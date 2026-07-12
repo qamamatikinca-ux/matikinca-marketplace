@@ -1,0 +1,48 @@
+name: Apply LoadLink update
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Open repository
+        uses: actions/checkout@v4
+
+      - name: Install LoadLink update
+        run: |
+          ZIP="loadlink-my-posts-truck-verification-final.zip"
+
+          if [ ! -f "$ZIP" ]; then
+            echo "Update ZIP was not found."
+            exit 1
+          fi
+
+          rm -rf /tmp/loadlink-update
+          mkdir -p /tmp/loadlink-update
+
+          unzip -q "$ZIP" -d /tmp/loadlink-update
+
+          rsync -a \
+            --exclude=".git/" \
+            --exclude=".env" \
+            --exclude=".env.*" \
+            --exclude="node_modules/" \
+            --exclude=".next/" \
+            /tmp/loadlink-update/matikinca-marketplace-main/ ./
+
+          rm -f "$ZIP"
+
+      - name: Save website changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+          git commit -m "Add My Posts and truck verification" || exit 0
+          git push origin main
