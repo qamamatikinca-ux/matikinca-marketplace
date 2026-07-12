@@ -70,8 +70,11 @@ export async function GET() {
   }
 
   const rows = await response.json();
+  const visibleRows = Array.isArray(rows)
+    ? rows.filter((row) => !row?.status || row.status === "active")
+    : [];
   return NextResponse.json(
-    { rows: Array.isArray(rows) ? rows : [] },
+    { rows: visibleRows },
     { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } },
   );
 }

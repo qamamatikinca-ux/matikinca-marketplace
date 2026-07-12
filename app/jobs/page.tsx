@@ -812,7 +812,7 @@ function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onRe
         <p className={`mt-2 text-sm font-semibold ${darkMode?"text-white/60":"text-black/60"}`}>{job.city} · {job.group}</p>
         <p className={`mt-3 text-sm ${darkMode?"text-white/55":"text-black/55"}`}>Posted by <strong className={darkMode?"text-white":"text-black"}>{job.postedBy}</strong> · {formatPostedDate(job.createdAt)}</p>
 
-        <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">{job.vehicleNeeded?<span className="rounded-full bg-[#eef2ff] px-3 py-2 text-black">{job.vehicleNeeded}</span>:null}<span className="rounded-full bg-[#eef2ff] px-3 py-2 text-black">{job.city}</span><span className="rounded-full bg-black px-3 py-2 text-white">{job.viewCount||0} views</span></div>
+        <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">{job.vehicleNeeded?<span className="rounded-full bg-[#eef2ff] px-3 py-2 text-black">{job.vehicleNeeded}</span>:null}<span className="rounded-full bg-[#eef2ff] px-3 py-2 text-black">{job.city}</span>{isOwner && isPro ? <span className="rounded-full bg-black px-3 py-2 text-white">{job.viewCount||0} views</span> : null}</div>
 
         {isOwner && (job.viewCount || 0) > 0 ? <div className="mt-4 flex items-center justify-between gap-3 border border-[#f6b800]/60 bg-[#f6b800]/10 px-3 py-2.5"><p className="text-xs font-black uppercase tracking-[.12em] text-[#b88900]">Your listing is being viewed.</p><button type="button" onClick={onOpenAnalytics} className="border border-[#f6b800] px-3 py-2 text-[10px] font-black uppercase text-[#b88900]">{isPro?"Analytics":"Pro analytics"}</button></div>:null}
 
