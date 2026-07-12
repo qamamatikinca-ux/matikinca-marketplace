@@ -1,0 +1,4 @@
+LoadLink Experience Upgrade V2 installed.
+Installed: 2026-07-12T13:39:28.682Z
+Environment variables and Vercel settings were not changed.
+Run LOADLINK-EXPERIENCE-UPGRADE-V2.sql in Supabase before deploying.

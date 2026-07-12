@@ -1,0 +1,15 @@
+FULL FILE REPLACEMENTS
+- app/messages/page.tsx
+- app/jobs/list/page.tsx
+- components/SwipeDotsEnhancer.tsx
+- components/ChatLauncher.tsx
+
+DATABASE
+- LOADLINK-EXPERIENCE-UPGRADE-V2.sql
+- COPY-THIS-INTO-SUPABASE.sql (same SQL, easier name for mobile)
+
+INSTALLER
+- install-loadlink-experience-upgrade-v2.js
+
+The installer also checks app/layout.tsx and adds ChatLauncher / SwipeDotsEnhancer only when missing.
+Every replaced file is backed up before installation.

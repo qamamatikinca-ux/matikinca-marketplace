@@ -1,0 +1,17 @@
+LOADLINK PORTAL MESSAGING UPDATE
+
+Included:
+- LinkBot removed from homepage and kept in Help Centre.
+- LinkBot supports natural typed LoadLink questions, follow-up prompts and longer guided help.
+- Black-and-white truck fleet image added to the Jobs hero with a dark fade.
+- Job cards simplified into a photo-first marketplace layout. Full description/contact controls open under View full details.
+- Featured listings removed from the homepage and moved to the top of the Jobs portal.
+- Standard listings retain the public view total. Detailed graphs and signed-in viewer details are gated to Pro listings.
+- Private LoadLink messaging page with stored history, unread notifications, typing indicator, last seen, file/image uploads, phone-app calling and a visible 50-message daily standard allowance.
+- News uses each article's own image where available. When an article has no usable image, a related credited image is shown.
+
+DATABASE SETUP
+Run LOADLINK-MESSAGING-PRO-ANALYTICS.sql once in Supabase SQL Editor after deployment.
+
+SECURITY NOTE
+Messages are protected by Supabase Row Level Security, HTTPS/TLS in transit and the database/storage platform's encryption at rest. This is not advertised as end-to-end encryption. A dedicated cryptographic/security audit is required before making an end-to-end encryption claim.

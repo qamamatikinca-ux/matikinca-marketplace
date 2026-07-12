@@ -1,0 +1,5 @@
+Applied inline dark logo fix at 2026-07-10T13:18:01.738Z
+Changed files:
+app/jobs/page.tsx
+app/page.tsx
+app/globals.css

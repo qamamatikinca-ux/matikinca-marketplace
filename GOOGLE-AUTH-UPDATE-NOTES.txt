@@ -1,0 +1,35 @@
+LOADLINK GOOGLE SIGN-IN, PROTECTED POSTING, CHAT AND ACCOUNT STORAGE UPDATE
+
+WHAT CHANGED
+- Google login returns users to the exact page/action they originally requested.
+- Apple remains visible but is disabled and marked Coming soon.
+- The header login icon becomes a gold check after a real Google/email account signs in.
+- Posting/listing pages and all in-app Message actions require a real signed-in account.
+- The floating Messages button sends logged-out users to sign in first.
+- New listings are linked to the signed-in Supabase user ID.
+- Existing listings, photos, owner keys, conversations and messages are preserved; nothing is reset.
+- Existing locally owned posts and chat keys are safely linked to the first signed-in account that owns them.
+- Account switching does not mix local chat/activity state between different users.
+- Chat keys, owned-post keys, recently viewed items, liked listings and portal activity sync to the signed-in account.
+- Signed-in page, listing, post and message activity is recorded in Supabase.
+
+REQUIRED SUPABASE STEP
+Run LOADLINK-GOOGLE-AUTH-ACCOUNT-STORAGE.sql once in Supabase SQL Editor.
+It is additive and contains no DROP TABLE, TRUNCATE or DELETE FROM statements.
+The DROP commands only replace named policies/triggers and do not remove user data.
+
+ENVIRONMENT VARIABLES
+No environment-variable file, name or value was changed.
+Keep the current Vercel variables exactly as they are.
+
+DEPLOYMENT CHECK
+1. Run the SQL file once in the same Supabase project already used by LoadLink.
+2. Upload/commit this complete project and let Vercel deploy.
+3. Sign in with Google and confirm the header icon becomes a gold check.
+4. Confirm existing posts still appear.
+5. Open an existing conversation and send a test message.
+6. Create one test listing and confirm it appears and has the signed-in user_id.
+7. Sign out and confirm Post/Message actions request sign-in.
+
+BUILD CHECK
+- npm run build completed successfully with Next.js 16.2.10.

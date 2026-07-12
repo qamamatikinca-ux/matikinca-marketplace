@@ -1,0 +1,5 @@
+LOADLINK CHAT APP UPGRADE INSTALLED
+Installed: 2026-07-12T12:58:59.697Z
+Environment variables were not changed.
+Backups: .loadlink-backup/chat-app-2026-07-12T12-58-59-687Z
+Next: run LOADLINK-CHAT-APP-UPGRADE.sql in Supabase SQL Editor, then npm run build.

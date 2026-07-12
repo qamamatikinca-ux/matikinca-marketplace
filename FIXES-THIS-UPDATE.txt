@@ -1,0 +1,21 @@
+LOADLINK TARGETED REPAIR
+
+Fixed only the requested issues:
+- Messages open with an automatic Supabase guest session. No visible login is required.
+- The chat launcher always opens Messages instead of redirecting to Login.
+- New job posts are connected to the guest session so Message works.
+- Older posts created on the same device can be claimed for messaging through the supplied SQL function.
+- News pictures now load through a server-side image proxy, with a local logistics fallback if a publisher blocks hotlinking.
+- The List a Job header explicitly uses the black-text logo on a white/light header.
+- The supplied forklift image fades into the actual List a Job form page.
+- Jobs landing hero appears before the featured/recent rail.
+- The jobs rail supports horizontal touch swiping and includes real promoted listings first, followed by recent real listings. Only promoted listings receive the Featured label.
+- LinkBot is always visible as a fixed button on the Help page.
+- Production build passed.
+
+REQUIRED SUPABASE SETTING FOR NO-LOGIN CHAT
+1. Supabase Dashboard > Authentication > Providers.
+2. Enable Anonymous Sign-Ins.
+3. Run SUPABASE-GUEST-CHAT-FINAL.sql once in SQL Editor.
+
+Anonymous users use a secure Supabase guest account in the background. They do not see a login screen.

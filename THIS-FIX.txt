@@ -1,0 +1,15 @@
+THIS UPDATE CHANGES ONLY THE FOUR REQUESTED ITEMS
+
+1. NEWS COVER IMAGES
+News cards now use reliable local logistics cover photographs. Google News logos, blank covers and escaped HTML such as &lt;a href= are removed.
+
+2. FEATURED LISTINGS
+The “Swipe left or right” instruction is removed.
+
+3. LIST A JOB HERO
+The exact uploaded forklift photograph is now public/images/jobs/list-job-forklift.jpg.
+
+4. CHAT WITH LISTING POSTERS
+Chat no longer requires a visible login, account creation or Supabase Anonymous Sign-Ins. It uses private device keys. A buyer can open and send a message immediately. The listing poster sees and replies to it from the device used to publish the listing.
+
+After deploying, run NO-LOGIN-CHAT.sql once in Supabase SQL Editor.

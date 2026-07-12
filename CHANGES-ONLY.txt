@@ -1,0 +1,19 @@
+LOADLINK MINIMAL USABILITY REFRESH
+
+Only the requested areas were changed:
+- Predictive homepage search across Jobs, Contracts, and Vehicles/Mobile Units.
+- Search suggestions use real live listings plus LoadLink categories.
+- Logo links to home on every updated page; on the homepage it reloads.
+- Featured cards are slightly shorter so the next homepage section appears sooner.
+- Job form now asks: “What vehicle or mobile unit do you need?”
+- Listing form page 3 is cleaner; optional profile and visibility settings are collapsed.
+- Added bold LoadLink-specific FAQ questions and answers.
+- Listing-owner view notification now includes Analytics.
+- Analytics modal includes total views, unique viewers, 7-day chart, device diagram, sources, and practical visibility advice.
+- Added /trucks route and contract portal filtering.
+
+IMPORTANT FOR DETAILED ANALYTICS
+Run supabase-view-analytics.sql once in Supabase SQL Editor.
+Without it, total views still display, but detailed charts begin after the SQL is installed.
+
+Production build passed successfully.
