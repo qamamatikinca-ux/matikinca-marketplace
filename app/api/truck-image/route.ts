@@ -124,11 +124,11 @@ export async function GET(request: Request) {
 
     if (!best) {
       return NextResponse.json({
-        imageUrl: "/images/jobs/jobs-hero-fleet.jpg",
+        imageUrl: null,
         title: `${brand} ${model}`,
         exactMatch: false,
-        credit: "LoadLink fallback image",
-        license: "Local site image",
+        credit: "",
+        license: "",
         sourceUrl: "",
       });
     }
@@ -145,11 +145,11 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     return NextResponse.json({
-      imageUrl: "/images/jobs/jobs-hero-fleet.jpg",
+      imageUrl: null,
       title: `${brand} ${model}`,
       exactMatch: false,
-      credit: "LoadLink fallback image",
-      license: "Local site image",
+      credit: "",
+      license: "",
       sourceUrl: "",
       warning: error instanceof Error ? error.message : "Reference image lookup failed.",
     });

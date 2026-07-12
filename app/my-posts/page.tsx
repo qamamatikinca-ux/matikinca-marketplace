@@ -159,13 +159,6 @@ export default function MyPostsPage() {
     }
   }
 
-  function toggleDarkMode() {
-    const next = !darkMode;
-    setDarkMode(next);
-    localStorage.setItem("loadlink-theme", next ? "dark" : "light");
-    window.dispatchEvent(new Event("loadlink-theme-change"));
-  }
-
   async function deleteListing(listing: MyListing) {
     if (!confirm(`Delete “${listing.title}” permanently?`)) return;
     setMessage("");
@@ -220,12 +213,11 @@ export default function MyPostsPage() {
 
   return (
     <main className={`min-h-screen ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
-      <Header darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+      <Header darkMode={darkMode} />
 
       <section className="border-b border-[#f6b800]/30 bg-black px-5 py-10 text-white md:py-14">
         <div className="mx-auto max-w-5xl">
-          <p className="text-xs font-black uppercase tracking-[0.25em] text-[#f6b800]">Owner dashboard</p>
-          <div className="mt-3 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
             <div>
               <h1 className="text-5xl font-black tracking-[-0.06em] md:text-7xl">My posts</h1>
               <p className="mt-4 max-w-xl text-sm font-semibold leading-7 text-white/60">Edit, close or delete your listings. Detailed analytics is unlocked only for Pro posts.</p>
@@ -330,8 +322,8 @@ function formatDate(value: string | null) {
   return date.toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function Header({ darkMode, toggleDarkMode }: { darkMode: boolean; toggleDarkMode: () => void }) {
-  return <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}><div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4"><div className="flex items-center gap-2"><Link href="/jobs" aria-label="Back to jobs" className={`flex h-10 w-10 items-center justify-center ${darkMode ? "text-white" : "text-black"}`}><BackIcon /></Link><AuthStatusButton darkMode={darkMode} /></div><HomeLogoLink theme={darkMode ? "dark" : "light"} /><button type="button" onClick={toggleDarkMode} aria-label="Toggle colour mode" className={`ml-auto flex h-10 w-10 items-center justify-center rounded-full border font-black ${darkMode ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-black/10 bg-black text-[#f6b800]"}`}>{darkMode ? "☀" : "◐"}</button></div></header>;
+function Header({ darkMode }: { darkMode: boolean }) {
+  return <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}><div className="grid h-20 grid-cols-[92px_1fr_92px] items-center px-4"><div className="flex items-center gap-2"><Link href="/jobs" aria-label="Back to jobs" className={`flex h-10 w-10 items-center justify-center ${darkMode ? "text-white" : "text-black"}`}><BackIcon /></Link><AuthStatusButton darkMode={darkMode} /></div><HomeLogoLink theme={darkMode ? "dark" : "light"} /><div aria-hidden="true" /></div></header>;
 }
 
 function FilterButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {

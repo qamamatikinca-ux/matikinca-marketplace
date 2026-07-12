@@ -13,7 +13,6 @@ import { getAccountOwnerKey, getOwnedJobKeys, setOwnedJobKeys } from "@/lib/chat
 import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import {
-  catalogStats,
   getTruckModel,
   getTruckModels,
   truckCatalog,
@@ -105,7 +104,6 @@ const emptyVerificationFiles: VerificationFiles = {
 
 export default function ListYourTruckPage() {
   const router = useRouter();
-  const stats = catalogStats();
   const [darkMode, setDarkMode] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -180,12 +178,7 @@ export default function ListYourTruckPage() {
       })
       .catch(() => {
         if (!active) return;
-        setReferenceImage({
-          imageUrl: "/images/jobs/jobs-hero-fleet.jpg",
-          title: `${brand} ${modelName}`,
-          exactMatch: false,
-          credit: "LoadLink fallback image",
-        });
+        setReferenceImage(null);
       })
       .finally(() => active && setImageLoading(false));
     return () => { active = false; };
@@ -221,13 +214,6 @@ export default function ListYourTruckPage() {
     setFuelType("");
     setAxleConfiguration("");
     setImageLoading(Boolean(nextModel));
-  }
-
-  function toggleDarkMode() {
-    const next = !darkMode;
-    setDarkMode(next);
-    localStorage.setItem("loadlink-theme", next ? "dark" : "light");
-    window.dispatchEvent(new Event("loadlink-theme-change"));
   }
 
   function confirmSelectedModel() {
@@ -440,35 +426,28 @@ export default function ListYourTruckPage() {
 
   const surface = darkMode ? "border-white/10 bg-[#101010] text-white" : "border-black/10 bg-white text-black";
   const muted = darkMode ? "text-white/55" : "text-black/55";
-  const inputClass = `h-14 w-full rounded-2xl border px-4 font-semibold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-[#171717] text-white placeholder:text-white/30" : "border-black/10 bg-[#faf8f2] text-black placeholder:text-black/35"}`;
+  const inputClass = `h-14 w-full rounded-xl border px-4 font-semibold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-[#171717] text-white placeholder:text-white/30" : "border-black/10 bg-[#faf8f2] text-black placeholder:text-black/35"}`;
   const textAreaClass = `${inputClass} min-h-32 py-4`;
 
   return (
     <main className={`min-h-screen transition-colors duration-500 ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
       {saving ? <LoadLinkLoading /> : null}
-      <Header darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+      <Header darkMode={darkMode} />
 
-      <section className="relative min-h-[390px] overflow-hidden border-b border-[#f6b800]/40 md:min-h-[470px]">
-        <img src="/images/jobs/jobs-hero-fleet.jpg" alt="Commercial trucks ready to be listed on LoadLink" className="absolute inset-0 h-full w-full object-cover object-center" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/75 to-black/25" />
-        <div className="relative mx-auto flex min-h-[390px] max-w-5xl flex-col justify-end px-5 pb-10 pt-24 text-white md:min-h-[470px]">
-          <p className="text-xs font-black uppercase tracking-[0.25em] text-[#f6b800]">Verified truck marketplace</p>
-          <h1 className="mt-3 max-w-3xl text-5xl font-black leading-[0.94] tracking-[-0.06em] md:text-7xl">List your exact truck.</h1>
-          <p className="mt-5 max-w-2xl text-base font-semibold leading-7 text-white/80">Choose the manufacturer and model first. LoadLink checks the factory specification, shows a matching reference picture and then collects the truck’s real information and verification documents.</p>
-          <div className="mt-6 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.14em]">
-            <span className="rounded-full border border-[#f6b800] bg-black/50 px-3 py-2">{stats.brands} brands</span>
-            <span className="rounded-full border border-[#f6b800] bg-black/50 px-3 py-2">{stats.models}+ model families</span>
-            <span className="rounded-full border border-[#f6b800] bg-black/50 px-3 py-2">2010–2027</span>
-          </div>
+      <section className="relative min-h-[300px] overflow-hidden border-b border-[#f6b800]/35 md:min-h-[360px]">
+        <img src="/images/jobs/jobs-hero-fleet.jpg" alt="Commercial trucks ready to be listed on LoadLink" className="absolute inset-0 h-full w-full object-cover object-center grayscale" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/20" />
+        <div className="relative mx-auto flex min-h-[300px] max-w-5xl flex-col justify-end px-5 pb-9 pt-20 text-white md:min-h-[360px]">
+          <h1 className="max-w-3xl text-5xl font-black leading-[0.94] tracking-[-0.06em] md:text-7xl">List your truck</h1>
+          <p className="mt-4 max-w-xl text-base font-semibold leading-7 text-white/75">Choose the year, make and model, then confirm the truck details.</p>
         </div>
       </section>
 
       <form onSubmit={submitTruck} className="mx-auto grid max-w-5xl gap-6 px-4 py-7 md:px-6 md:py-12">
-        <section className={`overflow-hidden rounded-[28px] border ${surface}`}>
-          <div className="border-b border-[#f6b800]/25 bg-black px-5 py-5 text-white md:px-7">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6b800]">Step 01</p>
-            <h2 className="mt-2 text-3xl font-black tracking-[-0.04em]">Choose the truck</h2>
-            <p className="mt-2 text-sm leading-6 text-white/60">The model list automatically changes according to the selected registration year.</p>
+        <section className={`overflow-hidden rounded-2xl border ${surface}`}>
+          <div className="border-b border-black/10 px-5 py-5 md:px-7">
+            <h2 className="text-3xl font-black tracking-[-0.04em]">Choose your truck</h2>
+            <p className={`mt-2 text-sm leading-6 ${muted}`}>Select the registration year, manufacturer and exact model.</p>
           </div>
 
           <div className="grid gap-5 p-5 md:grid-cols-3 md:p-7">
@@ -493,38 +472,57 @@ export default function ListYourTruckPage() {
 
           {brand && modelName ? (
             <div className="border-t border-black/10 p-5 md:p-7">
-              <div className="grid overflow-hidden rounded-[24px] border border-[#f6b800]/45 bg-black text-white md:grid-cols-[1.4fr_1fr]">
-                <div className="relative min-h-[260px] bg-[#080808] md:min-h-[380px]">
-                  {imageLoading ? <div className="absolute inset-0 loadlink-skeleton bg-white/5" /> : null}
-                  <img src={referenceImage?.imageUrl || "/images/jobs/jobs-hero-fleet.jpg"} alt={`${year} ${brand} ${modelName} reference`} className="h-full min-h-[260px] w-full object-contain md:min-h-[380px]" />
-                  <span className="absolute bottom-3 left-3 rounded-full bg-black/80 px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-[#f6b800]">Model reference</span>
+              <p className={`mb-4 text-sm font-bold ${muted}`}>1 result</p>
+              <article className={`overflow-hidden rounded-2xl border ${darkMode ? "border-white/15 bg-[#111]" : "border-black/10 bg-white"}`}>
+                <div className={`relative flex min-h-[260px] items-center justify-center ${darkMode ? "bg-[#080808]" : "bg-[#f2f4f7]"}`}>
+                  {imageLoading ? (
+                    <div className="absolute inset-0 loadlink-skeleton" />
+                  ) : referenceImage?.imageUrl ? (
+                    <img
+                      src={referenceImage.imageUrl}
+                      alt={`${year} ${brand} ${modelName}`}
+                      loading="eager"
+                      fetchPriority="high"
+                      className="h-full min-h-[260px] w-full object-contain"
+                    />
+                  ) : (
+                    <div className={`px-6 text-center ${muted}`}>
+                      <TruckOutlineIcon />
+                      <p className="mt-3 text-sm font-bold">Model photo unavailable</p>
+                    </div>
+                  )}
                 </div>
-                <div className="flex flex-col justify-between p-5 md:p-7">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f6b800]">Selected truck</p>
-                    <h3 className="mt-3 text-3xl font-black tracking-[-0.04em]">{brand}<br />{modelName}</h3>
-                    <p className="mt-3 text-sm font-bold text-white/55">Model year: {year}</p>
-                    {selectedModel ? (
-                      <div className="mt-5 grid gap-3 text-sm">
-                        <SpecLine label="Factory gearbox" value={selectedModel.transmissions.join(" / ")} />
-                        <SpecLine label="Fuel options" value={selectedModel.fuels.join(" / ")} />
-                        <SpecLine label="Axles" value={selectedModel.axleConfigurations.join(", ")} />
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="mt-6">
-                    <button type="button" onClick={confirmSelectedModel} className="flex h-13 w-full items-center justify-center rounded-2xl bg-[#f6b800] px-5 font-black uppercase tracking-wide text-black">Confirm this model</button>
-                    <p className="mt-3 text-[10px] leading-5 text-white/40">Reference image: {referenceImage?.credit || "loading"}. Your own truck photos are still required.</p>
-                  </div>
+
+                <div className="p-5 md:p-6">
+                  <h3 className="text-3xl font-black tracking-[-0.04em]">{brand} {modelName}</h3>
+                  <p className={`mt-1 text-base font-semibold ${muted}`}>{year}</p>
+
+                  <button
+                    type="button"
+                    onClick={confirmSelectedModel}
+                    className={`mt-5 flex h-13 w-full items-center justify-center gap-2 rounded-xl border-2 px-5 font-black ${modelConfirmed ? "border-[#2f9f5b] bg-[#2f9f5b] text-white" : "border-[#d8a800] text-[#b88900]"}`}
+                  >
+                    <CheckIcon />
+                    {modelConfirmed ? "Truck selected" : "Choose truck"}
+                  </button>
+
+                  {selectedModel ? (
+                    <div className="mt-5 grid grid-cols-2 gap-3">
+                      <ModelSpec label="Gearbox" value={selectedModel.transmissions.join(" / ")} darkMode={darkMode} />
+                      <ModelSpec label="Fuel" value={selectedModel.fuels.join(" / ")} darkMode={darkMode} />
+                      <ModelSpec label="Axles" value={selectedModel.axleConfigurations.join(", ")} darkMode={darkMode} />
+                      <ModelSpec label="Model years" value={`${selectedModel.from}–${selectedModel.to}`} darkMode={darkMode} />
+                    </div>
+                  ) : null}
                 </div>
-              </div>
+              </article>
             </div>
           ) : null}
         </section>
 
         {modelConfirmed && selectedModel ? (
           <>
-            <section id="vehicle-information" className={`scroll-mt-24 overflow-hidden rounded-[28px] border ${surface}`}>
+            <section id="vehicle-information" className={`scroll-mt-24 overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="02" title="Vehicle information" description="Factory options are checked against the selected model. Converted vehicles need supporting paperwork." />
               <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7">
                 <Field label="Listing title" wide><input value={title} onChange={(event) => setTitle(event.target.value)} className={inputClass} required /></Field>
@@ -550,10 +548,10 @@ export default function ListYourTruckPage() {
               </div>
             </section>
 
-            <section className={`overflow-hidden rounded-[28px] border ${surface}`}>
+            <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="03" title="Actual truck photos" description="The catalogue picture is only a reference. Upload clear current photos of the truck being listed." />
               <div className="p-5 md:p-7">
-                <label className={`flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-[22px] border-2 border-dashed px-5 text-center ${darkMode ? "border-white/15 bg-white/5" : "border-black/15 bg-[#faf8f2]"}`}>
+                <label className={`flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 text-center ${darkMode ? "border-white/15 bg-white/5" : "border-black/15 bg-[#faf8f2]"}`}>
                   <span className="text-lg font-black">Upload truck photos</span>
                   <span className={`mt-2 text-sm ${muted}`}>Minimum 2. Front, rear, both sides, cab and licence plate are recommended.</span>
                   <input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} className="hidden" />
@@ -562,7 +560,7 @@ export default function ListYourTruckPage() {
               </div>
             </section>
 
-            <section className={`overflow-hidden rounded-[28px] border ${surface}`}>
+            <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="04" title="Owner and vehicle verification" description="These files are stored privately and are not shown on the public listing." />
               <div className="grid gap-4 p-5 md:grid-cols-2 md:p-7">
                 <DocumentInput label="South African ID or passport" required file={documents.idDocument} onChange={(file) => setDocument("idDocument", file)} />
@@ -579,7 +577,7 @@ export default function ListYourTruckPage() {
               </div>
             </section>
 
-            <section className={`overflow-hidden rounded-[28px] border ${surface}`}>
+            <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="05" title="Contact, visibility and confirmation" description="Choose the listing package and confirm that the truck details are truthful." />
               <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7">
                 <Field label="Owner / company name"><input value={postedBy} onChange={(event) => setPostedBy(event.target.value)} className={inputClass} required /></Field>
@@ -598,39 +596,45 @@ export default function ListYourTruckPage() {
               </div>
             </section>
           </>
-        ) : (
-          <div className={`rounded-[24px] border p-6 text-center ${surface}`}><p className="text-sm font-bold">Confirm a truck model above to unlock vehicle information and verification.</p></div>
-        )}
+        ) : null}
       </form>
     </main>
   );
 }
 
-function Header({ darkMode, toggleDarkMode }: { darkMode: boolean; toggleDarkMode: () => void }) {
+function Header({ darkMode }: { darkMode: boolean }) {
   return (
     <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
-      <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4">
+      <div className="grid h-20 grid-cols-[92px_1fr_92px] items-center px-4">
         <div className="flex items-center gap-2">
           <Link href="/" aria-label="Back home" className={`flex h-10 w-10 items-center justify-center ${darkMode ? "text-white" : "text-black"}`}><MenuIcon /></Link>
           <AuthStatusButton darkMode={darkMode} />
         </div>
         <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-        <button type="button" onClick={toggleDarkMode} aria-label="Toggle colour mode" className={`ml-auto flex h-10 w-10 items-center justify-center rounded-full border font-black ${darkMode ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-black/10 bg-black text-[#f6b800]"}`}>{darkMode ? "☀" : "◐"}</button>
+        <div aria-hidden="true" />
       </div>
     </header>
   );
 }
 
 function SectionHeading({ step, title, description }: { step: string; title: string; description: string }) {
-  return <div className="border-b border-[#f6b800]/25 bg-black px-5 py-5 text-white md:px-7"><p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6b800]">Step {step}</p><h2 className="mt-2 text-3xl font-black tracking-[-0.04em]">{title}</h2><p className="mt-2 text-sm leading-6 text-white/60">{description}</p></div>;
+  return <div className="border-b border-black/10 px-5 py-5 md:px-7"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#b88900]">{step}</p><h2 className="mt-2 text-3xl font-black tracking-[-0.04em]">{title}</h2><p className="mt-2 text-sm leading-6 opacity-55">{description}</p></div>;
 }
 
 function Field({ label, children, wide = false }: { label: string; children: React.ReactNode; wide?: boolean }) {
   return <label className={wide ? "block md:col-span-2" : "block"}><span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-[#b88900]">{label}</span>{children}</label>;
 }
 
-function SpecLine({ label, value }: { label: string; value: string }) {
-  return <div className="border-t border-white/10 pt-3"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/40">{label}</p><p className="mt-1 font-bold text-white/85">{value}</p></div>;
+function ModelSpec({ label, value, darkMode }: { label: string; value: string; darkMode: boolean }) {
+  return <div className={`rounded-xl px-3 py-3 ${darkMode ? "bg-white/7" : "bg-[#f3f5f8]"}`}><p className="text-[10px] font-black uppercase tracking-[0.12em] opacity-45">{label}</p><p className="mt-1 text-sm font-bold leading-5">{value}</p></div>;
+}
+
+function CheckIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function TruckOutlineIcon() {
+  return <svg className="mx-auto" width="46" height="46" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M5 13h24v21H5V13Zm24 8h8l6 7v6H29V21Z" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round"/><circle cx="14" cy="35" r="4" stroke="currentColor" strokeWidth="2.5"/><circle cx="36" cy="35" r="4" stroke="currentColor" strokeWidth="2.5"/></svg>;
 }
 
 function DocumentInput({ label, required = false, file, onChange }: { label: string; required?: boolean; file: File | null; onChange: (file: File | null) => void }) {

@@ -686,9 +686,13 @@ export default function JobsPortalPage() {
             </div>
           </div>
 
-          <div className="mt-4">
+          <div className="mt-4 flex items-center gap-5">
             <RequireAuthLink href={portalCopy.listHref} className="inline-flex items-center gap-2 border border-[#f6b800] bg-[#f6b800] px-5 py-3 text-xs font-black uppercase tracking-wide text-black">
               {portalCopy.listLabel}
+            </RequireAuthLink>
+            <RequireAuthLink href="/my-posts" className="inline-flex items-center gap-1.5 py-3 text-xs font-black uppercase tracking-wide text-white/80 transition hover:text-[#f6b800]">
+              My posts
+              <span aria-hidden="true">›</span>
             </RequireAuthLink>
           </div>
         </div>
