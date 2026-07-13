@@ -71,7 +71,11 @@ export async function GET() {
 
   const rows = await response.json();
   const visibleRows = Array.isArray(rows)
-    ? rows.filter((row) => !row?.status || row.status === "active")
+    ? rows.filter((row) => {
+        const active = !row?.status || row.status === "active";
+        const approved = row?.moderation_status === undefined || row.moderation_status === "approved";
+        return active && approved;
+      })
     : [];
   return NextResponse.json(
     { rows: visibleRows },

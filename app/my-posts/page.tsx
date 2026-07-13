@@ -13,6 +13,7 @@ import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 
 type ListingStatus = "active" | "filled" | "closed" | "draft";
+type ModerationStatus = "pending" | "approved" | "rejected";
 
 type MyListing = {
   id: string;
@@ -32,6 +33,9 @@ type MyListing = {
   owner_key: string;
   user_id: string | null;
   status?: ListingStatus | null;
+  moderation_status?: ModerationStatus | null;
+  moderation_notes?: string | null;
+  moderated_at?: string | null;
 };
 
 type VerificationMap = Record<string, string>;
@@ -106,7 +110,7 @@ export default function MyPostsPage() {
       const results: MyListing[] = [];
       const byUser = await supabase
         .from("job_listings")
-        .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,status")
+        .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,status,moderation_status,moderation_notes,moderated_at")
         .eq("user_id", currentUserId)
         .order("created_at", { ascending: false });
 
@@ -114,7 +118,7 @@ export default function MyPostsPage() {
       else if (/status|column|schema cache/i.test(byUser.error.message)) {
         const fallback = await supabase
           .from("job_listings")
-          .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id")
+          .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,moderation_status,moderation_notes,moderated_at")
           .eq("user_id", currentUserId)
           .order("created_at", { ascending: false });
         if (fallback.error) throw fallback.error;
@@ -128,7 +132,7 @@ export default function MyPostsPage() {
       if (ownerKeys.length) {
         const byOwner = await supabase
           .from("job_listings")
-          .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,status")
+          .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,status,moderation_status,moderation_notes,moderated_at")
           .in("owner_key", ownerKeys)
           .order("created_at", { ascending: false });
         if (!byOwner.error) {
@@ -250,12 +254,14 @@ export default function MyPostsPage() {
               const status = listing.status || "active";
               const isPro = listing.package_type === "pro";
               const verificationStatus = verificationStatuses[listing.id];
+              const moderationStatus = listing.moderation_status || "pending";
               return (
                 <article key={listing.id} className={`overflow-hidden rounded-[26px] border ${surface}`}>
                   <div className="grid md:grid-cols-[260px_1fr]">
                     <div className="relative min-h-[210px] bg-black">
                       <img src={listing.photos?.[0] || "/images/jobs/job-card-1.jpg"} alt={listing.title} className="h-full min-h-[210px] w-full object-cover" />
                       <span className={`absolute left-3 top-3 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.13em] ${status === "active" ? "bg-[#2f9f5b] text-white" : "bg-black/80 text-white"}`}>{status}</span>
+                      <span className={`absolute right-3 top-3 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] ${moderationStatus === "approved" ? "bg-[#2f9f5b] text-white" : moderationStatus === "rejected" ? "bg-red-600 text-white" : "bg-[#f6b800] text-black"}`}>{moderationLabel(moderationStatus)}</span>
                       {verificationStatus ? <span className="absolute bottom-3 left-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] text-black">Verification {verificationStatus.replaceAll("_", " ")}</span> : null}
                     </div>
                     <div className="p-5 md:p-6">
@@ -271,6 +277,20 @@ export default function MyPostsPage() {
                       <p className={`mt-4 line-clamp-3 text-sm leading-6 ${muted}`}>{cleanDescription(listing.description)}</p>
                       <p className={`mt-3 text-xs font-semibold ${muted}`}>Posted {formatDate(listing.created_at)}</p>
 
+                      {moderationStatus === "rejected" ? (
+                        <div className="mt-4 rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-4">
+                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-red-500">Post rejected</p>
+                          <p className="mt-2 text-sm font-black">Why it was rejected</p>
+                          <p className="mt-1 text-sm leading-6 text-red-100/75">{listing.moderation_notes || "The post did not meet LoadLink listing requirements."}</p>
+                          <p className="mt-2 text-xs font-semibold text-red-200/55">Edit the listing and save it to send it back for review.</p>
+                        </div>
+                      ) : moderationStatus === "pending" ? (
+                        <div className="mt-4 rounded-2xl border border-[#f6b800]/40 bg-[#f6b800]/10 px-4 py-3">
+                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#b88900]">Waiting for review</p>
+                          <p className={`mt-1 text-xs font-semibold ${muted}`}>Only you can see this post until LoadLink approves it.</p>
+                        </div>
+                      ) : null}
+
                       {isPro ? (
                         <div className="mt-4 rounded-2xl border border-[#f6b800]/40 bg-[#f6b800]/10 px-4 py-3">
                           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#b88900]">Pro analytics</p>
@@ -284,9 +304,9 @@ export default function MyPostsPage() {
                       )}
 
                       <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-4">
-                        <button type="button" onClick={() => setEditing(listing)} className="min-h-12 rounded-xl border border-[#f6b800] px-3 text-xs font-black uppercase text-[#b88900]">Edit</button>
+                        <button type="button" onClick={() => setEditing(listing)} className="min-h-12 rounded-xl border border-[#f6b800] px-3 text-xs font-black uppercase text-[#b88900]">{moderationStatus === "rejected" ? "Edit & resubmit" : "Edit"}</button>
                         <button type="button" onClick={() => openAnalytics(listing)} className="min-h-12 rounded-xl border border-[#f6b800] bg-[#f6b800] px-3 text-xs font-black uppercase text-black">{isPro ? "Analytics" : "Pro analytics"}</button>
-                        {status === "active" ? <button type="button" onClick={() => setStatus(listing, "filled")} className="min-h-12 rounded-xl border border-black/15 px-3 text-xs font-black uppercase">Mark filled</button> : <button type="button" onClick={() => setStatus(listing, "active")} className="min-h-12 rounded-xl border border-black/15 px-3 text-xs font-black uppercase">Reopen</button>}
+                        {moderationStatus === "approved" ? (status === "active" ? <button type="button" onClick={() => setStatus(listing, "filled")} className="min-h-12 rounded-xl border border-black/15 px-3 text-xs font-black uppercase">Mark filled</button> : <button type="button" onClick={() => setStatus(listing, "active")} className="min-h-12 rounded-xl border border-black/15 px-3 text-xs font-black uppercase">Reopen</button>) : <span className="flex min-h-12 items-center justify-center rounded-xl border border-black/10 px-3 text-center text-[10px] font-black uppercase text-black/40">Not public</span>}
                         <button type="button" onClick={() => deleteListing(listing)} className="min-h-12 rounded-xl border border-red-500/60 px-3 text-xs font-black uppercase text-red-500">Delete</button>
                       </div>
                     </div>
@@ -309,6 +329,12 @@ export default function MyPostsPage() {
       {analyticsListing ? <AnalyticsModal listing={analyticsListing} data={analytics} loading={analyticsLoading} onClose={() => setAnalyticsListing(null)} /> : null}
     </main>
   );
+}
+
+function moderationLabel(value: ModerationStatus) {
+  if (value === "approved") return "Approved";
+  if (value === "rejected") return "Rejected";
+  return "Pending review";
 }
 
 function cleanDescription(value: string) {

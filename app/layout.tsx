@@ -4,6 +4,7 @@ import GlobalLoading from "@/components/GlobalLoading";
 import ChatLauncher from "@/components/ChatLauncher";
 import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";
 import AuthBootstrap from "@/components/AuthBootstrap";
+import NotificationCenter from "@/components/NotificationCenter";
 
 export const metadata: Metadata = {
   title: "LoadLink",
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <GlobalLoading />
         <SwipeDotsEnhancer />
         <AuthBootstrap />
+        <NotificationCenter />
         <ChatLauncher />
         {children}
       </body>
