@@ -690,7 +690,7 @@ export default function JobsPortalPage() {
             <RequireAuthLink href={portalCopy.listHref} className="inline-flex items-center gap-2 border border-[#f6b800] bg-[#f6b800] px-5 py-3 text-xs font-black uppercase tracking-wide text-black">
               {portalCopy.listLabel}
             </RequireAuthLink>
-            <RequireAuthLink href="/my-posts" className="inline-flex items-center gap-1.5 py-3 text-xs font-black uppercase tracking-wide text-white/80 transition hover:text-[#f6b800]">
+            <RequireAuthLink href="/my-posts" className="inline-flex items-center gap-1.5 rounded-full border border-[#f6b800]/70 bg-black/65 px-4 py-3 text-xs font-black uppercase tracking-wide text-[#f6b800] shadow-sm backdrop-blur transition hover:bg-black">
               My posts
               <span aria-hidden="true">›</span>
             </RequireAuthLink>

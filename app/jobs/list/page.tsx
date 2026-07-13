@@ -12,6 +12,7 @@ import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth"
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 import { getAccountOwnerKey } from "@/lib/chatKeys";
 import AuthStatusButton from "@/components/AuthStatusButton";
+import SubmissionSuccess from "@/components/SubmissionSuccess";
 
 type VehicleGroup = "Catering / Event" | "Trucks / Trailers" | "Farming / Mining";
 type ListingMode = "job" | "asset" | "contract";
@@ -114,6 +115,7 @@ export default function ListJobPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [authReady, setAuthReady] = useState(false);
+  const [submissionSuccess, setSubmissionSuccess] = useState(false);
 
   const photoLimit = packageType === "pro" ? 15 : 5;
 
@@ -311,7 +313,9 @@ export default function ListJobPage() {
         await syncAccountState().catch(() => undefined);
       }
       await minimumLoading;
-      router.push("/jobs?posted=success");
+      setIsSaving(false);
+      setSubmissionSuccess(true);
+      window.setTimeout(() => router.push("/jobs?posted=success"), 1700);
     } catch (error) {
       await minimumLoading;
       setIsSaving(false);
@@ -334,6 +338,7 @@ export default function ListJobPage() {
   return (
     <main className={`min-h-screen transition-colors duration-500 ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
       {isSaving ? <LoadLinkLoading /> : null}
+      <SubmissionSuccess open={submissionSuccess} />
       <Header darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
 
       <section className="relative h-[300px] overflow-hidden border-b border-[#f6b800]/30 md:h-[380px]">

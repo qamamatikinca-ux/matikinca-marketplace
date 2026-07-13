@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
+import SubmissionSuccess from "@/components/SubmissionSuccess";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { getAccountOwnerKey, getOwnedJobKeys, setOwnedJobKeys } from "@/lib/chatKeys";
@@ -73,6 +74,8 @@ function safeFileName(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/^-+|-+$/g, "") || "document";
 }
 
+type SellerType = "private" | "dealership";
+
 type ReferenceImage = {
   imageUrl: string;
   title: string;
@@ -90,6 +93,10 @@ type VerificationFiles = {
   roadworthy: File | null;
   operatingLicence: File | null;
   modificationProof: File | null;
+  companyRegistration: File | null;
+  taxDocument: File | null;
+  businessAddress: File | null;
+  representativeAuthority: File | null;
 };
 
 const emptyVerificationFiles: VerificationFiles = {
@@ -100,6 +107,10 @@ const emptyVerificationFiles: VerificationFiles = {
   roadworthy: null,
   operatingLicence: null,
   modificationProof: null,
+  companyRegistration: null,
+  taxDocument: null,
+  businessAddress: null,
+  representativeAuthority: null,
 };
 
 export default function ListYourTruckPage() {
@@ -108,6 +119,8 @@ export default function ListYourTruckPage() {
   const [authReady, setAuthReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const [sellerType, setSellerType] = useState<SellerType>("private");
   const [year, setYear] = useState(2026);
   const [brand, setBrand] = useState("");
   const [modelName, setModelName] = useState("");
@@ -137,6 +150,9 @@ export default function ListYourTruckPage() {
   const [documents, setDocuments] = useState<VerificationFiles>(emptyVerificationFiles);
   const [confirmOwnership, setConfirmOwnership] = useState(false);
   const [confirmAccuracy, setConfirmAccuracy] = useState(false);
+  const [dealershipName, setDealershipName] = useState("");
+  const [companyRegistrationNumber, setCompanyRegistrationNumber] = useState("");
+  const [taxNumber, setTaxNumber] = useState("");
 
   const availableModels = useMemo(() => getTruckModels(brand, year), [brand, year]);
   const selectedModel = useMemo(() => getTruckModel(brand, modelName, year), [brand, modelName, year]);
@@ -285,6 +301,14 @@ export default function ListYourTruckPage() {
     if (transmissionCheck.requiresModificationProof && !documents.modificationProof) {
       return "Upload gearbox conversion or engineering paperwork for a converted/custom transmission.";
     }
+    if (sellerType === "dealership") {
+      if (!dealershipName.trim() || !companyRegistrationNumber.trim() || !taxNumber.trim()) {
+        return "Enter the dealership name, company registration number and tax number.";
+      }
+      if (!documents.companyRegistration || !documents.taxDocument || !documents.businessAddress || !documents.representativeAuthority) {
+        return "Upload the company registration, tax document, business address proof and representative authority document.";
+      }
+    }
     if (!confirmOwnership || !confirmAccuracy) return "Confirm ownership authority and the accuracy of the vehicle information.";
     return "";
   }
@@ -321,9 +345,14 @@ export default function ListYourTruckPage() {
       const roadworthyPath = documents.roadworthy ? await uploadVerificationDocument(documents.roadworthy, user.id, folder, "Roadworthy certificate") : null;
       const operatingLicencePath = documents.operatingLicence ? await uploadVerificationDocument(documents.operatingLicence, user.id, folder, "Operating licence") : null;
       const modificationProofPath = documents.modificationProof ? await uploadVerificationDocument(documents.modificationProof, user.id, folder, "Modification paperwork") : null;
+      const companyRegistrationPath = sellerType === "dealership" && documents.companyRegistration ? await uploadVerificationDocument(documents.companyRegistration, user.id, folder, "Company registration") : null;
+      const taxDocumentPath = sellerType === "dealership" && documents.taxDocument ? await uploadVerificationDocument(documents.taxDocument, user.id, folder, "Tax document") : null;
+      const businessAddressPath = sellerType === "dealership" && documents.businessAddress ? await uploadVerificationDocument(documents.businessAddress, user.id, folder, "Business address proof") : null;
+      const representativeAuthorityPath = sellerType === "dealership" && documents.representativeAuthority ? await uploadVerificationDocument(documents.representativeAuthority, user.id, folder, "Representative authority") : null;
 
       const storedDescription = [
         "Listing type: Truck",
+        `Seller type: ${sellerType === "dealership" ? "Dealership" : "Private seller"}`,
         `Vehicle needed: ${year} ${brand} ${modelName}`,
         `Body type: ${bodyType}`,
         `Transmission: ${transmission}`,
@@ -389,6 +418,14 @@ export default function ListYourTruckPage() {
         roadworthy_document_path: roadworthyPath,
         operating_licence_document_path: operatingLicencePath,
         modification_document_path: modificationProofPath,
+        dealership_application: sellerType === "dealership",
+        dealership_name: sellerType === "dealership" ? dealershipName.trim() : null,
+        company_registration_number: sellerType === "dealership" ? companyRegistrationNumber.trim().toUpperCase() : null,
+        tax_number: sellerType === "dealership" ? taxNumber.trim().toUpperCase() : null,
+        company_registration_document_path: companyRegistrationPath,
+        tax_document_path: taxDocumentPath,
+        business_address_document_path: businessAddressPath,
+        representative_authority_document_path: representativeAuthorityPath,
         status: "pending",
       });
       if (verificationResult.error) throw verificationResult.error;
@@ -403,7 +440,9 @@ export default function ListYourTruckPage() {
         metadata: { title: title.trim(), brand, model: modelName, year },
       }).catch(() => undefined);
       await syncAccountState().catch(() => undefined);
-      router.push("/my-posts?posted=truck");
+      setSaving(false);
+      setSubmissionSuccess(true);
+      window.setTimeout(() => router.push("/my-posts?posted=truck"), 1800);
     } catch (error) {
       if (createdListingId) {
         try {
@@ -432,21 +471,24 @@ export default function ListYourTruckPage() {
   return (
     <main className={`min-h-screen transition-colors duration-500 ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
       {saving ? <LoadLinkLoading /> : null}
-      <Header darkMode={darkMode} />
+      <SubmissionSuccess open={submissionSuccess} title="Truck submission sent" message="Your truck and verification documents were submitted securely. Our team will review them and update you within a few minutes." />
+      <Header darkMode={darkMode} sellerType={sellerType} onToggleSellerType={() => { setSellerType((current) => current === "private" ? "dealership" : "private"); setMessage(""); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
 
       <section className="relative min-h-[300px] overflow-hidden border-b border-[#f6b800]/35 md:min-h-[360px]">
-        <img src="/images/jobs/jobs-hero-fleet.jpg" alt="Commercial trucks ready to be listed on LoadLink" className="absolute inset-0 h-full w-full object-cover object-center grayscale" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/20" />
+        <img src="/images/jobs/jobs-hero-fleet.jpg" alt="Commercial trucks ready to be listed on LoadLink" className="absolute inset-0 h-full w-full scale-[1.03] object-cover object-center grayscale opacity-80" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/65 to-black/35" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black" />
         <div className="relative mx-auto flex min-h-[300px] max-w-5xl flex-col justify-end px-5 pb-9 pt-20 text-white md:min-h-[360px]">
-          <h1 className="max-w-3xl text-5xl font-black leading-[0.94] tracking-[-0.06em] md:text-7xl">List your truck</h1>
-          <p className="mt-4 max-w-xl text-base font-semibold leading-7 text-white/75">Choose the year, make and model, then confirm the truck details.</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#f6b800]">{sellerType === "dealership" ? "Dealership stock application" : "Private truck listing"}</p>
+          <h1 className="mt-3 max-w-3xl text-5xl font-black leading-[0.94] tracking-[-0.06em] md:text-7xl">{sellerType === "dealership" ? "List dealership stock" : "List your truck"}</h1>
+          <p className="mt-4 max-w-xl text-base font-semibold leading-7 text-white/75">{sellerType === "dealership" ? "Add the truck details and submit the business documents required for dealership approval." : "Choose the year, make and model, then confirm the truck details."}</p>
         </div>
       </section>
 
       <form onSubmit={submitTruck} className="mx-auto grid max-w-5xl gap-6 px-4 py-7 md:px-6 md:py-12">
         <section className={`overflow-hidden rounded-2xl border ${surface}`}>
           <div className="border-b border-black/10 px-5 py-5 md:px-7">
-            <h2 className="text-3xl font-black tracking-[-0.04em]">Choose your truck</h2>
+            <h2 className="text-3xl font-black tracking-[-0.04em]">{sellerType === "dealership" ? "Choose a dealership truck" : "Choose your truck"}</h2>
             <p className={`mt-2 text-sm leading-6 ${muted}`}>Select the registration year, manufacturer and exact model.</p>
           </div>
 
@@ -561,7 +603,19 @@ export default function ListYourTruckPage() {
             </section>
 
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
-              <SectionHeading step="04" title="Owner and vehicle verification" description="These files are stored privately and are not shown on the public listing." />
+              <SectionHeading step="04" title={sellerType === "dealership" ? "Dealership and vehicle verification" : "Owner and vehicle verification"} description="These files are stored privately and are not shown on the public listing." />
+              {sellerType === "dealership" ? (
+                <div className="grid gap-5 border-b border-[#f6b800]/20 p-5 md:grid-cols-2 md:p-7">
+                  <Field label="Registered dealership name"><input value={dealershipName} onChange={(event) => setDealershipName(event.target.value)} className={inputClass} required /></Field>
+                  <Field label="Company registration number"><input value={companyRegistrationNumber} onChange={(event) => setCompanyRegistrationNumber(event.target.value)} className={inputClass} required /></Field>
+                  <Field label="SARS tax number"><input value={taxNumber} onChange={(event) => setTaxNumber(event.target.value)} className={inputClass} required /></Field>
+                  <div className={`rounded-2xl border p-4 text-sm leading-6 ${darkMode ? "border-white/10 bg-white/5 text-white/60" : "border-black/10 bg-[#faf8f2] text-black/60"}`}>Dealership information is reviewed privately before the listing can be approved.</div>
+                  <DocumentInput label="CIPC company registration document" required file={documents.companyRegistration} onChange={(file) => setDocument("companyRegistration", file)} />
+                  <DocumentInput label="SARS tax registration or compliance document" required file={documents.taxDocument} onChange={(file) => setDocument("taxDocument", file)} />
+                  <DocumentInput label="Proof of business address" required file={documents.businessAddress} onChange={(file) => setDocument("businessAddress", file)} />
+                  <DocumentInput label="Director or representative authority letter" required file={documents.representativeAuthority} onChange={(file) => setDocument("representativeAuthority", file)} />
+                </div>
+              ) : null}
               <div className="grid gap-4 p-5 md:grid-cols-2 md:p-7">
                 <DocumentInput label="South African ID or passport" required file={documents.idDocument} onChange={(file) => setDocument("idDocument", file)} />
                 <DocumentInput label="Driver’s licence" required file={documents.driverLicence} onChange={(file) => setDocument("driverLicence", file)} />
@@ -580,7 +634,7 @@ export default function ListYourTruckPage() {
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="05" title="Contact, visibility and confirmation" description="Choose the listing package and confirm that the truck details are truthful." />
               <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7">
-                <Field label="Owner / company name"><input value={postedBy} onChange={(event) => setPostedBy(event.target.value)} className={inputClass} required /></Field>
+                <Field label={sellerType === "dealership" ? "Dealership contact name" : "Owner / company name"}><input value={postedBy} onChange={(event) => setPostedBy(event.target.value)} className={inputClass} required /></Field>
                 <Field label="Contact number"><input value={contactNumber} onChange={(event) => setContactNumber(event.target.value)} placeholder="0821234567" className={inputClass} required /></Field>
                 <Field label="WhatsApp number — optional"><input value={whatsappNumber} onChange={(event) => setWhatsappNumber(event.target.value)} placeholder="0821234567" className={inputClass} /></Field>
                 <Field label="Listing package"><select value={packageType} onChange={(event) => setPackageType(event.target.value as "standard" | "pro")} className={inputClass}><option value="standard">Standard listing</option><option value="pro">Pro listing — analytics enabled</option></select></Field>
@@ -591,7 +645,7 @@ export default function ListYourTruckPage() {
               </div>
               <div className="border-t border-[#f6b800]/25 bg-black p-5 text-white md:p-7">
                 {message ? <div className="mb-4 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm font-bold leading-6 text-red-300">{message}</div> : null}
-                <button type="submit" disabled={saving} className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[0.12em] text-black disabled:opacity-50">{saving ? "Submitting verification..." : "Submit truck for verification"}</button>
+                <button type="submit" disabled={saving} className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[0.12em] text-black disabled:opacity-50">{saving ? "Submitting verification..." : sellerType === "dealership" ? "Submit dealership truck" : "Submit truck for verification"}</button>
                 <p className="mt-3 text-center text-xs leading-5 text-white/45">The listing is marked verification pending until the documents have been reviewed. Analytics remains available only on Pro listings.</p>
               </div>
             </section>
@@ -602,16 +656,18 @@ export default function ListYourTruckPage() {
   );
 }
 
-function Header({ darkMode }: { darkMode: boolean }) {
+function Header({ darkMode, sellerType, onToggleSellerType }: { darkMode: boolean; sellerType: SellerType; onToggleSellerType: () => void }) {
   return (
     <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
-      <div className="grid h-20 grid-cols-[92px_1fr_92px] items-center px-4">
+      <div className="grid h-20 grid-cols-[86px_1fr_108px] items-center px-3 sm:grid-cols-[110px_1fr_170px] sm:px-4">
         <div className="flex items-center gap-2">
           <Link href="/" aria-label="Back home" className={`flex h-10 w-10 items-center justify-center ${darkMode ? "text-white" : "text-black"}`}><MenuIcon /></Link>
           <AuthStatusButton darkMode={darkMode} />
         </div>
         <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-        <div aria-hidden="true" />
+        <button type="button" onClick={onToggleSellerType} className={`justify-self-end text-right text-[10px] font-black leading-4 underline decoration-[#f6b800] decoration-2 underline-offset-4 sm:text-xs ${darkMode ? "text-white" : "text-black"}`}>
+          {sellerType === "dealership" ? "List as a private seller" : "Are you a dealership?"}
+        </button>
       </div>
     </header>
   );

@@ -163,3 +163,33 @@ header img.loadlink-logo-img,
   50% { opacity: .78; }
 }
 .loadlink-skeleton { animation: loadlink-pulse 1.35s ease-in-out infinite; }
+
+@keyframes loadlink-success-pop {
+  0% { transform: scale(.72); opacity: 0; }
+  58% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes loadlink-success-draw {
+  0% { stroke-dashoffset: 72; opacity: 0; }
+  20% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+.loadlink-success-ring {
+  animation: loadlink-success-pop .55s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.loadlink-success-check path {
+  stroke-dasharray: 72;
+  stroke-dashoffset: 72;
+  animation: loadlink-success-draw .55s .22s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loadlink-success-ring,
+  .loadlink-success-check path {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+}
