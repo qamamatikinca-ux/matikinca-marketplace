@@ -282,7 +282,7 @@ export default function ListJobPage() {
         poster_photo: posterPhotoUrl,
         description: storedDescription,
         photos: uploadedUrls,
-        sponsored: packageType === "pro",
+        sponsored: false,
         package_type: packageType,
         owner_key: ownerKey,
         user_id: user.id,
