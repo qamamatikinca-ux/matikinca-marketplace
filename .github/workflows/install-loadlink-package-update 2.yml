@@ -1,0 +1,64 @@
+name: Install LoadLink package update
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Open repository
+        uses: actions/checkout@v4
+
+      - name: Apply LoadLink website patch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ZIP="LoadLink-Website-Manual-GitHub-Patch.zip"
+
+          if [ ! -f "$ZIP" ]; then
+            echo "Missing $ZIP in the repository root."
+            exit 1
+          fi
+
+          rm -rf /tmp/loadlink-website-patch
+          mkdir -p /tmp/loadlink-website-patch
+          unzip -q "$ZIP" -d /tmp/loadlink-website-patch
+
+          SOURCE="/tmp/loadlink-website-patch/matikinca-marketplace-main"
+
+          if [ ! -f "$SOURCE/PATCH-MANIFEST.txt" ]; then
+            echo "The website patch has an unexpected folder structure."
+            exit 1
+          fi
+
+          rsync -a \
+            --exclude=".git/" \
+            --exclude=".github/" \
+            --exclude=".env" \
+            --exclude=".env.*" \
+            --exclude="node_modules/" \
+            --exclude=".next/" \
+            "$SOURCE/" ./
+
+          rm -f "$ZIP"
+
+      - name: Save website update
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes were found."
+          else
+            git commit -m "Install LoadLink packages and dealership update"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
