@@ -1,0 +1,3 @@
+LoadLink website package/dealership patch.
+This patch contains only the files changed or added by the package update.
+It does not contain or modify environment files.
