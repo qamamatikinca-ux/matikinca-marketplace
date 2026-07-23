@@ -107,7 +107,7 @@ export default function ListJobPage() {
   const [contactNumber, setContactNumber] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [description, setDescription] = useState("");
-  const [packageType, setPackageType] = useState<"standard" | "pro">("standard");
+  const packageType = "standard" as const;
   const [files, setFiles] = useState<File[]>([]);
   const [previewPhotos, setPreviewPhotos] = useState<string[]>([]);
   const [posterPhoto, setPosterPhoto] = useState<File | null>(null);
@@ -117,12 +117,16 @@ export default function ListJobPage() {
   const [authReady, setAuthReady] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
 
-  const photoLimit = packageType === "pro" ? 15 : 5;
+  const photoLimit = 5;
 
   useEffect(() => {
     setDarkMode(localStorage.getItem("loadlink-theme") === "dark");
     const mode = new URLSearchParams(window.location.search).get("mode");
-    if (mode === "asset" || mode === "contract") setListingMode(mode);
+    if (mode === "asset") {
+      router.replace("/list-your-truck");
+      return;
+    }
+    if (mode === "contract") setListingMode(mode);
 
     async function requireAccount() {
       if (!isSupabaseConfigured) {
@@ -440,15 +444,9 @@ export default function ListJobPage() {
               </div>
             ) : null}
 
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => setPackageType("standard")} className={`rounded-2xl border p-4 text-left text-sm font-black transition ${packageType === "standard" ? "border-[#f6b800] bg-[#f6b800] text-black" : surface}`}>
-                Standard
-                <span className="mt-1 block text-xs font-semibold opacity-60">Up to 5 photos</span>
-              </button>
-              <button type="button" onClick={() => setPackageType("pro")} className={`rounded-2xl border p-4 text-left text-sm font-black transition ${packageType === "pro" ? "border-[#f6b800] bg-[#f6b800] text-black" : surface}`}>
-                Pro visibility
-                <span className="mt-1 block text-xs font-semibold opacity-60">Up to 15 photos</span>
-              </button>
+            <div className={`mt-5 border border-[#f6b800]/45 p-4 ${darkMode ? "bg-[#f6b800]/10" : "bg-[#fff7dc]"}`}>
+              <p className="text-sm font-black">Free job posting</p>
+              <p className={`mt-1 text-xs font-semibold leading-5 ${muted}`}>Job and contract opportunities are free to publish after sign-in. This form allows up to 5 clear photos. Vehicle sales and vehicle stock must use the paid List Your Truck flow.</p>
             </div>
           </FormCard>
 

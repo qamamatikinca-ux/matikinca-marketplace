@@ -193,3 +193,13 @@ header img.loadlink-logo-img,
     stroke-dashoffset: 0 !important;
   }
 }
+
+
+/* LoadLink focused UX fixes */
+.loadlink-hero-fade {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 58%, rgba(0,0,0,.7) 78%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 58%, rgba(0,0,0,.7) 78%, transparent 100%);
+}
+@media (max-width: 640px) {
+  .loadlink-hero-fade { object-position: 58% center; }
+}

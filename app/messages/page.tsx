@@ -328,6 +328,8 @@ export default function MessagesPage() {
         }
 
         await syncAccountState().catch(() => undefined);
+        const chatKeys = Array.from(new Set([...getBuyerKeys(), ...getOwnerKeys()]));
+        await Promise.all(chatKeys.map((key) => supabase.rpc("loadlink_register_chat_access_key", { p_access_key: key })));
         const params = new URLSearchParams(window.location.search);
         const listingId = params.get("listing");
         const metadata = user.user_metadata || {};

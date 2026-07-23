@@ -11,6 +11,7 @@ import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth"
 import { getOwnerKeys } from "@/lib/chatKeys";
 import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+import { requestListingRenewal } from "@/lib/packageAccess";
 
 type ListingStatus = "active" | "filled" | "closed" | "draft";
 type ModerationStatus = "pending" | "approved" | "rejected";
@@ -36,6 +37,9 @@ type MyListing = {
   moderation_status?: ModerationStatus | null;
   moderation_notes?: string | null;
   moderated_at?: string | null;
+  listing_kind?: string | null;
+  expires_at?: string | null;
+  stock_status?: string | null;
 };
 
 type VerificationMap = Record<string, string>;
@@ -110,7 +114,7 @@ export default function MyPostsPage() {
       const results: MyListing[] = [];
       const byUser = await supabase
         .from("job_listings")
-        .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,status,moderation_status,moderation_notes,moderated_at")
+        .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,status,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status")
         .eq("user_id", currentUserId)
         .order("created_at", { ascending: false });
 
@@ -118,7 +122,7 @@ export default function MyPostsPage() {
       else if (/status|column|schema cache/i.test(byUser.error.message)) {
         const fallback = await supabase
           .from("job_listings")
-          .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,moderation_status,moderation_notes,moderated_at")
+          .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status")
           .eq("user_id", currentUserId)
           .order("created_at", { ascending: false });
         if (fallback.error) throw fallback.error;
@@ -132,7 +136,7 @@ export default function MyPostsPage() {
       if (ownerKeys.length) {
         const byOwner = await supabase
           .from("job_listings")
-          .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,status,moderation_status,moderation_notes,moderated_at")
+          .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,status,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status")
           .in("owner_key", ownerKeys)
           .order("created_at", { ascending: false });
         if (!byOwner.error) {
@@ -184,8 +188,22 @@ export default function MyPostsPage() {
     setListings((current) => current.map((item) => item.id === listing.id ? { ...item, status } : item));
   }
 
+  async function renewListing(listing: MyListing) {
+    const raw = window.prompt("How many days would you like to renew this listing for? Each day costs R15.", "7");
+    if (!raw) return;
+    const days = Math.max(1, Math.min(365, Math.floor(Number(raw) || 0)));
+    if (!days) return;
+    setMessage("");
+    try {
+      const payment = await requestListingRenewal(listing.id, days);
+      setMessage(`Renewal request ${payment.reference} was created for R${(payment.amount_cents / 100).toFixed(2)}. The expiry date updates automatically when payment is marked paid.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The renewal request could not be created.");
+    }
+  }
+
   async function openAnalytics(listing: MyListing) {
-    if ((listing.package_type || "standard") !== "pro") {
+    if (!["pro", "dealer"].includes(listing.package_type || "manual")) {
       setLockedAnalytics(listing);
       return;
     }
@@ -208,7 +226,7 @@ export default function MyPostsPage() {
   }), [filter, listings]);
 
   const activeCount = listings.filter((item) => (item.status || "active") === "active").length;
-  const proCount = listings.filter((item) => item.package_type === "pro").length;
+  const proCount = listings.filter((item) => ["pro", "dealer"].includes(item.package_type || "")).length;
 
   if (!authReady) return <main className="min-h-screen bg-black text-white"><LoadLinkLoading /></main>;
 
@@ -252,7 +270,9 @@ export default function MyPostsPage() {
           <div className="grid gap-5">
             {filteredListings.map((listing) => {
               const status = listing.status || "active";
-              const isPro = listing.package_type === "pro";
+              const isPro = ["pro", "dealer"].includes(listing.package_type || "");
+              const isManualVehicle = listing.listing_kind === "vehicle" && listing.package_type === "manual";
+              const expired = Boolean(listing.expires_at && new Date(listing.expires_at) <= new Date());
               const verificationStatus = verificationStatuses[listing.id];
               const moderationStatus = listing.moderation_status || "pending";
               return (
@@ -271,11 +291,12 @@ export default function MyPostsPage() {
                           <h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">{listing.title}</h2>
                           <p className="mt-2 text-lg font-black text-[#b88900]">{formatListingRate(listing.rate)}</p>
                         </div>
-                        <span className={`rounded-full px-3 py-2 text-[10px] font-black uppercase ${isPro ? "bg-[#f6b800] text-black" : darkMode ? "bg-white/10 text-white" : "bg-black/5 text-black"}`}>{isPro ? "Pro" : "Standard"}</span>
+                        <span className={`rounded-full px-3 py-2 text-[10px] font-black uppercase ${isPro ? "bg-[#f6b800] text-black" : darkMode ? "bg-white/10 text-white" : "bg-black/5 text-black"}`}>{listing.package_type === "dealer" ? "Dealer" : isPro ? "Pro" : isManualVehicle ? "Manual" : "Job post"}</span>
                       </div>
 
                       <p className={`mt-4 line-clamp-3 text-sm leading-6 ${muted}`}>{cleanDescription(listing.description)}</p>
                       <p className={`mt-3 text-xs font-semibold ${muted}`}>Posted {formatDate(listing.created_at)}</p>
+                      {isManualVehicle && listing.expires_at ? <div className={`mt-3 border px-4 py-3 ${expired ? "border-red-500/50 bg-red-500/10" : "border-[#f6b800]/40 bg-[#f6b800]/10"}`}><p className={`text-[10px] font-black uppercase ${expired ? "text-red-500" : "text-[#b88900]"}`}>{expired ? "Listing expired" : `${Math.max(0, Math.ceil((new Date(listing.expires_at).getTime() - Date.now()) / 86400000))} paid days remaining`}</p><p className={`mt-1 text-xs font-bold ${muted}`}>Expires {formatDate(listing.expires_at)} · R15 per day</p><button type="button" onClick={() => void renewListing(listing)} className="mt-3 rounded-full bg-[#f6b800] px-4 py-2 text-[10px] font-black uppercase text-black">Renew listing</button></div> : null}
 
                       {moderationStatus === "rejected" ? (
                         <div className="mt-4 rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-4">
@@ -393,7 +414,7 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
 }
 
 function LockedAnalyticsModal({ onClose }: { onClose: () => void }) {
-  return <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"><section className="w-full max-w-md rounded-[26px] border border-[#f6b800]/60 bg-[#080808] p-6 text-white"><p className="text-xs font-black uppercase tracking-[0.18em] text-[#f6b800]">Pro-only analytics</p><h2 className="mt-3 text-3xl font-black tracking-[-0.04em]">Analytics is locked on Standard posts.</h2><p className="mt-4 text-sm leading-7 text-white/60">Pro posts can view total and unique views, seven-day performance, traffic sources, devices and recent signed-in viewers.</p><div className="mt-6 grid gap-3"><Link href="/jobs/list?upgrade=pro" className="flex h-13 items-center justify-center rounded-xl bg-[#f6b800] font-black text-black">Upgrade to Pro</Link><button type="button" onClick={onClose} className="h-13 rounded-xl border border-white/15 font-black">Not now</button></div></section></div>;
+  return <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"><section className="w-full max-w-md rounded-[26px] border border-[#f6b800]/60 bg-[#080808] p-6 text-white"><p className="text-xs font-black uppercase tracking-[0.18em] text-[#f6b800]">Pro-only analytics</p><h2 className="mt-3 text-3xl font-black tracking-[-0.04em]">Analytics is locked on Manual listings and free job posts.</h2><p className="mt-4 text-sm leading-7 text-white/60">Pro posts can view total and unique views, seven-day performance, traffic sources, devices and recent signed-in viewers.</p><div className="mt-6 grid gap-3"><Link href="/jobs/list?upgrade=pro" className="flex h-13 items-center justify-center rounded-xl bg-[#f6b800] font-black text-black">Upgrade to Pro</Link><button type="button" onClick={onClose} className="h-13 rounded-xl border border-white/15 font-black">Not now</button></div></section></div>;
 }
 
 function AnalyticsModal({ listing, data, loading, onClose }: { listing: MyListing; data: AnalyticsPayload | null; loading: boolean; onClose: () => void }) {

@@ -84,8 +84,7 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
   return (
     <section className={`${darkMode ? "bg-black text-white" : "bg-white text-black"} px-5 py-12`}>
       <div className="mx-auto max-w-5xl">
-        <p className="text-xs font-black uppercase tracking-[0.26em] text-[#b88900]">Recent activity</p>
-        <h2 className="mt-2 text-3xl font-black tracking-[-0.05em] md:text-5xl">Continue where you left off</h2>
+        <h2 className="text-3xl font-black tracking-[-0.05em] md:text-5xl">Continue where you left off</h2>
 
         <div className="mt-6 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 no-scrollbar">
           {([['posted','Recently Posted'],['viewed','Recently Viewed'],['liked','Liked']] as [ActivityTab,string][]).map(([value,label]) => (

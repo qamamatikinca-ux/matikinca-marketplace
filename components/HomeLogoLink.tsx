@@ -23,7 +23,9 @@ export default function HomeLogoLink({
       onClick={(event) => {
         if (pathname === "/") {
           event.preventDefault();
-          window.location.reload();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          window.history.replaceState(window.history.state, "", "/");
+          window.dispatchEvent(new Event("loadlink-home-refresh"));
         }
       }}
     >

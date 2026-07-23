@@ -30,7 +30,7 @@ type JobListing = {
   description: string;
   photos: string[];
   sponsored: boolean;
-  packageType?: "standard" | "pro";
+  packageType?: "standard" | "pro" | "dealer";
   createdAt?: string;
   viewCount?: number;
   lastViewedAt?: string | null;
@@ -138,7 +138,7 @@ function mapJobRow(row: JobRow, verifiedUsers: Set<string> = new Set()): JobList
     description: details.cleanDescription || row.description,
     photos: row.photos && row.photos.length > 0 ? row.photos : ["/images/jobs/job-card-1.jpg"],
     sponsored: Boolean(row.sponsored),
-    packageType: row.package_type === "pro" ? "pro" : "standard",
+    packageType: row.package_type === "dealer" ? "dealer" : row.package_type === "pro" ? "pro" : "standard",
     createdAt: row.created_at || undefined,
     viewCount: row.view_count || 0,
     lastViewedAt: row.last_viewed_at || null,
@@ -597,8 +597,8 @@ export default function JobsPortalPage() {
   }
 
   const portalRailJobs = useMemo(() => {
-    const promoted = allJobs.filter((job) => job.sponsored || job.packageType === "pro");
-    const recent = allJobs.filter((job) => !job.sponsored && job.packageType !== "pro");
+    const promoted = allJobs.filter((job) => job.sponsored || ["pro", "dealer"].includes(job.packageType || ""));
+    const recent = allJobs.filter((job) => !job.sponsored && !["pro", "dealer"].includes(job.packageType || ""));
     return [...promoted, ...recent].slice(0, 8);
   }, [allJobs]);
 
@@ -687,7 +687,7 @@ export default function JobsPortalPage() {
           </div>
 
           <div className="mt-4 flex items-center gap-5">
-            <RequireAuthLink href={portalCopy.listHref} className="inline-flex items-center gap-2 border border-[#f6b800] bg-[#f6b800] px-5 py-3 text-xs font-black uppercase tracking-wide text-black">
+            <RequireAuthLink href={portalCopy.listHref} className="inline-flex items-center gap-1.5 rounded-full border border-[#f6b800] bg-[#f6b800] px-4 py-3 text-xs font-black uppercase tracking-wide text-black shadow-sm transition active:scale-[0.98]">
               {portalCopy.listLabel}
             </RequireAuthLink>
             <RequireAuthLink href="/my-posts" className="inline-flex items-center gap-1.5 rounded-full border border-[#f6b800]/70 bg-black/65 px-4 py-3 text-xs font-black uppercase tracking-wide text-[#f6b800] shadow-sm backdrop-blur transition hover:bg-black">
@@ -761,7 +761,7 @@ function FeaturedJobsRail({ jobs, darkMode, onOpen }: { jobs: JobListing[]; dark
 
         <div className="no-scrollbar mt-5 flex w-full touch-pan-x snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-3 scroll-smooth">
           {jobs.map((job) => {
-            const promoted = job.sponsored || job.packageType === "pro";
+            const promoted = job.sponsored || ["pro", "dealer"].includes(job.packageType || "");
             return (
               <button
                 key={job.id}
@@ -791,7 +791,7 @@ function FeaturedJobsRail({ jobs, darkMode, onOpen }: { jobs: JobListing[]; dark
 function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onReport, onOpenGallery, onOpenAnalytics, onDelete, onEdit }: { job: JobListing; darkMode: boolean; isOwner: boolean; isLiked: boolean; onToggleLiked: () => void; onShare: () => void; onReport: () => void; onOpenGallery: () => void; onOpenAnalytics: () => void; onDelete: () => void; onEdit: () => void }) {
   const coverPhoto = job.photos[0] || "/images/jobs/job-card-1.jpg";
   const photoCount = job.photos.length;
-  const isPro = job.packageType === "pro";
+  const isPro = ["pro", "dealer"].includes(job.packageType || "");
 
   return (
     <article id={`job-${job.id}`} className={`scroll-mt-24 overflow-hidden border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
@@ -940,11 +940,11 @@ function ListingAnalyticsModal({ job, ownerKey, onClose }: { job: JobListing; ow
     ? "Your listing has not been opened yet. A clear cover photo, exact location and specific title help people understand it faster."
     : analytics.totalViews < 5
       ? "Your listing is starting to get discovered. Keep the title specific and put the strongest photo first so people know what is available immediately."
-      : job.packageType === "pro"
+      : ["pro", "dealer"].includes(job.packageType || "")
         ? "Your listing is attracting attention. Keep the rate, location and availability current so interested users can act quickly."
         : "Your listing is attracting attention. More complete photos and a clearer rate usually help a listing hold attention when visibility increases.";
 
-  if (job.packageType !== "pro") {
+  if (!["pro", "dealer"].includes(job.packageType || "")) {
     return <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"><section className="w-full max-w-md border border-[#f6b800]/50 bg-[#080808] p-6 text-white"><p className="text-xs font-black uppercase tracking-[.2em] text-[#f6b800]">Pro analytics</p><h2 className="mt-3 text-3xl font-black">Understand who is finding your listing</h2><p className="mt-4 text-sm leading-7 text-white/60">Standard listings keep their public view count. Pro analytics adds seven-day graphs, traffic sources, devices and signed-in viewers who opened the listing.</p><div className="mt-6 grid gap-3"><RequireAuthLink href="/jobs/list?upgrade=pro" className="flex h-12 items-center justify-center bg-[#f6b800] font-black text-black">View Pro options</RequireAuthLink><button onClick={onClose} className="h-12 border border-white/15 font-black">Not now</button></div></section></div>;
   }
 

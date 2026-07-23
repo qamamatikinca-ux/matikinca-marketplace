@@ -94,11 +94,9 @@ export default function GlobalLoading() {
       startLoading();
     }
 
-    window.addEventListener("beforeunload", startLoading);
     document.addEventListener("click", handleClick);
 
     return () => {
-      window.removeEventListener("beforeunload", startLoading);
       document.removeEventListener("click", handleClick);
       clearTimers();
     };
