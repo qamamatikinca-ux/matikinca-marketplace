@@ -1,0 +1,44 @@
+name: Install LoadLink Buy a Truck TypeScript hotfix
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply TypeScript hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          PATCH="LoadLink-Buy-A-Truck-TypeScript-Hotfix.zip"
+          if [ ! -f "$PATCH" ]; then
+            echo "ERROR: $PATCH must be uploaded to the repository root beside package.json."
+            ls -la
+            exit 1
+          fi
+          unzip -o "$PATCH" -d .
+          test -f components/BuyATruckShowcase.tsx
+
+      - name: Commit website hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add components/BuyATruckShowcase.tsx
+          if git diff --cached --quiet; then
+            echo "Hotfix already applied."
+          else
+            git commit -m "Fix Buy a Truck TypeScript build error"
+            git push origin HEAD:main
+          fi
