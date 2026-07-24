@@ -1,0 +1,58 @@
+name: Install LoadLink business and dealer update
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout website repository
+        uses: actions/checkout@v4
+
+      - name: Apply website patch safely
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP="LoadLink-Business-Dealer-Boost-Website-Patch.zip"
+          if [ ! -f "$ZIP" ]; then
+            echo "Missing $ZIP in the repository root beside package.json."
+            ls -la
+            exit 1
+          fi
+
+          rm -rf /tmp/loadlink-business-website
+          mkdir -p /tmp/loadlink-business-website
+          unzip -q "$ZIP" -d /tmp/loadlink-business-website
+
+          test -f /tmp/loadlink-business-website/app/list-your-truck/page.tsx
+          test -f /tmp/loadlink-business-website/app/jobs/list/page.tsx
+          test -f /tmp/loadlink-business-website/components/BusinessPlans.tsx
+
+          rsync -a \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='node_modules/' \
+            --exclude='.next/' \
+            --exclude='PATCH-NOTES.txt' \
+            /tmp/loadlink-business-website/ ./
+
+          rm -f "$ZIP"
+
+      - name: Commit website update
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Install LoadLink business dealer and boost update"
+            git push origin HEAD:main
+          fi
