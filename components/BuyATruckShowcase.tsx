@@ -40,18 +40,32 @@ export default function BuyATruckShowcase({ darkMode = false }: { darkMode?: boo
     if (!isSupabaseConfigured) return;
     let active = true;
     async function load() {
-      let result = await supabase
+      const primaryResult = await supabase
         .from("job_listings")
         .select("id,title,city,rate,posted_by,photos,package_type,listing_kind,dealership_id,boost_expires_at,sponsored,created_at")
         .or("listing_kind.eq.truck_sale,description.ilike.%Seller type:%")
         .eq("moderation_status", "approved")
         .order("created_at", { ascending: false })
         .limit(24);
-      if (result.error && /column|schema cache/i.test(result.error.message)) {
-        result = await supabase.from("job_listings").select("id,title,city,rate,posted_by,photos,package_type,sponsored,created_at").order("created_at", { ascending: false }).limit(24);
+
+      let listings: TruckListing[] = [];
+
+      if (!primaryResult.error && primaryResult.data) {
+        listings = primaryResult.data as unknown as TruckListing[];
+      } else if (primaryResult.error && /column|schema cache/i.test(primaryResult.error.message)) {
+        const fallbackResult = await supabase
+          .from("job_listings")
+          .select("id,title,city,rate,posted_by,photos,package_type,sponsored,created_at")
+          .order("created_at", { ascending: false })
+          .limit(24);
+
+        if (!fallbackResult.error && fallbackResult.data) {
+          listings = fallbackResult.data as unknown as TruckListing[];
+        }
       }
-      if (!active || result.error || !result.data?.length) return;
-      setRows(result.data as TruckListing[]);
+
+      if (!active || listings.length === 0) return;
+      setRows(listings);
     }
     void load();
     return () => { active = false; };
