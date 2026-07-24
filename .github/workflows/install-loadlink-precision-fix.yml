@@ -1,0 +1,62 @@
+name: Install LoadLink precision UI and dealer profile fix
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Find and apply patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          PATCH=""
+          for candidate in \
+            LoadLink-Precision-UI-Dealer-Fix.zip \
+            loadlink-precision-ui-dealer-fix.zip; do
+            if [ -f "$candidate" ]; then PATCH="$candidate"; break; fi
+          done
+          if [ -z "$PATCH" ]; then
+            echo "Patch ZIP was not found in the repository root."
+            ls -la
+            exit 1
+          fi
+          python - <<'PY'
+          import os, zipfile
+          patch = os.environ.get('PATCH_FILE')
+          if not patch:
+              for candidate in ['LoadLink-Precision-UI-Dealer-Fix.zip','loadlink-precision-ui-dealer-fix.zip']:
+                  if os.path.exists(candidate): patch=candidate; break
+          if not patch: raise SystemExit('Patch ZIP missing')
+          with zipfile.ZipFile(patch) as z:
+              for info in z.infolist():
+                  path = info.filename.replace('\\','/')
+                  if path.startswith('/') or '..' in path.split('/'):
+                      raise SystemExit(f'Unsafe path: {path}')
+              z.extractall('.')
+          PY
+          rm -f "$PATCH"
+
+      - name: Commit installed files
+        shell: bash
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No file changes were needed."
+          else
+            git commit -m "Apply precise LoadLink UI and dealer profile fix"
+            git push origin main
+          fi
