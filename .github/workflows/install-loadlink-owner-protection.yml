@@ -1,0 +1,40 @@
+name: Install LoadLink owner protection
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Install owner protection patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          PATCH="LoadLink-Owner-Protection-Control-Centre-Patch.zip"
+          test -f "$PATCH" || { echo "Upload $PATCH to the repository root beside package.json first."; exit 1; }
+          TMP="$(mktemp -d)"
+          unzip -q "$PATCH" -d "$TMP"
+          cp -R "$TMP"/. ./
+          rm -rf "$TMP" "$PATCH"
+
+      - name: Commit protected-owner update
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Protect LoadLink owner accounts from moderation lockout"
+            git push origin main
+          fi
