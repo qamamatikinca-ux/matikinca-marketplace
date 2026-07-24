@@ -22,6 +22,9 @@ type ListingRow = {
   sponsored?: boolean | null;
   package_type?: string | null;
   created_at?: string | null;
+  boost_expires_at?: string | null;
+  display_tier?: number | null;
+  listing_kind?: string | null;
 };
 
 type FeaturedListing = {
@@ -193,7 +196,13 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
   const featuredListings = useMemo<FeaturedListing[]>(() => {
     if (!liveListings.length) return fallbackFeatured;
 
-    const ordered = [...liveListings].sort((a, b) => Number(Boolean(b.sponsored)) - Number(Boolean(a.sponsored)));
+    const ordered = [...liveListings].sort((a, b) => {
+      const score = (item: ListingRow) => {
+        const activeBoost = Boolean(item.boost_expires_at && new Date(item.boost_expires_at) > new Date());
+        return Number(item.display_tier || 0) * 10 + (activeBoost ? 8 : 0) + (item.sponsored ? 4 : 0) + (item.package_type === "dealer" ? 3 : item.package_type === "pro" ? 2 : 0);
+      };
+      return score(b) - score(a);
+    });
     return ordered.slice(0, 6).map((item) => {
       const portal = portalForListing(item);
       return {
@@ -205,7 +214,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
         image: item.photos?.[0] || "/images/jobs/job-card-1.jpg",
         href: `/jobs?portal=${portal}#job-${item.id}`,
         verified: false,
-        premium: Boolean(item.sponsored || item.package_type === "pro"),
+        premium: Boolean(item.sponsored || item.package_type === "pro" || item.package_type === "dealer" || (item.boost_expires_at && new Date(item.boost_expires_at) > new Date())),
       };
     });
   }, [liveListings]);

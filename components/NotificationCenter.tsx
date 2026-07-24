@@ -128,7 +128,7 @@ export default function NotificationCenter() {
   return (
     <>
       {open ? (
-        <section className="fixed bottom-[9.5rem] right-4 z-[90] w-[calc(100vw-2rem)] max-w-sm overflow-hidden rounded-[24px] border border-[#f6b800]/50 bg-[#090909] text-white shadow-[0_24px_70px_rgba(0,0,0,.45)]">
+        <section className="fixed bottom-20 left-4 z-[90] w-[calc(100vw-2rem)] max-w-sm overflow-hidden rounded-[24px] border border-[#f6b800]/50 bg-[#090909] text-white shadow-[0_24px_70px_rgba(0,0,0,.45)]">
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f6b800]">LoadLink updates</p>
@@ -183,7 +183,7 @@ export default function NotificationCenter() {
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-label={unread ? `Open notifications, ${unread} unread` : "Open notifications"}
-        className="fixed bottom-[13.5rem] right-5 z-[89] flex h-12 w-12 items-center justify-center rounded-full border border-[#f6b800] bg-black/95 text-[#f6b800] shadow-[0_12px_35px_rgba(0,0,0,.35)] backdrop-blur transition active:scale-95"
+        className="fixed bottom-5 left-4 z-[89] flex h-10 w-10 items-center justify-center rounded-full border border-[#f6b800]/70 bg-black/85 text-[#f6b800] shadow-[0_8px_24px_rgba(0,0,0,.24)] backdrop-blur transition hover:bg-black active:scale-95"
       >
         <BellIcon />
         {unread > 0 ? (

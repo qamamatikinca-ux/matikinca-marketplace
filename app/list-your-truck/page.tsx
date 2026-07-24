@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import AuthStatusButton from "@/components/AuthStatusButton";
+import BusinessPlans from "@/components/BusinessPlans";
+import BuyATruckShowcase from "@/components/BuyATruckShowcase";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
-import VehicleListingAccess from "@/components/VehicleListingAccess";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { getAccountOwnerKey, getOwnedJobKeys, setOwnedJobKeys } from "@/lib/chatKeys";
@@ -121,7 +122,6 @@ export default function ListYourTruckPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
-  const [listingAccessGranted, setListingAccessGranted] = useState(false);
   const [sellerType, setSellerType] = useState<SellerType>("private");
   const [year, setYear] = useState(2026);
   const [brand, setBrand] = useState("");
@@ -146,7 +146,7 @@ export default function ListYourTruckPage() {
   const [contactNumber, setContactNumber] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [description, setDescription] = useState("");
-  const [packageType, setPackageType] = useState<"manual" | "pro" | "dealer">("manual");
+  const [packageType, setPackageType] = useState<"standard" | "pro" | "dealer">("standard");
   const [vehiclePhotos, setVehiclePhotos] = useState<File[]>([]);
   const [vehiclePreviews, setVehiclePreviews] = useState<string[]>([]);
   const [documents, setDocuments] = useState<VerificationFiles>(emptyVerificationFiles);
@@ -155,11 +155,6 @@ export default function ListYourTruckPage() {
   const [dealershipName, setDealershipName] = useState("");
   const [companyRegistrationNumber, setCompanyRegistrationNumber] = useState("");
   const [taxNumber, setTaxNumber] = useState("");
-
-  const grantListingAccess = useCallback((plan: "manual" | "pro" | "dealer") => {
-    setPackageType(plan);
-    setListingAccessGranted(true);
-  }, []);
 
   const availableModels = useMemo(() => getTruckModels(brand, year), [brand, year]);
   const selectedModel = useMemo(() => getTruckModel(brand, modelName, year), [brand, modelName, year]);
@@ -254,7 +249,7 @@ export default function ListYourTruckPage() {
   }
 
   async function handleVehiclePhotos(event: ChangeEvent<HTMLInputElement>) {
-    const selected = Array.from(event.target.files || []).slice(0, packageType === "manual" ? 5 : 15);
+    const selected = Array.from(event.target.files || []).slice(0, packageType === "pro" ? 15 : 8);
     setVehiclePhotos(selected);
     const previews = await Promise.all(selected.map((file) => new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -357,12 +352,6 @@ export default function ListYourTruckPage() {
       const businessAddressPath = sellerType === "dealership" && documents.businessAddress ? await uploadVerificationDocument(documents.businessAddress, user.id, folder, "Business address proof") : null;
       const representativeAuthorityPath = sellerType === "dealership" && documents.representativeAuthority ? await uploadVerificationDocument(documents.representativeAuthority, user.id, folder, "Representative authority") : null;
 
-      let dealershipId: string | null = null;
-      if (packageType === "dealer") {
-        const dealerProfile = await supabase.from("dealership_profiles").select("id").eq("owner_user_id", user.id).maybeSingle();
-        if (!dealerProfile.error) dealershipId = dealerProfile.data?.id || null;
-      }
-
       const storedDescription = [
         "Listing type: Truck",
         `Seller type: ${sellerType === "dealership" ? "Dealership" : "Private seller"}`,
@@ -390,19 +379,15 @@ export default function ListYourTruckPage() {
         photos: photoUrls,
         sponsored: packageType === "pro" || packageType === "dealer",
         package_type: packageType,
+        listing_kind: "truck_sale",
+        display_tier: packageType === "dealer" ? 4 : packageType === "pro" ? 3 : 1,
         owner_key: ownerKey,
         user_id: user.id,
-        listing_kind: "vehicle",
-        dealership_id: dealershipId,
-        stock_status: "available",
       }).select("id").single();
 
       if (listingResult.error || !listingResult.data?.id) throw listingResult.error || new Error("The truck listing could not be created.");
       const listingId = listingResult.data.id;
       createdListingId = listingId;
-
-      const accessResult = await supabase.rpc("loadlink_attach_vehicle_access", { p_listing_id: listingId });
-      if (accessResult.error) throw accessResult.error;
 
       const detailsResult = await supabase.from("truck_listing_details").insert({
         listing_id: listingId,
@@ -482,24 +467,6 @@ export default function ListYourTruckPage() {
     return <main className="min-h-screen bg-black text-white"><LoadLinkLoading /></main>;
   }
 
-  if (!listingAccessGranted) {
-    return (
-      <main className={`min-h-screen transition-colors duration-500 ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
-        <Header darkMode={darkMode} sellerType={sellerType} onToggleSellerType={() => setSellerType((current) => current === "private" ? "dealership" : "private")} />
-        <section className="relative min-h-[260px] overflow-hidden border-b border-[#f6b800]/35">
-          <img src="/images/jobs/jobs-hero-fleet.jpg" alt="Commercial trucks ready to be listed on LoadLink" className="loadlink-hero-fade absolute inset-0 h-full w-full object-cover object-center grayscale opacity-75" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/70 to-black/40" />
-          <div className="relative mx-auto flex min-h-[260px] max-w-5xl flex-col justify-end px-5 pb-8 pt-20 text-white">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#f6b800]">Vehicle marketplace</p>
-            <h1 className="mt-3 text-5xl font-black tracking-[-0.06em] md:text-7xl">List your truck</h1>
-            <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-white/70">Choose a paid listing option before uploading vehicle stock.</p>
-          </div>
-        </section>
-        <VehicleListingAccess darkMode={darkMode} onGranted={grantListingAccess} />
-      </main>
-    );
-  }
-
   const surface = darkMode ? "border-white/10 bg-[#101010] text-white" : "border-black/10 bg-white text-black";
   const muted = darkMode ? "text-white/55" : "text-black/55";
   const inputClass = `h-14 w-full rounded-xl border px-4 font-semibold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-[#171717] text-white placeholder:text-white/30" : "border-black/10 bg-[#faf8f2] text-black placeholder:text-black/35"}`;
@@ -512,15 +479,17 @@ export default function ListYourTruckPage() {
       <Header darkMode={darkMode} sellerType={sellerType} onToggleSellerType={() => { setSellerType((current) => current === "private" ? "dealership" : "private"); setMessage(""); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
 
       <section className="relative min-h-[300px] overflow-hidden border-b border-[#f6b800]/35 md:min-h-[360px]">
-        <img src="/images/jobs/jobs-hero-fleet.jpg" alt="Commercial trucks ready to be listed on LoadLink" className="loadlink-hero-fade absolute inset-0 h-full w-full scale-[1.03] object-cover object-center grayscale opacity-80" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/65 to-black/35" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black" />
+        <img src="/images/jobs/jobs-hero-fleet.jpg" alt="Commercial trucks ready to be listed on LoadLink" className="absolute inset-0 h-full w-full scale-[1.03] object-cover object-center grayscale opacity-80 [mask-image:linear-gradient(to_bottom,black_0%,black_64%,transparent_100%)]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/65 to-black/35 [mask-image:linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-transparent" />
         <div className="relative mx-auto flex min-h-[300px] max-w-5xl flex-col justify-end px-5 pb-9 pt-20 text-white md:min-h-[360px]">
           <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#f6b800]">{sellerType === "dealership" ? "Dealership stock application" : "Private truck listing"}</p>
           <h1 className="mt-3 max-w-3xl text-5xl font-black leading-[0.94] tracking-[-0.06em] md:text-7xl">{sellerType === "dealership" ? "List dealership stock" : "List your truck"}</h1>
           <p className="mt-4 max-w-xl text-base font-semibold leading-7 text-white/75">{sellerType === "dealership" ? "Add the truck details and submit the business documents required for dealership approval." : "Choose the year, make and model, then confirm the truck details."}</p>
         </div>
       </section>
+
+      <BusinessPlans darkMode={darkMode} />
 
       <form onSubmit={submitTruck} className="mx-auto grid max-w-5xl gap-6 px-4 py-7 md:px-6 md:py-12">
         <section className={`overflow-hidden rounded-2xl border ${surface}`}>
@@ -674,7 +643,7 @@ export default function ListYourTruckPage() {
                 <Field label={sellerType === "dealership" ? "Dealership contact name" : "Owner / company name"}><input value={postedBy} onChange={(event) => setPostedBy(event.target.value)} className={inputClass} required /></Field>
                 <Field label="Contact number"><input value={contactNumber} onChange={(event) => setContactNumber(event.target.value)} placeholder="0821234567" className={inputClass} required /></Field>
                 <Field label="WhatsApp number — optional"><input value={whatsappNumber} onChange={(event) => setWhatsappNumber(event.target.value)} placeholder="0821234567" className={inputClass} /></Field>
-                <Field label="Listing access"><div className={`${inputClass} flex items-center`}>{packageType === "dealer" ? "Dealer bundle" : packageType === "pro" ? "Pro subscription" : "Manual listing — R15 per day"}</div></Field>
+                <Field label="Listing package"><select value={packageType} onChange={(event) => setPackageType(event.target.value as "standard" | "pro" | "dealer")} className={inputClass}><option value="standard">Standard listing</option><option value="pro">Pro listing — analytics enabled</option><option value="dealer">Dealer package — showroom priority</option></select></Field>
               </div>
               <div className="grid gap-3 px-5 pb-5 md:px-7 md:pb-7">
                 <CheckRow checked={confirmOwnership} onChange={setConfirmOwnership} label="I own this vehicle or have written authority from the owner to list it." />
@@ -689,6 +658,8 @@ export default function ListYourTruckPage() {
           </>
         ) : null}
       </form>
+
+      <BuyATruckShowcase darkMode={darkMode} />
     </main>
   );
 }

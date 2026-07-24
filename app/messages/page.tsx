@@ -328,8 +328,6 @@ export default function MessagesPage() {
         }
 
         await syncAccountState().catch(() => undefined);
-        const chatKeys = Array.from(new Set([...getBuyerKeys(), ...getOwnerKeys()]));
-        await Promise.all(chatKeys.map((key) => supabase.rpc("loadlink_register_chat_access_key", { p_access_key: key })));
         const params = new URLSearchParams(window.location.search);
         const listingId = params.get("listing");
         const metadata = user.user_metadata || {};
@@ -403,6 +401,7 @@ export default function MessagesPage() {
     }
 
     let active = true;
+    setMessages([]);
     loadMessages(selectedConversation, true);
     const messageTimer = setInterval(() => {
       if (active) loadMessages(selectedConversation).catch(() => undefined);
@@ -429,7 +428,7 @@ export default function MessagesPage() {
         })
         .then(() => undefined);
     };
-  }, [loadMessages, selectedConversation]);
+  }, [loadMessages, selectedId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({
@@ -827,7 +826,7 @@ export default function MessagesPage() {
               ) : null}
 
               <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8">
-                {messagesLoading ? (
+                {messagesLoading && messages.length === 0 ? (
                   <div className="flex h-full items-center justify-center">
                     <div className="h-9 w-9 animate-spin rounded-full border-2 border-black/10 border-t-[#f6b800]" />
                   </div>

@@ -107,7 +107,8 @@ export default function ListJobPage() {
   const [contactNumber, setContactNumber] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [description, setDescription] = useState("");
-  const packageType = "standard" as const;
+  const [packageType] = useState<"standard">("standard");
+  const [boostJob, setBoostJob] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [previewPhotos, setPreviewPhotos] = useState<string[]>([]);
   const [posterPhoto, setPosterPhoto] = useState<File | null>(null);
@@ -122,11 +123,7 @@ export default function ListJobPage() {
   useEffect(() => {
     setDarkMode(localStorage.getItem("loadlink-theme") === "dark");
     const mode = new URLSearchParams(window.location.search).get("mode");
-    if (mode === "asset") {
-      router.replace("/list-your-truck");
-      return;
-    }
-    if (mode === "contract") setListingMode(mode);
+    if (mode === "asset" || mode === "contract") setListingMode(mode);
 
     async function requireAccount() {
       if (!isSupabaseConfigured) {
@@ -307,6 +304,16 @@ export default function ListJobPage() {
       }
       if (result.error) throw result.error;
       if (result.data?.id) {
+        if (boostJob) {
+          const boostResult = await supabase.from("job_boosts").insert({
+            listing_id: result.data.id,
+            user_id: user.id,
+            amount_cents: 1400,
+            status: "pending_payment",
+            requested_at: new Date().toISOString(),
+          });
+          if (boostResult.error && !/relation|schema cache|does not exist/i.test(boostResult.error.message)) throw boostResult.error;
+        }
         saveOwnedJob(result.data.id, ownerKey);
         window.dispatchEvent(new Event("loadlink-account-state-changed"));
         await recordUserActivity("listing_posted", {
@@ -444,9 +451,14 @@ export default function ListJobPage() {
               </div>
             ) : null}
 
-            <div className={`mt-5 border border-[#f6b800]/45 p-4 ${darkMode ? "bg-[#f6b800]/10" : "bg-[#fff7dc]"}`}>
-              <p className="text-sm font-black">Free job posting</p>
-              <p className={`mt-1 text-xs font-semibold leading-5 ${muted}`}>Job and contract opportunities are free to publish after sign-in. This form allows up to 5 clear photos. Vehicle sales and vehicle stock must use the paid List Your Truck flow.</p>
+            <div className={`mt-5 overflow-hidden rounded-2xl border ${boostJob ? "border-[#f6b800] bg-[#fff7d7] text-black" : surface}`}>
+              <label className="flex cursor-pointer items-start gap-4 p-5">
+                <input type="checkbox" checked={boostJob} onChange={(event) => setBoostJob(event.target.checked)} className="mt-1 h-5 w-5 accent-[#f6b800]" />
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center justify-between gap-2"><strong className="text-base font-black">Boost this job on the homepage</strong><strong className="rounded-full bg-[#f6b800] px-3 py-1 text-xs font-black text-black">R14 once off</strong></span>
+                  <span className="mt-2 block text-xs font-semibold leading-5 opacity-60">Your job is posted free. Select this optional boost to request seven days of priority homepage placement. The control centre activates it after payment is confirmed.</span>
+                </span>
+              </label>
             </div>
           </FormCard>
 
