@@ -1,0 +1,104 @@
+name: Install LoadLink precision UI and dealer profile fix - AutoFind
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Locate and safely apply precision patch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          import sys
+          import zipfile
+
+          root = Path.cwd().resolve()
+          ignored = {'.git', 'node_modules', '.next', '.vercel'}
+          required = {
+              'components/BuyATruckShowcase.tsx',
+              'components/NotificationCenter.tsx',
+              'app/list-your-truck/page.tsx',
+              'app/dealership/[slug]/page.tsx',
+          }
+
+          candidates = []
+          for path in root.rglob('*.zip'):
+              try:
+                  relative_parts = path.relative_to(root).parts
+              except ValueError:
+                  continue
+              if any(part in ignored for part in relative_parts):
+                  continue
+              candidates.append(path)
+
+          chosen = None
+          for path in sorted(candidates, key=lambda p: (len(p.parts), p.name.lower())):
+              try:
+                  with zipfile.ZipFile(path) as archive:
+                      names = {name.replace('\\', '/').lstrip('./') for name in archive.namelist()}
+                      if required.issubset(names):
+                          chosen = path
+                          break
+              except zipfile.BadZipFile:
+                  continue
+
+          if chosen is None:
+              print('ERROR: The LoadLink precision patch ZIP was not found.')
+              print('Upload LoadLink-Precision-UI-Dealer-Fix.zip anywhere inside this repository, preferably beside package.json.')
+              print('ZIP files found:')
+              for path in candidates:
+                  print(f' - {path.relative_to(root)}')
+              sys.exit(1)
+
+          print(f'Using patch: {chosen.relative_to(root)}')
+
+          with zipfile.ZipFile(chosen) as archive:
+              for item in archive.infolist():
+                  normalized = item.filename.replace('\\', '/')
+                  parts = Path(normalized).parts
+                  if normalized.startswith('/') or '..' in parts:
+                      raise SystemExit(f'Unsafe ZIP path blocked: {normalized}')
+              archive.extractall(root)
+
+          chosen.unlink()
+          print('Precision patch applied successfully.')
+          PY
+
+      - name: Confirm key files were installed
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f components/BuyATruckShowcase.tsx
+          test -f components/NotificationCenter.tsx
+          test -f app/list-your-truck/page.tsx
+          test -f 'app/dealership/[slug]/page.tsx'
+          echo "Required LoadLink files are present."
+
+      - name: Commit installed files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No file changes were needed."
+          else
+            git commit -m "Apply LoadLink precision UI and dealer profile fix"
+            git push origin main
+          fi
