@@ -203,3 +203,16 @@ header img.loadlink-logo-img,
 @media (max-width: 640px) {
   .loadlink-hero-fade { object-position: 58% center; }
 }
+
+/* LoadLink Smart Platform Core: resilient connectivity notice */
+.loadlink-network-banner {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 9999;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(200, 166, 75, .45);
+  background: #111;
+  color: #fff;
+  text-align: center;
+  font-size: 13px;
+}

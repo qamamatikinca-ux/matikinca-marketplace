@@ -1,3 +1,4 @@
+import NetworkRecovery from "@/components/platform/NetworkRecovery";
 import type { Metadata } from "next";
 import "./globals.css";
 import GlobalLoading from "@/components/GlobalLoading";
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AuthBootstrap />
         <NotificationCenter />
         <ChatLauncher />
+        <NetworkRecovery />
         {children}
       </body>
     </html>
