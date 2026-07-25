@@ -1,0 +1,45 @@
+name: Install LoadLink Phase 1 Split Update
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check required ZIP files
+        shell: bash
+        run: |
+          set -e
+          test -f "LoadLink-Phase1-FULL-Part-1.zip" || { echo "Missing Part 1 ZIP"; exit 1; }
+          test -f "LoadLink-Phase1-FULL-Part-2.zip" || { echo "Missing Part 2 ZIP"; exit 1; }
+
+      - name: Extract both parts into the repository
+        shell: bash
+        run: |
+          set -e
+          unzip -o "LoadLink-Phase1-FULL-Part-1.zip" -d .
+          unzip -o "LoadLink-Phase1-FULL-Part-2.zip" -d .
+          rm -f "LoadLink-Phase1-FULL-Part-1.zip" "LoadLink-Phase1-FULL-Part-2.zip"
+
+      - name: Commit installed files
+        shell: bash
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No file changes to commit."
+          else
+            git commit -m "Install LoadLink Phase 1 split update"
+            git push
+          fi
