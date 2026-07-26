@@ -1,0 +1,45 @@
+name: Install LoadLink Phase 1 Remaining 50 — Website
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "LoadLink-Phase1-Remaining-50-Website-Patch.zip"
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply website patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP="LoadLink-Phase1-Remaining-50-Website-Patch.zip"
+          if [ ! -f "$ZIP" ]; then
+            echo "$ZIP is not present. Nothing to install."
+            exit 0
+          fi
+          unzip -oq "$ZIP" -d .
+          rm -f "$ZIP"
+
+      - name: Commit installed files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "LoadLink Phase 1 Installer"
+          git config user.email "loadlinksouthafrica@gmail.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No file changes were produced."
+            exit 0
+          fi
+          git commit -m "Install remaining Phase 1 website update"
+          git push
