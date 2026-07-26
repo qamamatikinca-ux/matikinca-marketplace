@@ -11,7 +11,7 @@ import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth"
 import { getOwnerKeys } from "@/lib/chatKeys";
 import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
-import { getVehicleListingAccess, requestListingRenewal, type LoadLinkPlan } from "@/lib/packageAccess";
+import { requestListingRenewal } from "@/lib/packageAccess";
 
 type ListingStatus = "active" | "filled" | "closed" | "draft";
 type ModerationStatus = "pending" | "approved" | "rejected";
@@ -52,9 +52,6 @@ type AnalyticsPayload = {
   daily_views?: Array<{ label: string; count: number }>;
   devices?: Array<{ label: string; count: number }>;
   sources?: Array<{ label: string; count: number }>;
-  saves?: number;
-  messages?: number;
-  shares?: number;
 };
 
 export default function MyPostsPage() {
@@ -71,7 +68,6 @@ export default function MyPostsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsPayload | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [lockedAnalytics, setLockedAnalytics] = useState<MyListing | null>(null);
-  const [analyticsPlan, setAnalyticsPlan] = useState<LoadLinkPlan | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -101,8 +97,6 @@ export default function MyPostsPage() {
     }
 
     setAuthReady(true);
-    const access = await getVehicleListingAccess().catch(() => null);
-    setAnalyticsPlan(access?.plan === "pro" || access?.plan === "dealer" ? access.plan : null);
     await loadListings(user.id);
   }
 
@@ -209,24 +203,18 @@ export default function MyPostsPage() {
   }
 
   async function openAnalytics(listing: MyListing) {
-    if (!analyticsPlan) {
+    if (!["pro", "dealer"].includes(listing.package_type || "manual")) {
       setLockedAnalytics(listing);
       return;
     }
     setAnalyticsListing(listing);
     setAnalytics(null);
     setAnalyticsLoading(true);
-    let result = await supabase.rpc("loadlink_get_listing_analytics", {
-      p_listing_id: listing.id,
+    const result = await supabase.rpc("get_pro_job_analytics", {
+      p_job_id: listing.id,
+      p_owner_key: listing.owner_key || "",
     });
-    if (result.error && /function|schema cache|does not exist/i.test(result.error.message)) {
-      result = await supabase.rpc("get_pro_job_analytics", {
-        p_job_id: listing.id,
-        p_owner_key: listing.owner_key || "",
-      });
-    }
     if (!result.error) setAnalytics((result.data || {}) as AnalyticsPayload);
-    else setMessage(result.error.message);
     setAnalyticsLoading(false);
   }
 
@@ -426,13 +414,13 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
 }
 
 function LockedAnalyticsModal({ onClose }: { onClose: () => void }) {
-  return <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"><section className="w-full max-w-md rounded-[26px] border border-[#f6b800]/60 bg-[#080808] p-6 text-white"><p className="text-xs font-black uppercase tracking-[0.18em] text-[#f6b800]">Pro-only analytics</p><h2 className="mt-3 text-3xl font-black tracking-[-0.04em]">Analytics requires an active Pro or Dealer package.</h2><p className="mt-4 text-sm leading-7 text-white/60">Pro and Dealer accounts can view total and unique views, seven-day performance, traffic sources and devices for their listings.</p><div className="mt-6 grid gap-3"><Link href="/packages" className="flex h-13 items-center justify-center rounded-xl bg-[#f6b800] font-black text-black">Upgrade to Pro</Link><button type="button" onClick={onClose} className="h-13 rounded-xl border border-white/15 font-black">Not now</button></div></section></div>;
+  return <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"><section className="w-full max-w-md rounded-[26px] border border-[#f6b800]/60 bg-[#080808] p-6 text-white"><p className="text-xs font-black uppercase tracking-[0.18em] text-[#f6b800]">Pro-only analytics</p><h2 className="mt-3 text-3xl font-black tracking-[-0.04em]">Analytics is locked on Manual listings and free job posts.</h2><p className="mt-4 text-sm leading-7 text-white/60">Pro posts can view total and unique views, seven-day performance, traffic sources, devices and recent signed-in viewers.</p><div className="mt-6 grid gap-3"><Link href="/jobs/list?upgrade=pro" className="flex h-13 items-center justify-center rounded-xl bg-[#f6b800] font-black text-black">Upgrade to Pro</Link><button type="button" onClick={onClose} className="h-13 rounded-xl border border-white/15 font-black">Not now</button></div></section></div>;
 }
 
 function AnalyticsModal({ listing, data, loading, onClose }: { listing: MyListing; data: AnalyticsPayload | null; loading: boolean; onClose: () => void }) {
   const daily = data?.daily_views || [];
   const max = Math.max(1, ...daily.map((item) => Number(item.count || 0)));
-  return <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/90 p-4 backdrop-blur-sm"><section className="mx-auto mt-5 w-full max-w-3xl overflow-hidden rounded-[26px] border border-[#f6b800]/60 bg-[#080808] text-white"><div className="flex items-start justify-between border-b border-white/10 p-5"><div><p className="text-xs font-black uppercase tracking-[0.16em] text-[#f6b800]">Pro analytics</p><h2 className="mt-2 text-2xl font-black">{listing.title}</h2></div><button type="button" onClick={onClose} className="h-10 w-10 rounded-full border border-white/15 text-xl">×</button></div>{loading ? <div className="h-72 loadlink-skeleton bg-white/5" /> : <><div className="grid grid-cols-3 border-b border-white/10"><Metric label="Total views" value={String(data?.total_views ?? listing.view_count ?? 0)} /><Metric label="Unique" value={String(data?.unique_viewers ?? 0)} /><Metric label="Last viewed" value={data?.last_viewed_at ? new Date(data.last_viewed_at).toLocaleDateString("en-ZA") : "Not yet"} /></div><div className="grid grid-cols-3 border-b border-white/10"><Metric label="Saves" value={String(data?.saves ?? 0)} /><Metric label="Enquiries" value={String(data?.messages ?? 0)} /><Metric label="Shares" value={String(data?.shares ?? 0)} /></div><div className="grid gap-6 p-5 md:grid-cols-2"><div><h3 className="text-xs font-black uppercase tracking-[0.16em] text-[#f6b800]">Last 7 days</h3>{daily.length ? <div className="mt-4 flex h-40 items-end gap-2 border-b border-white/10 px-2">{daily.map((item) => <div key={item.label} className="flex h-full flex-1 flex-col items-center justify-end gap-2"><span className="text-[10px] font-black">{item.count}</span><div className="w-full min-w-3 rounded-t bg-[#f6b800]" style={{ height: `${Math.max(6, Number(item.count) / max * 110)}px` }} /><span className="pb-2 text-[9px] font-bold uppercase text-white/45">{item.label}</span></div>)}</div> : <p className="mt-4 text-sm text-white/50">No daily view events yet.</p>}</div><Breakdown title="Devices" rows={data?.devices || []} /><Breakdown title="Traffic sources" rows={data?.sources || []} /></div></>}</section></div>;
+  return <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/90 p-4 backdrop-blur-sm"><section className="mx-auto mt-5 w-full max-w-3xl overflow-hidden rounded-[26px] border border-[#f6b800]/60 bg-[#080808] text-white"><div className="flex items-start justify-between border-b border-white/10 p-5"><div><p className="text-xs font-black uppercase tracking-[0.16em] text-[#f6b800]">Pro analytics</p><h2 className="mt-2 text-2xl font-black">{listing.title}</h2></div><button type="button" onClick={onClose} className="h-10 w-10 rounded-full border border-white/15 text-xl">×</button></div>{loading ? <div className="h-72 loadlink-skeleton bg-white/5" /> : <><div className="grid grid-cols-3 border-b border-white/10"><Metric label="Total views" value={String(data?.total_views ?? listing.view_count ?? 0)} /><Metric label="Unique" value={String(data?.unique_viewers ?? 0)} /><Metric label="Last viewed" value={data?.last_viewed_at ? new Date(data.last_viewed_at).toLocaleDateString("en-ZA") : "Not yet"} /></div><div className="grid gap-6 p-5 md:grid-cols-2"><div><h3 className="text-xs font-black uppercase tracking-[0.16em] text-[#f6b800]">Last 7 days</h3>{daily.length ? <div className="mt-4 flex h-40 items-end gap-2 border-b border-white/10 px-2">{daily.map((item) => <div key={item.label} className="flex h-full flex-1 flex-col items-center justify-end gap-2"><span className="text-[10px] font-black">{item.count}</span><div className="w-full min-w-3 rounded-t bg-[#f6b800]" style={{ height: `${Math.max(6, Number(item.count) / max * 110)}px` }} /><span className="pb-2 text-[9px] font-bold uppercase text-white/45">{item.label}</span></div>)}</div> : <p className="mt-4 text-sm text-white/50">No daily view events yet.</p>}</div><Breakdown title="Devices" rows={data?.devices || []} /><Breakdown title="Traffic sources" rows={data?.sources || []} /></div></>}</section></div>;
 }
 
 function Breakdown({ title, rows }: { title: string; rows: Array<{ label: string; count: number }> }) {

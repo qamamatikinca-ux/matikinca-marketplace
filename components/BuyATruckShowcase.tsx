@@ -20,11 +20,7 @@ type TruckListing = {
   created_at?: string | null;
 };
 
-const fallback: TruckListing[] = [
-  { id: "demo-1", title: "2023 Mercedes-Benz Actros 2645", city: "Centurion", rate: "R1 695 000", posted_by: "LoadLink Dealer Demo", photos: ["/images/truck-1.jpg"], package_type: "dealer" },
-  { id: "demo-2", title: "2022 Volvo FH 440", city: "Gauteng", rate: "Request a quote", posted_by: "Verified dealership", photos: ["/images/truck-2.jpg"], package_type: "pro" },
-  { id: "demo-3", title: "2021 Scania R-series", city: "Johannesburg", rate: "R1 250 000", posted_by: "Private seller", photos: ["/images/truck-3.jpg"], package_type: "standard" },
-];
+const fallback: TruckListing[] = [];
 
 function rank(item: TruckListing) {
   if (item.package_type === "dealer") return 4;
@@ -35,6 +31,7 @@ function rank(item: TruckListing) {
 
 export default function BuyATruckShowcase({ darkMode = false }: { darkMode?: boolean }) {
   const [rows, setRows] = useState<TruckListing[]>(fallback);
+  const [loaded, setLoaded] = useState(!isSupabaseConfigured);
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -64,10 +61,11 @@ export default function BuyATruckShowcase({ darkMode = false }: { darkMode?: boo
         }
       }
 
-      if (!active || listings.length === 0) return;
+      if (!active) return;
       setRows(listings);
+      setLoaded(true);
     }
-    void load();
+    void load().finally(() => { if (active) setLoaded(true); });
     return () => { active = false; };
   }, []);
 
@@ -85,6 +83,8 @@ export default function BuyATruckShowcase({ darkMode = false }: { darkMode?: boo
           <Link href="/jobs?portal=asset&search=truck" className="inline-flex h-11 items-center justify-center rounded-xl border border-[#f6b800] px-5 text-xs font-black uppercase tracking-[0.12em] text-[#9d7300]">View all trucks</Link>
         </div>
 
+        {!loaded ? <div className="mt-7 rounded-2xl border border-[#f6b800]/25 p-6 text-sm opacity-60">Loading live vehicles…</div> : null}
+        {loaded && ordered.length === 0 ? <div className="mt-7 rounded-2xl border border-[#f6b800]/25 p-6"><p className="font-black">No approved trucks are available yet</p><p className="mt-2 text-sm opacity-60">Approved vehicle listings will appear here as soon as they are published.</p></div> : null}
         <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {ordered.map((item) => {
             const tier = rank(item);

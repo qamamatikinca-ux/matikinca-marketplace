@@ -123,11 +123,7 @@ export default function ListJobPage() {
   useEffect(() => {
     setDarkMode(localStorage.getItem("loadlink-theme") === "dark");
     const mode = new URLSearchParams(window.location.search).get("mode");
-    if (mode === "asset") {
-      router.replace("/list-your-truck");
-      return;
-    }
-    if (mode === "contract") setListingMode(mode);
+    if (mode === "asset" || mode === "contract") setListingMode(mode);
 
     async function requireAccount() {
       if (!isSupabaseConfigured) {
@@ -285,7 +281,6 @@ export default function ListJobPage() {
         photos: uploadedUrls,
         sponsored: false,
         package_type: packageType,
-        listing_kind: listingMode === "asset" ? "vehicle" : "job",
         owner_key: ownerKey,
         user_id: user.id,
       };

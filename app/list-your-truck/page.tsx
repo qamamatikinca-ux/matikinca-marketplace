@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import AuthStatusButton from "@/components/AuthStatusButton";
@@ -10,13 +10,11 @@ import BuyATruckShowcase from "@/components/BuyATruckShowcase";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
-import VehicleListingAccess from "@/components/VehicleListingAccess";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { getAccountOwnerKey, getOwnedJobKeys, setOwnedJobKeys } from "@/lib/chatKeys";
 import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
-import type { LoadLinkPlan } from "@/lib/packageAccess";
 import {
   getTruckModel,
   getTruckModels,
@@ -149,7 +147,6 @@ export default function ListYourTruckPage() {
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [description, setDescription] = useState("");
   const [packageType, setPackageType] = useState<"standard" | "pro" | "dealer">("standard");
-  const [accessPlan, setAccessPlan] = useState<LoadLinkPlan | null>(null);
   const [vehiclePhotos, setVehiclePhotos] = useState<File[]>([]);
   const [vehiclePreviews, setVehiclePreviews] = useState<string[]>([]);
   const [documents, setDocuments] = useState<VerificationFiles>(emptyVerificationFiles);
@@ -251,12 +248,8 @@ export default function ListYourTruckPage() {
     requestAnimationFrame(() => document.getElementById("vehicle-information")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
-  const photoLimit = accessPlan === "pro" || accessPlan === "dealer" ? 15 : 5;
-
   async function handleVehiclePhotos(event: ChangeEvent<HTMLInputElement>) {
-    const allSelected = Array.from(event.target.files || []);
-    const selected = allSelected.slice(0, photoLimit);
-    if (allSelected.length > photoLimit) setMessage(`Your current package allows up to ${photoLimit} photos. Extra photos were ignored.`);
+    const selected = Array.from(event.target.files || []).slice(0, packageType === "pro" ? 15 : 8);
     setVehiclePhotos(selected);
     const previews = await Promise.all(selected.map((file) => new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -296,8 +289,6 @@ export default function ListYourTruckPage() {
   }
 
   function validateBeforeSubmit() {
-    if (!accessPlan) return "Choose and activate a vehicle listing package before continuing.";
-    if (sellerType === "dealership" && accessPlan !== "dealer") return "An active Dealer package is required to submit dealership stock.";
     if (!modelConfirmed || !selectedModel) return "Confirm the exact truck model before continuing.";
     if (!transmissionCheck?.valid) return transmissionCheck?.message || "Choose a valid gearbox.";
     if (!title.trim() || !postedBy.trim() || !rate.trim() || !description.trim()) return "Complete all required vehicle and listing fields.";
@@ -388,7 +379,7 @@ export default function ListYourTruckPage() {
         photos: photoUrls,
         sponsored: packageType === "pro" || packageType === "dealer",
         package_type: packageType,
-        listing_kind: "vehicle",
+        listing_kind: "truck_sale",
         display_tier: packageType === "dealer" ? 4 : packageType === "pro" ? 3 : 1,
         owner_key: ownerKey,
         user_id: user.id,
@@ -474,21 +465,6 @@ export default function ListYourTruckPage() {
 
   if (!authReady) {
     return <main className="min-h-screen bg-black text-white"><LoadLinkLoading /></main>;
-  }
-
-  const grantAccess = useCallback((plan: LoadLinkPlan) => {
-    setAccessPlan(plan);
-    setPackageType(plan === "manual" ? "standard" : plan);
-    setMessage("");
-  }, []);
-
-  if (!accessPlan) {
-    return (
-      <main className={darkMode ? "min-h-screen bg-black text-white" : "min-h-screen bg-[#f4efe3] text-black"}>
-        <Header darkMode={darkMode} sellerType={sellerType} onToggleSellerType={() => setSellerType((current) => current === "private" ? "dealership" : "private")} />
-        <VehicleListingAccess darkMode={darkMode} onGranted={grantAccess} />
-      </main>
-    );
   }
 
   const surface = darkMode ? "border-white/10 bg-[#101010] text-white" : "border-black/10 bg-white text-black";
@@ -625,7 +601,7 @@ export default function ListYourTruckPage() {
               <div className="p-5 md:p-7">
                 <label className={`flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 text-center ${darkMode ? "border-white/15 bg-white/5" : "border-black/15 bg-[#faf8f2]"}`}>
                   <span className="text-lg font-black">Upload truck photos</span>
-                  <span className={`mt-2 text-sm ${muted}`}>Minimum 2. Front, rear, both sides, cab and licence plate are recommended. Your package allows up to {photoLimit} photos.</span>
+                  <span className={`mt-2 text-sm ${muted}`}>Minimum 2. Front, rear, both sides, cab and licence plate are recommended.</span>
                   <input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} className="hidden" />
                 </label>
                 {vehiclePreviews.length ? <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">{vehiclePreviews.map((src, index) => <img key={src + index} src={src} alt={`Truck preview ${index + 1}`} className="aspect-[4/3] w-full rounded-2xl border border-[#f6b800]/30 object-cover" />)}</div> : null}
@@ -667,7 +643,7 @@ export default function ListYourTruckPage() {
                 <Field label={sellerType === "dealership" ? "Dealership contact name" : "Owner / company name"}><input value={postedBy} onChange={(event) => setPostedBy(event.target.value)} className={inputClass} required /></Field>
                 <Field label="Contact number"><input value={contactNumber} onChange={(event) => setContactNumber(event.target.value)} placeholder="0821234567" className={inputClass} required /></Field>
                 <Field label="WhatsApp number — optional"><input value={whatsappNumber} onChange={(event) => setWhatsappNumber(event.target.value)} placeholder="0821234567" className={inputClass} /></Field>
-                <Field label="Listing package"><div className={`${inputClass} flex items-center`}>{accessPlan === "manual" ? "Manual listing — 5 photos" : accessPlan === "pro" ? "Pro — analytics and 15 photos" : "Dealer — dealership tools and 15 photos"}</div></Field>
+                <Field label="Listing package"><select value={packageType} onChange={(event) => setPackageType(event.target.value as "standard" | "pro" | "dealer")} className={inputClass}><option value="standard">Standard listing</option><option value="pro">Pro listing — analytics enabled</option><option value="dealer">Dealer package — showroom priority</option></select></Field>
               </div>
               <div className="grid gap-3 px-5 pb-5 md:px-7 md:pb-7">
                 <CheckRow checked={confirmOwnership} onChange={setConfirmOwnership} label="I own this vehicle or have written authority from the owner to list it." />

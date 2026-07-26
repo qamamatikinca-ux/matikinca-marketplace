@@ -38,15 +38,7 @@ export default function VerifyPage() {
       return;
     }
     const clean = phone.replace(/\s/g, "");
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setMessage("Sign in with your LoadLink account before verifying a phone number.");
-      setBusy(false);
-      return;
-    }
-    // Link the phone number to the current Google-authenticated account rather
-    // than creating a separate phone-only LoadLink identity.
-    const { error } = await supabase.auth.updateUser({ phone: clean });
+    const { error } = await supabase.auth.signInWithOtp({ phone: clean });
     setBusy(false);
     if (error) {
       setMessage(error.message);
@@ -59,7 +51,7 @@ export default function VerifyPage() {
   async function verifyOtp() {
     setBusy(true);
     setMessage("");
-    const { error } = await supabase.auth.verifyOtp({ phone: phone.replace(/\s/g, ""), token, type: "phone_change" });
+    const { error } = await supabase.auth.verifyOtp({ phone: phone.replace(/\s/g, ""), token, type: "sms" });
     setBusy(false);
     if (error) {
       setMessage(error.message);

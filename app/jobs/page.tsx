@@ -12,7 +12,6 @@ import AuthStatusButton from "@/components/AuthStatusButton";
 import RequireAuthLink from "@/components/RequireAuthLink";
 import { isAuthenticatedUser } from "@/lib/auth";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
-import { getVehicleListingAccess, type LoadLinkPlan } from "@/lib/packageAccess";
 
 type VehicleGroup = "Catering / Event" | "Trucks / Trailers" | "Farming / Mining";
 type QuickCategory = "truck" | "event-catering" | "logistics" | "mining-farming" | "";
@@ -233,24 +232,12 @@ function getLikedJobIds() {
   }
 }
 
-function recordListingEvent(jobId: string, eventType: "save" | "message" | "share") {
-  if (!isSupabaseConfigured || jobId.startsWith("demo-")) return;
-  void supabase.rpc("loadlink_record_listing_event", {
-    p_listing_id: jobId,
-    p_event_type: eventType,
-    p_source: getViewerSource(),
-    p_device: getViewerDeviceType(),
-    p_viewer_hash: getDeviceKey(),
-  });
-}
-
 async function shareListing(job: JobListing) {
   const url = `${window.location.origin}/jobs#job-${job.id}`;
   const data = { title: job.title, text: `${job.title} in ${job.city} on LoadLink`, url };
   try {
     if (navigator.share) await navigator.share(data);
     else { await navigator.clipboard.writeText(url); window.alert("Listing link copied."); }
-    recordListingEvent(job.id, "share");
   } catch { }
 }
 
@@ -364,7 +351,6 @@ export default function JobsPortalPage() {
   const [quickCategory, setQuickCategory] = useState<QuickCategory>("");
   const [portalFilter, setPortalFilter] = useState<PortalFilter>("");
   const [analyticsJob, setAnalyticsJob] = useState<JobListing | null>(null);
-  const [analyticsPlan, setAnalyticsPlan] = useState<LoadLinkPlan | null>(null);
   const [loadError, setLoadError] = useState("");
   const cityWrapperRef = useRef<HTMLLabelElement | null>(null);
 
@@ -425,15 +411,6 @@ export default function JobsPortalPage() {
           }
           await syncAccountState().catch(() => undefined);
           await fetchJobs();
-        })
-        .catch(() => undefined);
-    }
-    if (isSupabaseConfigured) {
-      supabase.auth.getUser()
-        .then(async ({ data }) => {
-          if (!isAuthenticatedUser(data.user)) return;
-          const access = await getVehicleListingAccess().catch(() => null);
-          setAnalyticsPlan(access?.plan === "pro" || access?.plan === "dealer" ? access.plan : null);
         })
         .catch(() => undefined);
     }
@@ -553,7 +530,6 @@ export default function JobsPortalPage() {
       if (nowLiked) next.add(job.id); else next.delete(job.id);
       return next;
     });
-    if (nowLiked) recordListingEvent(job.id, "save");
   }
 
   function searchJobs() {
@@ -743,7 +719,6 @@ export default function JobsPortalPage() {
                 job={job}
                 darkMode={darkMode}
                 isOwner={Boolean(ownedJobs[job.id])}
-                analyticsEnabled={Boolean(analyticsPlan)}
                 isLiked={likedJobIds.has(job.id)}
                 onToggleLiked={() => toggleLiked(job)}
                 onShare={() => shareListing(job)}
@@ -768,7 +743,7 @@ export default function JobsPortalPage() {
       <Footer darkMode={darkMode} />
 
       {galleryJob ? <PhotoGalleryModal job={galleryJob} onClose={() => setGalleryJob(null)} /> : null}
-      {analyticsJob ? <ListingAnalyticsModal job={analyticsJob} ownerKey={ownedJobs[analyticsJob.id] || ""} analyticsPlan={analyticsPlan} onClose={() => setAnalyticsJob(null)} /> : null}
+      {analyticsJob ? <ListingAnalyticsModal job={analyticsJob} ownerKey={ownedJobs[analyticsJob.id] || ""} onClose={() => setAnalyticsJob(null)} /> : null}
       {editJob ? <EditJobModal job={editJob} ownerKey={ownedJobs[editJob.id]} onClose={() => setEditJob(null)} onUpdated={() => { setEditJob(null); fetchJobs(); }} /> : null}
     </main>
   );
@@ -813,9 +788,10 @@ function FeaturedJobsRail({ jobs, darkMode, onOpen }: { jobs: JobListing[]; dark
   );
 }
 
-function JobCard({ job, darkMode, isOwner, analyticsEnabled, isLiked, onToggleLiked, onShare, onReport, onOpenGallery, onOpenAnalytics, onDelete, onEdit }: { job: JobListing; darkMode: boolean; isOwner: boolean; analyticsEnabled: boolean; isLiked: boolean; onToggleLiked: () => void; onShare: () => void; onReport: () => void; onOpenGallery: () => void; onOpenAnalytics: () => void; onDelete: () => void; onEdit: () => void }) {
+function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onReport, onOpenGallery, onOpenAnalytics, onDelete, onEdit }: { job: JobListing; darkMode: boolean; isOwner: boolean; isLiked: boolean; onToggleLiked: () => void; onShare: () => void; onReport: () => void; onOpenGallery: () => void; onOpenAnalytics: () => void; onDelete: () => void; onEdit: () => void }) {
   const coverPhoto = job.photos[0] || "/images/jobs/job-card-1.jpg";
   const photoCount = job.photos.length;
+  const isPro = ["pro", "dealer"].includes(job.packageType || "");
 
   return (
     <article id={`job-${job.id}`} className={`scroll-mt-24 overflow-hidden border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
@@ -840,9 +816,9 @@ function JobCard({ job, darkMode, isOwner, analyticsEnabled, isLiked, onToggleLi
         <p className={`mt-2 text-sm font-semibold ${darkMode?"text-white/60":"text-black/60"}`}>{job.city} · {job.group}</p>
         <p className={`mt-3 text-sm ${darkMode?"text-white/55":"text-black/55"}`}>Posted by <strong className={darkMode?"text-white":"text-black"}>{job.postedBy}</strong> · {formatPostedDate(job.createdAt)}</p>
 
-        <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">{job.vehicleNeeded?<span className="rounded-full bg-[#eef2ff] px-3 py-2 text-black">{job.vehicleNeeded}</span>:null}<span className="rounded-full bg-[#eef2ff] px-3 py-2 text-black">{job.city}</span>{isOwner && analyticsEnabled ? <span className="rounded-full bg-black px-3 py-2 text-white">{job.viewCount||0} views</span> : null}</div>
+        <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">{job.vehicleNeeded?<span className="rounded-full bg-[#eef2ff] px-3 py-2 text-black">{job.vehicleNeeded}</span>:null}<span className="rounded-full bg-[#eef2ff] px-3 py-2 text-black">{job.city}</span>{isOwner && isPro ? <span className="rounded-full bg-black px-3 py-2 text-white">{job.viewCount||0} views</span> : null}</div>
 
-        {isOwner && (job.viewCount || 0) > 0 ? <div className="mt-4 flex items-center justify-between gap-3 border border-[#f6b800]/60 bg-[#f6b800]/10 px-3 py-2.5"><p className="text-xs font-black uppercase tracking-[.12em] text-[#b88900]">Your listing is being viewed.</p><button type="button" onClick={onOpenAnalytics} className="border border-[#f6b800] px-3 py-2 text-[10px] font-black uppercase text-[#b88900]">{analyticsEnabled?"Analytics":"Pro analytics"}</button></div>:null}
+        {isOwner && (job.viewCount || 0) > 0 ? <div className="mt-4 flex items-center justify-between gap-3 border border-[#f6b800]/60 bg-[#f6b800]/10 px-3 py-2.5"><p className="text-xs font-black uppercase tracking-[.12em] text-[#b88900]">Your listing is being viewed.</p><button type="button" onClick={onOpenAnalytics} className="border border-[#f6b800] px-3 py-2 text-[10px] font-black uppercase text-[#b88900]">{isPro?"Analytics":"Pro analytics"}</button></div>:null}
 
         <details className={`mt-5 border ${darkMode?"border-white/10":"border-black/10"}`}>
           <summary className="cursor-pointer list-none px-4 py-4 text-sm font-black uppercase tracking-wide">View full details</summary>
@@ -884,9 +860,9 @@ function ContactSellerStack({ job, darkMode }: { job: JobListing; darkMode: bool
         </div>
       </div>
       <div className="grid grid-cols-3 border-t border-black/10">
-        <a href={`tel:${job.contactNumber.replace(/\s/g, "")}`} onClick={() => recordListingEvent(job.id, "message")} className="flex min-h-16 flex-col items-center justify-center gap-1.5 border-r border-black/10 bg-[#168eea] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><PhoneIcon /> Call</a>
-        <RequireAuthLink href={`/messages?listing=${encodeURIComponent(job.id)}`} onAuthenticatedClick={() => recordListingEvent(job.id, "message")} className="flex min-h-16 flex-col items-center justify-center gap-1.5 border-r border-black/10 bg-[#168eea] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><MessageIcon /> Message</RequireAuthLink>
-        <a href={whatsappPhone ? `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}` : "#"} onClick={(e) => { if (!whatsappPhone) { e.preventDefault(); greetPoster(job); return; } recordListingEvent(job.id, "message"); }} target="_blank" rel="noreferrer" className="flex min-h-16 flex-col items-center justify-center gap-1.5 bg-[#0d442b] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><WhatsAppIcon /> WhatsApp</a>
+        <a href={`tel:${job.contactNumber.replace(/\s/g, "")}`} className="flex min-h-16 flex-col items-center justify-center gap-1.5 border-r border-black/10 bg-[#168eea] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><PhoneIcon /> Call</a>
+        <RequireAuthLink href={`/messages?listing=${encodeURIComponent(job.id)}`} className="flex min-h-16 flex-col items-center justify-center gap-1.5 border-r border-black/10 bg-[#168eea] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><MessageIcon /> Message</RequireAuthLink>
+        <a href={whatsappPhone ? `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}` : "#"} onClick={(e) => { if (!whatsappPhone) { e.preventDefault(); greetPoster(job); } }} target="_blank" rel="noreferrer" className="flex min-h-16 flex-col items-center justify-center gap-1.5 bg-[#0d442b] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><WhatsAppIcon /> WhatsApp</a>
       </div>
     </div>
   );
@@ -904,9 +880,6 @@ type ListingAnalytics = {
   dailyViews: AnalyticsBreakdown[];
   devices: AnalyticsBreakdown[];
   sources: AnalyticsBreakdown[];
-  saves: number;
-  messages: number;
-  shares: number;
   recentViewers: { name: string; viewedAt: string }[];
   detailed: boolean;
 };
@@ -919,9 +892,6 @@ function normaliseAnalyticsPayload(data: unknown, job: JobListing): ListingAnaly
     dailyViews: [],
     devices: [],
     sources: [],
-    saves: 0,
-    messages: 0,
-    shares: 0,
     recentViewers: [],
     detailed: false,
   };
@@ -940,35 +910,29 @@ function normaliseAnalyticsPayload(data: unknown, job: JobListing): ListingAnaly
     dailyViews: toRows(raw.daily_views ?? raw.dailyViews),
     devices: toRows(raw.devices),
     sources: toRows(raw.sources),
-    saves: Number(raw.saves ?? 0),
-    messages: Number(raw.messages ?? 0),
-    shares: Number(raw.shares ?? 0),
     recentViewers: Array.isArray(raw.recent_viewers ?? raw.recentViewers) ? ((raw.recent_viewers ?? raw.recentViewers) as any[]).map((item:any)=>({name:String(item.name||"LoadLink member"),viewedAt:String(item.viewed_at||item.viewedAt||"")})) : [],
     detailed: true,
   };
 }
 
-function ListingAnalyticsModal({ job, ownerKey, analyticsPlan, onClose }: { job: JobListing; ownerKey: string; analyticsPlan: LoadLinkPlan | null; onClose: () => void }) {
+function ListingAnalyticsModal({ job, ownerKey, onClose }: { job: JobListing; ownerKey: string; onClose: () => void }) {
   const [analytics, setAnalytics] = useState<ListingAnalytics>(() => normaliseAnalyticsPayload(null, job));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     async function load() {
-      if (!isSupabaseConfigured || !analyticsPlan || job.id.startsWith("demo-")) {
+      if (!isSupabaseConfigured || !ownerKey || job.id.startsWith("demo-")) {
         if (active) setLoading(false);
         return;
       }
-      let result = await supabase.rpc("loadlink_get_listing_analytics", { p_listing_id: job.id });
-      if (result.error && ownerKey && /function|schema cache|does not exist/i.test(result.error.message)) {
-        result = await supabase.rpc("get_pro_job_analytics", { p_job_id: job.id, p_owner_key: ownerKey });
-      }
-      if (active && !result.error) setAnalytics(normaliseAnalyticsPayload(result.data, job));
+      const { data, error } = await supabase.rpc("get_pro_job_analytics", { p_job_id: job.id, p_owner_key: ownerKey });
+      if (active && !error) setAnalytics(normaliseAnalyticsPayload(data, job));
       if (active) setLoading(false);
     }
-    void load();
+    load();
     return () => { active = false; };
-  }, [analyticsPlan, job, ownerKey]);
+  }, [job, ownerKey]);
 
   const maximumDaily = Math.max(1, ...analytics.dailyViews.map((item) => item.count));
   const maximumDevice = Math.max(1, ...analytics.devices.map((item) => item.count));
@@ -976,11 +940,11 @@ function ListingAnalyticsModal({ job, ownerKey, analyticsPlan, onClose }: { job:
     ? "Your listing has not been opened yet. A clear cover photo, exact location and specific title help people understand it faster."
     : analytics.totalViews < 5
       ? "Your listing is starting to get discovered. Keep the title specific and put the strongest photo first so people know what is available immediately."
-      : analyticsPlan
+      : ["pro", "dealer"].includes(job.packageType || "")
         ? "Your listing is attracting attention. Keep the rate, location and availability current so interested users can act quickly."
         : "Your listing is attracting attention. More complete photos and a clearer rate usually help a listing hold attention when visibility increases.";
 
-  if (!analyticsPlan) {
+  if (!["pro", "dealer"].includes(job.packageType || "")) {
     return <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"><section className="w-full max-w-md border border-[#f6b800]/50 bg-[#080808] p-6 text-white"><p className="text-xs font-black uppercase tracking-[.2em] text-[#f6b800]">Pro analytics</p><h2 className="mt-3 text-3xl font-black">Understand who is finding your listing</h2><p className="mt-4 text-sm leading-7 text-white/60">Standard listings keep their public view count. Pro analytics adds seven-day graphs, traffic sources, devices and signed-in viewers who opened the listing.</p><div className="mt-6 grid gap-3"><RequireAuthLink href="/jobs/list?upgrade=pro" className="flex h-12 items-center justify-center bg-[#f6b800] font-black text-black">View Pro options</RequireAuthLink><button onClick={onClose} className="h-12 border border-white/15 font-black">Not now</button></div></section></div>;
   }
 
@@ -999,11 +963,6 @@ function ListingAnalyticsModal({ job, ownerKey, analyticsPlan, onClose }: { job:
           <Metric label="Total views" value={String(analytics.totalViews)} />
           <Metric label="Unique viewers" value={analytics.uniqueViewers === null ? "Tracking" : String(analytics.uniqueViewers)} />
           <Metric label="Last viewed" value={analytics.lastViewedAt ? new Date(analytics.lastViewedAt).toLocaleDateString() : "Not yet"} wide />
-        </div>
-        <div className="grid grid-cols-3 border-b border-white/10">
-          <Metric label="Saves" value={String(analytics.saves)} />
-          <Metric label="Enquiries" value={String(analytics.messages)} />
-          <Metric label="Shares" value={String(analytics.shares)} />
         </div>
 
         <div className="grid gap-6 p-5 md:grid-cols-2">

@@ -25,6 +25,8 @@ export default function NotificationCenter() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
+  const [showLauncher, setShowLauncher] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const signedIn = isAuthenticatedUser(user);
   const unread = useMemo(
@@ -46,7 +48,10 @@ export default function NotificationCenter() {
       .order("created_at", { ascending: false })
       .limit(40);
 
-    if (!result.error) setNotifications((result.data || []) as UserNotification[]);
+    if (!result.error) {
+      setNotifications((result.data || []) as UserNotification[]);
+      setHasLoadedOnce(true);
+    }
     setLoading(false);
   }, [signedIn, user]);
 
@@ -104,6 +109,23 @@ export default function NotificationCenter() {
       void supabase.removeChannel(channel);
     };
   }, [loadNotifications, signedIn, user]);
+
+  useEffect(() => {
+    if (!signedIn) {
+      setShowLauncher(false);
+      return;
+    }
+    if (unread > 0 || open) {
+      setShowLauncher(true);
+      return;
+    }
+    if (!hasLoadedOnce) {
+      setShowLauncher(true);
+      return;
+    }
+    const hideTimer = window.setTimeout(() => setShowLauncher(false), 20_000);
+    return () => window.clearTimeout(hideTimer);
+  }, [hasLoadedOnce, open, signedIn, unread]);
 
   async function markRead(id: string) {
     setNotifications((current) => current.map((item) => item.id === id ? { ...item, is_read: true } : item));
@@ -179,7 +201,7 @@ export default function NotificationCenter() {
         </section>
       ) : null}
 
-      <button
+      {showLauncher ? <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-label={unread ? `Open notifications, ${unread} unread` : "Open notifications"}
@@ -191,7 +213,7 @@ export default function NotificationCenter() {
             {unread > 99 ? "99+" : unread}
           </span>
         ) : null}
-      </button>
+      </button> : null}
     </>
   );
 }

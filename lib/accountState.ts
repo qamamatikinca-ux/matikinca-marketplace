@@ -235,14 +235,6 @@ export async function syncAccountState() {
     if (legacyDeviceKey && legacyDeviceKey.length >= 20) ownerKeys.add(legacyDeviceKey);
   }
 
-  // Link every signed-in buyer and owner chat key to the authenticated account.
-  // The database then applies the correct Standard, Pro or Dealer message limit
-  // without exposing raw access keys to any public table.
-  const chatAccessKeys = new Set([...snapshot.buyer_keys, ...ownerKeys]);
-  for (const accessKey of chatAccessKeys) {
-    await supabase.rpc("loadlink_register_chat_access_key", { p_access_key: accessKey });
-  }
-
   for (const ownerKey of ownerKeys) {
     await supabase.rpc("claim_guest_listings", { p_owner_key: ownerKey });
   }
