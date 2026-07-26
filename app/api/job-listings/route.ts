@@ -74,7 +74,8 @@ export async function GET() {
     ? rows.filter((row) => {
         const active = !row?.status || row.status === "active";
         const approved = row?.moderation_status === undefined || row.moderation_status === "approved";
-        return active && approved;
+        const unexpired = !row?.expires_at || new Date(row.expires_at).getTime() > Date.now();
+        return active && approved && unexpired;
       })
     : [];
   return NextResponse.json(

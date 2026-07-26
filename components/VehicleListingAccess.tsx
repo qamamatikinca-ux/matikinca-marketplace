@@ -70,7 +70,7 @@ export default function VehicleListingAccess({
         <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Job posts remain free. Vehicle listings require a paid manual listing, Pro subscription or approved Dealer bundle.</p>
 
         {!schemaReady ? (
-          <div className="mt-6 border border-red-500/40 bg-red-500/10 p-4 text-sm font-bold leading-6">The package database migration has not been installed yet. Run <strong>LOADLINK-PACKAGES-DEALERSHIPS.sql</strong> in Supabase before accepting paid listings.</div>
+          <div className="mt-6 border border-red-500/40 bg-red-500/10 p-4 text-sm font-bold leading-6">The package database migration has not been installed yet. Run <strong>LOADLINK-PHASE-1-REMAINING-50.sql</strong> in Supabase before accepting paid listings.</div>
         ) : null}
 
         {loading ? <div className={`mt-6 border p-5 text-sm font-bold ${muted}`}>Checking your current package…</div> : (
