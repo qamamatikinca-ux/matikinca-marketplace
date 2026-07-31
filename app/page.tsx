@@ -10,6 +10,7 @@ import AuthStatusButton from "@/components/AuthStatusButton";
 import RequireAuthLink from "@/components/RequireAuthLink";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 
+import DriversAvailableForWork from "@/components/phase2/DriversAvailableForWork";
 type PortalImage = {
   src: string;
   position: string;
@@ -504,7 +505,9 @@ export default function Home() {
           </p>
         </div>
       </footer>
-    </main>
+    
+      <DriversAvailableForWork />
+</main>
   );
 }
 

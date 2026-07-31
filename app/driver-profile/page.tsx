@@ -1,0 +1,41 @@
+"use client";
+
+import { FormEvent,useEffect,useMemo,useState } from "react";
+import Link from "next/link";
+import { browserSupabase } from "@/lib/phase2/supabase";
+import styles from "./phase2-driver-profile.module.css";
+
+type Doc={id:string;document_type:string;original_filename:string;size_bytes:number};
+type FormState={full_name:string;headline:string;city:string;province:string;phone:string;email:string;years_experience:number;licence_code:string;prdp_required:boolean;prdp_expiry:string;vehicle_types:string;route_experience:string;languages:string;previous_roles:string;availability:string;bio:string;status?:string;review_reason?:string;missing_document_type?:string};
+const EMPTY:FormState={full_name:'',headline:'',city:'',province:'',phone:'',email:'',years_experience:0,licence_code:'',prdp_required:false,prdp_expiry:'',vehicle_types:'',route_experience:'',languages:'',previous_roles:'',availability:'Available immediately',bio:''};
+const LABELS:Record<string,string>={identity:'ID or passport',drivers_licence:"Driver’s licence",prdp:'PrDP',cv:'CV',driving_certificate:'Relevant driving certificate'};
+
+export default function DriverProfilePage(){
+  const [form,setForm]=useState<FormState>(EMPTY); const [docs,setDocs]=useState<Doc[]>([]); const [token,setToken]=useState(''); const [message,setMessage]=useState(''); const [busy,setBusy]=useState(false);
+  const documentMap=useMemo(()=>Object.fromEntries(docs.map(d=>[d.document_type,d])),[docs]);
+
+  async function authToken(){const {data}=await browserSupabase().auth.getSession(); return data.session?.access_token??'';}
+  async function load(){const t=await authToken(); if(!t){window.location.href='/login';return;} setToken(t); const r=await fetch('/api/phase2/me',{headers:{Authorization:`Bearer ${t}`}}); const d=await r.json(); if(d.profile){setForm({...EMPTY,...d.profile,vehicle_types:(d.profile.vehicle_types??[]).join(', '),route_experience:(d.profile.route_experience??[]).join(', '),languages:(d.profile.languages??[]).join(', '),prdp_expiry:d.profile.prdp_expiry??''});} setDocs(d.documents??[]);}
+  useEffect(()=>{load().catch(()=>setMessage('The profile could not be loaded.'));},[]);
+
+  function field<K extends keyof FormState>(key:K,value:FormState[K]){setForm(v=>({...v,[key]:value}));}
+  async function save(event?:FormEvent){event?.preventDefault();setBusy(true);setMessage('');try{const payload={...form,vehicle_types:form.vehicle_types.split(',').map(v=>v.trim()).filter(Boolean),route_experience:form.route_experience.split(',').map(v=>v.trim()).filter(Boolean),languages:form.languages.split(',').map(v=>v.trim()).filter(Boolean)};const r=await fetch('/api/phase2/me',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token||await authToken()}`},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw new Error(d.error);setMessage('Profile details saved.');await load();}catch(e){setMessage(e instanceof Error?e.message:'The profile could not be saved.');}finally{setBusy(false);}}
+  async function upload(type:string,file:File|null){if(!file)return;setBusy(true);setMessage('');try{if(!token)await load();const data=new FormData();data.append('documentType',type);data.append('file',file);const r=await fetch('/api/phase2/documents',{method:'POST',headers:{Authorization:`Bearer ${token||await authToken()}`},body:data});const d=await r.json();if(!r.ok)throw new Error(d.error);setMessage(`${LABELS[type]} uploaded and validated.`);await load();}catch(e){setMessage(e instanceof Error?e.message:'Upload failed.');}finally{setBusy(false);}}
+  async function submit(){setBusy(true);setMessage('');try{await save();const r=await fetch('/api/phase2/submit',{method:'POST',headers:{Authorization:`Bearer ${token||await authToken()}`}});const d=await r.json();if(!r.ok)throw new Error(d.error);setMessage('Your driver profile has been submitted for review.');await load();}catch(e){setMessage(e instanceof Error?e.message:'Submission failed.');}finally{setBusy(false);}}
+
+  const uploads=[['identity',true],['drivers_licence',true],['prdp',form.prdp_required],['cv',false],['driving_certificate',false]] as const;
+  return <main className={styles.page}><div className={styles.top}><Link href="/">Back to LoadLink</Link><span className={styles.status}>Status: {form.status??'draft'}</span></div><section className={styles.shell}><header><p className={styles.eyebrow}>Driver opportunity profile</p><h1>Build your driver profile</h1><p>Companies and truck owners can view approved profiles in Drivers Available for Work. Only critical documents are required.</p></header>
+  {form.review_reason&&<div className={styles.notice}><strong>Review feedback</strong><p>{form.review_reason}</p></div>}{form.missing_document_type&&<div className={styles.notice}>Upload requested: {LABELS[form.missing_document_type]}</div>}{message&&<div role="status" className={styles.notice}>{message}</div>}
+  <form onSubmit={save} className={styles.form}><div className={styles.grid}>
+    <label>Full name<input value={form.full_name} onChange={e=>field('full_name',e.target.value)} required /></label><label>Professional headline<input value={form.headline} onChange={e=>field('headline',e.target.value)} placeholder="Long-distance code 14 driver" /></label>
+    <label>City<input value={form.city} onChange={e=>field('city',e.target.value)} required /></label><label>Province<input value={form.province} onChange={e=>field('province',e.target.value)} required /></label>
+    <label>Phone<input value={form.phone} onChange={e=>field('phone',e.target.value)} required /></label><label>Email<input type="email" value={form.email} onChange={e=>field('email',e.target.value)} required /></label>
+    <label>Years of experience<input type="number" min="0" max="60" value={form.years_experience} onChange={e=>field('years_experience',Number(e.target.value))} /></label><label>Licence code<input value={form.licence_code} onChange={e=>field('licence_code',e.target.value)} required /></label>
+    <label className={styles.check}><input type="checkbox" checked={form.prdp_required} onChange={e=>field('prdp_required',e.target.checked)} /> I require a PrDP for the work I am seeking</label>{form.prdp_required&&<label>PrDP expiry<input type="date" value={form.prdp_expiry} onChange={e=>field('prdp_expiry',e.target.value)} /></label>}
+    <label>Vehicle experience<input value={form.vehicle_types} onChange={e=>field('vehicle_types',e.target.value)} placeholder="Truck, tanker, refrigerated truck" required /></label><label>Route experience<input value={form.route_experience} onChange={e=>field('route_experience',e.target.value)} placeholder="Gauteng, Durban, cross-border" /></label>
+    <label>Languages<input value={form.languages} onChange={e=>field('languages',e.target.value)} placeholder="English, isiXhosa" /></label><label>Availability<input value={form.availability} onChange={e=>field('availability',e.target.value)} /></label>
+  </div><label>Previous roles and experience<textarea value={form.previous_roles} onChange={e=>field('previous_roles',e.target.value)} rows={4} /></label><label>Short professional summary<textarea value={form.bio} onChange={e=>field('bio',e.target.value)} rows={4} /></label><button disabled={busy} type="submit">Save profile details</button></form>
+  <section className={styles.documents}><h2>Documents</h2><p>Required: ID or passport and driver’s licence. PrDP is required only when applicable. CV and a relevant driving certificate are optional.</p><div className={styles.docGrid}>{uploads.map(([type,required])=><label className={styles.doc} key={type}><strong>{LABELS[type]} {required&&<span>Required</span>}</strong><small>{documentMap[type]?.original_filename??'No file uploaded'}</small><input disabled={busy} type="file" accept="application/pdf,image/jpeg,image/png" onChange={e=>upload(type,e.target.files?.[0]??null)} /></label>)}</div></section>
+  <div className={styles.excluded}><strong>Not requested:</strong> police clearance, medical certificate, proof of address, reference letters, employer letters, fire-safety certificates and first-aid certificates.</div>
+  <button className={styles.submit} disabled={busy} type="button" onClick={submit}>Submit profile for review</button></section></main>;
+}

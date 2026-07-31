@@ -7,6 +7,7 @@ import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";
 import AuthBootstrap from "@/components/AuthBootstrap";
 import NotificationCenter from "@/components/NotificationCenter";
 
+import MarketplaceRestrictionGuard from "@/components/phase2/MarketplaceRestrictionGuard";
 export const metadata: Metadata = {
   title: "LoadLink",
   description: "Logistics marketplace",
@@ -16,6 +17,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body>
+        <MarketplaceRestrictionGuard />
         <GlobalLoading />
         <SwipeDotsEnhancer />
         <AuthBootstrap />
