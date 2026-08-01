@@ -1,0 +1,47 @@
+name: Install LoadLink Professional Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout uploaded release
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Remove only known legacy repair artifacts
+        run: node scripts/clean-legacy-source.mjs
+      - name: Validate recommendation coverage
+        run: node scripts/validate-recommendations.mjs
+      - name: Validate marketplace and security contracts
+        run: node --test tests/*.test.mjs
+      - name: Validate TypeScript syntax
+        run: node scripts/syntax-check.mjs
+      - name: Validate ordered SQL migration
+        run: node scripts/sql-integrity.mjs
+      - name: Validate asset budget
+        run: node scripts/performance-budget.mjs
+      - name: Remove this one-time installer
+        run: rm -f .github/workflows/install-loadlink-professional-release.yml
+      - name: Commit the clean professional release
+        shell: bash
+        run: |
+          git config user.name "LoadLink Release Installer"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No legacy files remained. The uploaded release is already clean."
+          else
+            git commit -m "Install LoadLink professional marketplace release"
+            git push
+          fi
