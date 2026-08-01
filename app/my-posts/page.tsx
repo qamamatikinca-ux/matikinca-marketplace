@@ -300,7 +300,7 @@ export default function MyPostsPage() {
                     <div className="p-5 md:p-6">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <p className="text-xs font-black uppercase tracking-[0.15em] text-[#b88900]">{listing.city} · {listing.vehicle_group}</p>
+                          <p className={`text-xs font-black uppercase tracking-[0.12em] ${muted}`}>{listing.city} · {listing.vehicle_group}</p>
                           <h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">{listing.title}</h2>
                           <p className="mt-2 text-lg font-black text-[#b88900]">{formatListingRate(listing.rate)}</p>
                         </div>
@@ -312,11 +312,11 @@ export default function MyPostsPage() {
                       {isManualVehicle && listing.expires_at ? <div className={`mt-3 border px-4 py-3 ${expired ? "border-red-500/50 bg-red-500/10" : "border-[#f6b800]/40 bg-[#f6b800]/10"}`}><p className={`text-[10px] font-black uppercase ${expired ? "text-red-500" : "text-[#b88900]"}`}>{expired ? "Listing expired" : `${Math.max(0, Math.ceil((new Date(listing.expires_at).getTime() - Date.now()) / 86400000))} paid days remaining`}</p><p className={`mt-1 text-xs font-bold ${muted}`}>Expires {formatDate(listing.expires_at)} · R15 per day</p><button type="button" onClick={() => void renewListing(listing)} className="mt-3 rounded-full bg-[#f6b800] px-4 py-2 text-[10px] font-black uppercase text-black">Renew listing</button></div> : null}
 
                       {moderationStatus === "rejected" ? (
-                        <div className="mt-4 rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-4">
+                        <div className={`loadlink-rejection-panel mt-4 rounded-2xl border px-4 py-4 ${darkMode ? "border-red-500/45 bg-red-950/25 text-red-100" : "border-red-400 bg-red-50 text-red-950"}`}>
                           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-red-500">Post rejected</p>
                           <p className="mt-2 text-sm font-black">Why it was rejected</p>
-                          <p className="mt-1 text-sm leading-6 text-red-100/75">{listing.moderation_notes || "The post did not meet LoadLink listing requirements."}</p>
-                          <p className="mt-2 text-xs font-semibold text-red-200/55">Edit the listing and save it to send it back for review.</p>
+                          <p className="mt-1 text-sm font-semibold leading-6">{listing.moderation_notes || "The post did not meet LoadLink listing requirements."}</p>
+                          <p className={`mt-2 text-xs font-semibold ${darkMode ? "text-red-100/70" : "text-red-900/70"}`}>Edit the listing and save it to send it back for review.</p>
                         </div>
                       ) : moderationStatus === "pending" ? (
                         <div className="mt-4 rounded-2xl border border-[#f6b800]/40 bg-[#f6b800]/10 px-4 py-3">

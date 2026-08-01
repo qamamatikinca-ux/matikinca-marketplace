@@ -12,13 +12,6 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
@@ -216,3 +209,24 @@ header img.loadlink-logo-img,
   text-align: center;
   font-size: 13px;
 }
+
+
+/* LoadLink single-source theme coordination */
+html[data-loadlink-theme="light"] {
+  --background: #f4efe3;
+  --foreground: #111111;
+  background: #f4efe3;
+}
+html[data-loadlink-theme="dark"] {
+  --background: #050505;
+  --foreground: #f7f7f7;
+  background: #050505;
+}
+html[data-loadlink-theme="light"] body { background:#f4efe3; color:#111; }
+html[data-loadlink-theme="dark"] body { background:#050505; color:#f7f7f7; }
+body { min-height:100vh; }
+
+/* Keep status and moderation copy readable in both themes. */
+.loadlink-rejection-panel { border:1px solid rgba(220,38,38,.45); }
+html[data-loadlink-theme="light"] .loadlink-rejection-panel { background:#fff0f0; color:#4b0b0b; }
+html[data-loadlink-theme="dark"] .loadlink-rejection-panel { background:#2a0909; color:#fff; }

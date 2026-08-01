@@ -13,6 +13,7 @@ import AuthStatusButton from "@/components/AuthStatusButton";
 import RequireAuthLink from "@/components/RequireAuthLink";
 import { isAuthenticatedUser } from "@/lib/auth";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
+import { detectIntent, detectRegion, flexibleMatch, normaliseSearch, searchTokens } from "@/lib/smartSearch";
 
 type VehicleGroup = "Catering / Event" | "Trucks / Trailers" | "Farming / Mining";
 type QuickCategory = "truck" | "event-catering" | "logistics" | "mining-farming" | "";
@@ -434,8 +435,10 @@ export default function JobsPortalPage() {
     if (homeSearch) {
       const lower = homeSearch.toLowerCase();
       const cityMatch = cityOptions.find((item) => lower.includes(item.toLowerCase()));
+      const inferredIntent = detectIntent(homeSearch);
       setKeyword(homeSearch);
       if (cityMatch) setCity(cityMatch);
+      if (inferredIntent === "job" || inferredIntent === "contract" || inferredIntent === "asset") setPortalFilter(inferredIntent);
       if (lower.includes("truck") || lower.includes("superlink") || lower.includes("tipper") || lower.includes("flat deck") || lower.includes("lowbed") || lower.includes("tautliner") || lower.includes("bakkie")) setGroup("Trucks / Trailers");
       if (lower.includes("mining") || lower.includes("farming")) setGroup("Farming / Mining");
       if (lower.includes("catering") || lower.includes("event")) setGroup("Catering / Event");
@@ -504,26 +507,28 @@ export default function JobsPortalPage() {
   const allJobs = useMemo(() => sharedJobs, [sharedJobs]);
 
   const matchingJobs = useMemo(() => {
-    const tokens = keyword
-      .trim()
-      .toLowerCase()
-      .split(/\s+/)
-      .map((token) => token.replace(/[^a-z0-9-]/g, ""))
-      .filter((token) => token && !searchStopWords.has(token));
+    const region = detectRegion(keyword);
+    const regionWords = new Set(region ? searchTokens(region[0]) : []);
+    const intent = detectIntent(keyword);
+    const intentWords = new Set(["job", "jobs", "work", "opportunity", "opportunities", "contract", "contracts", "tender", "truck", "trucks", "vehicle", "vehicles"]);
+    const meaningfulTokens = searchTokens(keyword).filter((token) => !regionWords.has(token) && !intentWords.has(token));
+    const meaningfulQuery = meaningfulTokens.join(" ");
 
     return allJobs.filter((job) => {
-      const searchable = `${job.title} ${job.city} ${job.group} ${job.vehicleNeeded || ""} ${job.rate} ${job.postedBy} ${job.description} ${job.packageType || "standard"} ${job.sponsored ? "premium sponsored pro" : "standard"} ${job.verified ? "verified" : ""}`.toLowerCase();
-      const keywordMatch = tokens.length === 0 || tokens.every((token) => searchable.includes(token));
-      const cityMatch = !city.trim() || job.city.toLowerCase().includes(city.toLowerCase());
+      const searchable = `${job.title} ${job.city} ${job.group} ${job.vehicleNeeded || ""} ${job.rate} ${job.postedBy} ${job.description} ${job.packageType || "standard"} ${job.sponsored ? "premium sponsored pro" : "standard"} ${job.verified ? "verified" : ""}`;
+      const keywordMatch = !meaningfulQuery || flexibleMatch(searchable, meaningfulQuery);
+      const selectedCityMatch = !city.trim() || normaliseSearch(job.city).includes(normaliseSearch(city));
+      const regionMatch = !region || region[1].some((place) => normaliseSearch(job.city).includes(normaliseSearch(place)));
       const groupMatch = !group || job.group === group;
       const categoryMatch = !quickCategory || (
-        quickCategory === "truck" ? /truck|trailer|tipper|superlink|lowbed|tautliner|bakkie|mobile unit/.test(searchable) :
-        quickCategory === "event-catering" ? /event|catering|food truck|mobile toilet|mobile fridge|mobile kitchen/.test(searchable) :
-        quickCategory === "logistics" ? /logistics|delivery|transport|freight|courier|warehouse|load/.test(searchable) :
-        /mining|farming|farm|agriculture|agricultural/.test(searchable)
+        quickCategory === "truck" ? /truck|trailer|tipper|superlink|lowbed|tautliner|bakkie|mobile unit/i.test(searchable) :
+        quickCategory === "event-catering" ? /event|catering|food truck|mobile toilet|mobile fridge|mobile kitchen/i.test(searchable) :
+        quickCategory === "logistics" ? /logistics|delivery|transport|freight|courier|warehouse|load/i.test(searchable) :
+        /mining|farming|farm|agriculture|agricultural/i.test(searchable)
       );
-      const portalMatch = !portalFilter || job.listingType === portalFilter;
-      return keywordMatch && cityMatch && groupMatch && categoryMatch && portalMatch;
+      const inferredPortalMatch = !intent || intent === "driver" || intent === "dealer" || job.listingType === intent;
+      const explicitPortalMatch = !portalFilter || job.listingType === portalFilter;
+      return keywordMatch && selectedCityMatch && regionMatch && groupMatch && categoryMatch && inferredPortalMatch && explicitPortalMatch;
     });
   }, [allJobs, keyword, city, group, quickCategory, portalFilter]);
 

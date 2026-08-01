@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { clearActiveAccountState } from "@/lib/accountState";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 
@@ -10,58 +10,56 @@ type MenuLink = {
   label: string;
   href: string;
   description: string;
+  icon: "home" | "jobs" | "truck" | "contract" | "driver" | "message" | "posts" | "settings" | "dealer" | "package" | "help" | "network";
 };
 
-const primaryLinks: MenuLink[] = [
-  { label: "Home", href: "/", description: "Return to the LoadLink homepage" },
-  { label: "Available jobs", href: "/jobs", description: "Browse paid logistics work" },
-  { label: "Available trucks", href: "/trucks", description: "Browse vehicles and mobile units" },
-  { label: "Contracts", href: "/contracts", description: "Browse logistics contracts" },
-  { label: "Drivers available for work", href: "/drivers", description: "View approved driver profiles" },
+const marketplaceLinks: MenuLink[] = [
+  { label: "Home", href: "/", description: "Main LoadLink marketplace", icon: "home" },
+  { label: "Jobs", href: "/jobs", description: "Work for truck and mobile-unit owners", icon: "jobs" },
+  { label: "Trucks", href: "/trucks", description: "Vehicles and mobile units", icon: "truck" },
+  { label: "Contracts", href: "/contracts", description: "Recurring and project work", icon: "contract" },
+  { label: "Drivers", href: "/drivers", description: "Approved drivers for hire", icon: "driver" },
+  { label: "Featured dealership", href: "/dealership/loadlink-commercial-centurion", description: "View the dealer showroom", icon: "dealer" },
 ];
 
 const accountLinks: MenuLink[] = [
-  { label: "Messages", href: "/messages", description: "Open your LoadLink conversations" },
-  { label: "My posts", href: "/my-posts", description: "Edit and manage your listings" },
-  { label: "Profile settings", href: "/account/settings", description: "Manage your profile, privacy and notifications" },
-  { label: "Driver profile", href: "/driver-profile", description: "Create or update your work profile" },
-  { label: "Dealership centre", href: "/dealer", description: "Manage an approved dealership" },
-  { label: "Packages", href: "/packages", description: "Review LoadLink package options" },
-  { label: "Help centre", href: "/help", description: "Get support and safety guidance" },
+  { label: "Messages", href: "/messages", description: "Your conversations", icon: "message" },
+  { label: "My posts", href: "/my-posts", description: "Manage and resubmit posts", icon: "posts" },
+  { label: "Profile settings", href: "/account/settings", description: "Account, profile and alerts", icon: "settings" },
+  { label: "Driver profile", href: "/driver-profile", description: "Apply for driver opportunities", icon: "driver" },
+  { label: "Dealership centre", href: "/dealer", description: "Manage approved dealership stock", icon: "dealer" },
+  { label: "Packages", href: "/packages", description: "Manual, Pro and Dealer plans", icon: "package" },
+  { label: "Your network", href: "/#followed-network", description: "People and businesses you follow", icon: "network" },
+  { label: "Help centre", href: "/help", description: "Support and safety guidance", icon: "help" },
 ];
 
-export default function SiteMenu({
-  darkMode,
-  className = "",
-}: {
-  darkMode: boolean;
-  className?: string;
-}) {
+export default function SiteMenu({ darkMode, className = "" }: { darkMode: boolean; className?: string }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [email, setEmail] = useState("");
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
-    supabase.auth.getUser().then(({ data }) => setSignedIn(Boolean(data.user)));
+    supabase.auth.getUser().then(({ data }) => {
+      setSignedIn(Boolean(data.user));
+      setEmail(data.user?.email || "");
+    });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSignedIn(Boolean(session?.user));
+      setEmail(session?.user?.email || "");
     });
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
+  useEffect(() => setOpen(false), [pathname]);
 
   useEffect(() => {
     if (!open) return;
     const original = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
+    const closeOnEscape = (event: KeyboardEvent) => event.key === "Escape" && setOpen(false);
     window.addEventListener("keydown", closeOnEscape);
     return () => {
       document.body.style.overflow = original;
@@ -69,70 +67,64 @@ export default function SiteMenu({
     };
   }, [open]);
 
+  const initials = useMemo(() => (email ? email.slice(0, 2).toUpperCase() : "LL"), [email]);
+
   async function signOut() {
     if (signingOut) return;
     setSigningOut(true);
     try {
       if (isSupabaseConfigured) await supabase.auth.signOut();
       clearActiveAccountState();
-      setSignedIn(false);
-      setOpen(false);
       window.location.href = "/";
     } finally {
       setSigningOut(false);
     }
   }
 
-  const panel = darkMode ? "bg-[#080808] text-white" : "bg-[#fffaf0] text-black";
+  const panel = darkMode ? "bg-[#080808] text-white" : "bg-[#f8f5ed] text-black";
   const border = darkMode ? "border-white/10" : "border-black/10";
   const muted = darkMode ? "text-white/50" : "text-black/50";
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={`flex h-10 w-10 items-center justify-center ${className}`}
-        aria-label="Open LoadLink menu"
-        aria-expanded={open}
-      >
+      <button type="button" onClick={() => setOpen(true)} className={`flex h-10 w-10 items-center justify-center ${className}`} aria-label="Open LoadLink menu" aria-expanded={open}>
         <MenuIcon />
       </button>
 
       {open ? (
         <div className="fixed inset-0 z-[10000]">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
-            onClick={() => setOpen(false)}
-            aria-label="Close LoadLink menu"
-          />
-          <aside className={`absolute inset-y-0 left-0 flex w-[min(92vw,390px)] flex-col border-r shadow-2xl ${panel} ${border}`} role="dialog" aria-modal="true" aria-label="LoadLink menu">
-            <header className={`flex min-h-20 items-center justify-between border-b px-5 ${border}`}>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#b88900]">LoadLink</p>
-                <h2 className="mt-1 text-2xl font-black tracking-[-0.04em]">Menu</h2>
+          <button type="button" className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={() => setOpen(false)} aria-label="Close LoadLink menu" />
+          <aside className={`absolute inset-y-0 left-0 flex w-[min(94vw,430px)] flex-col border-r shadow-[24px_0_80px_rgba(0,0,0,.28)] ${panel} ${border}`} role="dialog" aria-modal="true" aria-label="LoadLink navigation">
+            <header className={`border-b px-5 pb-5 pt-4 ${border}`}>
+              <div className="flex items-center justify-between gap-4">
+                <Link href="/" className="flex items-center gap-3" aria-label="LoadLink home">
+                  <img src={darkMode ? "/images/loadlink-logo-dark.png" : "/images/loadlink-logo-light.png"} alt="LoadLink" className="h-9 w-auto object-contain" />
+                </Link>
+                <button type="button" onClick={() => setOpen(false)} className={`flex h-10 w-10 items-center justify-center rounded-full border text-xl ${border}`} aria-label="Close menu">×</button>
               </div>
-              <button type="button" onClick={() => setOpen(false)} className={`flex h-10 w-10 items-center justify-center border text-2xl font-black ${border}`} aria-label="Close menu">×</button>
+
+              <div className={`mt-5 flex items-center gap-3 rounded-2xl border p-3 ${border} ${darkMode ? "bg-white/[.04]" : "bg-white"}`}>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black text-xs font-black text-[#f6b800]">{initials}</div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black">{signedIn ? "Your LoadLink account" : "Welcome to LoadLink"}</p>
+                  <p className={`mt-0.5 truncate text-xs font-semibold ${muted}`}>{signedIn ? email : "Sign in to post, follow and message"}</p>
+                </div>
+                <Link href={signedIn ? "/account/settings" : "/login"} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f6b800] text-black" aria-label={signedIn ? "Open settings" : "Sign in"}><GearIcon /></Link>
+              </div>
             </header>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
-              <MenuSection title="Explore" links={primaryLinks} pathname={pathname} border={border} muted={muted} />
-              <MenuSection title="Your LoadLink" links={accountLinks} pathname={pathname} border={border} muted={muted} />
-
-              <div className={`mt-6 border-t pt-5 ${border}`}>
-                {signedIn ? (
-                  <button type="button" onClick={() => void signOut()} disabled={signingOut} className="flex min-h-12 w-full items-center justify-center border border-red-500/40 px-4 text-xs font-black uppercase tracking-[0.14em] text-red-500 disabled:opacity-50">
-                    {signingOut ? "Signing out…" : "Sign out"}
-                  </button>
-                ) : (
-                  <Link href="/login" className="flex min-h-12 w-full items-center justify-center bg-[#f6b800] px-4 text-xs font-black uppercase tracking-[0.14em] text-black">Log in or sign up</Link>
-                )}
-              </div>
+              <MenuSection title="Marketplace" links={marketplaceLinks} pathname={pathname} darkMode={darkMode} border={border} muted={muted} />
+              <MenuSection title="Account and tools" links={accountLinks} pathname={pathname} darkMode={darkMode} border={border} muted={muted} />
             </div>
 
-            <footer className={`border-t px-5 py-4 text-xs font-semibold ${border} ${muted}`}>
-              loadlinksouthafrica@gmail.com
+            <footer className={`border-t p-4 ${border}`}>
+              {signedIn ? (
+                <button type="button" onClick={() => void signOut()} disabled={signingOut} className="flex h-12 w-full items-center justify-center rounded-xl border border-red-500/45 text-xs font-black uppercase tracking-[.12em] text-red-500 disabled:opacity-50">{signingOut ? "Signing out…" : "Sign out"}</button>
+              ) : (
+                <Link href="/login" className="flex h-12 w-full items-center justify-center rounded-xl bg-[#f6b800] text-xs font-black uppercase tracking-[.12em] text-black">Log in or sign up</Link>
+              )}
+              <p className={`mt-3 text-center text-[11px] font-semibold ${muted}`}>loadlinksouthafrica@gmail.com</p>
             </footer>
           </aside>
         </div>
@@ -141,20 +133,18 @@ export default function SiteMenu({
   );
 }
 
-function MenuSection({ title, links, pathname, border, muted }: { title: string; links: MenuLink[]; pathname: string; border: string; muted: string }) {
+function MenuSection({ title, links, pathname, darkMode, border, muted }: { title: string; links: MenuLink[]; pathname: string; darkMode: boolean; border: string; muted: string }) {
   return (
     <section className="mb-7">
-      <p className="mb-2 px-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#b88900]">{title}</p>
-      <div className={`border-y ${border}`}>
+      <h2 className={`mb-3 px-1 text-[11px] font-black uppercase tracking-[.18em] ${muted}`}>{title}</h2>
+      <div className="grid grid-cols-2 gap-2">
         {links.map((item) => {
-          const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
+          const active = pathname === item.href || (item.href !== "/" && !item.href.includes("#") && pathname.startsWith(`${item.href}/`));
           return (
-            <Link key={item.href} href={item.href} className={`flex items-center justify-between gap-4 border-b px-2 py-4 last:border-b-0 ${border} ${active ? "bg-[#f6b800] text-black" : ""}`}>
-              <span className="min-w-0">
-                <span className="block text-sm font-black">{item.label}</span>
-                <span className={`mt-1 block text-[11px] font-semibold leading-4 ${active ? "text-black/60" : muted}`}>{item.description}</span>
-              </span>
-              <span className="text-xl font-black" aria-hidden="true">›</span>
+            <Link key={item.href} href={item.href} className={`min-h-[112px] rounded-2xl border p-3 transition ${active ? "border-[#f6b800] bg-[#f6b800] text-black" : `${border} ${darkMode ? "bg-white/[.035] hover:bg-white/[.07]" : "bg-white hover:border-[#f6b800]"}`}`}>
+              <span className={`flex h-8 w-8 items-center justify-center rounded-full ${active ? "bg-black text-[#f6b800]" : darkMode ? "bg-white/10" : "bg-black/[.05]"}`}><NavIcon type={item.icon} /></span>
+              <span className="mt-3 block text-sm font-black leading-4">{item.label}</span>
+              <span className={`mt-1.5 block text-[10px] font-semibold leading-4 ${active ? "text-black/60" : muted}`}>{item.description}</span>
             </Link>
           );
         })}
@@ -163,10 +153,20 @@ function MenuSection({ title, links, pathname, border, muted }: { title: string;
   );
 }
 
-function MenuIcon() {
-  return (
-    <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
+function MenuIcon() { return <svg aria-hidden="true" width="25" height="25" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /></svg>; }
+function GearIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9.5 4h5l.6 2a7 7 0 0 1 1.6.9l2-.5 2.5 4.3-1.4 1.5v1.7l1.4 1.5-2.5 4.3-2-.5a7 7 0 0 1-1.6.9l-.6 2h-5l-.6-2a7 7 0 0 1-1.6-.9l-2 .5-2.5-4.3 1.4-1.5v-1.7l-1.4-1.5 2.5-4.3 2 .5A7 7 0 0 1 8.9 6l.6-2Z" stroke="currentColor" strokeWidth="1.6"/><circle cx="12" cy="13" r="2.7" stroke="currentColor" strokeWidth="1.7"/></svg>; }
+function NavIcon({ type }: { type: MenuLink["icon"] }) {
+  const common = { width: 17, height: 17, viewBox: "0 0 24 24", fill: "none" };
+  if (type === "home") return <svg {...common}><path d="m4 11 8-7 8 7v9H4v-9Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M9.5 20v-6h5v6" stroke="currentColor" strokeWidth="1.8"/></svg>;
+  if (type === "jobs") return <svg {...common}><path d="M5 7h14v13H5V7Z" stroke="currentColor" strokeWidth="1.8"/><path d="M9 7V4h6v3M5 12h14" stroke="currentColor" strokeWidth="1.8"/></svg>;
+  if (type === "truck") return <svg {...common}><path d="M3 6h11v11H3V6Zm11 4h4l3 3v4h-7v-7Z" stroke="currentColor" strokeWidth="1.8"/><circle cx="7" cy="18" r="2" stroke="currentColor" strokeWidth="1.8"/><circle cx="18" cy="18" r="2" stroke="currentColor" strokeWidth="1.8"/></svg>;
+  if (type === "contract") return <svg {...common}><path d="M7 3h8l3 3v15H7V3Z" stroke="currentColor" strokeWidth="1.8"/><path d="M10 10h5M10 14h5M10 18h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
+  if (type === "driver") return <svg {...common}><circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.8"/><path d="M5 21c.7-4 3-6 7-6s6.3 2 7 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
+  if (type === "message") return <svg {...common}><path d="M4 5h16v12H9l-5 4V5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M8 10h8M8 13h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
+  if (type === "posts") return <svg {...common}><path d="M5 4h14v16H5V4Z" stroke="currentColor" strokeWidth="1.8"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
+  if (type === "settings") return <GearIcon />;
+  if (type === "dealer") return <svg {...common}><path d="M4 10h16v10H4V10Z" stroke="currentColor" strokeWidth="1.8"/><path d="m3 10 2-6h14l2 6M8 20v-5h4v5" stroke="currentColor" strokeWidth="1.8"/></svg>;
+  if (type === "package") return <svg {...common}><path d="m4 7 8-4 8 4-8 4-8-4Z" stroke="currentColor" strokeWidth="1.8"/><path d="m4 7v10l8 4 8-4V7M12 11v10" stroke="currentColor" strokeWidth="1.8"/></svg>;
+  if (type === "network") return <svg {...common}><circle cx="7" cy="8" r="3" stroke="currentColor" strokeWidth="1.8"/><circle cx="17" cy="8" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M2.5 20c.5-4 2-6 4.5-6s4 2 4.5 6M12.5 20c.5-4 2-6 4.5-6s4 2 4.5 6" stroke="currentColor" strokeWidth="1.8"/></svg>;
+  return <svg {...common}><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><path d="M9.8 9a2.4 2.4 0 1 1 3.4 2.2c-.9.4-1.2 1-1.2 1.8M12 17h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
 }

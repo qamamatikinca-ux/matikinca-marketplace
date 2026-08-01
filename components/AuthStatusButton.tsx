@@ -62,10 +62,9 @@ export default function AuthStatusButton({
         href="/account/settings"
         aria-label={`Signed in as ${email}. Open profile settings`}
         title={`Signed in as ${email}. Open profile settings`}
-        className={`${base} border-[#f6b800] bg-[#f6b800] text-black shadow-[0_0_18px_rgba(246,184,0,0.24)]`}
+        className={`${base} border-[#f6b800] bg-black text-[#f6b800] shadow-[0_0_18px_rgba(246,184,0,0.18)]`}
       >
-        <GoldCheckIcon />
-        <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-[#25b85a]" aria-hidden="true" />
+        <SettingsGearIcon />
       </Link>
     );
   }
@@ -86,10 +85,11 @@ export default function AuthStatusButton({
   );
 }
 
-function GoldCheckIcon() {
+function SettingsGearIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="m5.5 12.5 4.1 4.1L18.8 7.4" stroke="currentColor" strokeWidth="2.7" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M9.4 3.5h5.2l.7 2.2a7.6 7.6 0 0 1 1.5.9l2.2-.5 2.6 4.5-1.5 1.7v1.8l1.5 1.7-2.6 4.5-2.2-.5a7.6 7.6 0 0 1-1.5.9l-.7 2.2H9.4l-.7-2.2a7.6 7.6 0 0 1-1.5-.9l-2.2.5-2.6-4.5 1.5-1.7v-1.8l-1.5-1.7L5 6.1l2.2.5a7.6 7.6 0 0 1 1.5-.9l.7-2.2Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <circle cx="12" cy="13.2" r="3" stroke="currentColor" strokeWidth="1.8" />
     </svg>
   );
 }

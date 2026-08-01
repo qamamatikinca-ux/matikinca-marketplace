@@ -25,7 +25,7 @@ export default function NotificationCenter() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
-  const [showLauncher, setShowLauncher] = useState(true);
+  const [showLauncher, setShowLauncher] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const signedIn = isAuthenticatedUser(user);
@@ -111,20 +111,11 @@ export default function NotificationCenter() {
   }, [loadNotifications, signedIn, user]);
 
   useEffect(() => {
-    if (!signedIn) {
+    if (!signedIn || !hasLoadedOnce) {
       setShowLauncher(false);
       return;
     }
-    if (unread > 0 || open) {
-      setShowLauncher(true);
-      return;
-    }
-    if (!hasLoadedOnce) {
-      setShowLauncher(true);
-      return;
-    }
-    const hideTimer = window.setTimeout(() => setShowLauncher(false), 20_000);
-    return () => window.clearTimeout(hideTimer);
+    setShowLauncher(open || unread > 0);
   }, [hasLoadedOnce, open, signedIn, unread]);
 
   async function markRead(id: string) {
@@ -134,8 +125,13 @@ export default function NotificationCenter() {
 
   async function markAllRead() {
     const ids = notifications.filter((item) => !item.is_read).map((item) => item.id);
-    if (!ids.length) return;
+    if (!ids.length) {
+      setOpen(false);
+      return;
+    }
     setNotifications((current) => current.map((item) => ({ ...item, is_read: true })));
+    setOpen(false);
+    setShowLauncher(false);
     await supabase.from("user_notifications").update({ is_read: true, read_at: new Date().toISOString() }).in("id", ids);
   }
 

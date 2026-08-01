@@ -3,15 +3,18 @@
 import HomeLogoLink from "@/components/HomeLogoLink";
 
 import Link from "next/link";
-import { useEffect, useState } from "react"; import RecentActivityPanel from "@/components/RecentActivityPanel";
+import { useEffect, useState } from "react";
+import RecentActivityPanel from "@/components/RecentActivityPanel";
 import MarketplaceDiscovery from "@/components/MarketplaceDiscovery";
 import LogisticsNews from "@/components/LogisticsNews";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import RequireAuthLink from "@/components/RequireAuthLink";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 
-import DriversAvailableForWork from "@/components/phase2/DriversAvailableForWork";
 import SiteMenu from "@/components/SiteMenu";
+import FeaturedDealership from "@/components/FeaturedDealership";
+import FollowedNetwork from "@/components/FollowedNetwork";
+import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 type PortalImage = {
   src: string;
   position: string;
@@ -75,6 +78,30 @@ const portalCards: PortalCard[] = [
     packageType: "pro",
   },
   {
+    title: "Available Trucks",
+    buttonText: "Browse trucks and mobile units",
+    images: [
+      { src: "/images/truck-1.jpg", position: "center center" },
+      { src: "/images/truck-2.jpg", position: "center center" },
+      { src: "/images/truck-3.jpg", position: "center center" },
+    ],
+    href: "/trucks",
+    type: "Vehicle marketplace",
+    category: "Truck",
+    packageType: "premium",
+  },
+  {
+    title: "Drivers Available",
+    buttonText: "Browse professional driver profiles",
+    images: [
+      { src: "/images/jobs/hero.jpg", position: "center 38%" },
+    ],
+    href: "/drivers",
+    type: "Driver profiles",
+    category: "Driver",
+    packageType: "basic",
+  },
+  {
     title: "List Your Truck",
     buttonText: "List your truck",
     images: [
@@ -99,17 +126,11 @@ const portalCards: PortalCard[] = [
 ];
 
 export default function Home() {
-  const [darkMode, setDarkMode] = useState(false);
+  const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [recentActivity, setRecentActivity] = useState<PortalCard[]>([]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("loadlink-theme");
-
-    if (savedTheme === "dark") {
-      setDarkMode(true);
-    }
-
     try {
       const savedActivity = localStorage.getItem("loadlink-recent-activity");
 
@@ -141,10 +162,7 @@ export default function Home() {
   }, []);
 
   function toggleDarkMode() {
-    const newMode = !darkMode;
-
-    setDarkMode(newMode);
-    localStorage.setItem("loadlink-theme", newMode ? "dark" : "light");
+    toggleTheme();
   }
 
   function getActiveImage(card: PortalCard) {
@@ -198,7 +216,7 @@ export default function Home() {
         <AuthStatusButton darkMode={darkMode} />
       </div>
 
-      <HomeLogoLink logoClassName="loadlink-logo-dark-fix" />
+      <HomeLogoLink theme={darkMode ? "dark" : "light"} logoClassName="loadlink-logo-dark-fix" />
 
       <button
         onClick={toggleDarkMode}
@@ -216,6 +234,8 @@ export default function Home() {
   </header>
 
       <MarketplaceDiscovery darkMode={darkMode} />
+
+      <FeaturedDealership darkMode={darkMode} />
 
       {/* MAIN RECTANGLE PORTAL CARDS */}
       <section className="w-full">
@@ -269,7 +289,7 @@ export default function Home() {
 
       <RecentActivityPanel darkMode={darkMode} />
 
-      <DriversAvailableForWork darkMode={darkMode} />
+      <FollowedNetwork darkMode={darkMode} />
 
       {/* OUR MISSION SECTION */}
       <section
@@ -278,14 +298,6 @@ export default function Home() {
         }`}
       >
         <div className="mx-auto max-w-5xl text-center">
-          <p
-            className={`mb-4 text-sm font-black uppercase tracking-[0.3em] ${
-              darkMode ? "text-[#8a6400]" : "text-[#b98400]"
-            }`}
-          >
-            Our Mission
-          </p>
-
           <h2 className="text-4xl font-black leading-tight md:text-6xl">
             Building a smarter way to connect logistics opportunities.
           </h2>
@@ -295,18 +307,8 @@ export default function Home() {
               darkMode ? "text-white/60" : "text-black/60"
             }`}
           >
-            Mission information will be added here later.
+            LoadLink brings verified logistics opportunities, commercial vehicles, professional drivers and direct business communication into one South African marketplace. Our goal is to make finding work, equipment and reliable industry partners faster and more transparent.
           </p>
-        </div>
-      </section>
-
-      <section className={`px-5 py-14 md:px-12 ${darkMode ? "bg-black text-white" : "bg-white text-black"}`}>
-        <div className={`mx-auto max-w-5xl border p-6 md:p-8 ${darkMode ? "border-[#f6b800]/30 bg-[#0b0b0b]" : "border-[#d4a532] bg-[#fff6dc]"}`}>
-          <p className="text-xs font-black uppercase tracking-[0.25em] text-[#b88900]">Account verification</p>
-          <div className="mt-3 flex flex-col justify-between gap-5 md:flex-row md:items-center">
-            <div><h2 className="text-3xl font-black">Build trust with a verified profile</h2><p className={`mt-2 max-w-2xl text-sm leading-6 ${darkMode ? "text-white/60" : "text-black/60"}`}>Verify your cellphone number and identity. Review usually takes a few minutes when a reviewer is available.</p></div>
-            <Link href="/verify" className="flex h-12 shrink-0 items-center justify-center bg-[#f6b800] px-6 font-black text-black">Start verification</Link>
-          </div>
         </div>
       </section>
 

@@ -88,7 +88,6 @@ export default function DriversAvailableForWork({
         <img src="/images/jobs/hero.jpg" alt="Truck drivers ready for logistics opportunities" className={styles.heroImage} />
         <div className={styles.heroShade} />
         <div className={styles.heroContent}>
-          <p className={styles.eyebrow}>LoadLink workforce</p>
           <h2 className={styles.title}>Drivers Available for Work</h2>
           <p className={styles.subtitle}>Approved drivers can present their licence details, experience, routes and availability directly to logistics companies and truck owners.</p>
           <div className={styles.actions}>

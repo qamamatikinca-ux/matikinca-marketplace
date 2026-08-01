@@ -5,9 +5,9 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import AuthStatusButton from "@/components/AuthStatusButton";
-import BusinessPlans from "@/components/BusinessPlans";
-import BuyATruckShowcase from "@/components/BuyATruckShowcase";
+import BusinessPlans, { type BusinessPlanId } from "@/components/BusinessPlans";
 import HomeLogoLink from "@/components/HomeLogoLink";
+import SiteMenu from "@/components/SiteMenu";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
@@ -147,6 +147,7 @@ export default function ListYourTruckPage() {
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [description, setDescription] = useState("");
   const [packageType, setPackageType] = useState<"standard" | "pro" | "dealer">("standard");
+  const [selectedPlan, setSelectedPlan] = useState<BusinessPlanId | null>(null);
   const [vehiclePhotos, setVehiclePhotos] = useState<File[]>([]);
   const [vehiclePreviews, setVehiclePreviews] = useState<string[]>([]);
   const [documents, setDocuments] = useState<VerificationFiles>(emptyVerificationFiles);
@@ -165,6 +166,12 @@ export default function ListYourTruckPage() {
 
   useEffect(() => {
     queueMicrotask(() => setDarkMode(localStorage.getItem("loadlink-theme") === "dark"));
+    const requestedPlan = new URLSearchParams(window.location.search).get("plan");
+    if (requestedPlan === "manual" || requestedPlan === "pro" || requestedPlan === "dealer") {
+      setSelectedPlan(requestedPlan);
+      setPackageType(requestedPlan === "manual" ? "standard" : requestedPlan);
+      if (requestedPlan === "dealer") setSellerType("dealership");
+    }
 
     async function requireAccount() {
       if (!isSupabaseConfigured) {
@@ -467,6 +474,15 @@ export default function ListYourTruckPage() {
     return <main className="min-h-screen bg-black text-white"><LoadLinkLoading /></main>;
   }
 
+  function choosePlan(plan: BusinessPlanId) {
+    setSelectedPlan(plan);
+    setPackageType(plan === "manual" ? "standard" : plan);
+    if (plan === "dealer") setSellerType("dealership");
+    if (plan !== "dealer" && sellerType === "dealership") setSellerType("private");
+    setMessage("");
+    requestAnimationFrame(() => document.getElementById("truck-selection")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
   const surface = darkMode ? "border-white/10 bg-[#101010] text-white" : "border-black/10 bg-white text-black";
   const muted = darkMode ? "text-white/55" : "text-black/55";
   const inputClass = `h-14 w-full rounded-xl border px-4 font-semibold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-[#171717] text-white placeholder:text-white/30" : "border-black/10 bg-[#faf8f2] text-black placeholder:text-black/35"}`;
@@ -483,16 +499,15 @@ export default function ListYourTruckPage() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/65 to-black/35 [mask-image:linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)]" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-transparent" />
         <div className="relative mx-auto flex min-h-[300px] max-w-5xl flex-col justify-end px-5 pb-9 pt-20 text-white md:min-h-[360px]">
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#f6b800]">{sellerType === "dealership" ? "Dealership stock application" : "Private truck listing"}</p>
-          <h1 className="mt-3 max-w-3xl text-5xl font-black leading-[0.94] tracking-[-0.06em] md:text-7xl">{sellerType === "dealership" ? "List dealership stock" : "List your truck"}</h1>
+          <h1 className="max-w-3xl text-5xl font-black leading-[0.94] tracking-[-0.06em] md:text-7xl">{sellerType === "dealership" ? "List dealership stock" : "List your truck"}</h1>
           <p className="mt-4 max-w-xl text-base font-semibold leading-7 text-white/75">{sellerType === "dealership" ? "Add the truck details and submit the business documents required for dealership approval." : "Choose the year, make and model, then confirm the truck details."}</p>
         </div>
       </section>
 
-      <BusinessPlans darkMode={darkMode} />
+      <BusinessPlans darkMode={darkMode} selectable selectedPlan={selectedPlan} onSelect={choosePlan} />
 
-      <form onSubmit={submitTruck} className="mx-auto grid max-w-5xl gap-6 px-4 py-7 md:px-6 md:py-12">
-        <section className={`overflow-hidden rounded-2xl border ${surface}`}>
+      {selectedPlan ? <form onSubmit={submitTruck} className="mx-auto grid max-w-5xl gap-6 px-4 py-7 md:px-6 md:py-12">
+        <section id="truck-selection" className={`scroll-mt-24 overflow-hidden rounded-2xl border ${surface}`}>
           <div className="border-b border-black/10 px-5 py-5 md:px-7">
             <h2 className="text-3xl font-black tracking-[-0.04em]">{sellerType === "dealership" ? "Choose a dealership truck" : "Choose your truck"}</h2>
             <p className={`mt-2 text-sm leading-6 ${muted}`}>Select the registration year, manufacturer and exact model.</p>
@@ -638,12 +653,12 @@ export default function ListYourTruckPage() {
             </section>
 
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
-              <SectionHeading step="05" title="Contact, visibility and confirmation" description="Choose the listing package and confirm that the truck details are truthful." />
+              <SectionHeading step="05" title="Contact, visibility and confirmation" description="Review the selected plan and confirm that the truck details are truthful." />
               <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7">
                 <Field label={sellerType === "dealership" ? "Dealership contact name" : "Owner / company name"}><input value={postedBy} onChange={(event) => setPostedBy(event.target.value)} className={inputClass} required /></Field>
                 <Field label="Contact number"><input value={contactNumber} onChange={(event) => setContactNumber(event.target.value)} placeholder="0821234567" className={inputClass} required /></Field>
                 <Field label="WhatsApp number — optional"><input value={whatsappNumber} onChange={(event) => setWhatsappNumber(event.target.value)} placeholder="0821234567" className={inputClass} /></Field>
-                <Field label="Listing package"><select value={packageType} onChange={(event) => setPackageType(event.target.value as "standard" | "pro" | "dealer")} className={inputClass}><option value="standard">Standard listing</option><option value="pro">Pro listing — analytics enabled</option><option value="dealer">Dealer package — showroom priority</option></select></Field>
+                <Field label="Selected listing plan"><div className={`${inputClass} flex items-center`}>{selectedPlan === "manual" ? "Manual listing — R15 per vehicle per day" : selectedPlan === "pro" ? "Pro listing — analytics enabled" : "Dealer package — showroom priority"}</div></Field>
               </div>
               <div className="grid gap-3 px-5 pb-5 md:px-7 md:pb-7">
                 <CheckRow checked={confirmOwnership} onChange={setConfirmOwnership} label="I own this vehicle or have written authority from the owner to list it." />
@@ -657,9 +672,7 @@ export default function ListYourTruckPage() {
             </section>
           </>
         ) : null}
-      </form>
-
-      <BuyATruckShowcase darkMode={darkMode} />
+      </form> : null}
     </main>
   );
 }
@@ -669,7 +682,7 @@ function Header({ darkMode, sellerType, onToggleSellerType }: { darkMode: boolea
     <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
       <div className="grid h-20 grid-cols-[86px_1fr_108px] items-center px-3 sm:grid-cols-[110px_1fr_170px] sm:px-4">
         <div className="flex items-center gap-2">
-          <Link href="/" aria-label="Back home" className={`flex h-10 w-10 items-center justify-center ${darkMode ? "text-white" : "text-black"}`}><MenuIcon /></Link>
+          <SiteMenu darkMode={darkMode} />
           <AuthStatusButton darkMode={darkMode} />
         </div>
         <HomeLogoLink theme={darkMode ? "dark" : "light"} />
@@ -714,8 +727,4 @@ function DocumentInput({ label, required = false, file, onChange }: { label: str
 
 function CheckRow({ checked, onChange, label }: { checked: boolean; onChange: (value: boolean) => void; label: string }) {
   return <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[#f6b800]/30 p-4"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="mt-1 h-5 w-5 accent-[#f6b800]" /><span className="text-sm font-semibold leading-6">{label}</span></label>;
-}
-
-function MenuIcon() {
-  return <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
 }

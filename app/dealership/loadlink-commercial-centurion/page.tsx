@@ -1,5 +1,5 @@
 import LoadLinkCommercialDealership from "@/components/LoadLinkCommercialDealership";
 
-export default function LegacyDealerRoute() {
+export default function LoadLinkCommercialCenturionPage() {
   return <LoadLinkCommercialDealership />;
 }
