@@ -45,6 +45,9 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
     supabase.auth.getUser().then(({ data }) => {
       setSignedIn(Boolean(data.user));
       setEmail(data.user?.email || "");
+    }).catch(() => {
+      setSignedIn(false);
+      setEmail("");
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSignedIn(Boolean(session?.user));

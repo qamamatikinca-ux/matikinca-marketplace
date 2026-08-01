@@ -26,7 +26,10 @@ export default function AuthStatusButton({
     supabase.auth.getUser().then(({ data }) => {
       if (!active) return;
       setUser(data.user);
-      setLoading(false);
+    }).catch(() => {
+      if (active) setUser(null);
+    }).finally(() => {
+      if (active) setLoading(false);
     });
 
     const {

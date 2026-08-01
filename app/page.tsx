@@ -3,18 +3,20 @@
 import HomeLogoLink from "@/components/HomeLogoLink";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import RecentActivityPanel from "@/components/RecentActivityPanel";
-import MarketplaceDiscovery from "@/components/MarketplaceDiscovery";
-import LogisticsNews from "@/components/LogisticsNews";
-import AuthStatusButton from "@/components/AuthStatusButton";
+import { lazy, Suspense, useEffect, useState } from "react";
 import RequireAuthLink from "@/components/RequireAuthLink";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 
-import SiteMenu from "@/components/SiteMenu";
-import FeaturedDealership from "@/components/FeaturedDealership";
-import FollowedNetwork from "@/components/FollowedNetwork";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
+import LoadLinkBoundary from "@/components/platform/LoadLinkBoundary";
+
+const RecentActivityPanel = lazy(() => import("@/components/RecentActivityPanel"));
+const MarketplaceDiscovery = lazy(() => import("@/components/MarketplaceDiscovery"));
+const LogisticsNews = lazy(() => import("@/components/LogisticsNews"));
+const AuthStatusButton = lazy(() => import("@/components/AuthStatusButton"));
+const SiteMenu = lazy(() => import("@/components/SiteMenu"));
+const FeaturedDealership = lazy(() => import("@/components/FeaturedDealership"));
+const FollowedNetwork = lazy(() => import("@/components/FollowedNetwork"));
 type PortalImage = {
   src: string;
   position: string;
@@ -126,6 +128,14 @@ const portalCards: PortalCard[] = [
 ];
 
 export default function Home() {
+  return (
+    <LoadLinkBoundary name="homepage" fallback={<HomeFallback />}>
+      <HomeExperience />
+    </LoadLinkBoundary>
+  );
+}
+
+function HomeExperience() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [recentActivity, setRecentActivity] = useState<PortalCard[]>([]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -148,7 +158,11 @@ export default function Home() {
         }
       }
     } catch {
-      localStorage.removeItem("loadlink-recent-activity");
+      try {
+        localStorage.removeItem("loadlink-recent-activity");
+      } catch {
+        // Browser storage may be unavailable; continue without recent activity.
+      }
       setRecentActivity([]);
     }
   }, []);
@@ -208,12 +222,20 @@ export default function Home() {
   >
     <div className="grid h-20 w-full grid-cols-[92px_1fr_52px] items-center px-4">
       <div className="flex items-center gap-2">
-        <SiteMenu
-          darkMode={darkMode}
-          className={`text-3xl font-black ${darkMode ? "text-white" : "text-black"}`}
-        />
+        <LoadLinkBoundary name="site menu">
+          <Suspense fallback={<span className="h-10 w-10" aria-hidden="true" />}>
+            <SiteMenu
+              darkMode={darkMode}
+              className={`text-3xl font-black ${darkMode ? "text-white" : "text-black"}`}
+            />
+          </Suspense>
+        </LoadLinkBoundary>
 
-        <AuthStatusButton darkMode={darkMode} />
+        <LoadLinkBoundary name="account settings button">
+          <Suspense fallback={<span className="h-10 w-10" aria-hidden="true" />}>
+            <AuthStatusButton darkMode={darkMode} />
+          </Suspense>
+        </LoadLinkBoundary>
       </div>
 
       <HomeLogoLink theme={darkMode ? "dark" : "light"} logoClassName="loadlink-logo-dark-fix" />
@@ -233,9 +255,9 @@ export default function Home() {
     </div>
   </header>
 
-      <MarketplaceDiscovery darkMode={darkMode} />
+      <LoadLinkBoundary name="marketplace search"><Suspense fallback={null}><MarketplaceDiscovery darkMode={darkMode} /></Suspense></LoadLinkBoundary>
 
-      <FeaturedDealership darkMode={darkMode} />
+      <LoadLinkBoundary name="featured dealership"><Suspense fallback={null}><FeaturedDealership darkMode={darkMode} /></Suspense></LoadLinkBoundary>
 
       {/* MAIN RECTANGLE PORTAL CARDS */}
       <section className="w-full">
@@ -287,9 +309,9 @@ export default function Home() {
         </div>
       </section>
 
-      <RecentActivityPanel darkMode={darkMode} />
+      <LoadLinkBoundary name="recent activity"><Suspense fallback={null}><RecentActivityPanel darkMode={darkMode} /></Suspense></LoadLinkBoundary>
 
-      <FollowedNetwork darkMode={darkMode} />
+      <LoadLinkBoundary name="followed network"><Suspense fallback={null}><FollowedNetwork darkMode={darkMode} /></Suspense></LoadLinkBoundary>
 
       {/* OUR MISSION SECTION */}
       <section
@@ -312,7 +334,7 @@ export default function Home() {
         </div>
       </section>
 
-      <LogisticsNews darkMode={darkMode} />
+      <LoadLinkBoundary name="logistics news"><Suspense fallback={null}><LogisticsNews darkMode={darkMode} /></Suspense></LoadLinkBoundary>
 
 
       {/* FOOTER / FINAL SECTION */}
@@ -507,6 +529,37 @@ export default function Home() {
         </div>
       </footer>
 </main>
+  );
+}
+
+
+function HomeFallback() {
+  const links = [
+    ["Find jobs", "/jobs"],
+    ["Find contracts", "/contracts"],
+    ["Browse trucks", "/trucks"],
+    ["Driver profiles", "/drivers"],
+    ["Featured dealership", "/dealership/loadlink-commercial-centurion"],
+    ["Profile settings", "/account/settings"],
+  ] as const;
+
+  return (
+    <main className="min-h-screen bg-[#fff6dc] px-5 py-10 text-black">
+      <div className="mx-auto max-w-4xl">
+        <header className="border-b border-black/10 pb-6 text-center">
+          <img src="/images/loadlink-logo-light.png" alt="LoadLink" className="mx-auto h-14 w-auto object-contain" />
+          <h1 className="mt-6 text-4xl font-black">LoadLink marketplace</h1>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-black/60">The main experience could not initialise on this browser, but every core LoadLink portal remains available below.</p>
+        </header>
+        <section className="mt-8 grid gap-3 sm:grid-cols-2">
+          {links.map(([label, href]) => (
+            <Link key={href} href={href} className="flex min-h-20 items-center justify-between border border-black/10 bg-white px-5 py-4 text-lg font-black">
+              {label}<span aria-hidden="true">→</span>
+            </Link>
+          ))}
+        </section>
+      </div>
+    </main>
   );
 }
 
