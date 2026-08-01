@@ -189,7 +189,6 @@ export default function ListYourVehiclePage() {
     setSelectedPlan(plan);
     setPackageType(plan === "manual" ? "standard" : plan);
     if (plan === "dealer") setSellerType("dealership");
-    else if (!dealerPost) setSellerType("private");
     setMessage("");
     requestAnimationFrame(() => document.getElementById("vehicle-type")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
@@ -382,7 +381,16 @@ export default function ListYourVehiclePage() {
     <main className={`min-h-screen transition-colors ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
       {saving ? <LoadLinkLoading /> : null}
       <SubmissionSuccess open={submissionSuccess} title="Vehicle submission sent" message={dealershipId ? "Your vehicle was added to the dealership inventory and submitted for review." : "Your vehicle and verification documents were submitted securely."} />
-      <Header darkMode={darkMode} sellerType={sellerType} dealerPost={dealerPost} onToggleTheme={toggleTheme} onToggleSellerType={() => { if (dealerPost) return; setSellerType((current) => current === "private" ? "dealership" : "private"); setMessage(""); }} />
+      <Header darkMode={darkMode} sellerType={sellerType} dealerPost={dealerPost} onToggleTheme={toggleTheme} onToggleSellerType={() => {
+        if (dealerPost) return;
+        if (sellerType === "dealership") {
+          setSellerType("private");
+          if (selectedPlan === "dealer") { setSelectedPlan(null); setPackageType("standard"); }
+        } else {
+          setSellerType("dealership");
+        }
+        setMessage("");
+      }} />
 
       <section className="relative min-h-[300px] overflow-hidden border-b border-[#f6b800]/35 md:min-h-[360px]">
         <img src="/images/jobs/jobs-hero-fleet.jpg" alt="Commercial vehicles ready to be listed on LoadLink" className="absolute inset-0 h-full w-full scale-[1.03] object-cover object-center grayscale opacity-80 [mask-image:linear-gradient(to_bottom,black_0%,black_64%,transparent_100%)]" />
@@ -392,6 +400,22 @@ export default function ListYourVehiclePage() {
           <p className="mt-4 max-w-xl text-base font-semibold leading-7 text-white/75">Choose your package, then select a truck, trailer or mobile unit and add the relevant details.</p>
         </div>
       </section>
+
+      {!dealerPost ? (
+        <section className={`border-b px-4 py-6 md:px-6 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+          <div className={`mx-auto max-w-6xl rounded-[24px] border p-5 md:flex md:items-center md:justify-between md:gap-8 md:p-6 ${darkMode ? "border-white/12 bg-[#111]" : "border-black/10 bg-[#faf8f2]"}`}>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#b88900]">Seller type</p>
+              <h2 className="mt-2 text-2xl font-black tracking-[-0.035em]">Are you a dealership?</h2>
+              <p className={`mt-2 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Choose dealership to submit the required business documents and link approved stock to your public dealership page. Choose private seller for an individual listing.</p>
+            </div>
+            <div className="mt-5 grid shrink-0 grid-cols-2 gap-2 md:mt-0 md:min-w-[330px]">
+              <button type="button" onClick={() => { setSellerType("private"); if (selectedPlan === "dealer") { setSelectedPlan(null); setPackageType("standard"); } setMessage(""); }} className={`min-h-12 rounded-xl border px-4 text-xs font-black uppercase tracking-[0.1em] transition ${sellerType === "private" ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/15 bg-black text-white" : "border-black/15 bg-white text-black"}`}>Private seller</button>
+              <button type="button" onClick={() => { setSellerType("dealership"); setMessage(""); }} className={`min-h-12 rounded-xl border px-4 text-xs font-black uppercase tracking-[0.1em] transition ${sellerType === "dealership" ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/15 bg-black text-white" : "border-black/15 bg-white text-black"}`}>Yes, dealership</button>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <BusinessPlans darkMode={darkMode} selectable selectedPlan={selectedPlan} onSelect={choosePlan} />
 
@@ -462,7 +486,18 @@ export default function ListYourVehiclePage() {
 }
 
 function Header({ darkMode, sellerType, dealerPost, onToggleTheme, onToggleSellerType }: { darkMode: boolean; sellerType: SellerType; dealerPost: boolean; onToggleTheme: () => void; onToggleSellerType: () => void }) {
-  return <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}><div className="grid h-20 grid-cols-[92px_1fr_92px] items-center px-3 sm:grid-cols-[120px_1fr_170px] sm:px-4"><div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div><HomeLogoLink theme={darkMode ? "dark" : "light"} /><div className="flex items-center justify-end gap-2"><LoadLinkThemeToggle darkMode={darkMode} onToggle={onToggleTheme} />{!dealerPost ? <button type="button" onClick={onToggleSellerType} className="hidden text-right text-[10px] font-black underline decoration-[#f6b800] decoration-2 underline-offset-4 sm:block">{sellerType === "dealership" ? "List privately" : "Dealership?"}</button> : null}</div></div></header>;
+  return (
+    <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
+      <div className="grid h-20 grid-cols-[86px_1fr_142px] items-center px-3 sm:grid-cols-[120px_1fr_230px] sm:px-4">
+        <div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div>
+        <HomeLogoLink theme={darkMode ? "dark" : "light"} />
+        <div className="flex items-center justify-end gap-2">
+          {!dealerPost ? <button type="button" onClick={onToggleSellerType} className={`max-w-[88px] text-right text-[9px] font-black leading-3 underline decoration-[#f6b800] decoration-2 underline-offset-4 sm:max-w-none sm:text-xs sm:leading-4 ${darkMode ? "text-white" : "text-black"}`}>{sellerType === "dealership" ? "List as a private seller" : "Are you a dealership?"}</button> : null}
+          <LoadLinkThemeToggle darkMode={darkMode} onToggle={onToggleTheme} />
+        </div>
+      </div>
+    </header>
+  );
 }
 function SectionHeading({ step, title, description }: { step: string; title: string; description: string }) { return <div className="border-b border-current/10 px-5 py-5 md:px-7"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#b88900]">{step}</p><h2 className="mt-2 text-3xl font-black tracking-[-0.04em]">{title}</h2><p className="mt-2 text-sm leading-6 opacity-55">{description}</p></div>; }
 function Field({ label, children, wide = false }: { label: string; children: React.ReactNode; wide?: boolean }) { return <label className={wide ? "block md:col-span-2" : "block"}><span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-[#b88900]">{label}</span>{children}</label>; }

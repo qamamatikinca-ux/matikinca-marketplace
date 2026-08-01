@@ -6,12 +6,15 @@ export type LoadLinkTheme = "light" | "dark";
 
 function readTheme(): LoadLinkTheme {
   if (typeof window === "undefined") return "light";
-  return window.localStorage.getItem("loadlink-theme") === "dark" ? "dark" : "light";
+  const stored = window.localStorage.getItem("loadlink-theme");
+  if (stored === "dark" || stored === "light") return stored;
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function applyTheme(theme: LoadLinkTheme) {
   if (typeof document === "undefined") return;
   document.documentElement.dataset.loadlinkTheme = theme;
+  document.documentElement.classList.toggle("dark", theme === "dark");
   document.documentElement.style.colorScheme = theme;
   document.body.dataset.loadlinkTheme = theme;
 }
