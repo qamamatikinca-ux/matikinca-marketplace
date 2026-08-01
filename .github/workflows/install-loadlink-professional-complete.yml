@@ -1,0 +1,170 @@
+name: Install LoadLink Professional Release COMPLETE
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: loadlink-professional-install-complete
+  cancel-in-progress: false
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Preserve existing GitHub workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/loadlink-existing-workflows
+          mkdir -p /tmp/loadlink-existing-workflows
+
+          if [ -d ".github/workflows" ]; then
+            cp -a .github/workflows/. /tmp/loadlink-existing-workflows/
+          fi
+
+      - name: Find and unpack the LoadLink release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ARCHIVE="$(find . -maxdepth 1 -type f             -iname 'LoadLink-Professional-Marketplace-Update*.zip'             -print -quit)"
+
+          if [ -z "${ARCHIVE}" ]; then
+            echo "::error::The LoadLink update ZIP is missing from the repository root."
+            echo "::error::Upload LoadLink-Professional-Marketplace-Update.zip beside package.json."
+            exit 1
+          fi
+
+          rm -rf .loadlink-release-stage
+          mkdir -p .loadlink-release-stage
+          unzip -q "${ARCHIVE}" -d .loadlink-release-stage
+
+          RELEASE_DIR="$(find .loadlink-release-stage             -mindepth 1 -maxdepth 1 -type d             -name 'LoadLink-Professional-Marketplace-Update*'             -print -quit)"
+
+          if [ -z "${RELEASE_DIR}" ]; then
+            echo "::error::The ZIP does not contain the expected LoadLink release folder."
+            exit 1
+          fi
+
+          for REQUIRED in             package.json             package-lock.json             scripts/clean-legacy-source.mjs             scripts/validate-recommendations.mjs             scripts/syntax-check.mjs             scripts/sql-integrity.mjs             scripts/performance-budget.mjs             tests/marketplace-contracts.test.mjs             tests/security-contracts.test.mjs             tests/release-structure.test.mjs             .github/workflows/quality-gate.yml             supabase/migrations/20260801_000001_loadlink_professional_marketplace.sql; do
+            if [ ! -f "${RELEASE_DIR}/${REQUIRED}" ]; then
+              echo "::error::The release ZIP is incomplete. Missing: ${REQUIRED}"
+              exit 1
+            fi
+          done
+
+          cp "${RELEASE_DIR}/.github/workflows/quality-gate.yml"             /tmp/loadlink-quality-gate.yml
+
+          rsync -a "${RELEASE_DIR}/" ./             --exclude '.git/'             --exclude '.github/workflows/'
+
+          echo "The professional LoadLink release files were copied successfully."
+
+      - name: Install project dependencies
+        env:
+          NODE_ENV: development
+        run: npm ci --include=dev --no-audit --no-fund
+
+      - name: Remove known legacy source artifacts
+        run: node scripts/clean-legacy-source.mjs
+
+      - name: Isolate workflows only for validation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf .github/workflows
+          mkdir -p .github/workflows
+          cp /tmp/loadlink-quality-gate.yml .github/workflows/quality-gate.yml
+
+          echo "Old installer workflows are temporarily hidden from the release test."
+          echo "They will be restored unchanged before the website update is committed."
+
+      - name: Validate all 140 recommendations
+        run: node scripts/validate-recommendations.mjs
+
+      - name: Validate marketplace, release and security contracts
+        run: node --test tests/*.test.mjs
+
+      - name: Validate TypeScript syntax
+        run: node scripts/syntax-check.mjs
+
+      - name: Validate ordered SQL migration
+        run: node scripts/sql-integrity.mjs
+
+      - name: Validate asset budget
+        run: node scripts/performance-budget.mjs
+
+      - name: Restore existing GitHub workflows unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf .github/workflows
+          mkdir -p .github/workflows
+
+          if [ -d "/tmp/loadlink-existing-workflows" ]; then
+            cp -a /tmp/loadlink-existing-workflows/. .github/workflows/
+          fi
+
+          git restore --source=HEAD --staged --worktree .github/workflows 2>/dev/null || true
+
+          if ! git diff --quiet -- .github/workflows; then
+            echo "::error::A GitHub workflow file is still modified."
+            git diff -- .github/workflows
+            exit 1
+          fi
+
+          echo "Confirmed: no GitHub workflow file will be added, edited or deleted."
+
+      - name: Remove temporary release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .loadlink-release-stage
+          rm -f /tmp/loadlink-quality-gate.yml
+          rm -rf /tmp/loadlink-existing-workflows
+
+          find . -maxdepth 1 -type f             -iname 'LoadLink-Professional-Marketplace-Update*.zip'             -delete
+
+      - name: Commit and push the professional website update
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "LoadLink Release Installer"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add -A
+
+          if git diff --cached --name-only | grep -qE '^\.github/workflows/'; then
+            echo "::error::A workflow file was staged unexpectedly. Installation stopped safely."
+            git restore --source=HEAD --staged --worktree .github/workflows
+            exit 1
+          fi
+
+          if git diff --cached --quiet; then
+            echo "No new website changes were detected."
+            exit 0
+          fi
+
+          git commit -m "Install LoadLink professional marketplace release"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+          echo "LoadLink professional release installed successfully."
