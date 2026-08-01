@@ -14,6 +14,7 @@ import {
 } from "react";
 
 import HomeLogoLink from "@/components/HomeLogoLink";
+import SiteMenu from "@/components/SiteMenu";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { getBuyerKey, getBuyerKeys, getOwnerKeys } from "@/lib/chatKeys";
@@ -64,6 +65,11 @@ type AttachmentPayload = {
   file_base64: string;
 };
 
+type BlockState = {
+  blocked_by_me: boolean;
+  blocked_by_other: boolean;
+};
+
 const ACCEPTED_FILE_TYPES = [
   "image/jpeg",
   "image/png",
@@ -74,6 +80,12 @@ const ACCEPTED_FILE_TYPES = [
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "text/plain",
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/webm",
+  "audio/ogg",
+  "audio/wav",
+  "audio/x-m4a",
 ];
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -140,6 +152,12 @@ function fileSizeLabel(bytes: number | null) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function recordingTime(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainder = String(seconds % 60).padStart(2, "0");
+  return `${minutes}:${remainder}`;
+}
+
 function fileToBase64(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -187,11 +205,20 @@ export default function MessagesPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [showDetails, setShowDetails] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [blockState, setBlockState] = useState<BlockState>({ blocked_by_me: false, blocked_by_other: false });
+  const [blockBusy, setBlockBusy] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const selectedIdRef = useRef("");
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordingCancelledRef = useRef(false);
 
   const selectedConversation = useMemo(
     () =>
@@ -210,6 +237,7 @@ export default function MessagesPage() {
   const dailyLimitReached = Boolean(
     selectedConversation && !isPro && messagesUsedToday >= dailyMessageLimit,
   );
+  const conversationBlocked = blockState.blocked_by_me || blockState.blocked_by_other;
 
   const visibleConversations = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -402,7 +430,16 @@ export default function MessagesPage() {
 
     let active = true;
     setMessages([]);
+    setBlockState({ blocked_by_me: false, blocked_by_other: false });
     loadMessages(selectedConversation, true);
+    supabase.rpc("get_listing_guest_block_status", {
+      p_thread_id: selectedConversation.id,
+      p_access_key: selectedConversation.accessKey,
+    }).then(({ data, error: blockError }) => {
+      if (!active || blockError) return;
+      const status = ((data || []) as BlockState[])[0];
+      if (status) setBlockState(status);
+    });
     const messageTimer = setInterval(() => {
       if (active) loadMessages(selectedConversation).catch(() => undefined);
     }, 2500);
@@ -420,6 +457,7 @@ export default function MessagesPage() {
       active = false;
       clearInterval(messageTimer);
       clearInterval(presenceTimer);
+      if (mediaRecorderRef.current?.state === "recording") stopRecording(true);
       supabase
         .rpc("touch_listing_guest_presence", {
           p_thread_id: selectedConversation.id,
@@ -439,6 +477,10 @@ export default function MessagesPage() {
   async function send(event?: FormEvent) {
     event?.preventDefault();
     if (!selectedConversation || !text.trim() || sending || uploading) return;
+    if (conversationBlocked) {
+      setError(blockState.blocked_by_me ? "Unblock this user before sending a message." : "This user has blocked this conversation.");
+      return;
+    }
     if (dailyLimitReached) {
       setError(
         "You have used today’s 50 free messages. Upgrade to Pro to keep messaging today.",
@@ -501,23 +543,22 @@ export default function MessagesPage() {
     }
   }
 
-  async function uploadFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file || !selectedConversation || uploading || sending) return;
-    if (dailyLimitReached) {
-      setError(
-        "You have used today’s 50 free messages. Upgrade to Pro to keep messaging today.",
-      );
+  async function sendAttachment(file: File, caption?: string) {
+    if (!selectedConversation || uploading || sending) return;
+    if (conversationBlocked) {
+      setError(blockState.blocked_by_me ? "Unblock this user before sending an attachment." : "This user has blocked this conversation.");
       return;
     }
-
+    if (dailyLimitReached) {
+      setError("You have used today’s 50 free messages. Upgrade to Pro to keep messaging today.");
+      return;
+    }
     if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
-      setError("Use a photo, PDF, Word, Excel or text file.");
+      setError("Use a photo, document or supported voice-note file.");
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
-      setError("Files must be 5 MB or smaller.");
+      setError("Files and voice notes must be 5 MB or smaller.");
       return;
     }
 
@@ -531,11 +572,11 @@ export default function MessagesPage() {
         p_file_name: file.name,
         p_file_type: file.type,
         p_file_base64: base64,
-        p_caption: text.trim() || null,
+        p_caption: caption ?? (text.trim() || null),
       });
       if (result.error) throw result.error;
       setText("");
-      await recordUserActivity("attachment_sent", {
+      await recordUserActivity(file.type.startsWith("audio/") ? "voice_note_sent" : "attachment_sent", {
         entityType: "conversation",
         entityId: selectedConversation.id,
         metadata: { listingId: selectedConversation.listing_id, fileType: file.type },
@@ -543,9 +584,109 @@ export default function MessagesPage() {
       await loadMessages(selectedConversation);
       await loadConversations(selectedConversation.id);
     } catch (uploadError) {
-      setError(cleanError(uploadError, "The file could not be sent."));
+      setError(cleanError(uploadError, file.type.startsWith("audio/") ? "The voice note could not be sent." : "The file could not be sent."));
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function uploadFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    await sendAttachment(file);
+  }
+
+  async function startRecording() {
+    if (!selectedConversation || recording || uploading || sending || conversationBlocked || dailyLimitReached) return;
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setError("Voice notes are not supported by this browser. You can attach an audio file instead.");
+      return;
+    }
+    setError("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const preferredTypes = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"];
+      const mimeType = preferredTypes.find((type) => MediaRecorder.isTypeSupported(type)) || "";
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      recordingStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      recordingChunksRef.current = [];
+      recordingCancelledRef.current = false;
+      setRecordingSeconds(0);
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) recordingChunksRef.current.push(event.data);
+      };
+      recorder.onerror = () => setError("The voice note recording stopped unexpectedly.");
+      recorder.onstop = () => {
+        const actualType = recorder.mimeType || mimeType || "audio/webm";
+        const cancelled = recordingCancelledRef.current;
+        const blob = new Blob(recordingChunksRef.current, { type: actualType });
+        recordingChunksRef.current = [];
+        recordingCancelledRef.current = false;
+        recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
+        recordingStreamRef.current = null;
+        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+        setRecording(false);
+        const extension = actualType.includes("mp4") ? "m4a" : actualType.includes("ogg") ? "ogg" : "webm";
+        if (!cancelled && blob.size > 0) {
+          const file = new File([blob], `LoadLink-voice-note-${Date.now()}.${extension}`, { type: actualType.split(";")[0] });
+          void sendAttachment(file, "Voice note");
+        }
+      };
+      recorder.start(500);
+      setRecording(true);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds((seconds) => {
+          if (seconds >= 89) {
+            mediaRecorderRef.current?.stop();
+            return 90;
+          }
+          return seconds + 1;
+        });
+      }, 1000);
+    } catch (recordError) {
+      setError(recordError instanceof Error && /permission|denied|notallowed/i.test(recordError.message) ? "Microphone permission is required to record a voice note." : "The microphone could not be opened.");
+    }
+  }
+
+  function stopRecording(cancel = false) {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === "inactive") return;
+    if (cancel) {
+      recordingCancelledRef.current = true;
+      recordingChunksRef.current = [];
+    }
+    recorder.stop();
+    mediaRecorderRef.current = null;
+    if (cancel) setError("Voice note cancelled.");
+  }
+
+  async function toggleBlock() {
+    if (!selectedConversation || blockBusy) return;
+    const willBlock = !blockState.blocked_by_me;
+    if (willBlock && recording) stopRecording(true);
+    if (willBlock && !window.confirm(`Block ${selectedConversation.other_name}? Neither person will be able to send messages until you unblock them.`)) return;
+    setBlockBusy(true);
+    setError("");
+    try {
+      const functionName = willBlock ? "block_listing_guest_user" : "unblock_listing_guest_user";
+      const result = await supabase.rpc(functionName, {
+        p_thread_id: selectedConversation.id,
+        p_access_key: selectedConversation.accessKey,
+      });
+      if (result.error) throw result.error;
+      setBlockState((current) => ({ ...current, blocked_by_me: willBlock }));
+      setError(willBlock ? `${selectedConversation.other_name} has been blocked.` : `${selectedConversation.other_name} has been unblocked.`);
+    } catch (blockError) {
+      const text = cleanError(blockError, "The block setting could not be changed.");
+      const rawMessage = blockError && typeof blockError === "object" && "message" in blockError
+        ? String((blockError as { message?: unknown }).message || "")
+        : "";
+      setError(/function|schema cache|does not exist/i.test(rawMessage) ? "Run LOADLINK-PHASE-2-FINAL.sql in Supabase to enable blocking." : text);
+    } finally {
+      setBlockBusy(false);
     }
   }
 
@@ -607,14 +748,17 @@ export default function MessagesPage() {
   return (
     <main className="h-[100dvh] overflow-hidden bg-[#eeeae0] text-black">
       <header className="grid h-[72px] grid-cols-[56px_1fr_56px] items-center border-b border-black/10 bg-black px-3 text-white md:h-20 md:grid-cols-[120px_1fr_120px] md:px-5">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-sm font-black"
-          aria-label="Back to LoadLink home"
-        >
-          <span className="text-2xl">←</span>
-          <span className="hidden md:inline">Home</span>
-        </Link>
+        <div className="flex items-center gap-1">
+          <SiteMenu darkMode className="text-white" />
+          <Link
+            href="/"
+            className="hidden items-center gap-2 text-sm font-black md:inline-flex"
+            aria-label="Back to LoadLink home"
+          >
+            <span className="text-2xl">←</span>
+            <span>Home</span>
+          </Link>
+        </div>
         <HomeLogoLink theme="dark" />
         <button
           type="button"
@@ -805,6 +949,14 @@ export default function MessagesPage() {
                   ) : null}
                   <button
                     type="button"
+                    onClick={() => void toggleBlock()}
+                    disabled={blockBusy}
+                    className={`hidden h-10 items-center justify-center rounded-full border px-4 text-[10px] font-black uppercase md:flex ${blockState.blocked_by_me ? "border-red-500 bg-red-50 text-red-600" : "border-black/10 bg-white text-black"}`}
+                  >
+                    {blockBusy ? "Saving…" : blockState.blocked_by_me ? "Unblock" : "Block"}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setShowDetails((value) => !value)}
                     className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-lg font-black xl:hidden"
                     aria-label="Conversation details"
@@ -819,9 +971,16 @@ export default function MessagesPage() {
                 privately. Only people in this conversation can access them.
               </div>
 
+              {conversationBlocked ? (
+                <div className="flex items-center justify-between gap-3 border-b border-red-300 bg-red-50 px-4 py-3 text-xs font-bold text-red-700">
+                  <span>{blockState.blocked_by_me ? "You blocked this user. Unblock them to continue the conversation." : "This user blocked the conversation. New messages are disabled."}</span>
+                  {blockState.blocked_by_me ? <button type="button" onClick={() => void toggleBlock()} className="shrink-0 border border-red-500 px-3 py-2 text-[10px] font-black uppercase">Unblock</button> : null}
+                </div>
+              ) : null}
+
               {showDetails ? (
                 <div className="border-b border-black/10 bg-white p-4 xl:hidden">
-                  <ConversationDetails conversation={selectedConversation} />
+                  <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} onToggleBlock={toggleBlock} />
                 </div>
               ) : null}
 
@@ -864,28 +1023,21 @@ export default function MessagesPage() {
                               }`}
                             >
                               {message.attachment_id ? (
-                                <button
-                                  type="button"
-                                  onClick={() => downloadAttachment(message)}
-                                  className={`mb-2 flex w-full items-center gap-3 rounded-xl border p-3 text-left ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}
-                                >
-                                  <span
-                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${mine ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}
+                                message.file_type?.startsWith("audio/") ? (
+                                  <VoiceAttachment message={message} accessKey={selectedConversation.accessKey} mine={mine} onError={setError} />
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => downloadAttachment(message)}
+                                    className={`mb-2 flex w-full items-center gap-3 rounded-xl border p-3 text-left ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}
                                   >
-                                    <PaperclipIcon />
-                                  </span>
-                                  <span className="min-w-0 flex-1">
-                                    <strong className="block truncate text-xs font-black">
-                                      {message.file_name || "Attachment"}
-                                    </strong>
-                                    <span
-                                      className={`mt-0.5 block text-[10px] font-semibold ${mine ? "text-white/55" : "text-black/45"}`}
-                                    >
-                                      {fileSizeLabel(message.file_size)} · Tap
-                                      to open
+                                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${mine ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><PaperclipIcon /></span>
+                                    <span className="min-w-0 flex-1">
+                                      <strong className="block truncate text-xs font-black">{message.file_name || "Attachment"}</strong>
+                                      <span className={`mt-0.5 block text-[10px] font-semibold ${mine ? "text-white/55" : "text-black/45"}`}>{fileSizeLabel(message.file_size)} · Tap to open</span>
                                     </span>
-                                  </span>
-                                </button>
+                                  </button>
+                                )
                               ) : null}
                               {message.body &&
                               (!message.attachment_id ||
@@ -955,11 +1107,20 @@ export default function MessagesPage() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={sending || uploading || dailyLimitReached}
+                    disabled={sending || uploading || dailyLimitReached || conversationBlocked}
                     className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-black/10 bg-[#f3f0e8] text-black disabled:opacity-40"
                     aria-label="Attach a file"
                   >
                     <PaperclipIcon />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => recording ? stopRecording(false) : void startRecording()}
+                    disabled={sending || uploading || dailyLimitReached || conversationBlocked}
+                    className={`flex h-12 shrink-0 items-center justify-center rounded-full border px-3 text-xs font-black ${recording ? "min-w-[82px] border-red-500 bg-red-500 text-white" : "w-12 border-black/10 bg-[#f3f0e8] text-black"} disabled:opacity-40`}
+                    aria-label={recording ? "Stop and send voice note" : "Record voice note"}
+                  >
+                    {recording ? recordingTime(recordingSeconds) : <MicrophoneIcon />}
                   </button>
                   <div className="min-w-0 flex-1 rounded-2xl border border-black/10 bg-[#f6f4ee] px-4 py-2 focus-within:border-[#f6b800] focus-within:bg-white">
                     <textarea
@@ -967,22 +1128,26 @@ export default function MessagesPage() {
                       onChange={(event) => updateTyping(event.target.value)}
                       onKeyDown={handleComposerKeyDown}
                       placeholder={
-                        dailyLimitReached
-                          ? "Daily free message limit reached"
-                          : uploading
-                            ? "Sending attachment…"
-                            : "Type a message"
+                        conversationBlocked
+                          ? "Messaging is blocked"
+                          : dailyLimitReached
+                            ? "Daily free message limit reached"
+                            : recording
+                              ? "Recording voice note…"
+                              : uploading
+                                ? "Sending attachment…"
+                                : "Type a message"
                       }
                       rows={1}
                       maxLength={4000}
-                      disabled={sending || uploading || dailyLimitReached}
+                      disabled={sending || uploading || dailyLimitReached || conversationBlocked}
                       className="max-h-32 min-h-8 w-full resize-none bg-transparent py-1 text-sm font-medium outline-none placeholder:text-black/35 disabled:opacity-50"
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={
-                      !text.trim() || sending || uploading || dailyLimitReached
+                      !text.trim() || sending || uploading || dailyLimitReached || conversationBlocked
                     }
                     className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f6b800] text-black shadow-sm transition active:scale-95 disabled:bg-black/10 disabled:text-black/25"
                     aria-label="Send message"
@@ -995,7 +1160,7 @@ export default function MessagesPage() {
                   </button>
                 </div>
                 <div className="mx-auto mt-2 flex max-w-3xl items-center justify-center gap-2 text-center text-[10px] font-semibold text-black/40">
-                  <span>Photos and documents up to 5 MB</span>
+                  <span>Photos, documents and voice notes up to 5 MB</span>
                   <span aria-hidden="true">·</span>
                   {isPro ? (
                     <span className="font-black text-[#8a6700]">
@@ -1046,11 +1211,44 @@ export default function MessagesPage() {
 
         <aside className="hidden min-h-0 overflow-y-auto border-l border-black/10 bg-white p-5 xl:block">
           {selectedConversation ? (
-            <ConversationDetails conversation={selectedConversation} />
+            <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} onToggleBlock={toggleBlock} />
           ) : null}
         </aside>
       </div>
     </main>
+  );
+}
+
+function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatMessage; accessKey: string; mine: boolean; onError: (message: string) => void }) {
+  const [url, setUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
+
+  async function loadVoiceNote() {
+    if (!message.attachment_id || loading || url) return;
+    setLoading(true);
+    try {
+      const result = await supabase.rpc("get_listing_guest_attachment", { p_attachment_id: message.attachment_id, p_access_key: accessKey });
+      if (result.error) throw result.error;
+      const payload = ((result.data || []) as AttachmentPayload[])[0];
+      if (!payload) throw new Error("Voice note unavailable.");
+      setUrl(URL.createObjectURL(base64ToBlob(payload.file_base64, payload.file_type)));
+    } catch (error) {
+      onError(cleanError(error, "Voice note could not be opened."));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className={`mb-2 w-full rounded-xl border p-3 ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}>
+      <div className="flex items-center gap-3">
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${mine ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><MicrophoneIcon /></span>
+        <span className="min-w-0 flex-1"><strong className="block text-xs font-black">Voice note</strong><span className={`mt-0.5 block text-[10px] font-semibold ${mine ? "text-white/55" : "text-black/45"}`}>{fileSizeLabel(message.file_size)}</span></span>
+      </div>
+      {url ? <audio controls preload="metadata" src={url} className="mt-3 h-9 w-full" /> : <button type="button" onClick={() => void loadVoiceNote()} disabled={loading} className={`mt-3 h-9 w-full rounded-lg border text-[10px] font-black uppercase ${mine ? "border-white/20 text-white" : "border-black/15 text-black"}`}>{loading ? "Loading…" : "Play voice note"}</button>}
+    </div>
   );
 }
 
@@ -1099,7 +1297,7 @@ function Avatar({
   );
 }
 
-function ConversationDetails({ conversation }: { conversation: Conversation }) {
+function ConversationDetails({ conversation, blockState, blockBusy, onToggleBlock }: { conversation: Conversation; blockState: BlockState; blockBusy: boolean; onToggleBlock: () => Promise<void> }) {
   return (
     <div>
       <p className="text-[10px] font-black uppercase tracking-[.22em] text-[#b88900]">
@@ -1170,6 +1368,10 @@ function ConversationDetails({ conversation }: { conversation: Conversation }) {
         ) : null}
       </div>
 
+      <button type="button" onClick={() => void onToggleBlock()} disabled={blockBusy || blockState.blocked_by_other} className={`mt-5 flex h-11 w-full items-center justify-center border text-xs font-black uppercase ${blockState.blocked_by_me ? "border-red-500 bg-red-50 text-red-600" : "border-black/15 text-black"} disabled:opacity-45`}>
+        {blockBusy ? "Saving…" : blockState.blocked_by_me ? "Unblock user" : blockState.blocked_by_other ? "This user blocked the chat" : "Block user"}
+      </button>
+
       <div className="mt-6 rounded-xl border border-[#e5c34c]/35 bg-[#fff8de] p-4">
         <p className="text-xs font-black">Stay safe</p>
         <p className="mt-2 text-xs font-medium leading-5 text-black/55">
@@ -1223,6 +1425,15 @@ function PaperclipIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function MicrophoneIcon() {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="8" y="3" width="8" height="12" rx="4" stroke="currentColor" strokeWidth="2" />
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v3M8.5 21h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }

@@ -11,6 +11,7 @@ import RequireAuthLink from "@/components/RequireAuthLink";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 
 import DriversAvailableForWork from "@/components/phase2/DriversAvailableForWork";
+import SiteMenu from "@/components/SiteMenu";
 type PortalImage = {
   src: string;
   position: string;
@@ -189,14 +190,10 @@ export default function Home() {
   >
     <div className="grid h-20 w-full grid-cols-[92px_1fr_52px] items-center px-4">
       <div className="flex items-center gap-2">
-        <button
-          className={`flex h-10 w-10 items-center justify-center text-3xl font-black ${
-            darkMode ? "text-white" : "text-black"
-          }`}
-          aria-label="Open menu"
-        >
-          <MenuIcon />
-        </button>
+        <SiteMenu
+          darkMode={darkMode}
+          className={`text-3xl font-black ${darkMode ? "text-white" : "text-black"}`}
+        />
 
         <AuthStatusButton darkMode={darkMode} />
       </div>
@@ -271,6 +268,8 @@ export default function Home() {
       </section>
 
       <RecentActivityPanel darkMode={darkMode} />
+
+      <DriversAvailableForWork darkMode={darkMode} />
 
       {/* OUR MISSION SECTION */}
       <section
@@ -505,8 +504,6 @@ export default function Home() {
           </p>
         </div>
       </footer>
-    
-      <DriversAvailableForWork />
 </main>
   );
 }

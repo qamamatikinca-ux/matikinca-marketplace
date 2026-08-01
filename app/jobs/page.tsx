@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import HomeLogoLink from "@/components/HomeLogoLink";
+import SiteMenu from "@/components/SiteMenu";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import RecentActivityPanel from "@/components/RecentActivityPanel";
 import { VerifiedBadge } from "@/components/MarketplaceDiscovery";
@@ -333,6 +334,8 @@ function greetPoster(job: JobListing) {
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
 }
 
+const LISTINGS_PER_PAGE = 7;
+
 export default function JobsPortalPage() {
   const [darkMode, setDarkMode] = useState(false);
   const [keyword, setKeyword] = useState("");
@@ -352,6 +355,7 @@ export default function JobsPortalPage() {
   const [portalFilter, setPortalFilter] = useState<PortalFilter>("");
   const [analyticsJob, setAnalyticsJob] = useState<JobListing | null>(null);
   const [loadError, setLoadError] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const cityWrapperRef = useRef<HTMLLabelElement | null>(null);
 
   async function fetchJobs() {
@@ -522,6 +526,25 @@ export default function JobsPortalPage() {
       return keywordMatch && cityMatch && groupMatch && categoryMatch && portalMatch;
     });
   }, [allJobs, keyword, city, group, quickCategory, portalFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(matchingJobs.length / LISTINGS_PER_PAGE));
+  const paginatedJobs = useMemo(() => {
+    const start = (currentPage - 1) * LISTINGS_PER_PAGE;
+    return matchingJobs.slice(start, start + LISTINGS_PER_PAGE);
+  }, [matchingJobs, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [keyword, city, group, quickCategory, portalFilter]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
+  function changePage(nextPage: number) {
+    setCurrentPage(Math.min(totalPages, Math.max(1, nextPage)));
+    requestAnimationFrame(() => document.getElementById("matching-jobs")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
 
   function toggleLiked(job: JobListing) {
     const nowLiked = saveLikedJob(job);
@@ -713,7 +736,7 @@ export default function JobsPortalPage() {
 
         <div className="grid gap-5">
           {loadingJobs ? <ListingSkeletons darkMode={darkMode} /> : matchingJobs.length > 0 ? (
-            matchingJobs.map((job) => (
+            paginatedJobs.map((job) => (
               <JobCard
                 key={job.id}
                 job={job}
@@ -737,6 +760,10 @@ export default function JobsPortalPage() {
             </div>
           )}
         </div>
+
+        {!loadingJobs && matchingJobs.length > LISTINGS_PER_PAGE ? (
+          <Pagination current={currentPage} total={totalPages} onChange={changePage} darkMode={darkMode} />
+        ) : null}
       </section>
 
       <RecentActivityPanel darkMode={darkMode} />
@@ -747,6 +774,32 @@ export default function JobsPortalPage() {
       {editJob ? <EditJobModal job={editJob} ownerKey={ownedJobs[editJob.id]} onClose={() => setEditJob(null)} onUpdated={() => { setEditJob(null); fetchJobs(); }} /> : null}
     </main>
   );
+}
+
+function Pagination({ current, total, onChange, darkMode }: { current: number; total: number; onChange: (page: number) => void; darkMode: boolean }) {
+  const items = paginationItems(current, total);
+  const base = `flex h-11 min-w-11 items-center justify-center border px-3 text-xs font-black ${darkMode ? "border-white/15 text-white" : "border-black/15 text-black"}`;
+  return (
+    <nav className="mt-8 flex flex-wrap items-center justify-center gap-2" aria-label="Listing pages">
+      <button type="button" disabled={current === 1} onClick={() => onChange(current - 1)} className={`${base} disabled:opacity-30`}>Previous</button>
+      {items.map((item, index) => item === "…" ? <span key={`ellipsis-${index}`} className={base}>…</span> : (
+        <button key={item} type="button" aria-current={item === current ? "page" : undefined} onClick={() => onChange(item as number)} className={`${base} ${item === current ? "border-[#f6b800] bg-[#f6b800] text-black" : ""}`}>{item}</button>
+      ))}
+      <button type="button" disabled={current === total} onClick={() => onChange(current + 1)} className={`${base} disabled:opacity-30`}>Next</button>
+    </nav>
+  );
+}
+
+function paginationItems(current: number, total: number): Array<number | "…"> {
+  if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
+  const result: Array<number | "…"> = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  if (start > 2) result.push("…");
+  for (let page = start; page <= end; page += 1) result.push(page);
+  if (end < total - 1) result.push("…");
+  result.push(total);
+  return result;
 }
 
 function FeaturedJobsRail({ jobs, darkMode, onOpen }: { jobs: JobListing[]; darkMode: boolean; onOpen: (job: JobListing) => void }) {
@@ -1105,7 +1158,7 @@ function Header({ darkMode, toggleDarkMode }: { darkMode: boolean; toggleDarkMod
     <header className={`sticky top-0 z-50 border-b transition-colors duration-500 ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
       <div className="grid h-20 w-full grid-cols-[92px_1fr_52px] items-center px-4">
         <div className="flex items-center gap-2">
-          <Link href="/" className={`flex h-10 w-10 items-center justify-center text-3xl font-black ${darkMode ? "text-white" : "text-black"}`} aria-label="Open menu"><MenuIcon /></Link>
+          <SiteMenu darkMode={darkMode} className={`text-3xl font-black ${darkMode ? "text-white" : "text-black"}`} />
           <AuthStatusButton darkMode={darkMode} />
         </div>
 

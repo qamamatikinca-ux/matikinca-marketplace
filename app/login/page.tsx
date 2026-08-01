@@ -1,6 +1,7 @@
 "use client";
 
 import HomeLogoLink from "@/components/HomeLogoLink";
+import SiteMenu from "@/components/SiteMenu";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -119,16 +120,7 @@ export default function LoginPage() {
       >
         <div className="grid h-20 w-full grid-cols-[92px_1fr_52px] items-center px-4">
           <div className="flex items-center gap-2">
-            <Link
-              href="/"
-              aria-label="Return to homepage"
-              className={[
-                "flex h-10 w-10 items-center justify-center",
-                isDark ? "text-white" : "text-black",
-              ].join(" ")}
-            >
-              <MenuIcon />
-            </Link>
+            <SiteMenu darkMode={isDark} className={isDark ? "text-white" : "text-black"} />
 
             <AuthStatusButton darkMode={isDark} />
           </div>

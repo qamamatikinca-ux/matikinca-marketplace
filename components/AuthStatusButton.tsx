@@ -59,9 +59,9 @@ export default function AuthStatusButton({
     const email = user.email || "your Google account";
     return (
       <Link
-        href="/login"
-        aria-label={`Signed in as ${email}`}
-        title={`Signed in as ${email}`}
+        href="/account/settings"
+        aria-label={`Signed in as ${email}. Open profile settings`}
+        title={`Signed in as ${email}. Open profile settings`}
         className={`${base} border-[#f6b800] bg-[#f6b800] text-black shadow-[0_0_18px_rgba(246,184,0,0.24)]`}
       >
         <GoldCheckIcon />

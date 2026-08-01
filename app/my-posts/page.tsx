@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
+import SiteMenu from "@/components/SiteMenu";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { getOwnerKeys } from "@/lib/chatKeys";
 import { formatListingRate } from "@/lib/formatCurrency";
@@ -44,6 +45,7 @@ type MyListing = {
 
 type VerificationMap = Record<string, string>;
 type Filter = "all" | "active" | "closed";
+const POSTS_PER_PAGE = 7;
 
 type AnalyticsPayload = {
   total_views?: number;
@@ -62,6 +64,7 @@ export default function MyPostsPage() {
   const [listings, setListings] = useState<MyListing[]>([]);
   const [verificationStatuses, setVerificationStatuses] = useState<VerificationMap>({});
   const [filter, setFilter] = useState<Filter>("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [message, setMessage] = useState("");
   const [editing, setEditing] = useState<MyListing | null>(null);
   const [analyticsListing, setAnalyticsListing] = useState<MyListing | null>(null);
@@ -225,6 +228,15 @@ export default function MyPostsPage() {
     return true;
   }), [filter, listings]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredListings.length / POSTS_PER_PAGE));
+  const paginatedListings = useMemo(() => {
+    const start = (currentPage - 1) * POSTS_PER_PAGE;
+    return filteredListings.slice(start, start + POSTS_PER_PAGE);
+  }, [currentPage, filteredListings]);
+
+  useEffect(() => { setCurrentPage(1); }, [filter]);
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages); }, [currentPage, totalPages]);
+
   const activeCount = listings.filter((item) => (item.status || "active") === "active").length;
   const proCount = listings.filter((item) => ["pro", "dealer"].includes(item.package_type || "")).length;
 
@@ -267,8 +279,9 @@ export default function MyPostsPage() {
         {message ? <div className="mb-5 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm font-bold text-red-500">{message}</div> : null}
 
         {loading ? <div className="min-h-64"><LoadLinkLoading /></div> : filteredListings.length ? (
+          <>
           <div className="grid gap-5">
-            {filteredListings.map((listing) => {
+            {paginatedListings.map((listing) => {
               const status = listing.status || "active";
               const isPro = ["pro", "dealer"].includes(listing.package_type || "");
               const isManualVehicle = listing.listing_kind === "vehicle" && listing.package_type === "manual";
@@ -336,6 +349,8 @@ export default function MyPostsPage() {
               );
             })}
           </div>
+          {totalPages > 1 ? <PostPagination current={currentPage} total={totalPages} onChange={setCurrentPage} darkMode={darkMode} /> : null}
+          </>
         ) : (
           <div className={`rounded-[26px] border p-10 text-center ${surface}`}>
             <h2 className="text-3xl font-black">No posts here yet</h2>
@@ -370,7 +385,13 @@ function formatDate(value: string | null) {
 }
 
 function Header({ darkMode }: { darkMode: boolean }) {
-  return <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}><div className="grid h-20 grid-cols-[92px_1fr_92px] items-center px-4"><div className="flex items-center gap-2"><Link href="/jobs" aria-label="Back to jobs" className={`flex h-10 w-10 items-center justify-center ${darkMode ? "text-white" : "text-black"}`}><BackIcon /></Link><AuthStatusButton darkMode={darkMode} /></div><HomeLogoLink theme={darkMode ? "dark" : "light"} /><div aria-hidden="true" /></div></header>;
+  return <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}><div className="grid h-20 grid-cols-[92px_1fr_92px] items-center px-4"><div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} /><AuthStatusButton darkMode={darkMode} /></div><HomeLogoLink theme={darkMode ? "dark" : "light"} /><Link href="/jobs" aria-label="Back to jobs" className={`ml-auto flex h-10 w-10 items-center justify-center ${darkMode ? "text-white" : "text-black"}`}><BackIcon /></Link></div></header>;
+}
+
+function PostPagination({ current, total, onChange, darkMode }: { current: number; total: number; onChange: (page: number) => void; darkMode: boolean }) {
+  const items: Array<number | "…"> = total <= 7 ? Array.from({ length: total }, (_, index) => index + 1) : [1, ...(current > 3 ? ["…" as const] : []), ...Array.from({ length: Math.max(0, Math.min(total - 1, current + 1) - Math.max(2, current - 1) + 1) }, (_, index) => Math.max(2, current - 1) + index), ...(current < total - 2 ? ["…" as const] : []), total];
+  const base = `h-11 min-w-11 border px-3 text-xs font-black ${darkMode ? "border-white/15 text-white" : "border-black/15 text-black"}`;
+  return <nav className="mt-8 flex flex-wrap items-center justify-center gap-2" aria-label="My post pages"><button type="button" disabled={current===1} onClick={()=>onChange(current-1)} className={`${base} disabled:opacity-30`}>Previous</button>{items.map((item,index)=>item==="…"?<span key={`ellipsis-${index}`} className={`${base} inline-flex items-center justify-center`}>…</span>:<button key={item} type="button" onClick={()=>onChange(item)} aria-current={item===current?"page":undefined} className={`${base} ${item===current?"border-[#f6b800] bg-[#f6b800] text-black":""}`}>{item}</button>)}<button type="button" disabled={current===total} onClick={()=>onChange(current+1)} className={`${base} disabled:opacity-30`}>Next</button></nav>;
 }
 
 function FilterButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {

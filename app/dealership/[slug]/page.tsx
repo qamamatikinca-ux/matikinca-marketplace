@@ -5,12 +5,14 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
+import SiteMenu from "@/components/SiteMenu";
 import { isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { supabase } from "@/lib/supabaseClient";
 
 type Dealer = { id:string; slug:string; name:string; profile_image_url?:string|null; cover_image_url?:string|null; short_bio?:string|null; business_description?:string|null; physical_location?:string|null; contact_email?:string|null; phone_number?:string|null; whatsapp_number?:string|null; website_url?:string|null; trading_hours?:string|null; year_established?:number|null; verification_status:string; average_response_minutes?:number|null; trust_score?:number|null; is_featured?:boolean; };
 type Listing = { id:string; title:string; city:string; rate:string; photos?:string[]|null; stock_status?:string; created_at:string; description?:string|null };
 type Update = { id:string; update_type:string; title:string; body:string; image_url?:string|null; created_at:string };
+const POSTS_PER_PAGE=7;
 
 export default function DealershipPublicPage() {
   const params = useParams<{slug:string}>();
@@ -26,6 +28,7 @@ export default function DealershipPublicPage() {
   const [status,setStatus]=useState("available");
   const [loading,setLoading]=useState(true);
   const [message,setMessage]=useState("");
+  const [page,setPage]=useState(1);
 
   useEffect(()=>{queueMicrotask(()=>setDarkMode(localStorage.getItem("loadlink-theme")==="dark"));},[]);
   useEffect(()=>{ if(!slug)return; void load(); },[slug]);
@@ -70,6 +73,10 @@ export default function DealershipPublicPage() {
   }
 
   const filtered=useMemo(()=>listings.filter(item=>(status==="all"||item.stock_status===status)&&`${item.title} ${item.city} ${item.rate}`.toLowerCase().includes(query.toLowerCase())),[listings,query,status]);
+  const totalPages=Math.max(1,Math.ceil(filtered.length/POSTS_PER_PAGE));
+  const visibleListings=useMemo(()=>filtered.slice((page-1)*POSTS_PER_PAGE,page*POSTS_PER_PAGE),[filtered,page]);
+  useEffect(()=>{setPage(1);},[query,status]);
+  useEffect(()=>{if(page>totalPages)setPage(totalPages);},[page,totalPages]);
   const surface=darkMode?"border-white/10 bg-[#0b0b0b] text-white":"border-black/10 bg-white text-black";
   const muted=darkMode?"text-white/55":"text-black/55";
 
@@ -77,7 +84,7 @@ export default function DealershipPublicPage() {
   if(!dealer)return <main className={`min-h-screen p-6 ${darkMode?"bg-black text-white":"bg-[#f4efe3] text-black"}`}><p className="font-black">{message||"Dealership unavailable"}</p><Link href="/trucks" className="mt-4 inline-block text-[#b88900]">Browse trucks</Link></main>;
 
   return <main className={`min-h-screen ${darkMode?"bg-black text-white":"bg-[#f4efe3] text-black"}`}>
-    <header className={`sticky top-0 z-40 border-b px-4 py-3 backdrop-blur-xl ${darkMode?"border-white/10 bg-black/90":"border-black/10 bg-[#f4efe3]/90"}`}><div className="mx-auto grid max-w-6xl grid-cols-[40px_1fr_40px] items-center"><Link href="/trucks" className="flex h-10 w-10 items-center justify-center rounded-full border border-[#f6b800]">‹</Link><HomeLogoLink theme={darkMode?"dark":"light"}/><AuthStatusButton darkMode={darkMode}/></div></header>
+    <header className={`sticky top-0 z-40 border-b px-4 py-3 backdrop-blur-xl ${darkMode?"border-white/10 bg-black/90":"border-black/10 bg-[#f4efe3]/90"}`}><div className="mx-auto grid max-w-6xl grid-cols-[92px_1fr_92px] items-center"><div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} className={darkMode?"text-white":"text-black"}/><AuthStatusButton darkMode={darkMode}/></div><HomeLogoLink theme={darkMode?"dark":"light"}/><Link href="/trucks" className="ml-auto flex h-10 w-10 items-center justify-center rounded-full border border-[#f6b800]" aria-label="Back to available trucks">‹</Link></div></header>
 
     <section className="relative h-52 overflow-hidden bg-black md:h-72">{dealer.cover_image_url?<img src={dealer.cover_image_url} alt="" className="h-full w-full object-cover opacity-75"/>:<div className="h-full w-full bg-[radial-gradient(circle_at_center,rgba(246,184,0,.32),transparent_60%)]"/>}<div className="absolute inset-0 bg-gradient-to-t from-black via-black/15 to-transparent"/></section>
 
@@ -97,7 +104,8 @@ export default function DealershipPublicPage() {
       {updates.length?<section className="mt-8"><div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-black uppercase tracking-wide text-[#b88900]">Dealership updates</p><h2 className="mt-1 text-3xl font-black">Latest from {dealer.name}</h2></div></div><div className="flex snap-x gap-4 overflow-x-auto pb-3 no-scrollbar">{updates.map(item=><article key={item.id} className={`min-w-[82%] snap-center border p-5 md:min-w-[360px] ${surface}`}>{item.image_url?<img src={item.image_url} alt="" className="mb-4 aspect-[16/9] w-full object-cover"/>:null}<p className="text-[10px] font-black uppercase tracking-wide text-[#b88900]">{item.update_type.replaceAll("_"," ")}</p><h3 className="mt-2 text-xl font-black">{item.title}</h3><p className={`mt-2 text-sm leading-6 ${muted}`}>{item.body}</p><p className={`mt-4 text-xs font-bold ${muted}`}>{date(item.created_at)}</p></article>)}</div></section>:null}
 
       <section className="mt-9"><div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-xs font-black uppercase tracking-wide text-[#b88900]">Inventory</p><h2 className="mt-1 text-4xl font-black">All dealership listings</h2></div><div className="grid gap-2 sm:grid-cols-2"><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search dealership stock" className={`h-12 border px-4 text-sm font-bold outline-none focus:border-[#f6b800] ${darkMode?"border-white/15 bg-[#111] text-white":"border-black/10 bg-white text-black"}`}/><select value={status} onChange={e=>setStatus(e.target.value)} className={`h-12 border px-4 text-sm font-bold outline-none ${darkMode?"border-white/15 bg-[#111] text-white":"border-black/10 bg-white text-black"}`}><option value="available">Available</option><option value="reserved">Reserved</option><option value="sold">Sold</option><option value="all">All stock</option></select></div></div>
-        {filtered.length?<div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">{filtered.map(item=><Link href={`/jobs?listing=${item.id}`} key={item.id} className={`overflow-hidden border ${surface}`}><div className="relative aspect-square bg-black/10">{item.photos?.[0]?<img src={item.photos[0]} alt={item.title} className="h-full w-full object-cover"/>:<div className="flex h-full items-center justify-center font-black text-[#b88900]">LOADLINK</div>}<span className="absolute left-2 top-2 bg-black/85 px-2 py-1 text-[9px] font-black uppercase text-[#f6b800]">{item.stock_status||"available"}</span></div><div className="p-3"><h3 className="line-clamp-2 text-sm font-black">{item.title}</h3><p className={`mt-1 text-xs font-bold ${muted}`}>{item.city}</p><p className="mt-2 text-sm font-black text-[#b88900]">{item.rate}</p></div></Link>)}</div>:<div className={`mt-5 border p-8 text-center ${surface}`}><p className="font-black">No listings match this search.</p></div>}
+        {filtered.length?<div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">{visibleListings.map(item=><Link href={`/jobs?listing=${item.id}`} key={item.id} className={`overflow-hidden border ${surface}`}><div className="relative aspect-square bg-black/10">{item.photos?.[0]?<img src={item.photos[0]} alt={item.title} className="h-full w-full object-cover"/>:<div className="flex h-full items-center justify-center font-black text-[#b88900]">LOADLINK</div>}<span className="absolute left-2 top-2 bg-black/85 px-2 py-1 text-[9px] font-black uppercase text-[#f6b800]">{item.stock_status||"available"}</span></div><div className="p-3"><h3 className="line-clamp-2 text-sm font-black">{item.title}</h3><p className={`mt-1 text-xs font-bold ${muted}`}>{item.city}</p><p className="mt-2 text-sm font-black text-[#b88900]">{item.rate}</p></div></Link>)}</div>:<div className={`mt-5 border p-8 text-center ${surface}`}><p className="font-black">No listings match this search.</p></div>}
+        {totalPages>1?<DealerPagination current={page} total={totalPages} onChange={setPage} darkMode={darkMode}/>:null}
       </section>
       {message?<p className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 bg-black px-5 py-3 text-sm font-bold text-white shadow-2xl">{message}</p>:null}
     </section>
@@ -106,3 +114,5 @@ export default function DealershipPublicPage() {
 function Stat({label,value,surface}:{label:string;value:string;surface:string}){return <article className={`border p-4 ${surface}`}><p className="text-[10px] font-black uppercase tracking-wide text-[#b88900]">{label}</p><p className="mt-2 text-xl font-black">{value}</p></article>}
 function Info({label,value}:{label:string;value:string}){return <div><p className="text-[10px] font-black uppercase tracking-wide text-[#b88900]">{label}</p><p className="mt-1 font-bold">{value}</p></div>}
 function date(value:string){return new Date(value).toLocaleDateString("en-ZA",{day:"numeric",month:"short",year:"numeric"})}
+
+function DealerPagination({current,total,onChange,darkMode}:{current:number;total:number;onChange:(page:number)=>void;darkMode:boolean}){const items:Array<number|"…">=total<=7?Array.from({length:total},(_,i)=>i+1):[1,...(current>3?["…" as const]:[]),...Array.from({length:Math.max(0,Math.min(total-1,current+1)-Math.max(2,current-1)+1)},(_,i)=>Math.max(2,current-1)+i),...(current<total-2?["…" as const]:[]),total];const base=`h-11 min-w-11 border px-3 text-xs font-black ${darkMode?"border-white/15 text-white":"border-black/15 text-black"}`;return <nav className="mt-8 flex flex-wrap items-center justify-center gap-2" aria-label="Dealership listing pages"><button type="button" disabled={current===1} onClick={()=>onChange(current-1)} className={`${base} disabled:opacity-30`}>Previous</button>{items.map((item,index)=>item==="…"?<span key={`ellipsis-${index}`} className={`${base} inline-flex items-center justify-center`}>…</span>:<button key={item} type="button" onClick={()=>onChange(item)} aria-current={item===current?"page":undefined} className={`${base} ${item===current?"border-[#f6b800] bg-[#f6b800] text-black":""}`}>{item}</button>)}<button type="button" disabled={current===total} onClick={()=>onChange(current+1)} className={`${base} disabled:opacity-30`}>Next</button></nav>}
