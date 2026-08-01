@@ -1,0 +1,98 @@
+name: Fix LoadLink Vercel Import Error
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fix-loadlink-vercel-import
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Correct the broken notifications import
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          FILE="app/api/admin/notifications/route.ts"
+
+          if [ ! -f "$FILE" ]; then
+            echo "::error::$FILE was not found."
+            exit 1
+          fi
+
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("app/api/admin/notifications/route.ts")
+          text = path.read_text(encoding="utf-8")
+
+          wrong = 'from "@/lib/marketplace/navigation";'
+          correct = 'from "@/lib/safeNavigation";'
+
+          if wrong in text:
+              text = text.replace(wrong, correct)
+              path.write_text(text, encoding="utf-8")
+              print("Corrected the notifications import.")
+          elif correct in text:
+              print("The notifications import is already correct.")
+          else:
+              raise SystemExit(
+                  "Could not find the expected notifications import. "
+                  "The file may have changed unexpectedly."
+              )
+          PY
+
+          if grep -R --line-number             '@/lib/marketplace/navigation'             app lib components context 2>/dev/null; then
+            echo "::error::A broken marketplace/navigation import still exists."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        env:
+          NODE_ENV: development
+        run: npm ci --include=dev --no-audit --no-fund
+
+      - name: Run the full production build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
+      - name: Commit and push the verified fix
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "LoadLink Build Fix"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add app/api/admin/notifications/route.ts
+
+          if git diff --cached --quiet; then
+            echo "The source file was already fixed. No commit was required."
+            exit 0
+          fi
+
+          git commit -m "Fix notifications API import path"
+          git push origin HEAD:main
+
+          echo "The verified Vercel build fix was pushed successfully."
