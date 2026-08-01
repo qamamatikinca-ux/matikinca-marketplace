@@ -6,37 +6,21 @@ export type LoadLinkTheme = "light" | "dark";
 
 function readTheme(): LoadLinkTheme {
   if (typeof window === "undefined") return "light";
-  try {
-    return window.localStorage.getItem("loadlink-theme") === "dark" ? "dark" : "light";
-  } catch {
-    return "light";
-  }
+  return window.localStorage.getItem("loadlink-theme") === "dark" ? "dark" : "light";
 }
 
 function applyTheme(theme: LoadLinkTheme) {
   if (typeof document === "undefined") return;
-  try {
-    document.documentElement.dataset.loadlinkTheme = theme;
-    document.documentElement.style.colorScheme = theme;
-    document.body.dataset.loadlinkTheme = theme;
-  } catch {
-    // A theme preference must never stop the website from rendering.
-  }
+  document.documentElement.dataset.loadlinkTheme = theme;
+  document.documentElement.style.colorScheme = theme;
+  document.body.dataset.loadlinkTheme = theme;
 }
 
 export function setLoadLinkTheme(theme: LoadLinkTheme) {
   if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem("loadlink-theme", theme);
-  } catch {
-    // Continue with the in-memory theme when browser storage is unavailable.
-  }
+  window.localStorage.setItem("loadlink-theme", theme);
   applyTheme(theme);
-  try {
-    window.dispatchEvent(new CustomEvent("loadlink-theme-change", { detail: { theme } }));
-  } catch {
-    // Older browsers may not support CustomEvent construction in all contexts.
-  }
+  window.dispatchEvent(new CustomEvent("loadlink-theme-change", { detail: { theme } }));
 }
 
 export function useLoadLinkTheme() {

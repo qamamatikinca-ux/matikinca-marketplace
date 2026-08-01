@@ -8,10 +8,12 @@ import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
 import { syncAccountState } from "@/lib/accountState";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
+import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 
 export default function SignUpPage() {
   const router = useRouter();
-  const [darkMode, setDarkMode] = useState(true);
+  const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,9 +21,6 @@ export default function SignUpPage() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    setDarkMode(localStorage.getItem("loadlink-theme") !== "light");
-  }, []);
 
   async function createAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,11 +74,6 @@ export default function SignUpPage() {
     }
   }
 
-  function toggleTheme() {
-    const next = !darkMode;
-    setDarkMode(next);
-    localStorage.setItem("loadlink-theme", next ? "dark" : "light");
-  }
 
   const page = darkMode ? "bg-black text-white" : "bg-[#fff3cf] text-black";
   const surface = darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-[#fffaf0]";
@@ -89,10 +83,10 @@ export default function SignUpPage() {
   return (
     <main className={`min-h-screen ${page}`}>
       <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
-        <div className="grid h-20 grid-cols-[92px_1fr_92px] items-center px-4">
+        <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4">
           <div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div>
           <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-          <button type="button" onClick={toggleTheme} className="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#f6b800] text-sm font-black text-black" aria-label="Change appearance"><ThemeIcon darkMode={darkMode} /></button>
+          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="ml-auto" />
         </div>
       </header>
 
@@ -122,10 +116,3 @@ export default function SignUpPage() {
 }
 
 
-function ThemeIcon({ darkMode }: { darkMode: boolean }) {
-  return darkMode ? (
-    <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" fill="currentColor" /><path d="M12 2.5v2.2M12 19.3v2.2M21.5 12h-2.2M4.7 12H2.5M18.72 5.28l-1.56 1.56M6.84 17.16l-1.56 1.56M18.72 18.72l-1.56-1.56M6.84 6.84 5.28 5.28" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
-  ) : (
-    <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M20.2 14.1A8.7 8.7 0 0 1 9.9 3.8a8.7 8.7 0 1 0 10.3 10.3Z" fill="currentColor" /></svg>
-  );
-}

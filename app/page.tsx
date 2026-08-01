@@ -9,14 +9,13 @@ import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import LoadLinkBoundary from "@/components/platform/LoadLinkBoundary";
+import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 
 const RecentActivityPanel = lazy(() => import("@/components/RecentActivityPanel"));
 const MarketplaceDiscovery = lazy(() => import("@/components/MarketplaceDiscovery"));
 const LogisticsNews = lazy(() => import("@/components/LogisticsNews"));
 const AuthStatusButton = lazy(() => import("@/components/AuthStatusButton"));
 const SiteMenu = lazy(() => import("@/components/SiteMenu"));
-const FeaturedDealership = lazy(() => import("@/components/FeaturedDealership"));
-const FollowedNetwork = lazy(() => import("@/components/FollowedNetwork"));
 type PortalImage = {
   src: string;
   position: string;
@@ -39,18 +38,9 @@ const portalCards: PortalCard[] = [
     title: "Find Jobs",
     buttonText: "Find available jobs",
     images: [
-      {
-        src: "/images/jobs-1.jpg",
-        position: "center center",
-      },
-      {
-        src: "/images/jobs-2.jpg",
-        position: "center center",
-      },
-      {
-        src: "/images/jobs-3.jpg",
-        position: "center center",
-      },
+      { src: "/images/jobs-1.jpg", position: "center center" },
+      { src: "/images/jobs-2.jpg", position: "center center" },
+      { src: "/images/jobs-3.jpg", position: "center center" },
     ],
     href: "/jobs",
     type: "Jobs portal",
@@ -61,18 +51,9 @@ const portalCards: PortalCard[] = [
     title: "Find Contracts",
     buttonText: "Find available contracts",
     images: [
-      {
-        src: "/images/contracts-1.jpg",
-        position: "center center",
-      },
-      {
-        src: "/images/contracts-2.jpg",
-        position: "center center",
-      },
-      {
-        src: "/images/contracts-3.jpg",
-        position: "center center",
-      },
+      { src: "/images/contracts-1.jpg", position: "center center" },
+      { src: "/images/contracts-2.jpg", position: "center center" },
+      { src: "/images/contracts-3.jpg", position: "center center" },
     ],
     href: "/contracts",
     type: "Contracts portal",
@@ -80,26 +61,11 @@ const portalCards: PortalCard[] = [
     packageType: "pro",
   },
   {
-    title: "Available Trucks",
-    buttonText: "Browse trucks and mobile units",
-    images: [
-      { src: "/images/truck-1.jpg", position: "center center" },
-      { src: "/images/truck-2.jpg", position: "center center" },
-      { src: "/images/truck-3.jpg", position: "center center" },
-    ],
-    href: "/trucks",
-    type: "Vehicle marketplace",
-    category: "Truck",
-    packageType: "premium",
-  },
-  {
-    title: "Drivers Available",
-    buttonText: "Browse professional driver profiles",
-    images: [
-      { src: "/images/jobs/hero.jpg", position: "center 38%" },
-    ],
-    href: "/drivers",
-    type: "Driver profiles",
+    title: "Driver Profile",
+    buttonText: "Create or update your driver profile",
+    images: [{ src: "/images/driver-profile-hero.jpg", position: "center center" }],
+    href: "/driver-profile",
+    type: "Driver profile portal",
     category: "Driver",
     packageType: "basic",
   },
@@ -107,18 +73,9 @@ const portalCards: PortalCard[] = [
     title: "List Your Truck",
     buttonText: "List your truck",
     images: [
-      {
-        src: "/images/truck-1.jpg",
-        position: "center center",
-      },
-      {
-        src: "/images/truck-2.jpg",
-        position: "center center",
-      },
-      {
-        src: "/images/truck-3.jpg",
-        position: "center center",
-      },
+      { src: "/images/truck-1.jpg", position: "center center" },
+      { src: "/images/truck-2.jpg", position: "center center" },
+      { src: "/images/truck-3.jpg", position: "center center" },
     ],
     href: "/list-your-truck",
     type: "Truck owner portal",
@@ -240,24 +197,11 @@ function HomeExperience() {
 
       <HomeLogoLink theme={darkMode ? "dark" : "light"} logoClassName="loadlink-logo-dark-fix" />
 
-      <button
-        onClick={toggleDarkMode}
-        aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-        title={darkMode ? "Light mode" : "Dark mode"}
-        className={`ml-auto flex h-10 w-10 items-center justify-center rounded-full border transition active:scale-[0.97] ${
-          darkMode
-            ? "border-yellow-400/70 bg-yellow-400 text-black shadow-[0_0_18px_rgba(246,184,0,0.22)]"
-            : "border-black/10 bg-black text-[#f6b800] shadow-[0_8px_18px_rgba(0,0,0,0.10)]"
-        }`}
-      >
-        {darkMode ? <HeaderSunIcon /> : <HeaderMoonIcon />}
-      </button>
+      <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleDarkMode} className="ml-auto" />
     </div>
   </header>
 
       <LoadLinkBoundary name="marketplace search"><Suspense fallback={null}><MarketplaceDiscovery darkMode={darkMode} /></Suspense></LoadLinkBoundary>
-
-      <LoadLinkBoundary name="featured dealership"><Suspense fallback={null}><FeaturedDealership darkMode={darkMode} /></Suspense></LoadLinkBoundary>
 
       {/* MAIN RECTANGLE PORTAL CARDS */}
       <section className="w-full">
@@ -310,8 +254,6 @@ function HomeExperience() {
       </section>
 
       <LoadLinkBoundary name="recent activity"><Suspense fallback={null}><RecentActivityPanel darkMode={darkMode} /></Suspense></LoadLinkBoundary>
-
-      <LoadLinkBoundary name="followed network"><Suspense fallback={null}><FollowedNetwork darkMode={darkMode} /></Suspense></LoadLinkBoundary>
 
       {/* OUR MISSION SECTION */}
       <section
@@ -537,9 +479,8 @@ function HomeFallback() {
   const links = [
     ["Find jobs", "/jobs"],
     ["Find contracts", "/contracts"],
-    ["Browse trucks", "/trucks"],
+    ["Driver profile", "/driver-profile"],
     ["Driver profiles", "/drivers"],
-    ["Featured dealership", "/dealership/loadlink-commercial-centurion"],
     ["Profile settings", "/account/settings"],
   ] as const;
 
@@ -571,26 +512,3 @@ function MenuIcon() {
     </svg>
   );
 }
-
-function HeaderSunIcon() {
-  return (
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
-      <circle cx="12" cy="12" r="4.5" fill="currentColor" />
-      <path
-        d="M12 2.5v2.2M12 19.3v2.2M21.5 12h-2.2M4.7 12H2.5M18.72 5.28l-1.56 1.56M6.84 17.16l-1.56 1.56M18.72 18.72l-1.56-1.56M6.84 6.84 5.28 5.28"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function HeaderMoonIcon() {
-  return (
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
-      <path d="M20.2 14.1A8.7 8.7 0 0 1 9.9 3.8a8.7 8.7 0 1 0 10.3 10.3Z" fill="currentColor" />
-    </svg>
-  );
-}
-

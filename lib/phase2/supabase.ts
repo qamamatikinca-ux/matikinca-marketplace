@@ -1,29 +1,28 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 
-function env(name: string, fallback?: string): string {
-  const value = process.env[name] ?? (fallback ? process.env[fallback] : undefined);
-  if (!value) throw new Error(`Missing ${name}`);
-  return value;
-}
+const publicUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
+const publicKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.SUPABASE_ANON_KEY ||
+  "";
 
 export function publicSupabase(accessToken?: string): SupabaseClient {
-  const url = env("NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_URL");
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-    ?? process.env.SUPABASE_ANON_KEY;
-  if (!key) throw new Error("Missing public Supabase key");
-  return createClient(url, key, {
+  if (!publicUrl || !publicKey) {
+    if (!accessToken && isSupabaseConfigured) return supabase;
+    throw new Error("Supabase is not connected on this deployment.");
+  }
+
+  return createClient(publicUrl, publicKey, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : undefined,
   });
 }
 
 export function browserSupabase(): SupabaseClient {
-  const url = env("NEXT_PUBLIC_SUPABASE_URL");
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!key) throw new Error("Missing public Supabase key");
-  return createClient(url, key);
+  if (!isSupabaseConfigured) throw new Error("Supabase is not connected on this deployment.");
+  return supabase;
 }
 
 export function bearer(request: Request): string | null {

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
+import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import { browserSupabase } from "@/lib/phase2/supabase";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
@@ -34,7 +35,7 @@ const EMPTY: FormState = { full_name: "", headline: "", city: "", province: "", 
 const LABELS: Record<string, string> = { identity: "ID or passport", drivers_licence: "Driver’s licence", prdp: "PrDP", cv: "CV", driving_certificate: "Relevant driving certificate" };
 
 export default function DriverProfilePage() {
-  const { darkMode } = useLoadLinkTheme();
+  const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [form, setForm] = useState<FormState>(EMPTY);
   const [docs, setDocs] = useState<Doc[]>([]);
   const [token, setToken] = useState("");
@@ -184,15 +185,15 @@ export default function DriverProfilePage() {
   return (
     <main className={`min-h-screen ${page}`}>
       <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
-        <div className="grid h-20 grid-cols-[60px_1fr_60px] items-center px-4 md:grid-cols-[150px_1fr_150px] md:px-7">
-          <SiteMenu darkMode={darkMode} />
+        <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4 md:px-7">
+          <div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div>
           <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-          <div className="justify-self-end"><AuthStatusButton darkMode={darkMode} /></div>
+          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="ml-auto" />
         </div>
       </header>
 
       <section className="relative min-h-[300px] overflow-hidden bg-black text-white md:min-h-[390px]">
-        <img src="/images/jobs/hero.jpg" alt="Professional truck driver profile on LoadLink" className="absolute inset-0 h-full w-full object-cover opacity-70" />
+        <img src="/images/driver-profile-hero.jpg" alt="Professional truck driver profile on LoadLink" className="absolute inset-0 h-full w-full object-cover opacity-70" />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/15" />
         <div className="relative mx-auto flex min-h-[300px] max-w-6xl flex-col justify-end px-5 pb-8 md:min-h-[390px] md:px-7 md:pb-11">
           <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-[#f6b800] px-3 py-1 text-[9px] font-black uppercase tracking-[.14em] text-black">Driver profile</span><span className="rounded-full border border-white/25 bg-black/45 px-3 py-1 text-[9px] font-black uppercase tracking-[.14em] text-white">{status}</span></div>

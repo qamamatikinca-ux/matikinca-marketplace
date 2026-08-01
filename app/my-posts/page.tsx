@@ -8,11 +8,14 @@ import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import SiteMenu from "@/components/SiteMenu";
+import LoadLinkPagination from "@/components/LoadLinkPagination";
+import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { getOwnerKeys } from "@/lib/chatKeys";
 import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { requestListingRenewal } from "@/lib/packageAccess";
+import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 type ListingStatus = "active" | "filled" | "closed" | "draft";
 type ModerationStatus = "pending" | "approved" | "rejected";
@@ -58,7 +61,7 @@ type AnalyticsPayload = {
 
 export default function MyPostsPage() {
   const router = useRouter();
-  const [darkMode, setDarkMode] = useState(false);
+  const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [authReady, setAuthReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [listings, setListings] = useState<MyListing[]>([]);
@@ -77,7 +80,6 @@ export default function MyPostsPage() {
 
     async function start() {
       if (!active) return;
-      setDarkMode(localStorage.getItem("loadlink-theme") === "dark");
       await verifyAndLoad();
     }
 
@@ -247,7 +249,7 @@ export default function MyPostsPage() {
 
   return (
     <main className={`min-h-screen ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
-      <Header darkMode={darkMode} />
+      <Header darkMode={darkMode} toggleTheme={toggleTheme} />
 
       <section className="border-b border-[#f6b800]/30 bg-black px-5 py-10 text-white md:py-14">
         <div className="mx-auto max-w-5xl">
@@ -349,7 +351,7 @@ export default function MyPostsPage() {
               );
             })}
           </div>
-          {totalPages > 1 ? <PostPagination current={currentPage} total={totalPages} onChange={setCurrentPage} darkMode={darkMode} /> : null}
+          {totalPages > 1 ? <LoadLinkPagination current={currentPage} total={totalPages} onChange={setCurrentPage} darkMode={darkMode} label="My post pages" /> : null}
           </>
         ) : (
           <div className={`rounded-[26px] border p-10 text-center ${surface}`}>
@@ -384,14 +386,8 @@ function formatDate(value: string | null) {
   return date.toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function Header({ darkMode }: { darkMode: boolean }) {
-  return <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}><div className="grid h-20 grid-cols-[92px_1fr_92px] items-center px-4"><div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} /><AuthStatusButton darkMode={darkMode} /></div><HomeLogoLink theme={darkMode ? "dark" : "light"} /><Link href="/jobs" aria-label="Back to jobs" className={`ml-auto flex h-10 w-10 items-center justify-center ${darkMode ? "text-white" : "text-black"}`}><BackIcon /></Link></div></header>;
-}
-
-function PostPagination({ current, total, onChange, darkMode }: { current: number; total: number; onChange: (page: number) => void; darkMode: boolean }) {
-  const items: Array<number | "…"> = total <= 7 ? Array.from({ length: total }, (_, index) => index + 1) : [1, ...(current > 3 ? ["…" as const] : []), ...Array.from({ length: Math.max(0, Math.min(total - 1, current + 1) - Math.max(2, current - 1) + 1) }, (_, index) => Math.max(2, current - 1) + index), ...(current < total - 2 ? ["…" as const] : []), total];
-  const base = `h-11 min-w-11 border px-3 text-xs font-black ${darkMode ? "border-white/15 text-white" : "border-black/15 text-black"}`;
-  return <nav className="mt-8 flex flex-wrap items-center justify-center gap-2" aria-label="My post pages"><button type="button" disabled={current===1} onClick={()=>onChange(current-1)} className={`${base} disabled:opacity-30`}>Previous</button>{items.map((item,index)=>item==="…"?<span key={`ellipsis-${index}`} className={`${base} inline-flex items-center justify-center`}>…</span>:<button key={item} type="button" onClick={()=>onChange(item)} aria-current={item===current?"page":undefined} className={`${base} ${item===current?"border-[#f6b800] bg-[#f6b800] text-black":""}`}>{item}</button>)}<button type="button" disabled={current===total} onClick={()=>onChange(current+1)} className={`${base} disabled:opacity-30`}>Next</button></nav>;
+function Header({ darkMode, toggleTheme }: { darkMode: boolean; toggleTheme: () => void }) {
+  return <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}><div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4"><div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} /><AuthStatusButton darkMode={darkMode} /></div><HomeLogoLink theme={darkMode ? "dark" : "light"} /><LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="ml-auto" /></div></header>;
 }
 
 function FilterButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {

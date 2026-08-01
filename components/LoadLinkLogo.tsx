@@ -21,8 +21,7 @@ function detectDarkMode() {
   if (pageClasses.includes("bg-white") || pageClasses.includes("bg-[#fff")) return false;
 
   const pageTheme = localStorage.getItem("loadlink-theme");
-  const loginTheme = localStorage.getItem("loadlink-login-theme");
-  return (loginTheme || pageTheme) === "dark";
+  return pageTheme === "dark";
 }
 
 export default function LoadLinkLogo({

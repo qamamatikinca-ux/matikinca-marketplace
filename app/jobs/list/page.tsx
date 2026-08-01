@@ -5,6 +5,7 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import HomeLogoLink from "@/components/HomeLogoLink";
+import SiteMenu from "@/components/SiteMenu";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
@@ -13,6 +14,7 @@ import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 import { getAccountOwnerKey } from "@/lib/chatKeys";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
+import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 
 type VehicleGroup = "Catering / Event" | "Trucks / Trailers" | "Farming / Mining";
 type ListingMode = "job" | "asset" | "contract";
@@ -523,11 +525,11 @@ function Header({ darkMode, toggleDarkMode }: { darkMode: boolean; toggleDarkMod
     <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
       <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4">
         <div className="flex items-center gap-2">
-          <Link href="/jobs" className={`flex h-10 w-10 items-center justify-center ${darkMode ? "text-white" : "text-black"}`} aria-label="Back to jobs"><BackIcon /></Link>
+          <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
           <AuthStatusButton darkMode={darkMode} />
         </div>
         <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-        <button onClick={toggleDarkMode} className={`ml-auto flex h-10 w-10 items-center justify-center rounded-full border ${darkMode ? "border-yellow-400/70 bg-yellow-400 text-black" : "border-black/10 bg-black text-[#f6b800]"}`} aria-label="Toggle colour mode">{darkMode ? <SunIcon /> : <MoonIcon />}</button>
+        <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleDarkMode} className="ml-auto" />
       </div>
     </header>
   );
@@ -541,10 +543,4 @@ function BackIcon() {
 }
 function UserPlusIcon() {
   return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="9" cy="8" r="4" stroke="currentColor" strokeWidth="2"/><path d="M2.5 21c.7-4.2 3-6.5 6.5-6.5s5.8 2.3 6.5 6.5M18 7v6M15 10h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>;
-}
-function MoonIcon() {
-  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 15.2A8 8 0 0 1 8.8 4 8 8 0 1 0 20 15.2Z" fill="currentColor"/></svg>;
-}
-function SunIcon() {
-  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>;
 }

@@ -5,16 +5,17 @@ import BusinessPlans from "@/components/BusinessPlans";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
+import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 
 export default function PackagesPage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   return (
     <main className={darkMode ? "min-h-screen bg-black text-white" : "min-h-screen bg-[#f4efe3] text-black"}>
       <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
-        <div className="grid h-20 grid-cols-[100px_1fr_100px] items-center px-4">
+        <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4">
           <div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div>
           <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-          <button type="button" onClick={toggleTheme} className="justify-self-end rounded-full border border-[#f6b800] px-4 py-2 text-xs font-black">{darkMode ? "Light" : "Dark"}</button>
+          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="ml-auto" />
         </div>
       </header>
       <BusinessPlans darkMode={darkMode} />

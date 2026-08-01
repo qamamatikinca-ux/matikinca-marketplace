@@ -29,7 +29,6 @@ const quickCategories: QuickCategory[] = [
 const catalogue: SearchSuggestion[] = [
   { id: "jobs", label: "Find logistics jobs", meta: "Jobs for truck owners, drivers and mobile-unit operators", href: "/jobs?portal=job", searchable: "job jobs work opportunity load route delivery driver owner driver logistics transport", priority: 100 },
   { id: "contracts", label: "Find logistics contracts", meta: "Recurring, project and tender opportunities", href: "/jobs?portal=contract", searchable: "contract contracts tender recurring construction mining farming transport", priority: 100 },
-  { id: "trucks", label: "Browse trucks and mobile units", meta: "Commercial vehicles and equipment", href: "/trucks", searchable: "truck trucks vehicle vehicles trailer tipper superlink lowbed tautliner bakkie mobile unit hire", priority: 100 },
   { id: "drivers", label: "Browse drivers available for work", meta: "Approved professional driver profiles", href: "/drivers", searchable: "driver drivers code 10 code 14 prdp professional profile hire", priority: 95 },
   { id: "dealer", label: "LoadLink Commercial Centurion", meta: "Featured verified dealership", href: "/dealership/loadlink-commercial-centurion", searchable: "dealer dealership showroom truck sales centurion gauteng commercial", priority: 90 },
   { id: "delivery", label: "Delivery jobs", meta: "Local and regional logistics work", href: "/jobs?portal=job&search=delivery", searchable: "delivery courier warehouse local route job work gauteng johannesburg pretoria", priority: 80 },

@@ -10,24 +10,18 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { isAuthenticatedUser, safeNextPath } from "@/lib/auth";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import { clearActiveAccountState, syncAccountState } from "@/lib/accountState";
-
-type ThemeMode = "dark" | "light";
+import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
+import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
-  const [theme, setTheme] = useState<ThemeMode>("dark");
+  const { darkMode: isDark, toggleTheme } = useLoadLinkTheme();
   const [signedInEmail, setSignedInEmail] = useState("");
 
-  const isDark = theme === "dark";
-
   useEffect(() => {
-    const savedTheme = window.localStorage.getItem("loadlink-login-theme");
-    if (savedTheme === "dark" || savedTheme === "light") {
-      setTheme(savedTheme);
-    }
 
     if (!isSupabaseConfigured) return;
 
@@ -49,11 +43,6 @@ export default function LoginPage() {
     return safeNextPath(new URLSearchParams(window.location.search).get("next"), "/");
   }
 
-  function toggleTheme() {
-    const nextTheme: ThemeMode = isDark ? "light" : "dark";
-    setTheme(nextTheme);
-    window.localStorage.setItem("loadlink-login-theme", nextTheme);
-  }
 
   async function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -126,21 +115,7 @@ export default function LoginPage() {
           </div>
 
           <HomeLogoLink logoClassName="loadlink-logo-dark-fix" />
-
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-            title={isDark ? "Light mode" : "Dark mode"}
-            className={[
-              "ml-auto flex h-10 w-10 items-center justify-center rounded-full border transition active:scale-[0.97]",
-              isDark
-                ? "border-yellow-400/70 bg-yellow-400 text-black shadow-[0_0_18px_rgba(246,184,0,0.22)]"
-                : "border-black/10 bg-black text-[#f6b800] shadow-[0_8px_18px_rgba(0,0,0,0.10)]",
-            ].join(" ")}
-          >
-            {isDark ? <SunIcon /> : <MoonIcon />}
-          </button>
+          <LoadLinkThemeToggle darkMode={isDark} onToggle={toggleTheme} className="ml-auto" />
         </div>
       </header>
 

@@ -7,9 +7,11 @@ import type { User } from "@supabase/supabase-js";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
+import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import { clearActiveAccountState, syncAccountState } from "@/lib/accountState";
 import { isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 type ProfileForm = {
   full_name: string;
@@ -50,7 +52,7 @@ const EMPTY: ProfileForm = {
 const PROVINCES = ["Eastern Cape", "Free State", "Gauteng", "KwaZulu-Natal", "Limpopo", "Mpumalanga", "North West", "Northern Cape", "Western Cape"];
 
 export default function AccountSettingsPage() {
-  const [darkMode, setDarkMode] = useState(false);
+  const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [user, setUser] = useState<User | null>(null);
   const [form, setForm] = useState<ProfileForm>(EMPTY);
   const [loading, setLoading] = useState(true);
@@ -62,7 +64,6 @@ export default function AccountSettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setDarkMode(localStorage.getItem("loadlink-theme") === "dark");
     void load();
   }, []);
 
@@ -200,17 +201,11 @@ export default function AccountSettingsPage() {
     window.location.href = "/";
   }
 
-  function toggleTheme() {
-    const next = !darkMode;
-    setDarkMode(next);
-    localStorage.setItem("loadlink-theme", next ? "dark" : "light");
-    window.dispatchEvent(new Event("loadlink-theme-change"));
-  }
 
   const initials = useMemo(() => form.full_name.trim().split(/\s+/).slice(0, 2).map((part) => part[0] || "").join("").toUpperCase() || "LL", [form.full_name]);
   const page = darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black";
-  const surface = darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white";
-  const input = `mt-2 h-12 w-full border px-4 text-sm font-semibold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-black text-white" : "border-black/15 bg-[#fffdf8] text-black"}`;
+  const surface = darkMode ? "rounded-[24px] border-white/10 bg-[#0b0b0b]" : "rounded-[24px] border-black/10 bg-white";
+  const input = `mt-2 h-12 w-full rounded-xl border px-4 text-sm font-semibold outline-none transition focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-black text-white" : "border-black/15 bg-[#fffdf8] text-black"}`;
   const textarea = `${input} min-h-28 py-3`;
   const muted = darkMode ? "text-white/55" : "text-black/55";
 
@@ -222,38 +217,37 @@ export default function AccountSettingsPage() {
         <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4">
           <div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div>
           <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-          <button type="button" onClick={toggleTheme} className={`ml-auto flex h-10 w-10 items-center justify-center rounded-full border text-xs font-black ${darkMode ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-black/10 bg-black text-[#f6b800]"}`} aria-label="Toggle theme">{darkMode ? "L" : "D"}</button>
+          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="ml-auto" />
         </div>
       </header>
 
       <section className="mx-auto max-w-6xl px-5 py-9 md:px-8 md:py-12">
-        <p className="text-[10px] font-black uppercase tracking-[.2em] text-[#b88900]">Your LoadLink account</p>
         <h1 className="mt-2 text-4xl font-black tracking-[-.05em] md:text-6xl">Profile settings</h1>
         <p className={`mt-3 max-w-2xl text-sm leading-6 ${muted}`}>Manage the details people see, your contact preferences, account security and the features linked to your profile.</p>
 
-        {message ? <div role="status" className={`mt-6 border border-[#f6b800]/45 bg-[#f6b800]/10 p-4 text-sm font-bold`}>{message}</div> : null}
+        {message ? <div role="status" className="mt-6 rounded-xl border border-[#f6b800]/45 bg-[#f6b800]/10 p-4 text-sm font-bold">{message}</div> : null}
 
         <div className="mt-7 grid gap-5 lg:grid-cols-[280px_1fr]">
-          <aside className={`h-fit border p-5 ${surface}`}>
+          <aside className={`h-fit border p-5 shadow-[0_14px_40px_rgba(0,0,0,.06)] ${surface}`}>
             <div className="mx-auto flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-4 border-[#f6b800] bg-black text-2xl font-black text-[#f6b800]">
               {form.avatar_url ? <img src={form.avatar_url} alt="Profile" className="h-full w-full object-cover" /> : initials}
             </div>
             <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void uploadAvatar(event)} className="hidden" />
-            <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="mt-5 h-11 w-full bg-[#f6b800] text-xs font-black uppercase tracking-wide text-black disabled:opacity-50">{uploading ? "Uploading…" : "Change profile picture"}</button>
+            <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="mt-5 h-11 w-full rounded-xl bg-[#f6b800] px-4 text-xs font-black uppercase tracking-wide text-black disabled:opacity-50">{uploading ? "Uploading…" : "Change profile picture"}</button>
             <div className={`mt-5 border-t pt-5 ${darkMode ? "border-white/10" : "border-black/10"}`}>
               <Info label="Email" value={user?.email || "Not available"} />
               <Info label="Verification" value={form.verification_status.replaceAll("_", " ")} />
               <Info label="Package" value={form.subscription_plan} />
             </div>
             <div className="mt-5 grid gap-2">
-              <Link href="/verify" className="flex h-11 items-center justify-center border border-[#f6b800] text-xs font-black uppercase text-[#b88900]">Verification centre</Link>
-              <Link href="/account/packages" className="flex h-11 items-center justify-center border border-current/15 text-xs font-black uppercase">Package settings</Link>
-              <Link href="/driver-profile" className="flex h-11 items-center justify-center border border-current/15 text-xs font-black uppercase">Driver profile</Link>
+              <Link href="/verify" className="flex h-11 items-center justify-center rounded-xl border border-[#f6b800] px-3 text-center text-xs font-black uppercase text-[#b88900]">Verification centre</Link>
+              <Link href="/account/packages" className="flex h-11 items-center justify-center rounded-xl border border-current/15 px-3 text-center text-xs font-black uppercase">Package settings</Link>
+              <Link href="/driver-profile" className="flex h-11 items-center justify-center rounded-xl border border-current/15 px-3 text-center text-xs font-black uppercase">Driver profile</Link>
             </div>
           </aside>
 
           <div className="grid gap-5">
-            <form onSubmit={saveProfile} className={`border p-5 md:p-7 ${surface}`}>
+            <form onSubmit={saveProfile} className={`border p-5 shadow-[0_14px_40px_rgba(0,0,0,.05)] md:p-7 ${surface}`}>
               <h2 className="text-2xl font-black">Professional information</h2>
               <p className={`mt-2 text-sm ${muted}`}>These details help other users know who they are dealing with.</p>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -274,23 +268,23 @@ export default function AccountSettingsPage() {
                 <Toggle label="Listing and review updates" checked={form.listing_notifications} onChange={(value) => field("listing_notifications", value)} darkMode={darkMode} />
                 <Toggle label="LoadLink product news" checked={form.marketing_notifications} onChange={(value) => field("marketing_notifications", value)} darkMode={darkMode} />
               </div>
-              <button type="submit" disabled={saving} className="mt-6 h-12 bg-[#f6b800] px-6 text-xs font-black uppercase tracking-[.12em] text-black disabled:opacity-50">{saving ? "Saving…" : "Save profile settings"}</button>
+              <button type="submit" disabled={saving} className="mt-6 h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase tracking-[.12em] text-black disabled:opacity-50">{saving ? "Saving…" : "Save profile settings"}</button>
             </form>
 
-            <section className={`border p-5 md:p-7 ${surface}`}>
+            <section className={`border p-5 shadow-[0_14px_40px_rgba(0,0,0,.05)] md:p-7 ${surface}`}>
               <h2 className="text-2xl font-black">Security</h2>
               <p className={`mt-2 text-sm ${muted}`}>Use at least eight characters for a new password. Google sign-in remains connected.</p>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <Field label="New password"><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" className={input} /></Field>
                 <Field label="Confirm new password"><input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" className={input} /></Field>
               </div>
-              <button type="button" onClick={() => void updatePassword()} disabled={saving || !password} className="mt-5 h-11 border border-[#f6b800] px-5 text-xs font-black uppercase text-[#b88900] disabled:opacity-40">Update password</button>
+              <button type="button" onClick={() => void updatePassword()} disabled={saving || !password} className="mt-5 h-11 rounded-xl border border-[#f6b800] px-5 text-xs font-black uppercase text-[#b88900] disabled:opacity-40">Update password</button>
             </section>
 
-            <section className={`border border-red-500/35 p-5 md:p-7 ${surface}`}>
+            <section className={`border border-red-500/35 p-5 shadow-[0_14px_40px_rgba(0,0,0,.05)] md:p-7 ${surface}`}>
               <h2 className="text-2xl font-black">Account access</h2>
               <p className={`mt-2 text-sm ${muted}`}>Signing out removes this device session but keeps your listings, conversations and account data safe.</p>
-              <button type="button" onClick={() => void signOut()} className="mt-5 h-11 border border-red-500 px-5 text-xs font-black uppercase text-red-500">Sign out of LoadLink</button>
+              <button type="button" onClick={() => void signOut()} className="mt-5 h-11 rounded-xl border border-red-500 px-5 text-xs font-black uppercase text-red-500">Sign out of LoadLink</button>
             </section>
           </div>
         </div>
@@ -304,9 +298,16 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 function Toggle({ label, checked, onChange, darkMode }: { label: string; checked: boolean; onChange: (value: boolean) => void; darkMode: boolean }) {
-  return <label className={`flex min-h-14 cursor-pointer items-center justify-between gap-4 border px-4 ${darkMode ? "border-white/10" : "border-black/10"}`}><span className="text-sm font-bold normal-case tracking-normal">{label}</span><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="h-5 w-5 accent-[#f6b800]" /></label>;
+  return (
+    <div className={`flex min-h-14 items-center justify-between gap-4 rounded-xl border px-4 ${darkMode ? "border-white/10 bg-white/[.02]" : "border-black/10 bg-black/[.015]"}`}>
+      <span className="text-sm font-bold normal-case tracking-normal">{label}</span>
+      <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)} className={`relative h-7 w-12 shrink-0 rounded-full border transition ${checked ? "border-[#f6b800] bg-[#f6b800]" : darkMode ? "border-white/20 bg-white/10" : "border-black/20 bg-black/10"}`}>
+        <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-1"}`} />
+      </button>
+    </div>
+  );
 }
 
 function Info({ label, value }: { label: string; value: string }) {
-  return <div className="mb-4 last:mb-0"><p className="text-[10px] font-black uppercase tracking-[.14em] text-[#b88900]">{label}</p><p className="mt-1 break-words text-sm font-bold capitalize">{value}</p></div>;
+  return <div className="mb-4 last:mb-0"><p className="text-[10px] font-black uppercase tracking-[.12em] opacity-50">{label}</p><p className="mt-1 break-words text-sm font-bold capitalize">{value}</p></div>;
 }

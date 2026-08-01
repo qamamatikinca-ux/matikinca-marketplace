@@ -11,6 +11,8 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { formatListingRate } from "@/lib/formatCurrency";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import RequireAuthLink from "@/components/RequireAuthLink";
+import LoadLinkPagination from "@/components/LoadLinkPagination";
+import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import { isAuthenticatedUser } from "@/lib/auth";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 import { detectIntent, detectRegion, flexibleMatch, normaliseSearch, searchTokens } from "@/lib/smartSearch";
@@ -624,17 +626,13 @@ export default function JobsPortalPage() {
     fetchJobs();
   }
 
-  const portalRailJobs = useMemo(() => {
-    const promoted = allJobs.filter((job) => job.sponsored || ["pro", "dealer"].includes(job.packageType || ""));
-    const recent = allJobs.filter((job) => !job.sponsored && !["pro", "dealer"].includes(job.packageType || ""));
-    return [...promoted, ...recent].slice(0, 8);
-  }, [allJobs]);
+  const portalRailJobs = useMemo(() => matchingJobs.filter((job) => job.sponsored || ["pro", "dealer"].includes(job.packageType || "")).slice(0, 8), [matchingJobs]);
 
   const portalCopy = portalFilter === "contract"
-    ? { eyebrow: "Contracts portal", title: "Find logistics contracts", description: "Browse posted transport, construction, mining, farming and recurring delivery contracts.", searchButton: "Search contracts", listLabel: "Post a contract", listHref: "/jobs/list?mode=contract", results: "Available contracts" }
+    ? { title: "Find logistics contracts", description: "Browse posted transport, construction, mining, farming and recurring delivery contracts.", searchButton: "Search contracts", listLabel: "Post contract", listHref: "/jobs/list?mode=contract", results: "Available contracts" }
     : portalFilter === "asset"
-      ? { eyebrow: "Vehicles and mobile units", title: "Find equipment for hire", description: "Browse trucks, trailers, mobile toilets, mobile fridges, food trucks and other mobile units.", searchButton: "Search listings", listLabel: "List a vehicle or mobile unit", listHref: "/jobs/list?mode=asset", results: "Available vehicles and mobile units" }
-      : { eyebrow: "", title: "Find paid logistics work", description: "For truck owners, drivers, mobile kitchens, mobile fridges, farming vehicles and mining transport operators looking for real posted jobs.", searchButton: "Search jobs", listLabel: "List a job", listHref: "/jobs/list", results: "Available jobs" };
+      ? { title: "Find equipment for hire", description: "Browse trucks, trailers, mobile toilets, mobile fridges, food trucks and other mobile units.", searchButton: "Search listings", listLabel: "List vehicle", listHref: "/jobs/list?mode=asset", results: "Available vehicles and mobile units" }
+      : { title: "Find paid logistics work", description: "For truck owners, drivers, mobile kitchens, mobile fridges, farming vehicles and mining transport operators looking for real posted jobs.", searchButton: "Search jobs", listLabel: "Post job", listHref: "/jobs/list", results: "Available jobs" };
 
   return (
     <main className={`min-h-screen scroll-smooth transition-colors duration-500 ${darkMode ? "bg-black text-white" : "bg-[#fff7df] text-black"}`}>
@@ -647,7 +645,6 @@ export default function JobsPortalPage() {
 
         <div className="relative mx-auto flex min-h-[82vh] max-w-5xl flex-col justify-end px-5 pb-8 pt-20">
           <div className="max-w-4xl text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">
-            {portalCopy.eyebrow ? <p className="mb-4 inline-flex border border-[#f6b800] bg-black/35 px-4 py-2 text-xs font-black uppercase tracking-[0.24em] text-[#f6b800]">{portalCopy.eyebrow}</p> : null}
             <h1 className="text-5xl font-black leading-[0.92] tracking-[-0.06em] md:text-7xl">{portalCopy.title}</h1>
             <p className="mt-5 max-w-2xl text-base font-bold leading-7 md:text-lg">
               {portalCopy.description}
@@ -714,13 +711,12 @@ export default function JobsPortalPage() {
             </div>
           </div>
 
-          <div className="mt-4 flex items-center gap-5">
-            <RequireAuthLink href={portalCopy.listHref} className="inline-flex items-center gap-1.5 rounded-full border border-[#f6b800] bg-[#f6b800] px-4 py-3 text-xs font-black uppercase tracking-wide text-black shadow-sm transition active:scale-[0.98]">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 sm:max-w-xl">
+            <RequireAuthLink href={portalCopy.listHref} className="flex min-h-12 w-full items-center justify-center rounded-xl bg-[#f6b800] px-4 text-center text-xs font-black uppercase tracking-[.08em] text-black transition active:scale-[0.98] whitespace-nowrap">
               {portalCopy.listLabel}
             </RequireAuthLink>
-            <RequireAuthLink href="/my-posts" className="inline-flex items-center gap-1.5 rounded-full border border-[#f6b800]/70 bg-black/65 px-4 py-3 text-xs font-black uppercase tracking-wide text-[#f6b800] shadow-sm backdrop-blur transition hover:bg-black">
+            <RequireAuthLink href="/my-posts" className="flex min-h-12 w-full items-center justify-center rounded-xl border border-white/35 bg-black/80 px-4 text-center text-xs font-black uppercase tracking-[.08em] text-white transition active:scale-[0.98] whitespace-nowrap">
               My posts
-              <span aria-hidden="true">›</span>
             </RequireAuthLink>
           </div>
         </div>
@@ -767,7 +763,7 @@ export default function JobsPortalPage() {
         </div>
 
         {!loadingJobs && matchingJobs.length > LISTINGS_PER_PAGE ? (
-          <Pagination current={currentPage} total={totalPages} onChange={changePage} darkMode={darkMode} />
+          <LoadLinkPagination current={currentPage} total={totalPages} onChange={changePage} darkMode={darkMode} label="Listing pages" />
         ) : null}
       </section>
 
@@ -781,65 +777,25 @@ export default function JobsPortalPage() {
   );
 }
 
-function Pagination({ current, total, onChange, darkMode }: { current: number; total: number; onChange: (page: number) => void; darkMode: boolean }) {
-  const items = paginationItems(current, total);
-  const base = `flex h-11 min-w-11 items-center justify-center border px-3 text-xs font-black ${darkMode ? "border-white/15 text-white" : "border-black/15 text-black"}`;
-  return (
-    <nav className="mt-8 flex flex-wrap items-center justify-center gap-2" aria-label="Listing pages">
-      <button type="button" disabled={current === 1} onClick={() => onChange(current - 1)} className={`${base} disabled:opacity-30`}>Previous</button>
-      {items.map((item, index) => item === "…" ? <span key={`ellipsis-${index}`} className={base}>…</span> : (
-        <button key={item} type="button" aria-current={item === current ? "page" : undefined} onClick={() => onChange(item as number)} className={`${base} ${item === current ? "border-[#f6b800] bg-[#f6b800] text-black" : ""}`}>{item}</button>
-      ))}
-      <button type="button" disabled={current === total} onClick={() => onChange(current + 1)} className={`${base} disabled:opacity-30`}>Next</button>
-    </nav>
-  );
-}
-
-function paginationItems(current: number, total: number): Array<number | "…"> {
-  if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
-  const result: Array<number | "…"> = [1];
-  const start = Math.max(2, current - 1);
-  const end = Math.min(total - 1, current + 1);
-  if (start > 2) result.push("…");
-  for (let page = start; page <= end; page += 1) result.push(page);
-  if (end < total - 1) result.push("…");
-  result.push(total);
-  return result;
-}
-
 function FeaturedJobsRail({ jobs, darkMode, onOpen }: { jobs: JobListing[]; darkMode: boolean; onOpen: (job: JobListing) => void }) {
   return (
-    <section className={`border-b px-5 py-7 md:px-12 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-[#fff7df] text-black"}`}>
-      <div className="mx-auto max-w-7xl">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h2 className="text-3xl font-black">Featured and recent listings</h2>
-          </div>
-        </div>
-
-        <div className="no-scrollbar mt-5 flex w-full touch-pan-x snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-3 scroll-smooth">
-          {jobs.map((job) => {
-            const promoted = job.sponsored || ["pro", "dealer"].includes(job.packageType || "");
-            return (
-              <button
-                key={job.id}
-                onClick={() => onOpen(job)}
-                className={`min-w-[82%] snap-start overflow-hidden border text-left sm:min-w-[58%] md:min-w-[360px] md:max-w-[360px] ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}
-              >
-                <div className="relative aspect-[16/9] bg-black">
-                  <img src={job.photos[0] || "/images/jobs/job-card-1.jpg"} alt={job.title} className="h-full w-full object-cover" />
-                  <span className={`absolute left-3 top-3 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] ${promoted ? "bg-[#f6b800] text-black" : "bg-black/75 text-white"}`}>
-                    {promoted ? "Featured" : "Recent"}
-                  </span>
-                </div>
-                <div className="p-4">
-                  <p className="text-xs font-black uppercase tracking-[.14em] text-[#b88900]">{job.city} · {job.group}</p>
-                  <h3 className="mt-2 text-xl font-black">{job.title}</h3>
-                  <p className="mt-3 text-lg font-black text-[#b88900]">{formatListingRate(job.rate)}</p>
-                </div>
-              </button>
-            );
-          })}
+    <section className={`border-b px-5 py-8 md:px-12 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-[#fff7df] text-black"}`}>
+      <div className="mx-auto max-w-5xl">
+        <h2 className="text-3xl font-black tracking-[-.04em]">Promoted listings</h2>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {jobs.map((job) => (
+            <button key={job.id} onClick={() => onOpen(job)} className={`overflow-hidden rounded-2xl border text-left ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+              <div className="relative aspect-[16/9] bg-black">
+                <img src={job.photos[0] || "/images/jobs/job-card-1.jpg"} alt={job.title} className="h-full w-full object-cover" />
+                <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] text-black">Promoted</span>
+              </div>
+              <div className="p-4">
+                <p className={`text-xs font-bold ${darkMode ? "text-white/55" : "text-black/55"}`}>{job.city} · {job.group}</p>
+                <h3 className="mt-2 text-lg font-black leading-tight">{job.title}</h3>
+                <p className="mt-3 text-base font-black text-[#b88900]">{formatListingRate(job.rate)}</p>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
     </section>
@@ -1169,9 +1125,7 @@ function Header({ darkMode, toggleDarkMode }: { darkMode: boolean; toggleDarkMod
 
         <HomeLogoLink theme={darkMode ? "dark" : "light"} />
 
-        <button onClick={toggleDarkMode} aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"} className={`ml-auto flex h-10 w-10 items-center justify-center rounded-full border transition-all duration-500 ${darkMode ? "border-yellow-400/70 bg-yellow-400 text-black" : "border-black/10 bg-black text-[#f6b800]"}`}>
-          {darkMode ? <HeaderSunIcon /> : <HeaderMoonIcon />}
-        </button>
+        <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleDarkMode} className="ml-auto" />
       </div>
     </header>
   );
@@ -1208,23 +1162,6 @@ function HeaderUserPlusIcon() {
     <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" className="shrink-0">
       <path d="M10.4 11.2a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2ZM3.2 20.4c.55-3.85 3.35-6.4 7.2-6.4 2.1 0 3.86.76 5.1 2.07" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M18 14.2v6.6M14.7 17.5h6.6" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function HeaderSunIcon() {
-  return (
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
-      <circle cx="12" cy="12" r="4.5" fill="currentColor" />
-      <path d="M12 2.5v2.2M12 19.3v2.2M21.5 12h-2.2M4.7 12H2.5M18.72 5.28l-1.56 1.56M6.84 17.16l-1.56 1.56M18.72 18.72l-1.56-1.56M6.84 6.84 5.28 5.28" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function HeaderMoonIcon() {
-  return (
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
-      <path d="M20.2 14.1A8.7 8.7 0 0 1 9.9 3.8a8.7 8.7 0 1 0 10.3 10.3Z" fill="currentColor" />
     </svg>
   );
 }

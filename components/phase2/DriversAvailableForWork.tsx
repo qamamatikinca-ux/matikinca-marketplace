@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { browserSupabase } from "@/lib/phase2/supabase";
 import styles from "./DriversAvailableForWork.module.css";
+import LoadLinkPagination from "@/components/LoadLinkPagination";
 
 type Driver = {
   id: string;
@@ -39,16 +40,23 @@ export default function DriversAvailableForWork({
     setLoading(true);
     const limit = fullPage ? PAGE_SIZE : 4;
     const offset = fullPage ? (page - 1) * PAGE_SIZE : 0;
+    setNotice("");
     fetch(`/api/phase2/public-drivers?limit=${limit}&offset=${offset}`)
-      .then((response) => response.json())
+      .then(async (response) => {
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(String(result.error || "Driver profiles could not be loaded."));
+        return result;
+      })
       .then((result) => {
         if (!active) return;
         const rows = (result.drivers ?? []) as Driver[];
         setDrivers(rows);
         setTotal(Number(result.total || rows[0]?.total_count || rows.length));
       })
-      .catch(() => {
-        if (active) setDrivers([]);
+      .catch((error) => {
+        if (!active) return;
+        setDrivers([]);
+        setNotice(error instanceof Error ? error.message : "Driver profiles could not be loaded.");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -60,8 +68,14 @@ export default function DriversAvailableForWork({
 
   async function contact(id: string) {
     setNotice("");
-    const { data } = await browserSupabase().auth.getSession();
-    const token = data.session?.access_token;
+    let token = "";
+    try {
+      const { data } = await browserSupabase().auth.getSession();
+      token = data.session?.access_token || "";
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "LoadLink could not connect to your account.");
+      return;
+    }
     if (!token) {
       window.location.href = `/login?next=${encodeURIComponent("/drivers")}`;
       return;
@@ -79,13 +93,12 @@ export default function DriversAvailableForWork({
   }
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const pages = useMemo(() => paginationItems(page, pageCount), [page, pageCount]);
   const sectionClass = `${styles.section} ${darkMode ? styles.dark : styles.light} ${fullPage ? styles.fullPage : ""}`;
 
   return (
     <section className={sectionClass} data-loadlink-phase2-home>
       <div className={styles.hero}>
-        <img src="/images/jobs/hero.jpg" alt="Truck drivers ready for logistics opportunities" className={styles.heroImage} />
+        <img src="/images/driver-profile-hero.jpg" alt="Truck drivers ready for logistics opportunities" className={styles.heroImage} />
         <div className={styles.heroShade} />
         <div className={styles.heroContent}>
           <h2 className={styles.title}>Drivers Available for Work</h2>
@@ -131,13 +144,7 @@ export default function DriversAvailableForWork({
         )}
 
         {fullPage && pageCount > 1 ? (
-          <nav className={styles.pagination} aria-label="Driver profile pages">
-            <button type="button" disabled={page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</button>
-            {pages.map((item, index) => item === "…" ? <span key={`ellipsis-${index}`}>…</span> : (
-              <button key={item} type="button" aria-current={item === page ? "page" : undefined} className={item === page ? styles.activePage : ""} onClick={() => setPage(item as number)}>{item}</button>
-            ))}
-            <button type="button" disabled={page === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}>Next</button>
-          </nav>
+          <LoadLinkPagination current={page} total={pageCount} onChange={setPage} darkMode={darkMode} label="Driver profile pages" />
         ) : null}
       </div>
     </section>
@@ -146,16 +153,4 @@ export default function DriversAvailableForWork({
 
 function initials(name: string) {
   return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0] || "").join("").toUpperCase() || "LL";
-}
-
-function paginationItems(current: number, total: number): Array<number | "…"> {
-  if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
-  const result: Array<number | "…"> = [1];
-  const start = Math.max(2, current - 1);
-  const end = Math.min(total - 1, current + 1);
-  if (start > 2) result.push("…");
-  for (let value = start; value <= end; value += 1) result.push(value);
-  if (end < total - 1) result.push("…");
-  result.push(total);
-  return result;
 }

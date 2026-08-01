@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
 import { FollowPreferences, getFollowedProfiles, removeFollowedProfile, saveFollowedProfile } from "@/lib/following";
 import { browserSupabase } from "@/lib/phase2/supabase";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
+import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
+import LoadLinkPagination from "@/components/LoadLinkPagination";
 
 type Tab = "inventory" | "updates" | "about";
 type Truck = { title: string; year: string; price: string; mileage: string; image: string; description: string };
@@ -48,6 +50,12 @@ export default function LoadLinkCommercialDealership() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Truck | null>(null);
   const [followMessage, setFollowMessage] = useState("");
+  const [canCustomize, setCanCustomize] = useState(false);
+  const [customizeDialog, setCustomizeDialog] = useState(false);
+  const [bannerImage, setBannerImage] = useState("/images/jobs/jobs-hero-fleet.jpg");
+  const [profileImage, setProfileImage] = useState("/images/truck-1.jpg");
+  const [showDescription, setShowDescription] = useState(false);
+  const [showroomDescription, setShowroomDescription] = useState("");
 
   useEffect(() => {
     const saved = getFollowedProfiles().find((item) => item.type === "dealership" && item.id === DEALER_ID);
@@ -57,6 +65,54 @@ export default function LoadLinkCommercialDealership() {
       setFollowers(1825);
     }
   }, []);
+
+  useEffect(() => {
+    try {
+      setBannerImage(localStorage.getItem("loadlink-demo-dealer-banner") || "/images/jobs/jobs-hero-fleet.jpg");
+      setProfileImage(localStorage.getItem("loadlink-demo-dealer-profile") || "/images/truck-1.jpg");
+      setShowDescription(localStorage.getItem("loadlink-demo-dealer-show-description") === "true");
+      setShowroomDescription(localStorage.getItem("loadlink-demo-dealer-description") || "");
+    } catch {
+      // Keep the approved defaults when browser storage is unavailable.
+    }
+    try {
+      const supabase = browserSupabase();
+      supabase.auth.getUser().then(({ data }) => setCanCustomize((data.user?.email || "").toLowerCase() === OWNER_EMAIL)).catch(() => setCanCustomize(false));
+    } catch {
+      setCanCustomize(false);
+    }
+  }, []);
+
+  function updateShowroomImage(event: ChangeEvent<HTMLInputElement>, kind: "banner" | "profile") {
+    const file = event.target.files?.[0];
+    if (!file || !file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
+      setFollowMessage("Choose a JPG, PNG or WebP image smaller than 5 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const value = String(reader.result || "");
+      if (!value) return;
+      try {
+        localStorage.setItem(kind === "banner" ? "loadlink-demo-dealer-banner" : "loadlink-demo-dealer-profile", value);
+      } catch {
+        setFollowMessage("This browser could not save the showroom image locally.");
+      }
+      if (kind === "banner") setBannerImage(value); else setProfileImage(value);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function saveShowroomPreferences() {
+    try {
+      localStorage.setItem("loadlink-demo-dealer-show-description", String(showDescription));
+      localStorage.setItem("loadlink-demo-dealer-description", showroomDescription.trim());
+    } catch {
+      setFollowMessage("This browser could not save the showroom preferences locally.");
+    }
+    setCustomizeDialog(false);
+    setFollowMessage("Dealership branding updated for this showroom preview.");
+  }
 
   const totalPages = Math.max(1, Math.ceil(inventory.length / PAGE_SIZE));
   const visibleInventory = useMemo(() => inventory.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [page]);
@@ -136,21 +192,19 @@ export default function LoadLinkCommercialDealership() {
           <HomeLogoLink theme={darkMode ? "dark" : "light"} />
           <div className="flex items-center justify-self-end gap-2">
             <AuthStatusButton darkMode={darkMode} />
-            <button type="button" onClick={toggleTheme} aria-label={darkMode ? "Use light theme" : "Use dark theme"} className={`flex h-11 w-11 items-center justify-center rounded-full border ${darkMode ? "border-white/15 bg-white/5 text-[#f6b800]" : "border-black/10 bg-black text-[#f6b800]"}`}>
-              {darkMode ? <SunIcon /> : <MoonIcon />}
-            </button>
+            <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} />
           </div>
         </div>
       </header>
 
       <section className="relative min-h-[330px] overflow-hidden bg-black text-white md:min-h-[430px]">
-        <img src="/images/jobs/jobs-hero-fleet.jpg" alt="Commercial trucks at LoadLink Commercial Centurion" className="absolute inset-0 h-full w-full object-cover opacity-68" />
+        <img src={bannerImage} alt="Commercial trucks at LoadLink Commercial Centurion" className="absolute inset-0 h-full w-full object-cover opacity-68" />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
         <div className="relative mx-auto flex min-h-[330px] max-w-7xl items-end px-5 pb-8 md:min-h-[430px] md:px-8 md:pb-12">
           <div className="max-w-3xl">
             <span className="inline-flex rounded-full bg-[#f6b800] px-3 py-1 text-[9px] font-black uppercase tracking-[.16em] text-black">Verified LoadLink dealership</span>
             <h1 className="mt-4 text-4xl font-black tracking-[-.055em] sm:text-5xl md:text-7xl">{DEALER_NAME}</h1>
-            <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-white/72 md:text-base">Commercial truck stock, direct sales enquiries and dealership updates in one LoadLink showroom.</p>
+            {showDescription && showroomDescription.trim() ? <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-white/80">{showroomDescription}</p> : null}
           </div>
         </div>
       </section>
@@ -159,11 +213,11 @@ export default function LoadLinkCommercialDealership() {
         <div className="mx-auto max-w-7xl px-5 py-7 md:px-8 md:py-9">
           <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-start">
             <div className="flex gap-4">
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[22px] border-4 border-[#f6b800] bg-black text-2xl font-black text-[#f6b800] md:h-28 md:w-28 md:text-4xl">LL</div>
+              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-[22px] border-4 border-[#f6b800] bg-black md:h-28 md:w-28"><img src={profileImage} alt="LoadLink Commercial Centurion profile" className="h-full w-full object-cover" /></div>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2"><h2 className="text-2xl font-black tracking-[-.04em] md:text-3xl">{DEALER_NAME}</h2><span className="rounded-full bg-[#f6b800] px-2.5 py-1 text-[9px] font-black uppercase text-black">Verified dealer</span></div>
                 <p className={`mt-2 text-sm font-semibold ${muted}`}>Centurion, Gauteng · Commercial trucks · Nationwide enquiries</p>
-                <p className={`mt-3 max-w-2xl text-sm leading-6 ${muted}`}>Inspected commercial vehicles, direct sales enquiries and organised stock managed through LoadLink.</p>
+                
               </div>
             </div>
             <div className="grid grid-cols-3 gap-5 text-center md:min-w-[330px]">
@@ -177,6 +231,7 @@ export default function LoadLinkCommercialDealership() {
             <button type="button" onClick={openFollowSettings} className={`h-11 rounded-xl px-6 text-xs font-black uppercase tracking-[.11em] ${following ? darkMode ? "border border-white/20 bg-white/5" : "border border-black/15 bg-white" : "bg-[#f6b800] text-black"}`}>{following ? "Following · settings" : "Follow dealership"}</button>
             <Link href="/messages" className="flex h-11 items-center justify-center rounded-xl bg-black px-6 text-xs font-black uppercase tracking-[.11em] text-[#f6b800] ring-1 ring-white/10">Message sales team</Link>
             <a href={`mailto:${OWNER_EMAIL}?subject=LoadLink%20commercial%20vehicle%20enquiry`} className={`flex h-11 items-center justify-center rounded-xl border px-6 text-xs font-black uppercase tracking-[.11em] ${darkMode ? "border-white/15 bg-white/5" : "border-black/15 bg-white"}`}>Email dealership</a>
+            {canCustomize ? <button type="button" onClick={() => setCustomizeDialog(true)} className={`h-11 rounded-xl border px-6 text-xs font-black uppercase tracking-[.11em] ${darkMode ? "border-white/15 bg-white/5" : "border-black/15 bg-white"}`}>Customize showroom</button> : null}
           </div>
           {followMessage ? <p role="status" className={`mt-4 rounded-xl border px-4 py-3 text-sm font-bold ${darkMode ? "border-[#f6b800]/30 bg-[#f6b800]/10 text-[#ffd760]" : "border-[#d79f00]/35 bg-[#fff5ce] text-[#5f4600]"}`}>{followMessage}</p> : null}
         </div>
@@ -195,7 +250,7 @@ export default function LoadLinkCommercialDealership() {
           <>
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3 px-2 sm:px-0">
               <h2 className="text-3xl font-black tracking-[-.04em]">Available commercial vehicles</h2>
-              <Link href="/trucks" className={`rounded-xl border px-4 py-3 text-[10px] font-black uppercase tracking-[.12em] ${darkMode ? "border-white/15 bg-white/5" : "border-black/15 bg-white"}`}>Browse all LoadLink trucks</Link>
+              
             </div>
             <div className="grid grid-cols-2 gap-1 sm:gap-3 lg:grid-cols-3">
               {visibleInventory.map((truck) => (
@@ -210,7 +265,7 @@ export default function LoadLinkCommercialDealership() {
                 </button>
               ))}
             </div>
-            {totalPages > 1 ? <Pagination current={page} total={totalPages} onChange={setPage} darkMode={darkMode} /> : null}
+            {totalPages > 1 ? <LoadLinkPagination current={page} total={totalPages} onChange={setPage} darkMode={darkMode} label="Dealership inventory pages" /> : null}
           </>
         ) : null}
 
@@ -220,7 +275,7 @@ export default function LoadLinkCommercialDealership() {
 
         {tab === "about" ? (
           <div className="grid gap-5 lg:grid-cols-[1.2fr_.8fr]">
-            <article className={`rounded-[24px] border p-6 md:p-8 ${surface}`}><h2 className="text-3xl font-black">Commercial vehicle support through LoadLink</h2><p className={`mt-4 text-sm leading-7 ${muted}`}>This featured dealership lets customers browse organised inventory, follow stock updates and contact a sales team without leaving LoadLink.</p><p className={`mt-4 text-sm leading-7 ${muted}`}>Following the dealership adds it to <strong>Your LoadLink network</strong> on the homepage and uses the notification choices you selected.</p></article>
+            <article className={`rounded-[24px] border p-6 md:p-8 ${surface}`}><h2 className="text-3xl font-black">Commercial vehicle support through LoadLink</h2><p className={`mt-4 text-sm leading-7 ${muted}`}>This featured dealership lets customers browse organised inventory, follow stock updates and contact a sales team without leaving LoadLink.</p><p className={`mt-4 text-sm leading-7 ${muted}`}>Following the dealership saves your notification choices for this dealership.</p></article>
             <article className="rounded-[24px] border border-[#f6b800]/30 bg-black p-6 text-white md:p-8"><h2 className="text-2xl font-black text-[#f6b800]">Business information</h2><dl className="mt-5 space-y-5"><Detail label="Location" value="Centurion, Gauteng" /><Detail label="Sales coverage" value="South Africa" /><Detail label="Contact" value={OWNER_EMAIL} /><Detail label="Profile status" value="Verified LoadLink dealership" /></dl></article>
           </div>
         ) : null}
@@ -231,6 +286,23 @@ export default function LoadLinkCommercialDealership() {
           <div className={`max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-[28px] shadow-2xl sm:rounded-[28px] ${darkMode ? "bg-[#0d0d0d] text-white" : "bg-white text-black"}`}>
             <div className="relative aspect-[16/9] bg-black"><img src={selected.image} alt={selected.title} className="h-full w-full object-cover" /><button type="button" onClick={() => setSelected(null)} className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl font-black text-black" aria-label="Close vehicle details">×</button></div>
             <div className="p-5 md:p-7"><p className={`text-xs font-black ${muted}`}>{selected.year} · {selected.mileage}</p><h2 className="mt-2 text-3xl font-black tracking-[-.04em]">{selected.title}</h2><p className="mt-3 text-2xl font-black text-[#c59100]">{selected.price}</p><p className={`mt-4 text-sm leading-7 ${muted}`}>{selected.description}</p><div className="mt-6 grid gap-2 sm:grid-cols-2"><a href={`mailto:${OWNER_EMAIL}?subject=${encodeURIComponent(`Vehicle enquiry: ${selected.title}`)}`} className="flex h-12 items-center justify-center rounded-xl bg-[#f6b800] px-5 text-xs font-black uppercase text-black">Enquire by email</a><Link href="/messages" className="flex h-12 items-center justify-center rounded-xl bg-black px-5 text-xs font-black uppercase text-[#f6b800] ring-1 ring-white/15">Open messages</Link></div></div>
+          </div>
+        </div>
+      ) : null}
+
+      {customizeDialog ? (
+        <div className="fixed inset-0 z-[125] flex items-end justify-center bg-black/75 p-0 sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label="Customize dealership showroom">
+          <div className={`w-full max-w-xl rounded-t-[30px] border p-5 shadow-2xl sm:rounded-[30px] sm:p-7 ${surface}`}>
+            <div className="flex items-center justify-between gap-4"><h2 className="text-3xl font-black tracking-[-.04em]">Customize showroom</h2><button type="button" onClick={() => setCustomizeDialog(false)} className={`flex h-10 w-10 items-center justify-center rounded-full border text-xl ${darkMode ? "border-white/15" : "border-black/10"}`}>×</button></div>
+            <div className="mt-6 grid gap-4">
+              <label className="text-xs font-black uppercase tracking-[.12em]">Banner image<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => updateShowroomImage(event, "banner")} className="mt-2 block w-full text-sm font-semibold normal-case" /></label>
+              <label className="text-xs font-black uppercase tracking-[.12em]">Profile picture<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => updateShowroomImage(event, "profile")} className="mt-2 block w-full text-sm font-semibold normal-case" /></label>
+              <div className={`rounded-xl border p-4 ${darkMode ? "border-white/10" : "border-black/10"}`}>
+                <div className="flex items-center justify-between gap-4"><span className="text-sm font-black">Show dealership description</span><button type="button" role="switch" aria-checked={showDescription} onClick={() => setShowDescription((value) => !value)} className={`relative h-7 w-12 rounded-full ${showDescription ? "bg-[#f6b800]" : darkMode ? "bg-white/15" : "bg-black/15"}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${showDescription ? "translate-x-6" : "translate-x-1"}`} /></button></div>
+                {showDescription ? <textarea value={showroomDescription} onChange={(event) => setShowroomDescription(event.target.value)} maxLength={240} placeholder="Optional showroom description" className={`mt-4 min-h-24 w-full rounded-xl border px-4 py-3 text-sm font-semibold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-black text-white" : "border-black/15 bg-white text-black"}`} /> : null}
+              </div>
+              <button type="button" onClick={saveShowroomPreferences} className="h-12 rounded-xl bg-[#f6b800] text-xs font-black uppercase tracking-[.11em] text-black">Save showroom</button>
+            </div>
           </div>
         </div>
       ) : null}
@@ -269,11 +341,3 @@ function Stat({ value, label, muted }: { value: string; label: string; muted: st
 function Detail({ label, value }: { label: string; value: string }) {
   return <div><dt className="text-[9px] font-black uppercase tracking-[.15em] text-white/40">{label}</dt><dd className="mt-1 text-sm font-bold">{value}</dd></div>;
 }
-
-function Pagination({ current, total, onChange, darkMode }: { current: number; total: number; onChange: (page: number) => void; darkMode: boolean }) {
-  const normal = darkMode ? "border-white/15 bg-white/5 text-white" : "border-black/15 bg-white text-black";
-  return <nav className="mt-8 flex flex-wrap items-center justify-center gap-2" aria-label="Dealership inventory pages"><button type="button" disabled={current === 1} onClick={() => onChange(current - 1)} className={`h-10 rounded-lg border px-4 text-[10px] font-black uppercase disabled:opacity-35 ${normal}`}>Previous</button>{Array.from({ length: total }, (_, index) => index + 1).map((item) => <button type="button" key={item} aria-current={item === current ? "page" : undefined} onClick={() => onChange(item)} className={`h-10 min-w-10 rounded-lg border text-xs font-black ${item === current ? "border-[#f6b800] bg-[#f6b800] text-black" : normal}`}>{item}</button>)}<button type="button" disabled={current === total} onClick={() => onChange(current + 1)} className={`h-10 rounded-lg border px-4 text-[10px] font-black uppercase disabled:opacity-35 ${normal}`}>Next</button></nav>;
-}
-
-function MoonIcon() { return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20.2 15.1A8 8 0 0 1 8.9 3.8 8.2 8.2 0 1 0 20.2 15Z" fill="currentColor" /></svg>; }
-function SunIcon() { return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>; }
