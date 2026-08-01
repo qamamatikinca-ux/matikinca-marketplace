@@ -85,7 +85,7 @@ export default function ChatLauncher() {
     };
   }, [refreshUnread, signedIn]);
 
-  if (pathname.startsWith("/messages") || pathname.startsWith("/login") || pathname.startsWith("/list-your-truck") || authLoading) return null;
+  if (pathname.startsWith("/messages") || pathname.startsWith("/login") || (pathname.startsWith("/list-your-vehicle") || pathname.startsWith("/list-your-truck")) || authLoading) return null;
 
   const href = signedIn ? "/messages" : loginHref("/messages");
 

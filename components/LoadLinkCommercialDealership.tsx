@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
@@ -12,7 +12,7 @@ import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import LoadLinkPagination from "@/components/LoadLinkPagination";
 
 type Tab = "inventory" | "updates" | "about";
-type Truck = { title: string; year: string; price: string; mileage: string; image: string; description: string };
+type Truck = { title: string; year: string; price: string; mileage: string; image: string; description: string; previousOwners: string; transmission: string; fuel: string; condition: string; serviceHistory: string; bodyType: string };
 
 const DEALER_ID = "loadlink-commercial-centurion";
 const DEALER_NAME = "LoadLink Commercial Centurion";
@@ -21,15 +21,15 @@ const OWNER_EMAIL = "loadlinksouthafrica@gmail.com";
 const PAGE_SIZE = 7;
 
 const inventory: Truck[] = [
-  { title: "Mercedes-Benz Actros 2645", year: "2023", price: "R1 695 000", mileage: "188 000 km", image: "/images/truck-1.jpg", description: "Automatic long-haul tractor with full service history and nationwide delivery support." },
-  { title: "Volvo FH 440 Globetrotter", year: "2022", price: "Request a quote", mileage: "247 000 km", image: "/images/truck-2.jpg", description: "Well-maintained sleeper cab configured for regional and long-distance operations." },
-  { title: "Scania R-series 460", year: "2021", price: "R1 250 000", mileage: "315 000 km", image: "/images/truck-3.jpg", description: "High-roof tractor unit with strong fleet records and finance assistance available." },
-  { title: "MAN TGS 26.440", year: "2020", price: "R985 000", mileage: "402 000 km", image: "/images/jobs/job-card-1.jpg", description: "Reliable heavy-duty workhorse suitable for construction and line-haul applications." },
-  { title: "Mercedes-Benz Axor 3340", year: "2019", price: "R875 000", mileage: "466 000 km", image: "/images/jobs/jobs-hero-fleet.jpg", description: "Fleet-ready unit with inspection report, ownership documents and service records." },
-  { title: "DAF XF 480", year: "2022", price: "R1 420 000", mileage: "271 000 km", image: "/images/contracts-1.jpg", description: "Comfortable long-haul cab with economical drivetrain and verified roadworthy status." },
-  { title: "Isuzu FTR 850 Dropside", year: "2021", price: "R799 000", mileage: "198 500 km", image: "/images/jobs/job-card-2.jpg", description: "Versatile rigid truck for local distribution, construction and general freight." },
-  { title: "Hino 700 2841", year: "2020", price: "R925 000", mileage: "338 000 km", image: "/images/jobs/job-card-3.jpg", description: "Heavy-duty chassis prepared for fleet use with nationwide enquiry support." },
-  { title: "UD Quon GW26 410", year: "2022", price: "R1 080 000", mileage: "224 000 km", image: "/images/jobs/job-card-4.jpg", description: "Modern automated transmission, clean cab and complete dealership inspection." },
+  { title: "Mercedes-Benz Actros 2645", year: "2023", price: "R1 695 000", mileage: "188 000 km", image: "/images/truck-1.jpg", previousOwners: "1", transmission: "Automated manual", fuel: "Diesel", condition: "Excellent", serviceHistory: "Full service history", bodyType: "Tractor unit / horse", description: "Automatic long-haul tractor with full service history and nationwide delivery support." },
+  { title: "Volvo FH 440 Globetrotter", year: "2022", price: "Request a quote", mileage: "247 000 km", image: "/images/truck-2.jpg", previousOwners: "1", transmission: "Automatic", fuel: "Diesel", condition: "Very good", serviceHistory: "Full service history", bodyType: "Tractor unit / horse", description: "Well-maintained sleeper cab configured for regional and long-distance operations." },
+  { title: "Scania R-series 460", year: "2021", price: "R1 250 000", mileage: "315 000 km", image: "/images/truck-3.jpg", previousOwners: "2", transmission: "Automated manual", fuel: "Diesel", condition: "Very good", serviceHistory: "Full service history", bodyType: "Tractor unit / horse", description: "High-roof tractor unit with strong fleet records and finance assistance available." },
+  { title: "MAN TGS 26.440", year: "2020", price: "R985 000", mileage: "402 000 km", image: "/images/jobs/job-card-1.jpg", previousOwners: "2", transmission: "Automatic", fuel: "Diesel", condition: "Good", serviceHistory: "Partial service history", bodyType: "Rigid truck", description: "Reliable heavy-duty workhorse suitable for construction and line-haul applications." },
+  { title: "Mercedes-Benz Axor 3340", year: "2019", price: "R875 000", mileage: "466 000 km", image: "/images/jobs/jobs-hero-fleet.jpg", previousOwners: "2", transmission: "Manual", fuel: "Diesel", condition: "Good", serviceHistory: "Full service history", bodyType: "Rigid truck", description: "Fleet-ready unit with inspection report, ownership documents and service records." },
+  { title: "DAF XF 480", year: "2022", price: "R1 420 000", mileage: "271 000 km", image: "/images/contracts-1.jpg", previousOwners: "1", transmission: "Automatic", fuel: "Diesel", condition: "Very good", serviceHistory: "Full service history", bodyType: "Tractor unit / horse", description: "Comfortable long-haul cab with economical drivetrain and verified roadworthy status." },
+  { title: "Isuzu FTR 850 Dropside", year: "2021", price: "R799 000", mileage: "198 500 km", image: "/images/jobs/job-card-2.jpg", previousOwners: "1", transmission: "Manual", fuel: "Diesel", condition: "Very good", serviceHistory: "Full service history", bodyType: "Dropside", description: "Versatile rigid truck for local distribution, construction and general freight." },
+  { title: "Hino 700 2841", year: "2020", price: "R925 000", mileage: "338 000 km", image: "/images/jobs/job-card-3.jpg", previousOwners: "2", transmission: "Automatic", fuel: "Diesel", condition: "Good", serviceHistory: "Partial service history", bodyType: "Rigid truck", description: "Heavy-duty chassis prepared for fleet use with nationwide enquiry support." },
+  { title: "UD Quon GW26 410", year: "2022", price: "R1 080 000", mileage: "224 000 km", image: "/images/jobs/job-card-4.jpg", previousOwners: "1", transmission: "Automated manual", fuel: "Diesel", condition: "Excellent", serviceHistory: "Full service history", bodyType: "Tractor unit / horse", description: "Modern automated transmission, clean cab and complete dealership inspection." },
 ];
 
 const updates = [
@@ -42,6 +42,7 @@ const DEFAULT_PREFERENCES: FollowPreferences = { newListings: true, updates: tru
 
 export default function LoadLinkCommercialDealership() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
+  const sliderRef = useRef<HTMLDivElement>(null);
   const [tab, setTab] = useState<Tab>("inventory");
   const [following, setFollowing] = useState(false);
   const [preferences, setPreferences] = useState<FollowPreferences>(DEFAULT_PREFERENCES);
@@ -184,6 +185,12 @@ export default function LoadLinkCommercialDealership() {
     setPage(1);
   }
 
+  function moveSlider(direction: -1 | 1) {
+    const node = sliderRef.current;
+    if (!node) return;
+    node.scrollBy({ left: direction * Math.max(280, node.clientWidth * 0.82), behavior: "smooth" });
+  }
+
   return (
     <main className={`min-h-screen ${pageBg}`}>
       <header className={`sticky top-0 z-50 border-b backdrop-blur ${darkMode ? "border-white/10 bg-black/95" : "border-black/10 bg-white/95"}`}>
@@ -252,15 +259,20 @@ export default function LoadLinkCommercialDealership() {
               <h2 className="text-3xl font-black tracking-[-.04em]">Available commercial vehicles</h2>
               
             </div>
-            <div className="grid grid-cols-2 gap-1 sm:gap-3 lg:grid-cols-3">
+            <div className="mb-3 hidden justify-end gap-2 sm:flex">
+              <button type="button" onClick={() => moveSlider(-1)} className={`flex h-10 w-10 items-center justify-center rounded-full border ${darkMode ? "border-white/20" : "border-black/15"}`} aria-label="Previous dealership products">←</button>
+              <button type="button" onClick={() => moveSlider(1)} className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f6b800] text-black" aria-label="Next dealership products">→</button>
+            </div>
+            <div ref={sliderRef} className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-4 touch-pan-x">
               {visibleInventory.map((truck) => (
-                <button type="button" key={truck.title} onClick={() => setSelected(truck)} className="group relative aspect-square overflow-hidden rounded-[18px] bg-black text-left sm:rounded-[24px]">
+                <button type="button" key={truck.title} onClick={() => setSelected(truck)} className="group relative aspect-square w-[82vw] max-w-[310px] shrink-0 snap-start overflow-hidden rounded-[18px] bg-black text-left sm:w-[285px] sm:rounded-[24px]">
                   <img src={truck.image} alt={truck.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 p-3 text-white sm:p-5">
                     <p className="text-[9px] font-black uppercase tracking-[.12em] text-[#f6b800]">{truck.year} · {truck.mileage}</p>
                     <h3 className="mt-1 line-clamp-2 text-sm font-black leading-tight sm:text-xl">{truck.title}</h3>
                     <p className="mt-1 text-xs font-black sm:text-base">{truck.price}</p>
+                    <p className="mt-2 text-[9px] font-black uppercase tracking-[.1em] text-white/65">Tap for full details</p>
                   </div>
                 </button>
               ))}
@@ -283,9 +295,14 @@ export default function LoadLinkCommercialDealership() {
 
       {selected ? (
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/78 p-0 sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label={selected.title}>
-          <div className={`max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-[28px] shadow-2xl sm:rounded-[28px] ${darkMode ? "bg-[#0d0d0d] text-white" : "bg-white text-black"}`}>
-            <div className="relative aspect-[16/9] bg-black"><img src={selected.image} alt={selected.title} className="h-full w-full object-cover" /><button type="button" onClick={() => setSelected(null)} className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl font-black text-black" aria-label="Close vehicle details">×</button></div>
-            <div className="p-5 md:p-7"><p className={`text-xs font-black ${muted}`}>{selected.year} · {selected.mileage}</p><h2 className="mt-2 text-3xl font-black tracking-[-.04em]">{selected.title}</h2><p className="mt-3 text-2xl font-black text-[#c59100]">{selected.price}</p><p className={`mt-4 text-sm leading-7 ${muted}`}>{selected.description}</p><div className="mt-6 grid gap-2 sm:grid-cols-2"><a href={`mailto:${OWNER_EMAIL}?subject=${encodeURIComponent(`Vehicle enquiry: ${selected.title}`)}`} className="flex h-12 items-center justify-center rounded-xl bg-[#f6b800] px-5 text-xs font-black uppercase text-black">Enquire by email</a><Link href="/messages" className="flex h-12 items-center justify-center rounded-xl bg-black px-5 text-xs font-black uppercase text-[#f6b800] ring-1 ring-white/15">Open messages</Link></div></div>
+          <button type="button" className="absolute inset-0" onClick={() => setSelected(null)} aria-label="Close vehicle details" />
+          <div className={`relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-[28px] shadow-2xl sm:rounded-[28px] ${darkMode ? "bg-[#0d0d0d] text-white" : "bg-white text-black"}`}>
+            <div className="relative aspect-[16/9] bg-black"><img src={selected.image} alt={selected.title} className="h-full w-full object-contain" /><button type="button" onClick={() => setSelected(null)} className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl font-black text-black" aria-label="Close vehicle details">×</button></div>
+            <div className="p-5 md:p-7"><p className={`text-xs font-black ${muted}`}>{selected.year} · {selected.mileage}</p><h2 className="mt-2 text-3xl font-black tracking-[-.04em]">{selected.title}</h2><p className="mt-3 text-2xl font-black text-[#c59100]">{selected.price}</p>
+              <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3">
+                {[['Mileage', selected.mileage], ['Previous owners', selected.previousOwners], ['Transmission', selected.transmission], ['Fuel', selected.fuel], ['Condition', selected.condition], ['Service history', selected.serviceHistory], ['Body type', selected.bodyType], ['Seller', DEALER_NAME]].map(([label, value]) => <div key={label} className={`rounded-xl border p-3 ${darkMode ? "border-white/10 bg-white/[.03]" : "border-black/10 bg-black/[.02]"}`}><p className={`text-[10px] font-black uppercase ${muted}`}>{label}</p><p className="mt-1 text-sm font-black">{value}</p></div>)}
+              </div>
+              <h3 className="mt-6 text-lg font-black">Description</h3><p className={`mt-2 text-sm leading-7 ${muted}`}>{selected.description}</p><div className="mt-6 grid gap-2 sm:grid-cols-2"><a href={`mailto:${OWNER_EMAIL}?subject=${encodeURIComponent(`Vehicle enquiry: ${selected.title}`)}`} className="flex h-12 items-center justify-center rounded-xl bg-[#f6b800] px-5 text-xs font-black uppercase text-black">Enquire by email</a><Link href="/messages" className="flex h-12 items-center justify-center rounded-xl bg-black px-5 text-xs font-black uppercase text-[#f6b800] ring-1 ring-white/15">Open messages</Link></div></div>
           </div>
         </div>
       ) : null}
@@ -298,7 +315,7 @@ export default function LoadLinkCommercialDealership() {
               <label className="text-xs font-black uppercase tracking-[.12em]">Banner image<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => updateShowroomImage(event, "banner")} className="mt-2 block w-full text-sm font-semibold normal-case" /></label>
               <label className="text-xs font-black uppercase tracking-[.12em]">Profile picture<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => updateShowroomImage(event, "profile")} className="mt-2 block w-full text-sm font-semibold normal-case" /></label>
               <div className={`rounded-xl border p-4 ${darkMode ? "border-white/10" : "border-black/10"}`}>
-                <div className="flex items-center justify-between gap-4"><span className="text-sm font-black">Show dealership description</span><button type="button" role="switch" aria-checked={showDescription} onClick={() => setShowDescription((value) => !value)} className={`relative h-7 w-12 rounded-full ${showDescription ? "bg-[#f6b800]" : darkMode ? "bg-white/15" : "bg-black/15"}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${showDescription ? "translate-x-6" : "translate-x-1"}`} /></button></div>
+                <div className="flex items-center justify-between gap-4"><span className="text-sm font-black">Show dealership description</span><button type="button" role="switch" aria-checked={showDescription} onClick={() => setShowDescription((value) => !value)} className={`relative h-7 w-12 rounded-full border transition ${showDescription ? "border-[#f6b800] bg-[#f6b800]" : darkMode ? "border-white/20 bg-white/10" : "border-black/20 bg-black/10"}`}><span className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${showDescription ? "translate-x-5" : "translate-x-0"}`} /></button></div>
                 {showDescription ? <textarea value={showroomDescription} onChange={(event) => setShowroomDescription(event.target.value)} maxLength={240} placeholder="Optional showroom description" className={`mt-4 min-h-24 w-full rounded-xl border px-4 py-3 text-sm font-semibold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-black text-white" : "border-black/15 bg-white text-black"}`} /> : null}
               </div>
               <button type="button" onClick={saveShowroomPreferences} className="h-12 rounded-xl bg-[#f6b800] text-xs font-black uppercase tracking-[.11em] text-black">Save showroom</button>

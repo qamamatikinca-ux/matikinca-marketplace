@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 
-const MINIMUM_LOADING_TIME = 320;
-const SAFETY_MAXIMUM_LOADING_TIME = 5000;
+const INITIAL_MINIMUM_LOADING_TIME = 850;
+const ROUTE_MINIMUM_LOADING_TIME = 320;
+const SAFETY_MAXIMUM_LOADING_TIME = 4500;
 
 function isInternalLink(link: HTMLAnchorElement) {
   const href = link.getAttribute("href");
@@ -22,41 +23,56 @@ export default function GlobalLoading() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const routeKey = `${pathname}?${searchParams.toString()}`;
-  const [loading, setLoading] = useState(false);
-  const startedAtRef = useRef(0);
+  const [loading, setLoading] = useState(true);
+  const startedAtRef = useRef(Date.now());
+  const minimumRef = useRef(INITIAL_MINIMUM_LOADING_TIME);
   const minTimerRef = useRef<number | null>(null);
   const safetyTimerRef = useRef<number | null>(null);
+  const mountedRef = useRef(false);
 
-  function clearTimers() {
+  const clearTimers = useCallback(() => {
     if (minTimerRef.current !== null) window.clearTimeout(minTimerRef.current);
     if (safetyTimerRef.current !== null) window.clearTimeout(safetyTimerRef.current);
     minTimerRef.current = null;
     safetyTimerRef.current = null;
-  }
+  }, []);
 
-  function stopLoading() {
+  const stopLoading = useCallback(() => {
     const elapsed = Date.now() - startedAtRef.current;
-    const remaining = Math.max(0, MINIMUM_LOADING_TIME - elapsed);
+    const remaining = Math.max(0, minimumRef.current - elapsed);
     if (minTimerRef.current !== null) window.clearTimeout(minTimerRef.current);
     minTimerRef.current = window.setTimeout(() => {
       setLoading(false);
       clearTimers();
     }, remaining);
-  }
+  }, [clearTimers]);
 
-  function startLoading() {
+  const startLoading = useCallback((minimum = ROUTE_MINIMUM_LOADING_TIME) => {
     clearTimers();
+    minimumRef.current = minimum;
     startedAtRef.current = Date.now();
     setLoading(true);
     safetyTimerRef.current = window.setTimeout(() => {
       setLoading(false);
       clearTimers();
     }, SAFETY_MAXIMUM_LOADING_TIME);
-  }
+  }, [clearTimers]);
 
   useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      startLoading(INITIAL_MINIMUM_LOADING_TIME);
+      const releaseInitial = () => stopLoading();
+      if (document.readyState === "complete") requestAnimationFrame(releaseInitial);
+      else window.addEventListener("load", releaseInitial, { once: true });
+      const fallback = window.setTimeout(releaseInitial, 1200);
+      return () => {
+        window.removeEventListener("load", releaseInitial);
+        window.clearTimeout(fallback);
+      };
+    }
     stopLoading();
-  }, [routeKey]);
+  }, [routeKey, startLoading, stopLoading]);
 
   useEffect(() => {
     function handleClick(event: MouseEvent) {
@@ -74,15 +90,13 @@ export default function GlobalLoading() {
     document.addEventListener("click", handleClick);
     window.addEventListener("pageshow", release);
     window.addEventListener("popstate", release);
-    window.addEventListener("load", release);
     return () => {
       document.removeEventListener("click", handleClick);
       window.removeEventListener("pageshow", release);
       window.removeEventListener("popstate", release);
-      window.removeEventListener("load", release);
       clearTimers();
     };
-  }, []);
+  }, [clearTimers, startLoading, stopLoading]);
 
   return loading ? <LoadLinkLoading /> : null;
 }

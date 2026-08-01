@@ -70,14 +70,14 @@ const portalCards: PortalCard[] = [
     packageType: "basic",
   },
   {
-    title: "List Your Truck",
-    buttonText: "List your truck",
+    title: "List Your Vehicle",
+    buttonText: "List your vehicle",
     images: [
       { src: "/images/truck-1.jpg", position: "center center" },
       { src: "/images/truck-2.jpg", position: "center center" },
       { src: "/images/truck-3.jpg", position: "center center" },
     ],
-    href: "/list-your-truck",
+    href: "/list-your-vehicle",
     type: "Truck owner portal",
     category: "Truck Hire",
     packageType: "basic",
@@ -350,7 +350,7 @@ function HomeExperience() {
               >
                 <Link href="/jobs">Find jobs</Link>
                 <Link href="/contracts">Find contracts</Link>
-                <RequireAuthLink href="/list-your-truck">List your truck</RequireAuthLink>
+                <RequireAuthLink href="/list-your-vehicle">List your vehicle</RequireAuthLink>
                 <Link href="#">Truck hire</Link>
                 <Link href="#">Available loads</Link>
               </div>

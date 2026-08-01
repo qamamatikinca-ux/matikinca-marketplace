@@ -15,6 +15,8 @@ import {
 
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
+import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
+import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { getBuyerKey, getBuyerKeys, getOwnerKeys } from "@/lib/chatKeys";
@@ -194,6 +196,7 @@ function cleanError(error: unknown, fallback: string) {
 
 export default function MessagesPage() {
   const router = useRouter();
+  const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -219,6 +222,15 @@ export default function MessagesPage() {
   const recordingChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingCancelledRef = useRef(false);
+
+  useEffect(() => {
+    if (!loading) return;
+    const safety = window.setTimeout(() => {
+      setLoading(false);
+      setError((current) => current || "The inbox took too long to respond. Refresh to retry without being trapped on a black screen.");
+    }, 8000);
+    return () => window.clearTimeout(safety);
+  }, [loading]);
 
   const selectedConversation = useMemo(
     () =>
@@ -733,7 +745,7 @@ export default function MessagesPage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-black px-6 text-white">
+      <main className={`flex min-h-screen items-center justify-center px-6 ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
         <div className="text-center">
           <div className="mx-auto h-12 w-12 animate-spin rounded-full border-2 border-white/15 border-t-[#f6b800]" />
           <p className="mt-6 text-xs font-black uppercase tracking-[.22em] text-[#f6b800]">
@@ -746,10 +758,10 @@ export default function MessagesPage() {
   }
 
   return (
-    <main className="h-[100dvh] overflow-hidden bg-[#eeeae0] text-black">
-      <header className="grid h-[72px] grid-cols-[56px_1fr_56px] items-center border-b border-black/10 bg-black px-3 text-white md:h-20 md:grid-cols-[120px_1fr_120px] md:px-5">
+    <main data-theme={darkMode ? "dark" : "light"} className={`loadlink-messages h-[100dvh] overflow-hidden ${darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"}`}>
+      <header className={`grid h-[72px] grid-cols-[56px_1fr_92px] items-center border-b px-3 md:h-20 md:grid-cols-[120px_1fr_140px] md:px-5 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"}`}>
         <div className="flex items-center gap-1">
-          <SiteMenu darkMode className="text-white" />
+          <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
           <Link
             href="/"
             className="hidden items-center gap-2 text-sm font-black md:inline-flex"
@@ -759,23 +771,20 @@ export default function MessagesPage() {
             <span>Home</span>
           </Link>
         </div>
-        <HomeLogoLink theme="dark" />
-        <button
-          type="button"
-          onClick={() =>
-            loadConversations(selectedIdRef.current).catch((refreshError) =>
-              setError(cleanError(refreshError, "Could not refresh.")),
-            )
-          }
-          className="justify-self-end text-[11px] font-black uppercase tracking-wide text-[#f6b800]"
-        >
-          Refresh
-        </button>
+        <HomeLogoLink theme={darkMode ? "dark" : "light"} />
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => loadConversations(selectedIdRef.current).catch((refreshError) => setError(cleanError(refreshError, "Could not refresh.")))}
+            className="hidden text-[11px] font-black uppercase tracking-wide text-[#b88900] sm:block"
+          >Refresh</button>
+          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} />
+        </div>
       </header>
 
       <div className="mx-auto grid h-[calc(100dvh-72px)] max-w-[1500px] md:h-[calc(100dvh-80px)] md:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)_300px]">
         <aside
-          className={`${selectedId ? "hidden md:flex" : "flex"} min-h-0 flex-col border-r border-black/10 bg-white`}
+          className={`${selectedId ? "hidden md:flex" : "flex"} loadlink-inbox-panel min-h-0 flex-col border-r border-black/10 bg-white`}
         >
           <div className="border-b border-black/10 p-5">
             <div className="flex items-center justify-between gap-3">
@@ -888,11 +897,11 @@ export default function MessagesPage() {
         </aside>
 
         <section
-          className={`${selectedId ? "flex" : "hidden md:flex"} min-h-0 flex-col bg-[#f3f0e8]`}
+          className={`${selectedId ? "flex" : "hidden md:flex"} loadlink-chat-panel min-h-0 flex-col bg-[#f3f0e8]`}
         >
           {selectedConversation ? (
             <>
-              <header className="flex min-h-[78px] items-center gap-3 border-b border-black/10 bg-white px-3 py-3 md:px-5">
+              <header className="loadlink-chat-header flex min-h-[78px] items-center gap-3 border-b border-black/10 bg-white px-3 py-3 md:px-5">
                 <button
                   type="button"
                   onClick={returnToInbox}
@@ -1094,7 +1103,7 @@ export default function MessagesPage() {
 
               <form
                 onSubmit={send}
-                className="border-t border-black/10 bg-white p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:p-4"
+                className="loadlink-chat-composer border-t border-black/10 bg-white p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:p-4"
               >
                 <input
                   ref={fileInputRef}
@@ -1209,7 +1218,7 @@ export default function MessagesPage() {
           )}
         </section>
 
-        <aside className="hidden min-h-0 overflow-y-auto border-l border-black/10 bg-white p-5 xl:block">
+        <aside className="loadlink-details-panel hidden min-h-0 overflow-y-auto border-l border-black/10 bg-white p-5 xl:block">
           {selectedConversation ? (
             <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} onToggleBlock={toggleBlock} />
           ) : null}
@@ -1247,7 +1256,7 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
         <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${mine ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><MicrophoneIcon /></span>
         <span className="min-w-0 flex-1"><strong className="block text-xs font-black">Voice note</strong><span className={`mt-0.5 block text-[10px] font-semibold ${mine ? "text-white/55" : "text-black/45"}`}>{fileSizeLabel(message.file_size)}</span></span>
       </div>
-      {url ? <audio controls preload="metadata" src={url} className="mt-3 h-9 w-full" /> : <button type="button" onClick={() => void loadVoiceNote()} disabled={loading} className={`mt-3 h-9 w-full rounded-lg border text-[10px] font-black uppercase ${mine ? "border-white/20 text-white" : "border-black/15 text-black"}`}>{loading ? "Loading…" : "Play voice note"}</button>}
+      {url ? <audio controls preload="metadata" src={url} className="mt-3 h-9 w-full max-w-full" /> : <button type="button" onClick={() => void loadVoiceNote()} disabled={loading} className={`mt-3 h-9 w-full rounded-lg border text-[10px] font-black uppercase ${mine ? "border-white/20 text-white" : "border-black/15 text-black"}`}>{loading ? "Loading…" : "Play voice note"}</button>}
     </div>
   );
 }

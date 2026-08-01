@@ -61,6 +61,7 @@ export default function AccountSettingsPage() {
   const [message, setMessage] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [preferenceSaving, setPreferenceSaving] = useState<keyof Pick<ProfileForm, "email_notifications" | "chat_notifications" | "listing_notifications" | "marketing_notifications"> | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -105,6 +106,30 @@ export default function AccountSettingsPage() {
 
   function field<K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function savePreference(key: "email_notifications" | "chat_notifications" | "listing_notifications" | "marketing_notifications", value: boolean) {
+    if (!user || preferenceSaving) return;
+    const next = { ...form, [key]: value };
+    setForm(next);
+    setPreferenceSaving(key);
+    setMessage("");
+    try {
+      const { error } = await supabase.rpc("loadlink_update_my_profile", { p_payload: {
+        id: user.id, full_name: next.full_name.trim(), phone: next.phone.trim(), whatsapp_number: next.whatsapp_number.trim(),
+        company_name: next.company_name.trim(), job_title: next.job_title.trim(), city: next.city.trim(), province: next.province,
+        bio: next.bio.trim(), avatar_url: next.avatar_url, email_notifications: next.email_notifications, chat_notifications: next.chat_notifications,
+        listing_notifications: next.listing_notifications, marketing_notifications: next.marketing_notifications, updated_at: new Date().toISOString(),
+      } });
+      if (error) throw error;
+      try { localStorage.setItem(`loadlink-setting-${key}`, String(value)); } catch {}
+      setMessage("Preference saved.");
+    } catch (error) {
+      setForm(form);
+      setMessage(error instanceof Error ? error.message : "The preference could not be saved.");
+    } finally {
+      setPreferenceSaving(null);
+    }
   }
 
   async function saveProfile(event: FormEvent) {
@@ -263,10 +288,10 @@ export default function AccountSettingsPage() {
 
               <h3 className="mt-8 text-lg font-black">Notification preferences</h3>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <Toggle label="Email account updates" checked={form.email_notifications} onChange={(value) => field("email_notifications", value)} darkMode={darkMode} />
-                <Toggle label="New chat messages" checked={form.chat_notifications} onChange={(value) => field("chat_notifications", value)} darkMode={darkMode} />
-                <Toggle label="Listing and review updates" checked={form.listing_notifications} onChange={(value) => field("listing_notifications", value)} darkMode={darkMode} />
-                <Toggle label="LoadLink product news" checked={form.marketing_notifications} onChange={(value) => field("marketing_notifications", value)} darkMode={darkMode} />
+                <Toggle label="Email account updates" checked={form.email_notifications} busy={preferenceSaving === "email_notifications"} onChange={(value) => void savePreference("email_notifications", value)} darkMode={darkMode} />
+                <Toggle label="New chat messages" checked={form.chat_notifications} busy={preferenceSaving === "chat_notifications"} onChange={(value) => void savePreference("chat_notifications", value)} darkMode={darkMode} />
+                <Toggle label="Listing and review updates" checked={form.listing_notifications} busy={preferenceSaving === "listing_notifications"} onChange={(value) => void savePreference("listing_notifications", value)} darkMode={darkMode} />
+                <Toggle label="LoadLink product news" checked={form.marketing_notifications} busy={preferenceSaving === "marketing_notifications"} onChange={(value) => void savePreference("marketing_notifications", value)} darkMode={darkMode} />
               </div>
               <button type="submit" disabled={saving} className="mt-6 h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase tracking-[.12em] text-black disabled:opacity-50">{saving ? "Saving…" : "Save profile settings"}</button>
             </form>
@@ -297,12 +322,12 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className="block text-xs font-black uppercase tracking-[.11em]">{label}{children}</label>;
 }
 
-function Toggle({ label, checked, onChange, darkMode }: { label: string; checked: boolean; onChange: (value: boolean) => void; darkMode: boolean }) {
+function Toggle({ label, checked, busy, onChange, darkMode }: { label: string; checked: boolean; busy?: boolean; onChange: (value: boolean) => void; darkMode: boolean }) {
   return (
     <div className={`flex min-h-14 items-center justify-between gap-4 rounded-xl border px-4 ${darkMode ? "border-white/10 bg-white/[.02]" : "border-black/10 bg-black/[.015]"}`}>
       <span className="text-sm font-bold normal-case tracking-normal">{label}</span>
-      <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)} className={`relative h-7 w-12 shrink-0 rounded-full border transition ${checked ? "border-[#f6b800] bg-[#f6b800]" : darkMode ? "border-white/20 bg-white/10" : "border-black/20 bg-black/10"}`}>
-        <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-1"}`} />
+      <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)} disabled={busy} className={`relative h-7 w-12 shrink-0 rounded-full border transition disabled:opacity-55 ${checked ? "border-[#f6b800] bg-[#f6b800]" : darkMode ? "border-white/20 bg-white/10" : "border-black/20 bg-black/10"}`}>
+        <span className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} />
       </button>
     </div>
   );

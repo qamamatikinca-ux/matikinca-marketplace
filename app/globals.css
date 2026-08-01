@@ -230,3 +230,38 @@ body { min-height:100vh; }
 .loadlink-rejection-panel { border:1px solid rgba(220,38,38,.45); }
 html[data-loadlink-theme="light"] .loadlink-rejection-panel { background:#fff0f0; color:#4b0b0b; }
 html[data-loadlink-theme="dark"] .loadlink-rejection-panel { background:#2a0909; color:#fff; }
+
+/* LoadLink messages: consistent light/dark surfaces and media containment */
+.loadlink-messages audio,
+.loadlink-messages video,
+.loadlink-messages img { max-width: 100%; }
+html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-inbox-panel,
+html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-details-panel,
+html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-chat-header,
+html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-chat-composer {
+  background: #0b0b0b !important;
+  color: #f7f7f7 !important;
+  border-color: rgba(255,255,255,.1) !important;
+}
+html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-chat-panel {
+  background: #11100d !important;
+  color: #f7f7f7 !important;
+}
+html[data-loadlink-theme="dark"] .loadlink-messages input,
+html[data-loadlink-theme="dark"] .loadlink-messages textarea {
+  background: #171717 !important;
+  border-color: rgba(255,255,255,.14) !important;
+  color: #fff !important;
+}
+html[data-loadlink-theme="dark"] .loadlink-messages input::placeholder,
+html[data-loadlink-theme="dark"] .loadlink-messages textarea::placeholder { color: rgba(255,255,255,.38) !important; }
+html[data-loadlink-theme="dark"] .loadlink-messages [class*="text-black/"] { color: rgba(255,255,255,.58) !important; }
+html[data-loadlink-theme="dark"] .loadlink-messages .bg-white { background-color: #121212; }
+html[data-loadlink-theme="dark"] .loadlink-messages .bg-\[\#f3f0e8\],
+html[data-loadlink-theme="dark"] .loadlink-messages .bg-\[\#f6f4ee\],
+html[data-loadlink-theme="dark"] .loadlink-messages .bg-\[\#f5f3ed\] { background-color: #171717 !important; }
+html[data-loadlink-theme="dark"] .loadlink-messages [class~="text-black"] { color: #f7f7f7 !important; }
+html[data-loadlink-theme="dark"] .loadlink-messages [class*="bg-[#f6b800]"] { color: #050505 !important; }
+html[data-loadlink-theme="dark"] .loadlink-messages [class*="bg-white"] { background-color: #121212 !important; }
+html[data-loadlink-theme="dark"] .loadlink-messages [class*="border-black/"] { border-color: rgba(255,255,255,.12) !important; }
+.loadlink-messages video { max-height: min(70vh, 680px); object-fit: contain; }

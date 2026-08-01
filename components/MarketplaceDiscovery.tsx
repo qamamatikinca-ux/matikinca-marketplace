@@ -165,7 +165,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
       </section>
 
       <div ref={fabWrapperRef} className="fixed bottom-5 right-5 z-[70] flex flex-col items-end gap-2">
-        {fabOpen ? <div className={`w-64 overflow-hidden rounded-2xl border shadow-2xl ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-white text-black"}`}><RequireAuthLink href="/jobs/list" className="block border-b border-black/10 px-4 py-3.5 text-sm font-black">Post a job</RequireAuthLink><RequireAuthLink href="/list-your-truck" className="block border-b border-black/10 px-4 py-3.5 text-sm font-black">List a truck</RequireAuthLink><RequireAuthLink href="/jobs/list?mode=contract" className="block px-4 py-3.5 text-sm font-black">Post a contract</RequireAuthLink></div> : null}
+        {fabOpen ? <div className={`w-64 overflow-hidden rounded-2xl border shadow-2xl ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-white text-black"}`}><RequireAuthLink href="/jobs/list" className="block border-b border-black/10 px-4 py-3.5 text-sm font-black">Post a job</RequireAuthLink><RequireAuthLink href="/list-your-vehicle" className="block border-b border-black/10 px-4 py-3.5 text-sm font-black">List a vehicle</RequireAuthLink><RequireAuthLink href="/jobs/list?mode=contract" className="block px-4 py-3.5 text-sm font-black">Post a contract</RequireAuthLink></div> : null}
         <button onClick={() => setFabOpen((value) => !value)} aria-label="Open posting menu" className="flex h-14 w-14 items-center justify-center rounded-full border border-black bg-[#f6b800] text-black shadow-2xl"><PlusIcon open={fabOpen} /></button>
       </div>
     </>

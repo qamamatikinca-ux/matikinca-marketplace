@@ -260,7 +260,7 @@ export default function MyPostsPage() {
             </div>
             <div className="flex flex-wrap gap-3">
               <Link href="/jobs/list" className="rounded-full border border-[#f6b800] px-5 py-3 text-xs font-black uppercase tracking-wide text-[#f6b800]">Post a job</Link>
-              <Link href="/list-your-truck" className="rounded-full bg-[#f6b800] px-5 py-3 text-xs font-black uppercase tracking-wide text-black">List your truck</Link>
+              <Link href="/list-your-vehicle" className="rounded-full bg-[#f6b800] px-5 py-3 text-xs font-black uppercase tracking-wide text-black">List your vehicle</Link>
             </div>
           </div>
           <div className="mt-8 grid grid-cols-3 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
@@ -356,8 +356,8 @@ export default function MyPostsPage() {
         ) : (
           <div className={`rounded-[26px] border p-10 text-center ${surface}`}>
             <h2 className="text-3xl font-black">No posts here yet</h2>
-            <p className={`mt-3 text-sm ${muted}`}>Create a job post or list a verified truck to see it here.</p>
-            <div className="mt-6 flex justify-center gap-3"><Link href="/jobs/list" className="rounded-full border border-[#f6b800] px-5 py-3 text-xs font-black uppercase text-[#b88900]">Post job</Link><Link href="/list-your-truck" className="rounded-full bg-[#f6b800] px-5 py-3 text-xs font-black uppercase text-black">List truck</Link></div>
+            <p className={`mt-3 text-sm ${muted}`}>Create a job post or list a verified vehicle to see it here.</p>
+            <div className="mt-6 flex justify-center gap-3"><Link href="/jobs/list" className="rounded-full border border-[#f6b800] px-5 py-3 text-xs font-black uppercase text-[#b88900]">Post job</Link><Link href="/list-your-vehicle" className="rounded-full bg-[#f6b800] px-5 py-3 text-xs font-black uppercase text-black">List vehicle</Link></div>
           </div>
         )}
       </section>

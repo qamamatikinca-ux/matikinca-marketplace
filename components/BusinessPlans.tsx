@@ -64,7 +64,7 @@ export default function BusinessPlans({
         {!compact ? (
           <div className="mb-7 max-w-3xl">
             <h2 className="text-4xl font-black tracking-[-0.045em] md:text-6xl">Choose your listing plan first</h2>
-            <p className={`mt-4 max-w-2xl text-sm leading-7 md:text-base ${darkMode ? "text-white/60" : "text-black/60"}`}>Job posting remains free. Vehicle sellers choose Manual, Pro or Dealer before selecting a truck, so the correct photo limit, analytics and dealership tools are applied from the start.</p>
+            <p className={`mt-4 max-w-2xl text-sm leading-7 md:text-base ${darkMode ? "text-white/60" : "text-black/60"}`}>Job posting remains free. Vehicle sellers choose Manual, Pro or Dealer before selecting a vehicle, so the correct photo limit, analytics and dealership tools are applied from the start.</p>
           </div>
         ) : null}
 
@@ -82,7 +82,7 @@ export default function BusinessPlans({
                 {selectable ? (
                   <button type="button" onClick={() => onSelect?.(plan.id)} className={`mt-6 flex h-12 w-full items-center justify-center rounded-xl text-xs font-black uppercase tracking-[0.13em] ${selected ? "bg-[#2f9f5b] text-white" : plan.highlight ? "bg-[#f6b800] text-black" : "border border-[#f6b800] text-[#a87900]"}`}>{selected ? "Plan selected" : `Choose ${plan.name}`}</button>
                 ) : (
-                  <Link href={plan.id === "dealer" ? "/dealership/loadlink-commercial-centurion" : `/list-your-truck?plan=${plan.id}`} className={`mt-6 flex h-12 items-center justify-center rounded-xl text-xs font-black uppercase tracking-[0.13em] ${plan.highlight ? "bg-[#f6b800] text-black" : "border border-[#f6b800] text-[#a87900]"}`}>{plan.id === "dealer" ? "View dealer example" : "Choose this option"}</Link>
+                  <Link href={plan.id === "dealer" ? "/dealership/loadlink-commercial-centurion" : `/list-your-vehicle?plan=${plan.id}`} className={`mt-6 flex h-12 items-center justify-center rounded-xl text-xs font-black uppercase tracking-[0.13em] ${plan.highlight ? "bg-[#f6b800] text-black" : "border border-[#f6b800] text-[#a87900]"}`}>{plan.id === "dealer" ? "View dealer example" : "Choose this option"}</Link>
                 )}
               </article>
             );
