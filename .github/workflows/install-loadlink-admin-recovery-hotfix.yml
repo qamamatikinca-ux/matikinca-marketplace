@@ -1,0 +1,193 @@
+name: Install LoadLink Admin Recovery Hotfix
+
+"on":
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: install-loadlink-admin-recovery-hotfix
+  cancel-in-progress: false
+
+jobs:
+  repair-admin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out current LoadLink website
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use supported Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Verify expected LoadLink project
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f package.json
+          test -f package-lock.json
+          test -f app/layout.tsx
+          test -f app/global-error.tsx
+          test -f app/admin/verifications/page.tsx
+          test -f components/GlobalLoading.tsx
+          test -f components/NotificationCenter.tsx
+          test -f components/ChatLauncher.tsx
+
+      - name: Create rollback backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git archive --format=zip --output="$RUNNER_TEMP/loadlink-before-admin-recovery-hotfix.zip" HEAD
+
+      - name: Upload rollback backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: loadlink-before-admin-recovery-hotfix
+          path: ${{ runner.temp }}/loadlink-before-admin-recovery-hotfix.zip
+          retention-days: 30
+
+      - name: Decode and verify hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/loadlink-admin-hotfix.b64" <<'LOADLINK_ADMIN_HOTFIX_PAYLOAD'
+          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
+          LOADLINK_ADMIN_HOTFIX_PAYLOAD
+
+          base64 --decode "$RUNNER_TEMP/loadlink-admin-hotfix.b64" > "$RUNNER_TEMP/loadlink-admin-hotfix.tar.gz"
+          echo "10488db7c8c64bb5afe127afa58597022c424d5fd7a203d776199329a5188711  $RUNNER_TEMP/loadlink-admin-hotfix.tar.gz" | sha256sum --check --strict
+
+          tar -tzf "$RUNNER_TEMP/loadlink-admin-hotfix.tar.gz" > "$RUNNER_TEMP/loadlink-admin-hotfix-files.txt"
+          if grep -E '(^|/)\.\.?(/|$)|(^|/)\.env|(^|/)node_modules(/|$)|(^|/)\.git(/|$)' "$RUNNER_TEMP/loadlink-admin-hotfix-files.txt"; then
+            echo "Unsafe path found in hotfix payload."
+            exit 1
+          fi
+
+          allowed='^(app/error\.tsx|app/layout\.tsx|app/admin/page\.tsx|app/admin/loading\.tsx|app/admin/error\.tsx|app/admin/verifications/page\.tsx|components/platform/GlobalEnhancers\.tsx)$'
+          invalid=$(sed 's#/$##' "$RUNNER_TEMP/loadlink-admin-hotfix-files.txt" | grep -v '^app$' | grep -v '^app/admin$' | grep -v '^app/admin/verifications$' | grep -v '^components$' | grep -v '^components/platform$' | grep -Ev "$allowed" || true)
+          if [ -n "$invalid" ]; then
+            echo "Unexpected file in hotfix payload:"
+            echo "$invalid"
+            exit 1
+          fi
+
+      - name: Install admin recovery hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -xzf "$RUNNER_TEMP/loadlink-admin-hotfix.tar.gz" -C .
+
+          test -f app/admin/page.tsx
+          test -f app/admin/error.tsx
+          test -f app/admin/loading.tsx
+          test -f app/error.tsx
+          test -f components/platform/GlobalEnhancers.tsx
+
+          grep -q 'redirect("/admin/verifications")' app/admin/page.tsx
+          grep -q 'isAdminRoute' components/platform/GlobalEnhancers.tsx
+          grep -q 'GlobalEnhancers' app/layout.tsx
+          grep -q 'Sign in with an authorised LoadLink admin account' app/admin/verifications/page.tsx
+
+      - name: Install dependencies
+        shell: bash
+        run: npm ci --no-audit --no-fund
+
+      - name: Run TypeScript check
+        shell: bash
+        run: npx tsc --noEmit
+
+      - name: Run production build
+        shell: bash
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
+      - name: Commit verified hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- app components; then
+            echo "The admin recovery hotfix is already installed."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/error.tsx app/layout.tsx app/admin/page.tsx app/admin/loading.tsx app/admin/error.tsx app/admin/verifications/page.tsx components/platform/GlobalEnhancers.tsx
+          git commit -m "Fix LoadLink admin route recovery"
+          git push origin "HEAD:${{ github.ref_name }}"
