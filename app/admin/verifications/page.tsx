@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import AccessibleDialog from "@/components/platform/AccessibleDialog";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 
 type VerificationRequest = {
@@ -22,6 +23,8 @@ export default function AdminVerifications() {
   const [items, setItems] = useState<VerificationRequest[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [rejectId, setRejectId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,11 +91,11 @@ export default function AdminVerifications() {
     }
   }
 
-  async function review(id: string, decision: "verified" | "rejected") {
-    const reason =
-      decision === "rejected"
-        ? window.prompt("Reason for rejection")?.trim() || "Details could not be verified."
-        : null;
+  async function review(id: string, decision: "verified" | "rejected", reason: string | null = null) {
+    if (decision === "rejected" && (!reason || reason.trim().length < 10)) {
+      setMessage("Add a clear rejection reason of at least 10 characters.");
+      return;
+    }
 
     try {
       const result = await supabase.rpc("review_verification", {
@@ -106,6 +109,8 @@ export default function AdminVerifications() {
         return;
       }
 
+      setRejectId(null);
+      setRejectReason("");
       await load();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "The review could not be saved.");
@@ -230,7 +235,7 @@ export default function AdminVerifications() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => void review(item.id, "rejected")}
+                      onClick={() => { setRejectId(item.id); setRejectReason(""); }}
                       className="bg-black px-5 py-3 font-black text-white"
                     >
                       Reject
@@ -242,6 +247,10 @@ export default function AdminVerifications() {
           })}
         </div>
       </div>
+      <AccessibleDialog open={Boolean(rejectId)} onClose={() => setRejectId(null)} title="Reject verification request" description="Explain exactly what could not be verified so the user knows what to correct." darkMode={false}>
+        <textarea value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} className="min-h-36 w-full rounded-xl border border-black/15 bg-white p-4 outline-none focus:border-[#f6b800]" placeholder="Example: The identity document is unreadable and the name does not match the profile." />
+        <button type="button" onClick={() => rejectId && void review(rejectId, "rejected", rejectReason)} className="mt-4 h-12 w-full rounded-xl bg-black font-black text-white">Save rejection reason</button>
+      </AccessibleDialog>
     </main>
   );
 }

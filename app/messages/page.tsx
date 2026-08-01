@@ -1,1492 +1,246 @@
 "use client";
 
 import Link from "next/link";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ChangeEvent,
-  FormEvent,
-  KeyboardEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-
-import HomeLogoLink from "@/components/HomeLogoLink";
-import SiteMenu from "@/components/SiteMenu";
-import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
-import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
-import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+import AccessibleDialog from "@/components/platform/AccessibleDialog";
+import EmptyState from "@/components/platform/EmptyState";
+import ProfessionalHeader from "@/components/platform/ProfessionalHeader";
+import { secureUpload } from "@/lib/client/secureUpload";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
-import { getBuyerKey, getBuyerKeys, getOwnerKeys } from "@/lib/chatKeys";
-import { recordUserActivity, syncAccountState } from "@/lib/accountState";
+import { supabase, isSupabaseConfigured } from "@/lib/supabaseClient";
+import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
-type Role = "buyer" | "owner";
-
-type ConversationRow = {
-  id: string;
-  listing_id: string;
-  listing_title: string;
-  other_name: string;
-  other_phone: string | null;
-  last_message: string | null;
-  last_message_at: string | null;
-  unread_count: number | string | null;
-  other_last_seen: string | null;
-  other_typing: boolean | null;
-  average_reply_minutes: number | null;
-  last_message_has_attachment: boolean | null;
-  other_photo: string | null;
-  messages_used_today: number | string | null;
-  daily_message_limit: number | string | null;
-  is_pro: boolean | null;
+type Conversation = {
+  id: string; listing_id: string | null; listing_title: string; other_user_id: string;
+  other_name: string; other_phone: string | null; last_message: string | null;
+  last_message_at: string | null; unread_count: number | string | null; other_last_seen: string | null;
 };
+type Message = { id: string; conversation_id: string; sender_id: string; body: string; file_path: string | null; file_name: string | null; file_type: string | null; created_at: string };
+type BlockState = { blocked_by_me: boolean; blocked_by_other: boolean };
 
-type Conversation = ConversationRow & {
-  accessKey: string;
-  role: Role;
-  unreadCount: number;
-};
+const QUICK_REPLIES = ["Hi, is this still available?", "Please share more information.", "Can we arrange a call?", "Thank you, I will get back to you."];
+const MAX_FILE = 8 * 1024 * 1024;
 
-type ChatMessage = {
-  id: string;
-  sender_role: Role;
-  body: string;
-  created_at: string;
-  attachment_id: string | null;
-  file_name: string | null;
-  file_type: string | null;
-  file_size: number | null;
-};
-
-type AttachmentPayload = {
-  file_name: string;
-  file_type: string;
-  file_size: number;
-  file_base64: string;
-};
-
-type BlockState = {
-  blocked_by_me: boolean;
-  blocked_by_other: boolean;
-};
-
-const ACCEPTED_FILE_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "text/plain",
-  "audio/mpeg",
-  "audio/mp4",
-  "audio/webm",
-  "audio/ogg",
-  "audio/wav",
-  "audio/x-m4a",
-];
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
-
-function toCount(value: number | string | null | undefined) {
-  const parsed = Number(value || 0);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function formatClock(value: string | null) {
+function formatTime(value: string | null) {
   if (!value) return "";
-  return new Intl.DateTimeFormat("en-ZA", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+  const date = new Date(value); const today = date.toDateString() === new Date().toDateString();
+  return new Intl.DateTimeFormat("en-ZA", today ? { hour: "2-digit", minute: "2-digit" } : { day: "2-digit", month: "short" }).format(date);
 }
-
-function formatConversationDate(value: string | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  const now = new Date();
-  const sameDay = date.toDateString() === now.toDateString();
-  if (sameDay) return formatClock(value);
-  return new Intl.DateTimeFormat("en-ZA", {
-    day: "2-digit",
-    month: "short",
-  }).format(date);
+function activity(value: string | null) {
+  if (!value) return "Activity unavailable";
+  const minutes = Math.floor((Date.now() - new Date(value).getTime()) / 60000);
+  if (minutes < 2) return "Active now";
+  if (minutes < 60) return `Active ${minutes} min ago`;
+  if (minutes < 1440) return `Active ${Math.floor(minutes / 60)} hr ago`;
+  return `Last active ${new Date(value).toLocaleDateString("en-ZA")}`;
 }
-
-function activityText(conversation: Conversation) {
-  if (conversation.other_typing) return "Typing…";
-  if (!conversation.other_last_seen) return "Activity status unavailable";
-
-  const difference =
-    Date.now() - new Date(conversation.other_last_seen).getTime();
-  if (difference < 90_000) return "Active now";
-  if (difference < 3_600_000)
-    return `Active ${Math.max(1, Math.round(difference / 60_000))} min ago`;
-  if (difference < 86_400_000)
-    return `Active ${Math.max(1, Math.round(difference / 3_600_000))} hr ago`;
-
-  return `Last active ${new Intl.DateTimeFormat("en-ZA", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(conversation.other_last_seen))}`;
-}
-
-function replyText(minutes: number | null) {
-  if (!minutes || minutes < 1)
-    return "Reply time will appear after a few responses";
-  if (minutes <= 5) return "Usually replies within a few minutes";
-  if (minutes < 60) return `Usually replies within about ${minutes} min`;
-  if (minutes < 1440)
-    return `Usually replies within about ${Math.max(1, Math.round(minutes / 60))} hr`;
-  return `Usually replies within about ${Math.max(1, Math.round(minutes / 1440))} day${minutes >= 2880 ? "s" : ""}`;
-}
-
-function fileSizeLabel(bytes: number | null) {
-  if (!bytes) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function recordingTime(seconds: number) {
-  const minutes = Math.floor(seconds / 60);
-  const remainder = String(seconds % 60).padStart(2, "0");
-  return `${minutes}:${remainder}`;
-}
-
-function fileToBase64(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () =>
-      reject(new Error("The selected file could not be read."));
-    reader.onload = () => {
-      const result = String(reader.result || "");
-      resolve(result.includes(",") ? result.split(",")[1] : result);
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-function base64ToBlob(base64: string, mimeType: string) {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1)
-    bytes[index] = binary.charCodeAt(index);
-  return new Blob([bytes], { type: mimeType || "application/octet-stream" });
-}
-
-function cleanError(error: unknown, fallback: string) {
-  const message = error instanceof Error ? error.message : fallback;
-  if (/function|schema cache|does not exist/i.test(message)) {
-    return "Messaging is finishing its setup. Refresh after the chat upgrade has been installed.";
-  }
-  if (/daily message limit|50 free messages|message limit/i.test(message)) {
-    return "You have used today’s 50 free messages. Upgrade to Pro to keep messaging today.";
-  }
-  if (/fetch|network/i.test(message))
-    return "Connection interrupted. Check your signal and try again.";
-  return message || fallback;
+function safeError(error: unknown) {
+  const value = error instanceof Error ? error.message : "The request could not be completed.";
+  if (/daily message limit/i.test(value)) return "You have reached today’s 50-message Standard limit. Pro and Dealership accounts have unlimited messaging.";
+  if (/blocked/i.test(value)) return "This conversation is blocked. Unblock it before sending a message.";
+  if (/function|schema cache|does not exist/i.test(value)) return "Apply the professional marketplace Supabase migration, then refresh this page.";
+  return value;
 }
 
 export default function MessagesPage() {
   const router = useRouter();
   const { darkMode, toggleTheme } = useLoadLinkTheme();
+  const [userId, setUserId] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [text, setText] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [remaining, setRemaining] = useState(50);
   const [query, setQuery] = useState("");
+  const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
-  const [messagesLoading, setMessagesLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
-  const [showDetails, setShowDetails] = useState(false);
+  const [block, setBlock] = useState<BlockState>({ blocked_by_me: false, blocked_by_other: false });
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [media, setMedia] = useState<{ url: string; name: string; type: string } | null>(null);
   const [recording, setRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [blockState, setBlockState] = useState<BlockState>({ blocked_by_me: false, blocked_by_other: false });
-  const [blockBusy, setBlockBusy] = useState(false);
-
+  const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const selectedIdRef = useRef("");
-  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordingStreamRef = useRef<MediaStream | null>(null);
-  const recordingChunksRef = useRef<Blob[]>([]);
-  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const recordingCancelledRef = useRef(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    if (!loading) return;
-    const safety = window.setTimeout(() => {
-      setLoading(false);
-      setError((current) => current || "The inbox took too long to respond. Refresh to retry without being trapped on a black screen.");
-    }, 8000);
-    return () => window.clearTimeout(safety);
-  }, [loading]);
-
-  const selectedConversation = useMemo(
-    () =>
-      conversations.find((conversation) => conversation.id === selectedId) ||
-      null,
-    [conversations, selectedId],
-  );
-
-  const messagesUsedToday = selectedConversation
-    ? toCount(selectedConversation.messages_used_today)
-    : 0;
-  const dailyMessageLimit = selectedConversation
-    ? Math.max(1, toCount(selectedConversation.daily_message_limit) || 50)
-    : 50;
-  const isPro = Boolean(selectedConversation?.is_pro);
-  const dailyLimitReached = Boolean(
-    selectedConversation && !isPro && messagesUsedToday >= dailyMessageLimit,
-  );
-  const conversationBlocked = blockState.blocked_by_me || blockState.blocked_by_other;
-
-  const visibleConversations = useMemo(() => {
-    const search = query.trim().toLowerCase();
-    if (!search) return conversations;
-    return conversations.filter((conversation) =>
-      `${conversation.other_name} ${conversation.listing_title} ${conversation.last_message || ""}`
-        .toLowerCase()
-        .includes(search),
-    );
+  const selected = useMemo(() => conversations.find((item) => item.id === selectedId) || null, [conversations, selectedId]);
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return conversations;
+    return conversations.filter((item) => `${item.other_name} ${item.listing_title} ${item.last_message || ""}`.toLowerCase().includes(needle));
   }, [conversations, query]);
 
-  const loadConversations = useCallback(async (preferredId?: string) => {
-    const buyerKeys = getBuyerKeys();
-    const ownerKeys = getOwnerKeys();
-    const buyerRows: Conversation[] = [];
-
-    for (const buyerKey of buyerKeys) {
-      const buyerResult = await supabase.rpc("get_buyer_guest_threads", {
-        p_buyer_key: buyerKey,
-      });
-      if (buyerResult.error) throw buyerResult.error;
-
-      buyerRows.push(
-        ...((buyerResult.data || []) as ConversationRow[]).map((row) => ({
-          ...row,
-          accessKey: buyerKey,
-          role: "buyer" as const,
-          unreadCount: toCount(row.unread_count),
-        })),
-      );
-    }
-
-    const ownerRows: Conversation[] = [];
-    for (const ownerKey of ownerKeys) {
-      const ownerResult = await supabase.rpc("get_owner_guest_threads", {
-        p_owner_key: ownerKey,
-      });
-      if (ownerResult.error) throw ownerResult.error;
-      ownerRows.push(
-        ...((ownerResult.data || []) as ConversationRow[]).map((row) => ({
-          ...row,
-          accessKey: ownerKey,
-          role: "owner" as const,
-          unreadCount: toCount(row.unread_count),
-        })),
-      );
-    }
-
-    const merged = new Map<string, Conversation>();
-    [...buyerRows, ...ownerRows].forEach((row) => merged.set(row.id, row));
-    const rows = Array.from(merged.values()).sort((first, second) => {
-      return (
-        new Date(second.last_message_at || 0).getTime() -
-        new Date(first.last_message_at || 0).getTime()
-      );
-    });
-
+  const loadConversations = useCallback(async (preferred?: string) => {
+    const result = await supabase.rpc("get_my_conversations");
+    if (result.error) throw result.error;
+    const rows = (result.data || []) as Conversation[];
     setConversations(rows);
-    const nextId =
-      preferredId ||
-      selectedIdRef.current ||
-      (window.innerWidth >= 768 ? rows[0]?.id || "" : "");
-    if (nextId && rows.some((row) => row.id === nextId)) {
-      selectedIdRef.current = nextId;
-      setSelectedId(nextId);
-    }
-
+    const next = preferred || selectedId || (window.innerWidth >= 768 ? rows[0]?.id || "" : "");
+    if (next && rows.some((row) => row.id === next)) setSelectedId(next);
     window.dispatchEvent(new Event("loadlink-chat-unread-updated"));
+  }, [selectedId]);
+
+  const loadMessages = useCallback(async (conversationId: string) => {
+    const [messageResult, blockResult, remainingResult] = await Promise.all([
+      supabase.rpc("get_conversation_messages", { p_conversation_id: conversationId }),
+      supabase.rpc("loadlink_get_conversation_block", { p_conversation_id: conversationId }),
+      supabase.rpc("get_daily_message_remaining"),
+    ]);
+    if (messageResult.error) throw messageResult.error;
+    setMessages((messageResult.data || []) as Message[]);
+    setBlock((blockResult.data || { blocked_by_me: false, blocked_by_other: false }) as BlockState);
+    setRemaining(Math.max(0, Number(remainingResult.data ?? 50)));
+    await supabase.rpc("mark_conversation_read", { p_conversation_id: conversationId });
+    window.dispatchEvent(new Event("loadlink-chat-unread-updated"));
+    window.setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 40);
   }, []);
 
-  const loadMessages = useCallback(
-    async (conversation: Conversation, showLoader = false) => {
-      if (showLoader) setMessagesLoading(true);
-      try {
-        const result = await supabase.rpc("get_listing_guest_messages", {
-          p_thread_id: conversation.id,
-          p_access_key: conversation.accessKey,
-        });
-        if (result.error) throw result.error;
-        setMessages((result.data || []) as ChatMessage[]);
-
-        await supabase.rpc("mark_listing_guest_read", {
-          p_thread_id: conversation.id,
-          p_access_key: conversation.accessKey,
-        });
-        window.dispatchEvent(new Event("loadlink-chat-unread-updated"));
-      } catch (loadError) {
-        setError(cleanError(loadError, "Messages could not load."));
-      } finally {
-        if (showLoader) setMessagesLoading(false);
-      }
-    },
-    [],
-  );
-
   useEffect(() => {
-    if (!isSupabaseConfigured) {
-      setError("Messaging is not connected on this deployment yet.");
-      setLoading(false);
-      return;
-    }
-
+    if (!isSupabaseConfigured) { setError("Messaging is not connected on this deployment."); setLoading(false); return; }
     let active = true;
-    let refreshTimer: ReturnType<typeof setInterval> | null = null;
-
-    async function initialise() {
+    void (async () => {
       try {
-        setError("");
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!isAuthenticatedUser(user)) {
-          router.replace(loginHref(currentRelativePath()));
-          return;
-        }
-
-        await syncAccountState().catch(() => undefined);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!isAuthenticatedUser(user)) { router.replace(loginHref(currentRelativePath())); return; }
+        setUserId(user.id);
         const params = new URLSearchParams(window.location.search);
+        let target = params.get("thread") || "";
         const listingId = params.get("listing");
-        const metadata = user.user_metadata || {};
-        const buyerName =
-          params.get("name") ||
-          String(metadata.full_name || metadata.name || user.email?.split("@")[0] || "Interested LoadLink user");
-        const buyerPhoto = String(metadata.avatar_url || metadata.picture || "").trim() || null;
-        let openedId = "";
-
         if (listingId) {
-          let openResult = await supabase.rpc("open_listing_guest_chat_v2", {
-            p_listing_id: listingId,
-            p_buyer_key: getBuyerKey(),
-            p_buyer_name: buyerName,
-            p_buyer_photo: buyerPhoto,
-          });
-          if (
-            openResult.error &&
-            /function|schema cache|does not exist/i.test(
-              openResult.error.message,
-            )
-          ) {
-            openResult = await supabase.rpc("open_listing_guest_chat", {
-              p_listing_id: listingId,
-              p_buyer_key: getBuyerKey(),
-              p_buyer_name: buyerName,
-            });
-          }
-          if (openResult.error) throw openResult.error;
-          openedId = String(openResult.data || "");
-          await recordUserActivity("conversation_opened", {
-            entityType: "listing",
-            entityId: listingId,
-            metadata: { threadId: openedId },
-          }).catch(() => undefined);
-          await syncAccountState().catch(() => undefined);
-          window.history.replaceState(
-            {},
-            "",
-            openedId ? `/messages?thread=${openedId}` : "/messages",
-          );
-        } else {
-          openedId = params.get("thread") || "";
+          const opened = await supabase.rpc("loadlink_start_listing_conversation", { p_listing_id: listingId });
+          if (opened.error) throw opened.error;
+          target = String(opened.data || "");
+          window.history.replaceState({}, "", target ? `/messages?thread=${target}` : "/messages");
         }
-
-        if (!active) return;
-        await loadConversations(openedId);
-        refreshTimer = setInterval(
-          () => loadConversations().catch(() => undefined),
-          5000,
-        );
-      } catch (initialiseError) {
-        if (active)
-          setError(cleanError(initialiseError, "Chat could not open."));
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-
-    initialise();
-    return () => {
-      active = false;
-      if (refreshTimer) clearInterval(refreshTimer);
-    };
+        await loadConversations(target);
+      } catch (cause) { if (active) setError(safeError(cause)); }
+      finally { if (active) setLoading(false); }
+    })();
+    const safety = window.setTimeout(() => { if (active) { setLoading(false); setError((value) => value || "The inbox took too long to load. Check your connection and refresh."); } }, 9000);
+    return () => { active = false; window.clearTimeout(safety); };
   }, [loadConversations, router]);
 
   useEffect(() => {
-    if (!selectedConversation) {
-      setMessages([]);
-      return;
-    }
+    if (!selectedId) { setMessages([]); return; }
+    void loadMessages(selectedId).catch((cause) => setError(safeError(cause)));
+    const channel = supabase.channel(`conversation:${selectedId}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `conversation_id=eq.${selectedId}` }, () => {
+      void loadMessages(selectedId); void loadConversations();
+    }).subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [loadConversations, loadMessages, selectedId]);
 
-    let active = true;
-    setMessages([]);
-    setBlockState({ blocked_by_me: false, blocked_by_other: false });
-    loadMessages(selectedConversation, true);
-    supabase.rpc("get_listing_guest_block_status", {
-      p_thread_id: selectedConversation.id,
-      p_access_key: selectedConversation.accessKey,
-    }).then(({ data, error: blockError }) => {
-      if (!active || blockError) return;
-      const status = ((data || []) as BlockState[])[0];
-      if (status) setBlockState(status);
-    });
-    const messageTimer = setInterval(() => {
-      if (active) loadMessages(selectedConversation).catch(() => undefined);
-    }, 2500);
-    const presenceTimer = setInterval(() => {
-      supabase
-        .rpc("touch_listing_guest_presence", {
-          p_thread_id: selectedConversation.id,
-          p_access_key: selectedConversation.accessKey,
-          p_is_typing: false,
-        })
-        .then(() => undefined);
-    }, 25_000);
-
-    return () => {
-      active = false;
-      clearInterval(messageTimer);
-      clearInterval(presenceTimer);
-      if (mediaRecorderRef.current?.state === "recording") stopRecording(true);
-      supabase
-        .rpc("touch_listing_guest_presence", {
-          p_thread_id: selectedConversation.id,
-          p_access_key: selectedConversation.accessKey,
-          p_is_typing: false,
-        })
-        .then(() => undefined);
-    };
-  }, [loadMessages, selectedId]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({
-      behavior: messagesLoading ? "auto" : "smooth",
-    });
-  }, [messages, messagesLoading]);
-
-  async function send(event?: FormEvent) {
+  async function send(event?: FormEvent, attachment?: File) {
     event?.preventDefault();
-    if (!selectedConversation || !text.trim() || sending || uploading) return;
-    if (conversationBlocked) {
-      setError(blockState.blocked_by_me ? "Unblock this user before sending a message." : "This user has blocked this conversation.");
-      return;
-    }
-    if (dailyLimitReached) {
-      setError(
-        "You have used today’s 50 free messages. Upgrade to Pro to keep messaging today.",
-      );
-      return;
-    }
-
-    setSending(true);
-    setError("");
+    if (!selected || sending || block.blocked_by_me || block.blocked_by_other) return;
+    if (!text.trim() && !attachment) return;
+    setSending(true); setError("");
     try {
-      const result = await supabase.rpc("send_listing_guest_message", {
-        p_thread_id: selectedConversation.id,
-        p_access_key: selectedConversation.accessKey,
+      let upload: Awaited<ReturnType<typeof secureUpload>> | null = null;
+      if (attachment) {
+        if (attachment.size > MAX_FILE) throw new Error("Attachments must be smaller than 8 MB.");
+        upload = await secureUpload(attachment, "message-attachment", attachment.name, selected.id);
+      }
+      const result = await supabase.rpc("send_chat_message", {
+        p_conversation_id: selected.id,
         p_body: text.trim(),
+        p_file_path: upload?.path || null,
+        p_file_name: attachment?.name || null,
+        p_file_type: upload?.mime || attachment?.type || null,
       });
       if (result.error) throw result.error;
-      setText("");
-      await recordUserActivity("message_sent", {
-        entityType: "conversation",
-        entityId: selectedConversation.id,
-        metadata: { listingId: selectedConversation.listing_id },
-      }).catch(() => undefined);
-      await loadMessages(selectedConversation);
-      await loadConversations(selectedConversation.id);
-    } catch (sendError) {
-      setError(cleanError(sendError, "Message could not be sent."));
-    } finally {
-      setSending(false);
-    }
+      setText(""); setRemaining(Number((result.data as { remaining?: number } | null)?.remaining ?? remaining));
+      await loadMessages(selected.id); await loadConversations(selected.id);
+    } catch (cause) { setError(safeError(cause)); }
+    finally { setSending(false); if (fileRef.current) fileRef.current.value = ""; }
   }
 
-  function updateTyping(nextText: string) {
-    setText(nextText);
-    if (!selectedConversation) return;
-
-    supabase
-      .rpc("touch_listing_guest_presence", {
-        p_thread_id: selectedConversation.id,
-        p_access_key: selectedConversation.accessKey,
-        p_is_typing: Boolean(nextText.trim()),
-      })
-      .then(() => undefined);
-
-    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-    typingTimerRef.current = setTimeout(() => {
-      supabase
-        .rpc("touch_listing_guest_presence", {
-          p_thread_id: selectedConversation.id,
-          p_access_key: selectedConversation.accessKey,
-          p_is_typing: false,
-        })
-        .then(() => undefined);
-    }, 5000);
+  async function chooseFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]; if (file) await send(undefined, file);
   }
 
-  function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      send();
-    }
-  }
-
-  async function sendAttachment(file: File, caption?: string) {
-    if (!selectedConversation || uploading || sending) return;
-    if (conversationBlocked) {
-      setError(blockState.blocked_by_me ? "Unblock this user before sending an attachment." : "This user has blocked this conversation.");
-      return;
-    }
-    if (dailyLimitReached) {
-      setError("You have used today’s 50 free messages. Upgrade to Pro to keep messaging today.");
-      return;
-    }
-    if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
-      setError("Use a photo, document or supported voice-note file.");
-      return;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      setError("Files and voice notes must be 5 MB or smaller.");
-      return;
-    }
-
-    setUploading(true);
-    setError("");
-    try {
-      const base64 = await fileToBase64(file);
-      const result = await supabase.rpc("send_listing_guest_attachment", {
-        p_thread_id: selectedConversation.id,
-        p_access_key: selectedConversation.accessKey,
-        p_file_name: file.name,
-        p_file_type: file.type,
-        p_file_base64: base64,
-        p_caption: caption ?? (text.trim() || null),
-      });
-      if (result.error) throw result.error;
-      setText("");
-      await recordUserActivity(file.type.startsWith("audio/") ? "voice_note_sent" : "attachment_sent", {
-        entityType: "conversation",
-        entityId: selectedConversation.id,
-        metadata: { listingId: selectedConversation.listing_id, fileType: file.type },
-      }).catch(() => undefined);
-      await loadMessages(selectedConversation);
-      await loadConversations(selectedConversation.id);
-    } catch (uploadError) {
-      setError(cleanError(uploadError, file.type.startsWith("audio/") ? "The voice note could not be sent." : "The file could not be sent."));
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function uploadFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    await sendAttachment(file);
-  }
-
-  async function startRecording() {
-    if (!selectedConversation || recording || uploading || sending || conversationBlocked || dailyLimitReached) return;
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-      setError("Voice notes are not supported by this browser. You can attach an audio file instead.");
-      return;
-    }
-    setError("");
+  async function toggleRecording() {
+    if (recording) { recorderRef.current?.stop(); return; }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const preferredTypes = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"];
-      const mimeType = preferredTypes.find((type) => MediaRecorder.isTypeSupported(type)) || "";
-      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-      recordingStreamRef.current = stream;
-      mediaRecorderRef.current = recorder;
-      recordingChunksRef.current = [];
-      recordingCancelledRef.current = false;
-      setRecordingSeconds(0);
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) recordingChunksRef.current.push(event.data);
-      };
-      recorder.onerror = () => setError("The voice note recording stopped unexpectedly.");
+      const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : undefined });
+      chunksRef.current = [];
+      recorder.ondataavailable = (event) => { if (event.data.size) chunksRef.current.push(event.data); };
       recorder.onstop = () => {
-        const actualType = recorder.mimeType || mimeType || "audio/webm";
-        const cancelled = recordingCancelledRef.current;
-        const blob = new Blob(recordingChunksRef.current, { type: actualType });
-        recordingChunksRef.current = [];
-        recordingCancelledRef.current = false;
-        recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
-        recordingStreamRef.current = null;
-        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-        recordingTimerRef.current = null;
-        setRecording(false);
-        const extension = actualType.includes("mp4") ? "m4a" : actualType.includes("ogg") ? "ogg" : "webm";
-        if (!cancelled && blob.size > 0) {
-          const file = new File([blob], `LoadLink-voice-note-${Date.now()}.${extension}`, { type: actualType.split(";")[0] });
-          void sendAttachment(file, "Voice note");
-        }
+        stream.getTracks().forEach((track) => track.stop());
+        if (timerRef.current) window.clearInterval(timerRef.current);
+        setRecording(false); setRecordingSeconds(0);
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        if (blob.size) void send(undefined, new File([blob], `voice-note-${Date.now()}.webm`, { type: blob.type }));
       };
-      recorder.start(500);
-      setRecording(true);
-      recordingTimerRef.current = setInterval(() => {
-        setRecordingSeconds((seconds) => {
-          if (seconds >= 89) {
-            mediaRecorderRef.current?.stop();
-            return 90;
-          }
-          return seconds + 1;
-        });
-      }, 1000);
-    } catch (recordError) {
-      setError(recordError instanceof Error && /permission|denied|notallowed/i.test(recordError.message) ? "Microphone permission is required to record a voice note." : "The microphone could not be opened.");
-    }
+      recorder.start(); recorderRef.current = recorder; setRecording(true); setRecordingSeconds(0);
+      timerRef.current = window.setInterval(() => setRecordingSeconds((value) => value + 1), 1000);
+    } catch { setError("Microphone permission was not granted. You can still attach an audio file."); }
   }
 
-  function stopRecording(cancel = false) {
-    const recorder = mediaRecorderRef.current;
-    if (!recorder || recorder.state === "inactive") return;
-    if (cancel) {
-      recordingCancelledRef.current = true;
-      recordingChunksRef.current = [];
-    }
-    recorder.stop();
-    mediaRecorderRef.current = null;
-    if (cancel) setError("Voice note cancelled.");
+  async function openAttachment(message: Message) {
+    if (!message.file_path) return;
+    const result = await supabase.storage.from("chat-attachments").createSignedUrl(message.file_path, 300);
+    if (result.error) return setError(result.error.message);
+    setMedia({ url: result.data.signedUrl, name: message.file_name || "Attachment", type: message.file_type || "application/octet-stream" });
   }
 
   async function toggleBlock() {
-    if (!selectedConversation || blockBusy) return;
-    const willBlock = !blockState.blocked_by_me;
-    if (willBlock && recording) stopRecording(true);
-    if (willBlock && !window.confirm(`Block ${selectedConversation.other_name}? Neither person will be able to send messages until you unblock them.`)) return;
-    setBlockBusy(true);
-    setError("");
-    try {
-      const functionName = willBlock ? "block_listing_guest_user" : "unblock_listing_guest_user";
-      const result = await supabase.rpc(functionName, {
-        p_thread_id: selectedConversation.id,
-        p_access_key: selectedConversation.accessKey,
-      });
-      if (result.error) throw result.error;
-      setBlockState((current) => ({ ...current, blocked_by_me: willBlock }));
-      setError(willBlock ? `${selectedConversation.other_name} has been blocked.` : `${selectedConversation.other_name} has been unblocked.`);
-    } catch (blockError) {
-      const text = cleanError(blockError, "The block setting could not be changed.");
-      const rawMessage = blockError && typeof blockError === "object" && "message" in blockError
-        ? String((blockError as { message?: unknown }).message || "")
-        : "";
-      setError(/function|schema cache|does not exist/i.test(rawMessage) ? "Run LOADLINK-PHASE-2-FINAL.sql in Supabase to enable blocking." : text);
-    } finally {
-      setBlockBusy(false);
-    }
+    if (!selected) return;
+    const result = await supabase.rpc("loadlink_set_conversation_block", { p_conversation_id: selected.id, p_block: !block.blocked_by_me });
+    if (result.error) return setError(safeError(result.error));
+    setBlock((value) => ({ ...value, blocked_by_me: !value.blocked_by_me }));
   }
 
-  async function downloadAttachment(message: ChatMessage) {
-    if (!selectedConversation || !message.attachment_id) return;
-    setError("");
-    try {
-      const result = await supabase.rpc("get_listing_guest_attachment", {
-        p_attachment_id: message.attachment_id,
-        p_access_key: selectedConversation.accessKey,
-      });
-      if (result.error) throw result.error;
-      const payload = ((result.data || []) as AttachmentPayload[])[0];
-      if (!payload) throw new Error("Attachment unavailable.");
-
-      const blob = base64ToBlob(payload.file_base64, payload.file_type);
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = payload.file_name || "LoadLink attachment";
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
-    } catch (downloadError) {
-      setError(cleanError(downloadError, "Attachment could not be opened."));
-    }
+  async function submitReport() {
+    if (!selected || reportReason.trim().length < 8) return setError("Please explain the problem in at least 8 characters.");
+    const result = await supabase.rpc("loadlink_create_moderation_case", { p_entity_type: "conversation", p_entity_id: selected.id, p_reason: reportReason.trim(), p_case_type: "messaging_report", p_evidence: [] });
+    if (result.error) return setError(safeError(result.error));
+    setReportOpen(false); setReportReason(""); setError("Report submitted to the LoadLink safety team.");
   }
 
-  function chooseConversation(conversation: Conversation) {
-    selectedIdRef.current = conversation.id;
-    setSelectedId(conversation.id);
-    setShowDetails(false);
-    window.history.replaceState({}, "", `/messages?thread=${conversation.id}`);
+  function exportConversation() {
+    if (!selected) return;
+    const blob = new Blob([JSON.stringify({ conversation: selected, messages }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob); const link = document.createElement("a");
+    link.href = url; link.download = `loadlink-conversation-${selected.id}.json`; link.click(); URL.revokeObjectURL(url);
   }
 
-  function returnToInbox() {
-    selectedIdRef.current = "";
-    setSelectedId("");
-    setMessages([]);
-    setShowDetails(false);
-    window.history.replaceState({}, "", "/messages");
-  }
+  const surface = darkMode ? "border-white/10 bg-[#0b0b0b] text-white" : "border-black/10 bg-white text-black";
+  const muted = darkMode ? "text-white/55" : "text-black/55";
 
-  if (loading) {
-    return (
-      <main className={`flex min-h-screen items-center justify-center px-6 ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-2 border-white/15 border-t-[#f6b800]" />
-          <p className="mt-6 text-xs font-black uppercase tracking-[.22em] text-[#f6b800]">
-            LoadLink messages
-          </p>
-          <h1 className="mt-3 text-3xl font-black">Opening your inbox</h1>
+  return <main className={`min-h-[100dvh] ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
+    <ProfessionalHeader darkMode={darkMode} onToggleTheme={toggleTheme} compact />
+    <section className="mx-auto grid h-[calc(100dvh-80px)] max-w-[1500px] md:grid-cols-[360px_1fr]">
+      <aside className={`border-r ${surface} ${selectedId ? "hidden md:block" : "block"}`}>
+        <div className="border-b border-current/10 p-4"><h1 className="text-3xl font-black">Messages</h1><p className={`mt-1 text-sm ${muted}`}>Signed-in, listing-linked conversations.</p><label className="mt-4 block"><span className="sr-only">Search conversations</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search conversations" className={`h-12 w-full rounded-xl border px-4 font-bold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-white/5" : "border-black/10 bg-black/5"}`}/></label></div>
+        <div className="h-[calc(100dvh-202px)] overflow-y-auto">
+          {loading ? <p className={`p-5 text-sm font-bold ${muted}`}>Loading inbox…</p> : visible.length ? visible.map((item) => <button key={item.id} type="button" onClick={() => setSelectedId(item.id)} className={`grid w-full grid-cols-[48px_1fr_auto] gap-3 border-b border-current/10 p-4 text-left ${selectedId === item.id ? "bg-[#f6b800]/15" : "hover:bg-current/5"}`}><span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f6b800] text-lg font-black text-black">{item.other_name.slice(0,1).toUpperCase()}</span><span className="min-w-0"><strong className="block truncate">{item.other_name}</strong><span className={`block truncate text-xs ${muted}`}>{item.listing_title}</span><span className={`mt-1 block truncate text-xs ${muted}`}>{item.last_message || "Conversation started"}</span></span><span className="text-right text-[10px] font-bold"><span>{formatTime(item.last_message_at)}</span>{Number(item.unread_count || 0) > 0 ? <span className="ml-auto mt-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#f6b800] px-1 text-black">{item.unread_count}</span> : null}</span></button>) : <EmptyState title="No conversations yet" body="Open a listing and choose Message seller to start a secure conversation." actionHref="/vehicles" actionLabel="Browse vehicles" darkMode={darkMode}/>} 
         </div>
-      </main>
-    );
-  }
+      </aside>
 
-  return (
-    <main data-theme={darkMode ? "dark" : "light"} className={`loadlink-messages h-[100dvh] overflow-hidden ${darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"}`}>
-      <header className={`grid h-[72px] grid-cols-[56px_1fr_92px] items-center border-b px-3 md:h-20 md:grid-cols-[120px_1fr_140px] md:px-5 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"}`}>
-        <div className="flex items-center gap-1">
-          <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
-          <Link
-            href="/"
-            className="hidden items-center gap-2 text-sm font-black md:inline-flex"
-            aria-label="Back to LoadLink home"
-          >
-            <span className="text-2xl">←</span>
-            <span>Home</span>
-          </Link>
-        </div>
-        <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-        <div className="flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => loadConversations(selectedIdRef.current).catch((refreshError) => setError(cleanError(refreshError, "Could not refresh.")))}
-            className="hidden text-[11px] font-black uppercase tracking-wide text-[#b88900] sm:block"
-          >Refresh</button>
-          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} />
-        </div>
-      </header>
+      <section className={`${selectedId ? "flex" : "hidden md:flex"} min-w-0 flex-col ${darkMode ? "bg-[#050505]" : "bg-[#f8f5ec]"}`}>
+        {selected ? <>
+          <header className={`flex min-h-20 items-center gap-3 border-b px-4 ${surface}`}><button type="button" onClick={() => setSelectedId("")} className="flex h-10 w-10 items-center justify-center rounded-full border border-current/15 md:hidden" aria-label="Back to conversations">‹</button><span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f6b800] font-black text-black">{selected.other_name.slice(0,1).toUpperCase()}</span><div className="min-w-0 flex-1"><h2 className="truncate font-black">{selected.other_name}</h2><p className={`truncate text-xs ${muted}`}>{selected.listing_title} · {activity(selected.other_last_seen)}</p></div><button type="button" onClick={() => setDetailsOpen(true)} className="h-10 rounded-xl border border-current/15 px-4 text-xs font-black uppercase">Details</button></header>
+          <div className={`border-b px-4 py-3 text-xs font-bold ${darkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-white"}`}><span className="text-[#b88900]">Listing context:</span> {selected.listing_title} {selected.listing_id ? <Link href={`/jobs?listing=${selected.listing_id}`} className="ml-2 underline">View listing</Link> : null}</div>
+          <div className="flex-1 overflow-y-auto px-4 py-5"><div className="mx-auto max-w-3xl space-y-3">
+            {messages.map((message) => { const mine = message.sender_id === userId; return <article key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><div className={`max-w-[84%] rounded-2xl px-4 py-3 text-sm ${mine ? "bg-[#f6b800] text-black" : darkMode ? "bg-white/10 text-white" : "bg-white text-black shadow-sm"}`}>{message.body ? <p className="whitespace-pre-wrap leading-6">{message.body}</p> : null}{message.file_path ? <button type="button" onClick={() => void openAttachment(message)} className="mt-2 flex w-full items-center gap-2 rounded-xl border border-current/20 p-3 text-left font-bold"><span>Attachment</span><span className="min-w-0 truncate">{message.file_name || "Open file"}</span></button> : null}<time className="mt-2 block text-right text-[9px] font-bold opacity-55">{formatTime(message.created_at)}</time></div></article>; })}
+            <div ref={bottomRef}/>
+          </div></div>
+          {error ? <p role="status" className="border-t border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-500">{error}</p> : null}
+          {block.blocked_by_me || block.blocked_by_other ? <p className="border-t border-[#f6b800]/30 bg-[#f6b800]/10 px-4 py-3 text-center text-sm font-bold">{block.blocked_by_me ? "You blocked this conversation." : "The other participant blocked this conversation."}</p> : null}
+          <div className={`border-t p-3 ${surface}`}><div className="mx-auto max-w-3xl"><div className="mb-2 flex gap-2 overflow-x-auto no-scrollbar">{QUICK_REPLIES.map((reply) => <button key={reply} type="button" onClick={() => setText(reply)} className="shrink-0 rounded-full border border-current/15 px-3 py-2 text-[10px] font-black">{reply}</button>)}</div><form onSubmit={(event) => void send(event)} className="grid grid-cols-[44px_44px_1fr_auto] items-end gap-2"><input ref={fileRef} type="file" className="hidden" onChange={(event) => void chooseFile(event)} accept="image/jpeg,image/png,image/webp,application/pdf,audio/webm,audio/mpeg,video/mp4"/><button type="button" onClick={() => fileRef.current?.click()} disabled={sending || block.blocked_by_me || block.blocked_by_other} className="flex h-11 w-11 items-center justify-center rounded-xl border border-current/15" aria-label="Attach file">＋</button><button type="button" onClick={() => void toggleRecording()} disabled={sending || block.blocked_by_me || block.blocked_by_other} className={`flex h-11 w-11 items-center justify-center rounded-xl border ${recording ? "border-red-500 bg-red-500 text-white" : "border-current/15"}`} aria-label={recording ? "Stop voice note" : "Record voice note"}>{recording ? recordingSeconds : "●"}</button><label><span className="sr-only">Message</span><textarea value={text} onChange={(e) => setText(e.target.value)} rows={1} maxLength={4000} placeholder="Write a message" disabled={block.blocked_by_me || block.blocked_by_other} className={`max-h-32 min-h-11 w-full resize-none rounded-xl border px-4 py-3 outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-white/5" : "border-black/10 bg-black/5"}`}/></label><button disabled={sending || (!text.trim()) || block.blocked_by_me || block.blocked_by_other || remaining <= 0} className="h-11 rounded-xl bg-[#f6b800] px-5 text-xs font-black uppercase text-black disabled:opacity-40">{sending ? "Sending" : "Send"}</button></form><p className={`mt-2 text-right text-[10px] font-bold ${muted}`}>{remaining > 1000 ? "Unlimited messages" : `${remaining} Standard messages remaining today`}</p></div></div>
+        </> : <EmptyState title="Choose a conversation" body="Your secure LoadLink conversations will appear here." actionHref="/vehicles" actionLabel="Browse marketplace" darkMode={darkMode}/>} 
+      </section>
+    </section>
 
-      <div className="mx-auto grid h-[calc(100dvh-72px)] max-w-[1500px] md:h-[calc(100dvh-80px)] md:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)_300px]">
-        <aside
-          className={`${selectedId ? "hidden md:flex" : "flex"} loadlink-inbox-panel min-h-0 flex-col border-r border-black/10 bg-white`}
-        >
-          <div className="border-b border-black/10 p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[.22em] text-[#b88900]">
-                  LoadLink
-                </p>
-                <h1 className="mt-1 text-3xl font-black tracking-[-.04em]">
-                  Messages
-                </h1>
-              </div>
-              <span className="rounded-full bg-black px-3 py-1.5 text-xs font-black text-[#f6b800]">
-                {conversations.reduce(
-                  (total, conversation) => total + conversation.unreadCount,
-                  0,
-                )}{" "}
-                unread
-              </span>
-            </div>
-            <label className="mt-5 block">
-              <span className="sr-only">Search conversations</span>
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search messages or listings"
-                className="h-12 w-full rounded-xl border border-black/10 bg-[#f5f3ed] px-4 text-sm font-semibold outline-none transition focus:border-[#f6b800] focus:bg-white"
-              />
-            </label>
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {visibleConversations.length ? (
-              visibleConversations.map((conversation) => {
-                const active = conversation.id === selectedId;
-                return (
-                  <button
-                    key={conversation.id}
-                    type="button"
-                    onClick={() => chooseConversation(conversation)}
-                    className={`flex w-full gap-3 border-b border-black/5 p-4 text-left transition ${
-                      active ? "bg-[#fff4c7]" : "bg-white hover:bg-[#f8f6f0]"
-                    }`}
-                  >
-                    <Avatar
-                      name={conversation.other_name}
-                      photo={conversation.other_photo}
-                      size="h-12 w-12"
-                      online={Boolean(
-                        conversation.other_last_seen &&
-                          Date.now() -
-                            new Date(conversation.other_last_seen).getTime() <
-                            90_000,
-                      )}
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-start justify-between gap-2">
-                        <strong className="truncate text-sm font-black">
-                          {conversation.other_name}
-                        </strong>
-                        <span className="shrink-0 text-[10px] font-bold text-black/40">
-                          {formatConversationDate(conversation.last_message_at)}
-                        </span>
-                      </span>
-                      <span className="mt-1 block truncate text-xs font-bold text-[#8a6700]">
-                        {conversation.listing_title}
-                      </span>
-                      <span className="mt-1 flex items-center justify-between gap-3">
-                        <span
-                          className={`truncate text-xs ${conversation.unreadCount ? "font-black text-black" : "font-medium text-black/50"}`}
-                        >
-                          {conversation.last_message_has_attachment
-                            ? "Attachment · "
-                            : ""}
-                          {conversation.last_message ||
-                            "Start the conversation"}
-                        </span>
-                        {conversation.unreadCount ? (
-                          <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#f6b800] px-1 text-[10px] font-black text-black">
-                            {conversation.unreadCount > 99
-                              ? "99+"
-                              : conversation.unreadCount}
-                          </span>
-                        ) : null}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })
-            ) : (
-              <div className="p-8 text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-black text-[#f6b800]">
-                  <MessageIcon />
-                </div>
-                <h2 className="mt-5 text-xl font-black">
-                  No conversations yet
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-black/55">
-                  Open a listing and tap Message to start a private
-                  conversation.
-                </p>
-                <Link
-                  href="/jobs"
-                  className="mt-5 inline-flex rounded-xl bg-[#f6b800] px-5 py-3 text-xs font-black uppercase tracking-wide text-black"
-                >
-                  Browse listings
-                </Link>
-              </div>
-            )}
-          </div>
-        </aside>
-
-        <section
-          className={`${selectedId ? "flex" : "hidden md:flex"} loadlink-chat-panel min-h-0 flex-col bg-[#f3f0e8]`}
-        >
-          {selectedConversation ? (
-            <>
-              <header className="loadlink-chat-header flex min-h-[78px] items-center gap-3 border-b border-black/10 bg-white px-3 py-3 md:px-5">
-                <button
-                  type="button"
-                  onClick={returnToInbox}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/10 text-xl font-black md:hidden"
-                  aria-label="Back to conversations"
-                >
-                  ←
-                </button>
-                <Avatar
-                  name={selectedConversation.other_name}
-                  photo={selectedConversation.other_photo}
-                  size="h-11 w-11"
-                  online={Boolean(
-                    selectedConversation.other_last_seen &&
-                      Date.now() -
-                        new Date(
-                          selectedConversation.other_last_seen,
-                        ).getTime() <
-                        90_000,
-                  )}
-                />
-                <div className="min-w-0 flex-1">
-                  <h2 className="truncate text-base font-black md:text-lg">
-                    {selectedConversation.other_name}
-                  </h2>
-                  <p
-                    className={`truncate text-xs font-bold ${selectedConversation.other_typing ? "text-[#168b42]" : "text-black/45"}`}
-                  >
-                    {activityText(selectedConversation)}
-                  </p>
-                  <p className="hidden truncate text-[11px] font-semibold text-[#8a6700] sm:block">
-                    {replyText(selectedConversation.average_reply_minutes)}
-                  </p>
-                  <p
-                    className={`mt-0.5 text-[10px] font-black ${dailyLimitReached ? "text-red-600" : "text-black/40"}`}
-                  >
-                    {isPro
-                      ? "Pro messaging · no daily limit"
-                      : `${messagesUsedToday}/${dailyMessageLimit} messages used today`}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {selectedConversation.other_phone ? (
-                    <a
-                      href={`tel:${selectedConversation.other_phone.replace(/\s/g, "")}`}
-                      className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black md:w-auto md:px-4"
-                      aria-label="Call contact"
-                    >
-                      <PhoneIcon />
-                      <span className="ml-2 hidden text-xs font-black uppercase md:inline">
-                        Call
-                      </span>
-                    </a>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={() => void toggleBlock()}
-                    disabled={blockBusy}
-                    className={`hidden h-10 items-center justify-center rounded-full border px-4 text-[10px] font-black uppercase md:flex ${blockState.blocked_by_me ? "border-red-500 bg-red-50 text-red-600" : "border-black/10 bg-white text-black"}`}
-                  >
-                    {blockBusy ? "Saving…" : blockState.blocked_by_me ? "Unblock" : "Block"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowDetails((value) => !value)}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-lg font-black xl:hidden"
-                    aria-label="Conversation details"
-                  >
-                    i
-                  </button>
-                </div>
-              </header>
-
-              <div className="border-b border-[#d7b33b]/35 bg-[#fff7dc] px-4 py-2.5 text-[11px] font-semibold leading-5 text-black/60">
-                Messages and attachments are protected in transit and stored
-                privately. Only people in this conversation can access them.
-              </div>
-
-              {conversationBlocked ? (
-                <div className="flex items-center justify-between gap-3 border-b border-red-300 bg-red-50 px-4 py-3 text-xs font-bold text-red-700">
-                  <span>{blockState.blocked_by_me ? "You blocked this user. Unblock them to continue the conversation." : "This user blocked the conversation. New messages are disabled."}</span>
-                  {blockState.blocked_by_me ? <button type="button" onClick={() => void toggleBlock()} className="shrink-0 border border-red-500 px-3 py-2 text-[10px] font-black uppercase">Unblock</button> : null}
-                </div>
-              ) : null}
-
-              {showDetails ? (
-                <div className="border-b border-black/10 bg-white p-4 xl:hidden">
-                  <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} onToggleBlock={toggleBlock} />
-                </div>
-              ) : null}
-
-              <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8">
-                {messagesLoading && messages.length === 0 ? (
-                  <div className="flex h-full items-center justify-center">
-                    <div className="h-9 w-9 animate-spin rounded-full border-2 border-black/10 border-t-[#f6b800]" />
-                  </div>
-                ) : messages.length ? (
-                  <div className="mx-auto max-w-3xl space-y-3">
-                    {messages.map((message, index) => {
-                      const mine =
-                        message.sender_role === selectedConversation.role;
-                      const previous = messages[index - 1];
-                      const showDay =
-                        !previous ||
-                        new Date(previous.created_at).toDateString() !==
-                          new Date(message.created_at).toDateString();
-                      return (
-                        <div key={message.id}>
-                          {showDay ? (
-                            <div className="my-5 flex justify-center">
-                              <span className="rounded-full border border-black/5 bg-white/80 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-black/45">
-                                {new Intl.DateTimeFormat("en-ZA", {
-                                  weekday: "short",
-                                  day: "2-digit",
-                                  month: "short",
-                                }).format(new Date(message.created_at))}
-                              </span>
-                            </div>
-                          ) : null}
-                          <div
-                            className={`flex ${mine ? "justify-end" : "justify-start"}`}
-                          >
-                            <div
-                              className={`max-w-[86%] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[72%] ${
-                                mine
-                                  ? "rounded-br-sm bg-black text-white"
-                                  : "rounded-bl-sm border border-black/5 bg-white text-black"
-                              }`}
-                            >
-                              {message.attachment_id ? (
-                                message.file_type?.startsWith("audio/") ? (
-                                  <VoiceAttachment message={message} accessKey={selectedConversation.accessKey} mine={mine} onError={setError} />
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => downloadAttachment(message)}
-                                    className={`mb-2 flex w-full items-center gap-3 rounded-xl border p-3 text-left ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}
-                                  >
-                                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${mine ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><PaperclipIcon /></span>
-                                    <span className="min-w-0 flex-1">
-                                      <strong className="block truncate text-xs font-black">{message.file_name || "Attachment"}</strong>
-                                      <span className={`mt-0.5 block text-[10px] font-semibold ${mine ? "text-white/55" : "text-black/45"}`}>{fileSizeLabel(message.file_size)} · Tap to open</span>
-                                    </span>
-                                  </button>
-                                )
-                              ) : null}
-                              {message.body &&
-                              (!message.attachment_id ||
-                                message.body !== "Shared an attachment") ? (
-                                <p className="whitespace-pre-wrap break-words text-sm font-medium leading-6">
-                                  {message.body}
-                                </p>
-                              ) : null}
-                              <div
-                                className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] font-bold ${mine ? "text-white/45" : "text-black/35"}`}
-                              >
-                                <span>{formatClock(message.created_at)}</span>
-                                {mine ? <span aria-label="Sent">✓</span> : null}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {selectedConversation.other_typing ? (
-                      <div className="flex justify-start">
-                        <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-black/5 bg-white px-4 py-3 shadow-sm">
-                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-black/40 [animation-delay:-.2s]" />
-                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-black/40 [animation-delay:-.1s]" />
-                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-black/40" />
-                        </div>
-                      </div>
-                    ) : null}
-                    <div ref={bottomRef} />
-                  </div>
-                ) : (
-                  <div className="flex h-full items-center justify-center px-5 text-center">
-                    <div className="max-w-sm">
-                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-black text-[#f6b800]">
-                        <MessageIcon />
-                      </div>
-                      <h3 className="mt-5 text-2xl font-black">
-                        Start the conversation
-                      </h3>
-                      <p className="mt-2 text-sm leading-6 text-black/50">
-                        Ask about availability, location, timing, price or the
-                        requirements for this listing.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {error ? (
-                <div className="border-t border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-                  {error}
-                </div>
-              ) : null}
-
-              <form
-                onSubmit={send}
-                className="loadlink-chat-composer border-t border-black/10 bg-white p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:p-4"
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={ACCEPTED_FILE_TYPES.join(",")}
-                  onChange={uploadFile}
-                  className="hidden"
-                />
-                <div className="mx-auto flex max-w-3xl items-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={sending || uploading || dailyLimitReached || conversationBlocked}
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-black/10 bg-[#f3f0e8] text-black disabled:opacity-40"
-                    aria-label="Attach a file"
-                  >
-                    <PaperclipIcon />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => recording ? stopRecording(false) : void startRecording()}
-                    disabled={sending || uploading || dailyLimitReached || conversationBlocked}
-                    className={`flex h-12 shrink-0 items-center justify-center rounded-full border px-3 text-xs font-black ${recording ? "min-w-[82px] border-red-500 bg-red-500 text-white" : "w-12 border-black/10 bg-[#f3f0e8] text-black"} disabled:opacity-40`}
-                    aria-label={recording ? "Stop and send voice note" : "Record voice note"}
-                  >
-                    {recording ? recordingTime(recordingSeconds) : <MicrophoneIcon />}
-                  </button>
-                  <div className="min-w-0 flex-1 rounded-2xl border border-black/10 bg-[#f6f4ee] px-4 py-2 focus-within:border-[#f6b800] focus-within:bg-white">
-                    <textarea
-                      value={text}
-                      onChange={(event) => updateTyping(event.target.value)}
-                      onKeyDown={handleComposerKeyDown}
-                      placeholder={
-                        conversationBlocked
-                          ? "Messaging is blocked"
-                          : dailyLimitReached
-                            ? "Daily free message limit reached"
-                            : recording
-                              ? "Recording voice note…"
-                              : uploading
-                                ? "Sending attachment…"
-                                : "Type a message"
-                      }
-                      rows={1}
-                      maxLength={4000}
-                      disabled={sending || uploading || dailyLimitReached || conversationBlocked}
-                      className="max-h-32 min-h-8 w-full resize-none bg-transparent py-1 text-sm font-medium outline-none placeholder:text-black/35 disabled:opacity-50"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={
-                      !text.trim() || sending || uploading || dailyLimitReached || conversationBlocked
-                    }
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f6b800] text-black shadow-sm transition active:scale-95 disabled:bg-black/10 disabled:text-black/25"
-                    aria-label="Send message"
-                  >
-                    {sending ? (
-                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-black/20 border-t-black" />
-                    ) : (
-                      <SendIcon />
-                    )}
-                  </button>
-                </div>
-                <div className="mx-auto mt-2 flex max-w-3xl items-center justify-center gap-2 text-center text-[10px] font-semibold text-black/40">
-                  <span>Photos, documents and voice notes up to 5 MB</span>
-                  <span aria-hidden="true">·</span>
-                  {isPro ? (
-                    <span className="font-black text-[#8a6700]">
-                      Pro messaging active
-                    </span>
-                  ) : (
-                    <>
-                      <span
-                        className={
-                          dailyLimitReached
-                            ? "font-black text-red-600"
-                            : "font-black text-[#8a6700]"
-                        }
-                      >
-                        {messagesUsedToday}/{dailyMessageLimit} today
-                      </span>
-                      <Link
-                        href="/help?topic=pro-messaging"
-                        className="font-black text-black underline decoration-[#f6b800] decoration-2 underline-offset-2"
-                      >
-                        Upgrade
-                      </Link>
-                    </>
-                  )}
-                </div>
-              </form>
-            </>
-          ) : (
-            <div className="flex h-full items-center justify-center p-8 text-center">
-              <div className="max-w-md">
-                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-black text-[#f6b800]">
-                  <MessageIcon large />
-                </div>
-                <p className="mt-6 text-xs font-black uppercase tracking-[.22em] text-[#b88900]">
-                  LoadLink chat
-                </p>
-                <h2 className="mt-2 text-4xl font-black tracking-[-.05em]">
-                  Your logistics conversations in one place
-                </h2>
-                <p className="mt-4 text-sm font-medium leading-7 text-black/50">
-                  Select a conversation to message a listing owner or respond to
-                  someone interested in your post.
-                </p>
-              </div>
-            </div>
-          )}
-        </section>
-
-        <aside className="loadlink-details-panel hidden min-h-0 overflow-y-auto border-l border-black/10 bg-white p-5 xl:block">
-          {selectedConversation ? (
-            <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} onToggleBlock={toggleBlock} />
-          ) : null}
-        </aside>
-      </div>
-    </main>
-  );
-}
-
-function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatMessage; accessKey: string; mine: boolean; onError: (message: string) => void }) {
-  const [url, setUrl] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
-
-  async function loadVoiceNote() {
-    if (!message.attachment_id || loading || url) return;
-    setLoading(true);
-    try {
-      const result = await supabase.rpc("get_listing_guest_attachment", { p_attachment_id: message.attachment_id, p_access_key: accessKey });
-      if (result.error) throw result.error;
-      const payload = ((result.data || []) as AttachmentPayload[])[0];
-      if (!payload) throw new Error("Voice note unavailable.");
-      setUrl(URL.createObjectURL(base64ToBlob(payload.file_base64, payload.file_type)));
-    } catch (error) {
-      onError(cleanError(error, "Voice note could not be opened."));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className={`mb-2 w-full rounded-xl border p-3 ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}>
-      <div className="flex items-center gap-3">
-        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${mine ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><MicrophoneIcon /></span>
-        <span className="min-w-0 flex-1"><strong className="block text-xs font-black">Voice note</strong><span className={`mt-0.5 block text-[10px] font-semibold ${mine ? "text-white/55" : "text-black/45"}`}>{fileSizeLabel(message.file_size)}</span></span>
-      </div>
-      {url ? <audio controls preload="metadata" src={url} className="mt-3 h-9 w-full max-w-full" /> : <button type="button" onClick={() => void loadVoiceNote()} disabled={loading} className={`mt-3 h-9 w-full rounded-lg border text-[10px] font-black uppercase ${mine ? "border-white/20 text-white" : "border-black/15 text-black"}`}>{loading ? "Loading…" : "Play voice note"}</button>}
-    </div>
-  );
-}
-
-function Avatar({
-  name,
-  photo,
-  size,
-  online = false,
-}: {
-  name: string;
-  photo?: string | null;
-  size: string;
-  online?: boolean;
-}) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const initials =
-    name
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((part) => part[0] || "")
-      .join("")
-      .toUpperCase() || "LL";
-
-  return (
-    <span
-      className={`relative flex ${size} shrink-0 items-center justify-center overflow-visible rounded-full bg-black text-xs font-black text-[#f6b800]`}
-    >
-      {photo && !imageFailed ? (
-        <img
-          src={photo}
-          alt={`${name} profile`}
-          className="h-full w-full rounded-full object-cover"
-          onError={() => setImageFailed(true)}
-        />
-      ) : (
-        <span aria-hidden="true">{initials}</span>
-      )}
-      {online ? (
-        <span
-          className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-[#25b85a]"
-          aria-label="Active now"
-        />
-      ) : null}
-    </span>
-  );
-}
-
-function ConversationDetails({ conversation, blockState, blockBusy, onToggleBlock }: { conversation: Conversation; blockState: BlockState; blockBusy: boolean; onToggleBlock: () => Promise<void> }) {
-  return (
-    <div>
-      <p className="text-[10px] font-black uppercase tracking-[.22em] text-[#b88900]">
-        Conversation details
-      </p>
-      <div className="mt-5 flex items-center gap-3">
-        <Avatar
-          name={conversation.other_name}
-          photo={conversation.other_photo}
-          size="h-12 w-12"
-          online={Boolean(
-            conversation.other_last_seen &&
-              Date.now() - new Date(conversation.other_last_seen).getTime() <
-                90_000,
-          )}
-        />
-        <div className="min-w-0">
-          <h3 className="truncate font-black">{conversation.other_name}</h3>
-          <p className="mt-0.5 text-xs font-semibold text-black/45">
-            {activityText(conversation)}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-6 space-y-3 border-y border-black/10 py-5">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-wide text-black/35">
-            Listing
-          </p>
-          <p className="mt-1 text-sm font-black leading-5">
-            {conversation.listing_title}
-          </p>
-        </div>
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-wide text-black/35">
-            Response pattern
-          </p>
-          <p className="mt-1 text-sm font-semibold leading-5">
-            {replyText(conversation.average_reply_minutes)}
-          </p>
-        </div>
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-wide text-black/35">
-            Messaging plan
-          </p>
-          <p className="mt-1 text-sm font-semibold leading-5">
-            {conversation.is_pro
-              ? "Pro · unlimited daily messaging"
-              : `${toCount(conversation.messages_used_today)}/${Math.max(1, toCount(conversation.daily_message_limit) || 50)} messages used today`}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-5 grid gap-2">
-        <Link
-          href={`/jobs#job-${conversation.listing_id}`}
-          className="flex items-center justify-center rounded-xl border border-black/10 px-4 py-3 text-xs font-black uppercase tracking-wide"
-        >
-          View listing
-        </Link>
-        {conversation.other_phone ? (
-          <a
-            href={`tel:${conversation.other_phone.replace(/\s/g, "")}`}
-            className="flex items-center justify-center rounded-xl bg-black px-4 py-3 text-xs font-black uppercase tracking-wide text-[#f6b800]"
-          >
-            Call contact
-          </a>
-        ) : null}
-      </div>
-
-      <button type="button" onClick={() => void onToggleBlock()} disabled={blockBusy || blockState.blocked_by_other} className={`mt-5 flex h-11 w-full items-center justify-center border text-xs font-black uppercase ${blockState.blocked_by_me ? "border-red-500 bg-red-50 text-red-600" : "border-black/15 text-black"} disabled:opacity-45`}>
-        {blockBusy ? "Saving…" : blockState.blocked_by_me ? "Unblock user" : blockState.blocked_by_other ? "This user blocked the chat" : "Block user"}
-      </button>
-
-      <div className="mt-6 rounded-xl border border-[#e5c34c]/35 bg-[#fff8de] p-4">
-        <p className="text-xs font-black">Stay safe</p>
-        <p className="mt-2 text-xs font-medium leading-5 text-black/55">
-          Confirm listing details before paying. Avoid sending passwords, PINs
-          or one-time verification codes.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function MessageIcon({ large = false }: { large?: boolean }) {
-  const size = large ? 34 : 24;
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 3v-3.7A2 2 0 0 1 3 14.6V6a2 2 0 0 1 2-2Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M7 9h10M7 12h7"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function PaperclipIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="m20.5 11.5-7.8 7.8a5 5 0 0 1-7.1-7.1l8.5-8.5a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-2.8-2.8l7.8-7.8"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function MicrophoneIcon() {
-  return (
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="8" y="3" width="8" height="12" rx="4" stroke="currentColor" strokeWidth="2" />
-      <path d="M5 11a7 7 0 0 0 14 0M12 18v3M8.5 21h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function SendIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="m4 4 17 8-17 8 3-8-3-8Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M7 12h14"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function PhoneIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M7.2 3h3l1.5 4-2 1.5a15 15 0 0 0 5.8 5.8l1.5-2 4 1.5v3A3.2 3.2 0 0 1 17.8 20C10.2 20 4 13.8 4 6.2A3.2 3.2 0 0 1 7.2 3Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
+    <AccessibleDialog open={detailsOpen} onClose={() => setDetailsOpen(false)} title={selected?.other_name || "Conversation details"} description={selected?.listing_title} darkMode={darkMode}><div className="grid gap-3"><button type="button" onClick={() => void toggleBlock()} className="h-12 rounded-xl border border-current/15 font-black">{block.blocked_by_me ? "Unblock participant" : "Block participant"}</button><button type="button" onClick={() => { setDetailsOpen(false); setReportOpen(true); }} className="h-12 rounded-xl border border-red-500/40 font-black text-red-500">Report conversation</button><button type="button" onClick={exportConversation} className="h-12 rounded-xl border border-current/15 font-black">Export conversation data</button></div></AccessibleDialog>
+    <AccessibleDialog open={reportOpen} onClose={() => setReportOpen(false)} title="Report this conversation" description="Your report creates a case in the LoadLink moderation queue." darkMode={darkMode}><textarea value={reportReason} onChange={(e) => setReportReason(e.target.value)} className={`min-h-32 w-full rounded-xl border p-4 outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-white/5" : "border-black/10 bg-black/5"}`} placeholder="Explain what happened"/><button type="button" onClick={() => void submitReport()} className="mt-4 h-12 w-full rounded-xl bg-[#f6b800] font-black text-black">Submit report</button></AccessibleDialog>
+    <AccessibleDialog open={Boolean(media)} onClose={() => setMedia(null)} title={media?.name || "Attachment"} darkMode={darkMode} maxWidth="max-w-3xl">{media ? media.type.startsWith("image/") ? <img src={media.url} alt={media.name} className="max-h-[65dvh] w-full object-contain"/> : media.type.startsWith("audio/") ? <audio controls src={media.url} className="w-full"/> : media.type.startsWith("video/") ? <video controls src={media.url} className="max-h-[65dvh] w-full"/> : <div className="grid gap-3"><p className={muted}>This file opens through a short-lived secure link.</p><a href={media.url} target="_blank" rel="noreferrer" className="flex h-12 items-center justify-center rounded-xl bg-[#f6b800] font-black text-black">Open attachment</a></div> : null}</AccessibleDialog>
+  </main>;
 }

@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test tests/*.test.mjs",
+    "syntax": "node scripts/syntax-check.mjs",
+    "audit:recommendations": "node scripts/validate-recommendations.mjs",
+    "budget": "node scripts/performance-budget.mjs",
+    "check": "npm run audit:recommendations && npm test && npm run syntax && npm run sql:integrity && npm run budget",
+    "sql:integrity": "node scripts/sql-integrity.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.1",

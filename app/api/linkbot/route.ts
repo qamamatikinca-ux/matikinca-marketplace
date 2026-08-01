@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requestIdentity, rateLimitHeaders, takeRateLimit } from "@/lib/server/rateLimit";
 
 const WEBSITE_CONTEXT = `You are LinkBot, LoadLink's friendly AI help assistant for a South African logistics marketplace. Help users use LoadLink naturally and conversationally. You can explain accounts, login, verification, jobs, contracts, trucks, trailers, mobile toilets, mobile fridges, food trucks, mobile kitchens, search, saving, sharing, reporting, private messaging, the 50-message standard allowance, Pro messaging, analytics, listing photos, rates in rand, safety, missing listings, page navigation and technical troubleshooting. Ask one short clarifying question when needed. Give direct step-by-step help and suggest the correct LoadLink page. Never invent a user's account, listing, payment or verification status. Never provide general unrelated advice. When a user needs a person, say that agent support is being connected and ask them to prepare their account email, listing link and a short problem description.`;
 
@@ -24,10 +25,48 @@ const faq:Faq[]=[
 ];
 function fallback(message:string){const words=message.toLowerCase();let best:Faq|undefined;let score=0;for(const item of faq){const current=item.keys.reduce((n,key)=>n+(words.includes(key)?key.length:0),0);if(current>score){score=current;best=item}}return best||{answer:"Tell me what you are trying to do on LoadLink, what page you are on and what you expected to happen. I can guide you through it step by step.",followups:["Find a listing","Post a listing","Fix a problem","Talk to an agent"]};}
 
-export async function POST(request:NextRequest){
- const body=await request.json().catch(()=>({})); const message=String(body?.message||"").trim().slice(0,1200); const history=Array.isArray(body?.history)?body.history.slice(-8):[];
- if(!message)return NextResponse.json({answer:"Ask me anything about using LoadLink.",followups:["Find a listing","Post a listing","Talk to an agent"]},{status:400});
- const key=process.env.OPENAI_API_KEY;
- if(key){try{const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${key}`},body:JSON.stringify({model:process.env.OPENAI_LINKBOT_MODEL||"gpt-5-mini",instructions:WEBSITE_CONTEXT,input:[...history.map((m:any)=>({role:m.from==="bot"?"assistant":"user",content:String(m.text||"")})),{role:"user",content:message}],max_output_tokens:320}),signal:AbortSignal.timeout(14000)});if(response.ok){const data=await response.json();const answer=data.output_text||data.output?.flatMap((i:any)=>i.content||[]).map((p:any)=>p.text||"").join(" ");if(answer)return NextResponse.json({answer,followups:["Ask another question","Talk to an agent"],ai:true})}}catch{}}
- const result=fallback(message);return NextResponse.json({...result,ai:false});
+export async function POST(request: NextRequest) {
+  const limiter = takeRateLimit(`linkbot:${requestIdentity(request)}`, 25, 60 * 60_000);
+  if (!limiter.allowed) {
+    return NextResponse.json(
+      { answer: "You have reached the help-message limit for now. Please use the Help Centre articles or try again later.", followups: ["Open Help Centre", "Talk to an agent"] },
+      { status: 429, headers: rateLimitHeaders(limiter) },
+    );
+  }
+
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (contentLength > 20_000) return NextResponse.json({ error: "Request too large." }, { status: 413, headers: rateLimitHeaders(limiter) });
+  const body = await request.json().catch(() => ({}));
+  const message = String(body?.message || "").trim().replace(/[\u0000-\u001f]/g, " ").slice(0, 1200);
+  const history = Array.isArray(body?.history)
+    ? body.history.slice(-8).map((item: any) => ({ from: item?.from === "bot" ? "bot" : "user", text: String(item?.text || "").slice(0, 800) }))
+    : [];
+  if (!message) return NextResponse.json({ answer: "Ask me anything about using LoadLink.", followups: ["Find a listing", "Post a listing", "Talk to an agent"] }, { status: 400, headers: rateLimitHeaders(limiter) });
+
+  const key = process.env.OPENAI_API_KEY;
+  if (key) {
+    try {
+      const response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+        body: JSON.stringify({
+          model: process.env.OPENAI_LINKBOT_MODEL || "gpt-5-mini",
+          instructions: WEBSITE_CONTEXT,
+          input: [...history.map((m: any) => ({ role: m.from === "bot" ? "assistant" : "user", content: m.text })), { role: "user", content: message }],
+          max_output_tokens: 320,
+        }),
+        signal: AbortSignal.timeout(14_000),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const answer = data.output_text || data.output?.flatMap((item: any) => item.content || []).map((part: any) => part.text || "").join(" ");
+        if (answer) return NextResponse.json({ answer, followups: ["Ask another question", "Talk to an agent"], ai: true }, { headers: rateLimitHeaders(limiter) });
+      }
+    } catch {
+      // The local help catalogue remains available when the AI provider is unavailable.
+    }
+  }
+
+  const result = fallback(message);
+  return NextResponse.json({ ...result, ai: false }, { headers: rateLimitHeaders(limiter) });
 }

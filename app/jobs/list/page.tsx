@@ -11,7 +11,7 @@ import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
-import { getAccountOwnerKey } from "@/lib/chatKeys";
+import { secureUpload } from "@/lib/client/secureUpload";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
@@ -61,16 +61,6 @@ function groupForVehicle(value: string): VehicleGroup {
   return "Trucks / Trailers";
 }
 
-
-function saveOwnedJob(jobId: string, ownerKey: string) {
-  try {
-    const current = JSON.parse(localStorage.getItem("loadlink-owned-job-keys") || "{}") as Record<string, string>;
-    current[jobId] = ownerKey;
-    localStorage.setItem("loadlink-owned-job-keys", JSON.stringify(current));
-  } catch {
-    localStorage.setItem("loadlink-owned-job-keys", JSON.stringify({ [jobId]: ownerKey }));
-  }
-}
 
 function resizePhoto(file: File, maxWidth = 1200, quality = 0.8): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -125,7 +115,8 @@ export default function ListJobPage() {
   useEffect(() => {
     setDarkMode(localStorage.getItem("loadlink-theme") === "dark");
     const mode = new URLSearchParams(window.location.search).get("mode");
-    if (mode === "asset" || mode === "contract") setListingMode(mode);
+    if (mode === "asset") { router.replace("/list-your-vehicle"); return; }
+    if (mode === "contract") setListingMode("contract");
 
     async function requireAccount() {
       if (!isSupabaseConfigured) {
@@ -210,15 +201,9 @@ export default function ListJobPage() {
 
   async function uploadOne(file: File, folder: string, maxWidth = 1200) {
     const resized = await resizePhoto(file, maxWidth, folder === "posters" ? 0.82 : 0.78);
-    const safeName = file.name.replace(/[^a-z0-9.]/gi, "-").toLowerCase();
-    const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}`;
-    const upload = await supabase.storage.from("job-photos").upload(path, resized, {
-      cacheControl: "3600",
-      contentType: "image/jpeg",
-      upsert: false,
-    });
-    if (upload.error) throw upload.error;
-    return supabase.storage.from("job-photos").getPublicUrl(path).data.publicUrl;
+    const result = await secureUpload(resized, "listing-image", `${folder}-${file.name.replace(/[^a-z0-9.]/gi, "-").toLowerCase()}.jpg`);
+    if (!result.publicUrl) throw new Error("The uploaded image could not be published.");
+    return result.publicUrl;
   }
 
   async function uploadPhotos() {
@@ -263,7 +248,6 @@ export default function ListJobPage() {
         return;
       }
 
-      const ownerKey = getAccountOwnerKey(user.id);
       const uploadedUrls = await uploadPhotos();
       const posterPhotoUrl = posterPhoto ? await uploadOne(posterPhoto, "posters", 500) : "";
       const listingType = listingMode === "asset" ? assetType : listingMode === "contract" ? "Contract" : "Job";
@@ -283,8 +267,12 @@ export default function ListJobPage() {
         photos: uploadedUrls,
         sponsored: false,
         package_type: packageType,
-        owner_key: ownerKey,
         user_id: user.id,
+        listing_kind: listingMode === "contract" ? "contract" : "job",
+        lifecycle_status: "pending",
+        moderation_status: "pending",
+        idempotency_key: crypto.randomUUID(),
+        submitted_at: new Date().toISOString(),
       };
 
       let result = await supabase.from("job_listings").insert(fullListing).select("id").single();
@@ -300,8 +288,8 @@ export default function ListJobPage() {
           photos: fullListing.photos,
           sponsored: fullListing.sponsored,
           package_type: fullListing.package_type,
-          owner_key: fullListing.owner_key,
           user_id: fullListing.user_id,
+          listing_kind: fullListing.listing_kind,
         }).select("id").single();
       }
       if (result.error) throw result.error;
@@ -316,7 +304,6 @@ export default function ListJobPage() {
           });
           if (boostResult.error && !/relation|schema cache|does not exist/i.test(boostResult.error.message)) throw boostResult.error;
         }
-        saveOwnedJob(result.data.id, ownerKey);
         window.dispatchEvent(new Event("loadlink-account-state-changed"));
         await recordUserActivity("listing_posted", {
           entityType: "listing",

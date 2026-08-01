@@ -12,7 +12,8 @@ import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
-import { getAccountOwnerKey, getOwnedJobKeys, setOwnedJobKeys } from "@/lib/chatKeys";
+import { secureUpload } from "@/lib/client/secureUpload";
+import { planRule } from "@/lib/marketplace/plans";
 import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
@@ -214,7 +215,7 @@ export default function ListYourVehiclePage() {
   }
 
   async function handleVehiclePhotos(event: ChangeEvent<HTMLInputElement>) {
-    const max = packageType === "pro" || packageType === "dealer" ? 15 : 8;
+    const max = planRule(packageType).listingImages;
     const selected = Array.from(event.target.files ?? []).slice(0, max) as File[];
     setVehiclePhotos(selected);
     const previews = await Promise.all(selected.map((file) => new Promise<string>((resolve, reject) => {
@@ -224,19 +225,16 @@ export default function ListYourVehiclePage() {
   }
 
   function setDocument(key: keyof VerificationFiles, file: File | null) { setDocuments((current) => ({ ...current, [key]: file })); }
-  async function uploadVehiclePhoto(file: File, userId: string) {
+  async function uploadVehiclePhoto(file: File, _userId: string) {
     const resized = await resizePhoto(file);
-    const path = `vehicles/${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeFileName(file.name)}.jpg`;
-    const result = await supabase.storage.from("job-photos").upload(path, resized, { cacheControl: "3600", contentType: "image/jpeg", upsert: false });
-    if (result.error) throw result.error;
-    return supabase.storage.from("job-photos").getPublicUrl(path).data.publicUrl;
+    const result = await secureUpload(resized, "listing-image", `${safeFileName(file.name)}.jpg`);
+    if (!result.publicUrl) throw new Error("The vehicle image could not be published.");
+    return result.publicUrl;
   }
-  async function uploadVerificationDocument(file: File, userId: string, folder: string, label: string) {
+  async function uploadVerificationDocument(file: File, _userId: string, _folder: string, label: string) {
     if (file.size > 10 * 1024 * 1024) throw new Error(`${label} must be smaller than 10 MB.`);
-    const path = `${userId}/${folder}/${Date.now()}-${safeFileName(file.name)}`;
-    const result = await supabase.storage.from("vehicle-verification").upload(path, file, { cacheControl: "3600", contentType: file.type || undefined, upsert: false });
-    if (result.error) throw result.error;
-    return path;
+    const result = await secureUpload(file, "vehicle-document", safeFileName(file.name));
+    return result.path;
   }
 
   function validateBeforeSubmit() {
@@ -272,11 +270,9 @@ export default function ListYourVehiclePage() {
     if (validationMessage) { setMessage(validationMessage); return; }
     setSaving(true);
     let createdListingId = "";
-    let createdOwnerKey = "";
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!isAuthenticatedUser(user)) { router.replace(loginHref(currentRelativePath())); return; }
-      const ownerKey = getAccountOwnerKey(user.id); createdOwnerKey = ownerKey;
       const folder = crypto.randomUUID();
       const photoUrls: string[] = [];
       for (const file of vehiclePhotos) photoUrls.push(await uploadVehiclePhoto(file, user.id));
@@ -323,7 +319,14 @@ export default function ListYourVehiclePage() {
         description: storedDescription, photos: photoUrls,
         sponsored: packageType === "pro" || packageType === "dealer", package_type: packageType,
         listing_kind: "vehicle", display_tier: packageType === "dealer" ? 4 : packageType === "pro" ? 3 : 1,
-        stock_status: "available", dealership_id: dealershipId || null, owner_key: ownerKey, user_id: user.id,
+        stock_status: "available", lifecycle_status: "pending", moderation_status: "pending",
+        dealership_id: dealershipId || null, user_id: user.id,
+        vehicle_type: categoryLabel(vehicleCategory!), vehicle_year: year, brand: brand.trim(), model: modelName.trim(),
+        body_type: subtype, transmission: transmission || null, fuel_type: fuelType || null,
+        axle_configuration: axleConfiguration || null, odometer_km: Number(odometerKm),
+        previous_owners: previousOwners ? Number(previousOwners) : null, condition, service_history: serviceHistory,
+        gvm_kg: gvmKg ? Number(gvmKg) : null, payload_kg: payloadKg ? Number(payloadKg) : null,
+        verification_level: "documents_submitted", idempotency_key: crypto.randomUUID(), submitted_at: new Date().toISOString(),
       }).select("id").single();
       if (listingResult.error || !listingResult.data?.id) throw listingResult.error || new Error("The vehicle listing could not be created.");
       const listingId = String(listingResult.data.id); createdListingId = listingId;
@@ -353,7 +356,6 @@ export default function ListYourVehiclePage() {
       });
       if (verificationResult.error) throw verificationResult.error;
 
-      const owned = getOwnedJobKeys(); owned[listingId] = ownerKey; setOwnedJobKeys(owned);
       window.dispatchEvent(new Event("loadlink-account-state-changed"));
       await recordUserActivity("vehicle_listing_posted", { entityType: "listing", entityId: listingId, metadata: { title: title.trim(), category: vehicleCategory, dealershipId: dealershipId || null } }).catch(() => undefined);
       await syncAccountState().catch(() => undefined);
@@ -361,7 +363,7 @@ export default function ListYourVehiclePage() {
       window.setTimeout(() => router.push(dealershipId ? "/dealer?posted=vehicle" : "/my-posts?posted=vehicle"), 1800);
     } catch (error) {
       if (createdListingId) {
-        try { await supabase.rpc("delete_my_listing", { p_listing_id: createdListingId, p_owner_key: createdOwnerKey }); } catch {}
+        try { await supabase.rpc("loadlink_delete_my_listing", { p_listing_id: createdListingId }); } catch {}
       }
       setMessage(error instanceof Error ? error.message : "The vehicle listing could not be submitted.");
       setSaving(false);

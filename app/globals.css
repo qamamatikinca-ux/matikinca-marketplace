@@ -265,3 +265,49 @@ html[data-loadlink-theme="dark"] .loadlink-messages [class*="bg-[#f6b800]"] { co
 html[data-loadlink-theme="dark"] .loadlink-messages [class*="bg-white"] { background-color: #121212 !important; }
 html[data-loadlink-theme="dark"] .loadlink-messages [class*="border-black/"] { border-color: rgba(255,255,255,.12) !important; }
 .loadlink-messages video { max-height: min(70vh, 680px); object-fit: contain; }
+
+/* LoadLink professional marketplace design tokens */
+:root {
+  --ll-gold: #f6b800;
+  --ll-gold-dark: #b88900;
+  --ll-black: #050505;
+  --ll-cream: #f4efe3;
+  --ll-danger: #dc2626;
+  --ll-success: #15803d;
+  --ll-radius-card: 24px;
+  --ll-radius-control: 12px;
+  --ll-touch: 44px;
+}
+
+html { color-scheme: light; scroll-behavior: smooth; }
+html[data-loadlink-theme="dark"] { color-scheme: dark; }
+html, body { width: 100%; min-height: 100%; overflow-x: clip; }
+body { min-height: 100dvh; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+main { min-height: 100dvh; }
+img, video { max-width: 100%; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button, [role="button"], input[type="button"], input[type="submit"], select { min-height: var(--ll-touch); }
+input, select, textarea { font-size: 16px; }
+p, h1, h2, h3, h4, a, button, label { overflow-wrap: anywhere; }
+:focus-visible { outline: 3px solid var(--ll-gold); outline-offset: 3px; }
+::selection { background: var(--ll-gold); color: #000; }
+
+/* Avoid applying expensive transitions to the entire document. */
+button, a, input, textarea, select, .loadlink-transition {
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease, transform 180ms ease;
+}
+main, header, section, article, footer { transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease; }
+
+.safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+.safe-top { padding-top: env(safe-area-inset-top); }
+.sticky-mobile-action { bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+
+@media (max-width: 767px) {
+  .mobile-edge-scroll { margin-inline: -1rem; padding-inline: 1rem; scroll-padding-inline: 1rem; }
+  [role="dialog"] { padding-bottom: max(1.25rem, env(safe-area-inset-bottom)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}

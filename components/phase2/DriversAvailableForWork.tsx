@@ -9,6 +9,7 @@ import LoadLinkPagination from "@/components/LoadLinkPagination";
 type Driver = {
   id: string;
   full_name: string;
+  profile_image_url?: string;
   headline?: string;
   city: string;
   province: string;
@@ -120,11 +121,11 @@ export default function DriversAvailableForWork({
           <div className={styles.grid}>
             {drivers.map((driver) => (
               <article className={styles.card} key={driver.id}>
-                <div className={styles.avatar} aria-hidden="true">{initials(driver.full_name)}</div>
+                <div className={styles.avatar}>{driver.profile_image_url ? <img src={driver.profile_image_url} alt="" className="h-full w-full rounded-full object-cover" /> : initials(driver.full_name)}</div>
                 <div className={styles.cardBody}>
                   <div className={styles.cardTop}>
                     <div>
-                      <h3>{driver.full_name}</h3>
+                      <h3><Link href={`/drivers/${driver.id}`}>{driver.full_name}</Link></h3>
                       <p className={styles.headline}>{driver.headline || "Professional driver"}</p>
                     </div>
                     <span className={styles.verified}>Approved</span>
@@ -136,7 +137,7 @@ export default function DriversAvailableForWork({
                     <span>{driver.availability || "Availability on request"}</span>
                   </div>
                   <p className={styles.bio}>{driver.bio || driver.vehicle_types?.slice(0, 3).join(" · ") || "Available for suitable logistics work."}</p>
-                  <button data-marketplace-action type="button" className={styles.contact} onClick={() => void contact(driver.id)}>Contact driver</button>
+                  <div className={styles.cardActions}><Link data-marketplace-action className={styles.profile} href={`/drivers/${driver.id}`}>View profile</Link><button data-marketplace-action type="button" className={styles.contact} onClick={() => void contact(driver.id)}>Contact driver</button></div>
                 </div>
               </article>
             ))}

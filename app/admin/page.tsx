@@ -1,28 +1,8 @@
+"use client";
 import Link from "next/link";
-
-export default function AdminPage() {
-  return (
-    <main className="min-h-screen bg-[#f5f5f0] px-5 py-10 text-black">
-      <div className="mx-auto max-w-5xl">
-        <header className="border-b border-black/10 pb-6">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#9a6a00]">LoadLink administration</p>
-          <h1 className="mt-3 text-4xl font-black">Admin workspace</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-black/60">Review verification requests and manage protected LoadLink operations from this workspace.</p>
-        </header>
-
-        <section className="mt-8 grid gap-4 sm:grid-cols-2">
-          <Link href="/admin/verifications" className="border border-black/10 bg-white p-6 transition hover:border-[#f6b800]">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9a6a00]">Review queue</p>
-            <h2 className="mt-3 text-2xl font-black">Verification requests</h2>
-            <p className="mt-2 text-sm leading-6 text-black/55">Open pending identity and company-document submissions.</p>
-          </Link>
-          <Link href="/" className="border border-black/10 bg-black p-6 text-white transition hover:border-[#f6b800]">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#f6b800]">Marketplace</p>
-            <h2 className="mt-3 text-2xl font-black">Return to LoadLink</h2>
-            <p className="mt-2 text-sm leading-6 text-white/55">Open the public website without loading admin-only tools.</p>
-          </Link>
-        </section>
-      </div>
-    </main>
-  );
-}
+import { useEffect,useState } from "react";
+import AdminShell from "@/components/admin/AdminShell";
+import { authenticatedFetch } from "@/lib/client/authenticatedFetch";
+import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
+type Data={metrics:Record<string,number>;recentCases:Array<Record<string,unknown>>;recentEvents:Array<Record<string,unknown>>;generatedAt:string};
+export default function AdminPage(){const {darkMode}=useLoadLinkTheme();const [data,setData]=useState<Data|null>(null),[error,setError]=useState("");useEffect(()=>{void authenticatedFetch("/api/admin/overview").then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.error);setData(d);}).catch(e=>setError(e instanceof Error?e.message:"Dashboard could not load."));},[]);const surface=darkMode?"border-white/10 bg-[#0b0b0b]":"border-black/10 bg-white";return <AdminShell title="Operations dashboard" description="One synchronized workspace for listings, dealerships, drivers, safety cases, payments, support, content and platform health.">{error?<p className="rounded-xl border border-red-500/40 p-4 font-bold text-red-500">{error}</p>:null}<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{Object.entries(data?.metrics||{}).map(([key,value])=><article key={key} className={`rounded-2xl border p-5 ${surface}`}><p className="text-[10px] font-black uppercase tracking-[.14em] text-[#b88900]">{key.replace(/([A-Z])/g," $1")}</p><p className="mt-2 text-4xl font-black">{value}</p></article>)}</div><div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{[["Review listings","/admin/listings","Approve or reject posts with reasons and synchronized notifications."],["Moderation cases","/admin/cases","Investigate reports, fraud signals and messaging abuse."],["Payments","/admin/payments","Reconcile verified payment events and disputes."],["Dealerships","/admin/dealerships","Review business verification and public dealer status."],["Drivers","/admin/drivers","Review driver profiles and expiring documents."],["Support","/admin/support","Work tickets linked to users, listings and payments."]].map(([title,href,body])=><Link key={href} href={href} className={`rounded-2xl border p-5 transition hover:border-[#f6b800] ${surface}`}><h2 className="text-xl font-black">{title}</h2><p className="mt-2 text-sm leading-6 opacity-60">{body}</p></Link>)}</div></AdminShell>}

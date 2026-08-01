@@ -1,0 +1,51 @@
+LOADLINK PROFESSIONAL MARKETPLACE UPDATE
+========================================
+
+This package contains the complete approved professional-platform update.
+All 140 recommendations are accounted for. Nothing in LDE2 was changed.
+
+DO THIS IN THIS ORDER
+
+1. BACK UP
+   - Download the current GitHub repository.
+   - Create a Supabase database backup.
+   - Keep the current Vercel deployment as the rollback version.
+
+2. RUN THE SUPABASE UPDATE
+   - Open Supabase > SQL Editor.
+   - Run this complete file once:
+     supabase/migrations/20260801_000001_loadlink_professional_marketplace.sql
+   - Do not run the old independent repair SQL files after it.
+
+3. UPLOAD THE PROJECT
+   - Open this folder.
+   - Upload its CONTENTS to the ROOT of your GitHub repository.
+   - Replace matching files when GitHub asks.
+   - Do not upload the outer ZIP as a single repository file.
+   - Make sure the .github folder is included. That folder contains the installer and quality check.
+
+4. CHECK VERCEL VARIABLES
+   Keep your existing public Supabase variables and add the server-only variables listed in:
+   docs/DEPLOYMENT-GUIDE.md
+
+5. CLEAN THE OLD REPAIR FILES
+   - Open GitHub > Actions.
+   - Select "Install LoadLink Professional Release".
+   - Press "Run workflow".
+   - This removes only the known old installers, duplicate repair SQL files and old workflows, commits the cleanup, then removes itself.
+
+6. RUN THE GITHUB CHECK
+   - Open GitHub > Actions.
+   - Select "LoadLink Quality Gate".
+   - Press "Run workflow" if it did not start automatically.
+   - Do not deploy until every check is green.
+
+7. DEPLOY AND TEST
+   - Deploy through Vercel.
+   - Follow docs/QA-CHECKLIST.md.
+   - Confirm that database status, user account, notification, Control Centre and public page all match after every approval, rejection, payment and listing update.
+
+IMPORTANT
+- The 27 provider-dependent recommendations are included as safe foundations but still need real production credentials, policies or scheduled services before activation. See docs/EXTERNAL-ACTIVATION-CHECKLIST.md.
+- Do not expose SUPABASE_SERVICE_ROLE_KEY or payment secrets in browser variables.
+- No LDE2 files were changed or included.

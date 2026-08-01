@@ -1,0 +1,1 @@
+import AdminShell from "@/components/admin/AdminShell";import AdminRecords from "@/components/admin/AdminRecords";export default function Page(){return <AdminShell title="Safety cases" description="Reports from listings, dealerships and messages enter one moderation queue."><AdminRecords type="cases" title="Case queue" emptyText="No moderation cases were found."/></AdminShell>}

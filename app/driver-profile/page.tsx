@@ -6,10 +6,12 @@ import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import { browserSupabase } from "@/lib/phase2/supabase";
+import { secureUpload } from "@/lib/client/secureUpload";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 type Doc = { id: string; document_type: string; original_filename: string; size_bytes: number };
 type FormState = {
+  profile_image_url: string;
   full_name: string;
   headline: string;
   city: string;
@@ -31,7 +33,7 @@ type FormState = {
   missing_document_type?: string;
 };
 
-const EMPTY: FormState = { full_name: "", headline: "", city: "", province: "", phone: "", email: "", years_experience: 0, licence_code: "", prdp_required: false, prdp_expiry: "", vehicle_types: "", route_experience: "", languages: "", previous_roles: "", availability: "Available immediately", bio: "" };
+const EMPTY: FormState = { profile_image_url: "", full_name: "", headline: "", city: "", province: "", phone: "", email: "", years_experience: 0, licence_code: "", prdp_required: false, prdp_expiry: "", vehicle_types: "", route_experience: "", languages: "", previous_roles: "", availability: "Available immediately", bio: "" };
 const LABELS: Record<string, string> = { identity: "ID or passport", drivers_licence: "Driver’s licence", prdp: "PrDP", cv: "CV", driving_certificate: "Relevant driving certificate" };
 
 export default function DriverProfilePage() {
@@ -135,6 +137,33 @@ export default function DriverProfilePage() {
     }
   }
 
+  async function uploadProfileImage(file: File | null) {
+    if (!file) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const upload = await secureUpload(file, "profile-image", file.name, "driver-profile");
+      if (!upload.publicUrl) throw new Error("The profile image could not be published.");
+      const nextUrl = upload.publicUrl;
+      setForm((current) => ({ ...current, profile_image_url: nextUrl }));
+      const activeToken = token || await authToken();
+      const response = await fetch("/api/phase2/me", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${activeToken}` },
+        body: JSON.stringify({ ...payload(), profile_image_url: nextUrl }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "The profile image could not be saved.");
+      setMessageType("success");
+      setMessage("Driver profile image updated.");
+    } catch (error) {
+      setMessageType("error");
+      setMessage(error instanceof Error ? error.message : "The profile image could not be uploaded.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function upload(type: string, file: File | null) {
     if (!file) return;
     setBusy(true);
@@ -219,6 +248,16 @@ export default function DriverProfilePage() {
           <section className={`overflow-hidden rounded-[28px] border ${surface}`}>
             <SectionHeading title="Professional information" copy="Use accurate details that help businesses understand your experience and availability." darkMode={darkMode} />
             <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7">
+              <div className="flex items-center gap-4 md:col-span-2">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-[#f6b800] bg-black text-xl font-black text-[#f6b800]">
+                  {form.profile_image_url ? <img src={form.profile_image_url} alt="Driver profile" className="h-full w-full object-cover" /> : (form.full_name || "LL").split(/\s+/).slice(0, 2).map((part) => part[0] || "").join("").toUpperCase()}
+                </div>
+                <label className={`flex min-h-20 flex-1 cursor-pointer flex-col justify-center rounded-2xl border px-5 ${darkMode ? "border-white/12 bg-white/[.04]" : "border-black/10 bg-[#faf9f5]"}`}>
+                  <strong className="text-sm font-black">Professional profile image</strong>
+                  <span className={`mt-1 text-xs ${muted}`}>Upload a clear head-and-shoulders JPG or PNG. Private documents remain separate.</span>
+                  <input disabled={busy} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void uploadProfileImage(event.target.files?.[0] ?? null)} className="hidden" />
+                </label>
+              </div>
               <Field label="Full name"><input className={input} value={form.full_name} onChange={(event) => field("full_name", event.target.value)} required /></Field>
               <Field label="Professional headline"><input className={input} value={form.headline} onChange={(event) => field("headline", event.target.value)} placeholder="Code 14 long-distance driver" /></Field>
               <Field label="City"><input className={input} value={form.city} onChange={(event) => field("city", event.target.value)} required /></Field>

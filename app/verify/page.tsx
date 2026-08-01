@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useState } from "react";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+import { secureUpload } from "@/lib/client/secureUpload";
 
 type Step = "phone" | "otp" | "documents" | "done";
 
@@ -61,12 +62,9 @@ export default function VerifyPage() {
     setMessage("Number verified. Complete the identity check below.");
   }
 
-  async function upload(file: File, userId: string, label: string) {
-    const ext = file.name.split(".").pop()?.toLowerCase() || "bin";
-    const path = `${userId}/${label}-${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("verification-documents").upload(path, file, { upsert: false });
-    if (error) throw error;
-    return path;
+  async function upload(file: File, _userId: string, label: string) {
+    const result = await secureUpload(file, "verification-document", `${label}-${file.name}`);
+    return result.path;
   }
 
   async function submit(event: FormEvent) {
