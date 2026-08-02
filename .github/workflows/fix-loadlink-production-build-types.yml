@@ -1,0 +1,130 @@
+name: Fix LoadLink Production Build Types
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fix-loadlink-production-build-types
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply the verified production build fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          from pathlib import Path
+
+          changes = {
+              Path("app/api/admin/notifications/route.ts"): [
+                  (
+                      'import { safeInternalHref } from "@/lib/marketplace/navigation";',
+                      'import { safeInternalHref } from "@/lib/safeNavigation";',
+                  ),
+              ],
+              Path("app/api/admin/records/route.ts"): [
+                  (
+                      'const rows = (result.data || []).filter((row) => !search || JSON.stringify(row).toLowerCase().includes(search.toLowerCase()));',
+                      'const rows = ((result.data || []) as Record<string, unknown>[]).filter((row) => !search || JSON.stringify(row).toLowerCase().includes(search.toLowerCase()));',
+                  ),
+              ],
+              Path("app/api/listings/[id]/route.ts"): [
+                  (
+                      'similar: (similar.data || []).filter((row) => isPubliclyVisible(row as Record<string, unknown>)),',
+                      'similar: ((similar.data || []) as Record<string, unknown>[]).filter(isPubliclyVisible),',
+                  ),
+              ],
+              Path("app/my-posts/page.tsx"): [
+                  (
+                      '(verification.data || []).forEach((row) => { next[row.listing_id] = row.status; });',
+                      '((verification.data || []) as Array<{ listing_id: string; status: string }>).forEach((row) => { next[row.listing_id] = row.status; });',
+                  ),
+              ],
+          }
+
+          changed_files = []
+
+          for path, replacements in changes.items():
+              if not path.is_file():
+                  raise SystemExit(f"Required file is missing: {path}")
+
+              text = path.read_text(encoding="utf-8")
+              original = text
+
+              for old, new in replacements:
+                  if old in text:
+                      text = text.replace(old, new)
+                  elif new in text:
+                      print(f"Already corrected: {path}")
+                  else:
+                      raise SystemExit(
+                          f"Expected code was not found in {path}. "
+                          "The file changed unexpectedly, so the workflow stopped safely."
+                      )
+
+              if text != original:
+                  path.write_text(text, encoding="utf-8")
+                  changed_files.append(str(path))
+                  print(f"Corrected: {path}")
+
+          print(f"Files changed: {len(changed_files)}")
+          PY
+
+          if grep -R --line-number             '@/lib/marketplace/navigation'             app lib components context 2>/dev/null; then
+            echo "::error::The broken navigation import still exists."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        env:
+          NODE_ENV: development
+        run: npm ci --include=dev --no-audit --no-fund
+
+      - name: Run marketplace contract tests
+        run: npm test
+
+      - name: Run the full production build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
+      - name: Commit and push only after the build passes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "LoadLink Production Build Fix"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add             app/api/admin/notifications/route.ts             app/api/admin/records/route.ts             'app/api/listings/[id]/route.ts'             app/my-posts/page.tsx
+
+          if git diff --cached --quiet; then
+            echo "All source fixes were already present. No commit was needed."
+            exit 0
+          fi
+
+          git commit -m "Fix LoadLink production TypeScript build"
+          git push origin HEAD:main
+
+          echo "The verified production build fixes were pushed successfully."
