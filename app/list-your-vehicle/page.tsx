@@ -18,6 +18,7 @@ import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { getTruckModel, getTruckModels, truckCatalog, truckYears, validateTruckTransmission } from "@/lib/truckCatalog";
+import { createSafeRandomId, inferUploadContentType, prepareImageForUpload, readableUploadError, validateImageFile } from "@/lib/mobilePosting";
 
 
 const truckBodyTypes = [
@@ -28,7 +29,6 @@ const truckBodyTypes = [
 const trailerTypes = ["Flatbed", "Tautliner", "Side Tipper", "End Tipper", "Refrigerated", "Tanker", "Lowbed", "Livestock", "Car Carrier", "Container", "Other"];
 const mobileUnitTypes = ["Mobile Toilet", "Food Truck", "Mobile Kitchen", "Mobile Clinic", "Mobile Office", "Mobile Workshop", "Mobile Classroom", "Mobile Accommodation", "Mobile Shower", "Cold Room", "Other"];
 const gearboxOptions = ["Manual", "Automatic", "Automated manual", "Electric direct drive", "Not applicable", "Converted / custom"];
-const acceptedDocuments = ".jpg,.jpeg,.png,.webp,.pdf";
 
 type VehicleCategory = "truck" | "trailer" | "mobile_unit";
 type SellerType = "private" | "dealership";
@@ -57,29 +57,6 @@ function normalizePhone(value: string) { return value.replace(/[^\d+]/g, ""); }
 function isValidSouthAfricanPhone(value: string) { const clean = normalizePhone(value); return /^0\d{9}$/.test(clean) || /^\+27\d{9}$/.test(clean); }
 function safeFileName(value: string) { return value.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/^-+|-+$/g, "") || "document"; }
 function categoryLabel(category: VehicleCategory) { return category === "truck" ? "Truck" : category === "trailer" ? "Trailer" : "Mobile Unit"; }
-
-function resizePhoto(file: File, maxWidth = 1600, quality = 0.82): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const image = new Image();
-      image.onload = () => {
-        const scale = Math.min(1, maxWidth / image.width);
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(1, Math.round(image.width * scale));
-        canvas.height = Math.max(1, Math.round(image.height * scale));
-        const context = canvas.getContext("2d");
-        if (!context) return reject(new Error("Could not process the vehicle image."));
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Could not prepare the vehicle image.")), "image/jpeg", quality);
-      };
-      image.onerror = () => reject(new Error("Could not read the vehicle image."));
-      image.src = String(reader.result);
-    };
-    reader.onerror = () => reject(new Error("Could not read the vehicle image."));
-    reader.readAsDataURL(file);
-  });
-}
 
 export default function ListYourVehiclePage() {
   const router = useRouter();
@@ -170,6 +147,12 @@ export default function ListYourVehiclePage() {
   }, [router]);
 
   useEffect(() => {
+    const previews = vehiclePhotos.map((file) => URL.createObjectURL(file));
+    setVehiclePreviews(previews);
+    return () => previews.forEach((preview) => URL.revokeObjectURL(preview));
+  }, [vehiclePhotos]);
+
+  useEffect(() => {
     if (vehicleCategory !== "truck" || !brand || !modelName) return;
     let active = true;
     setImageLoading(true);
@@ -207,28 +190,49 @@ export default function ListYourVehiclePage() {
     setMessage("");
   }
 
-  async function handleVehiclePhotos(event: ChangeEvent<HTMLInputElement>) {
+  function handleVehiclePhotos(event: ChangeEvent<HTMLInputElement>) {
     const max = packageType === "pro" || packageType === "dealer" ? 15 : 8;
-    const selected = Array.from(event.target.files ?? []).slice(0, max) as File[];
-    setVehiclePhotos(selected);
-    const previews = await Promise.all(selected.map((file) => new Promise<string>((resolve, reject) => {
-      const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file);
-    })));
-    setVehiclePreviews(previews);
+    const selected = Array.from(event.target.files ?? []);
+    const accepted: File[] = [];
+    let firstError = "";
+    for (const file of selected) {
+      const validationError = validateImageFile(file, "Vehicle photo");
+      if (validationError) {
+        firstError ||= validationError;
+        continue;
+      }
+      accepted.push(file);
+    }
+    if (vehiclePhotos.length + accepted.length > max && !firstError) firstError = `Your package allows up to ${max} vehicle photos. Extra photos were ignored.`;
+    setVehiclePhotos((current) => {
+      const combined = [...current, ...accepted].filter((file, index, rows) =>
+        rows.findIndex((candidate) => candidate.name === file.name && candidate.size === file.size && candidate.lastModified === file.lastModified) === index,
+      );
+      return combined.slice(0, max);
+    });
+    setMessage(firstError);
   }
 
-  function setDocument(key: keyof VerificationFiles, file: File | null) { setDocuments((current) => ({ ...current, [key]: file })); }
+  function setDocument(key: keyof VerificationFiles, file: File | null) {
+    if (file && file.size > 10 * 1024 * 1024) {
+      setMessage("Verification documents must be smaller than 10 MB each.");
+      setDocuments((current) => ({ ...current, [key]: null }));
+      return;
+    }
+    setMessage("");
+    setDocuments((current) => ({ ...current, [key]: file }));
+  }
   async function uploadVehiclePhoto(file: File, userId: string) {
-    const resized = await resizePhoto(file);
-    const path = `vehicles/${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeFileName(file.name)}.jpg`;
-    const result = await supabase.storage.from("job-photos").upload(path, resized, { cacheControl: "3600", contentType: "image/jpeg", upsert: false });
+    const prepared = await prepareImageForUpload(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.82 });
+    const path = `vehicles/${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeFileName(file.name)}.${prepared.extension}`;
+    const result = await supabase.storage.from("job-photos").upload(path, prepared.blob, { cacheControl: "3600", contentType: prepared.contentType, upsert: false });
     if (result.error) throw result.error;
     return supabase.storage.from("job-photos").getPublicUrl(path).data.publicUrl;
   }
   async function uploadVerificationDocument(file: File, userId: string, folder: string, label: string) {
     if (file.size > 10 * 1024 * 1024) throw new Error(`${label} must be smaller than 10 MB.`);
     const path = `${userId}/${folder}/${Date.now()}-${safeFileName(file.name)}`;
-    const result = await supabase.storage.from("vehicle-verification").upload(path, file, { cacheControl: "3600", contentType: file.type || undefined, upsert: false });
+    const result = await supabase.storage.from("vehicle-verification").upload(path, file, { cacheControl: "3600", contentType: inferUploadContentType(file), upsert: false });
     if (result.error) throw result.error;
     return path;
   }
@@ -271,7 +275,7 @@ export default function ListYourVehiclePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!isAuthenticatedUser(user)) { router.replace(loginHref(currentRelativePath())); return; }
       const ownerKey = getAccountOwnerKey(user.id); createdOwnerKey = ownerKey;
-      const folder = crypto.randomUUID();
+      const folder = createSafeRandomId();
       const photoUrls: string[] = [];
       for (const file of vehiclePhotos) photoUrls.push(await uploadVehiclePhoto(file, user.id));
 
@@ -357,7 +361,7 @@ export default function ListYourVehiclePage() {
       if (createdListingId) {
         try { await supabase.rpc("delete_my_listing", { p_listing_id: createdListingId, p_owner_key: createdOwnerKey }); } catch {}
       }
-      setMessage(error instanceof Error ? error.message : "The vehicle listing could not be submitted.");
+      setMessage(readableUploadError(error, "The vehicle listing could not be submitted. Please try again."));
       setSaving(false);
     }
   }
@@ -413,7 +417,7 @@ export default function ListYourVehiclePage() {
 
       <BusinessPlans darkMode={darkMode} selectable selectedPlan={selectedPlan} onSelect={choosePlan} />
 
-      {selectedPlan ? <form onSubmit={submitVehicle} className="mx-auto grid max-w-5xl gap-6 px-4 py-7 md:px-6 md:py-12">
+      {selectedPlan ? <form onSubmit={submitVehicle} noValidate className="mx-auto grid max-w-5xl gap-6 px-4 py-7 md:px-6 md:py-12">
         <section id="vehicle-type" className={`scroll-mt-24 overflow-hidden rounded-2xl border ${surface}`}>
           <SectionHeading step="01" title="Choose what you are listing" description="The form changes to show only the details relevant to the selected vehicle or mobile unit." />
           <div className="grid gap-3 p-5 sm:grid-cols-3 md:p-7">
@@ -461,7 +465,7 @@ export default function ListYourVehiclePage() {
 
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="04" title="Photos and verification" description="Upload clear product photos and the critical documents required for review." />
-              <div className="p-5 md:p-7"><label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>Minimum 2 photos · up to {packageType === "pro" || packageType === "dealer" ? 15 : 8}</span><input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} className="hidden" /></label>{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <img key={preview} src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 shrink-0 snap-start rounded-xl object-cover" />)}</div> : null}</div>
+              <div className="p-5 md:p-7"><label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>Minimum 2 photos · up to {packageType === "pro" || packageType === "dealer" ? 15 : 8}</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onClick={(event) => { event.currentTarget.value = ""; }} onChange={handleVehiclePhotos} className="hidden" /></label>{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <img key={preview} src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 shrink-0 snap-start rounded-xl object-cover" />)}</div> : null}</div>
               {sellerType === "dealership" && !dealerPost ? <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><Field label="Dealership name"><input value={dealershipName} onChange={(event) => setDealershipName(event.target.value)} className={inputClass} required /></Field><Field label="Company registration number"><input value={companyRegistrationNumber} onChange={(event) => setCompanyRegistrationNumber(event.target.value)} className={inputClass} required /></Field><Field label="SARS tax number"><input value={taxNumber} onChange={(event) => setTaxNumber(event.target.value)} className={inputClass} required /></Field><DocumentInput label="CIPC company registration" required file={documents.companyRegistration} onChange={(file) => setDocument("companyRegistration", file)} /><DocumentInput label="SARS tax document" required file={documents.taxDocument} onChange={(file) => setDocument("taxDocument", file)} /><DocumentInput label="Proof of business address" required file={documents.businessAddress} onChange={(file) => setDocument("businessAddress", file)} /><DocumentInput label="Representative authority" required file={documents.representativeAuthority} onChange={(file) => setDocument("representativeAuthority", file)} /></div> : null}
               <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><DocumentInput label="South African ID or passport" required file={documents.idDocument} onChange={(file) => setDocument("idDocument", file)} />{vehicleCategory === "truck" ? <DocumentInput label="Driver’s licence" required file={documents.driverLicence} onChange={(file) => setDocument("driverLicence", file)} /> : null}<DocumentInput label="Vehicle registration certificate" required file={documents.registrationPaper} onChange={(file) => setDocument("registrationPaper", file)} /><DocumentInput label="Proof of ownership or authority to list" required file={documents.ownershipProof} onChange={(file) => setDocument("ownershipProof", file)} /><DocumentInput label="Roadworthy certificate" file={documents.roadworthy} onChange={(file) => setDocument("roadworthy", file)} /><DocumentInput label="Operating licence" file={documents.operatingLicence} onChange={(file) => setDocument("operatingLicence", file)} />{transmissionCheck?.requiresModificationProof ? <DocumentInput label="Gearbox conversion paperwork" required file={documents.modificationProof} onChange={(file) => setDocument("modificationProof", file)} /> : null}</div>
             </section>
@@ -496,5 +500,21 @@ function Header({ darkMode, sellerType, dealerPost, onToggleTheme, onToggleSelle
 function SectionHeading({ step, title, description }: { step: string; title: string; description: string }) { return <div className="border-b border-current/10 px-5 py-5 md:px-7"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#b88900]">{step}</p><h2 className="mt-2 text-3xl font-black tracking-[-0.04em]">{title}</h2><p className="mt-2 text-sm leading-6 opacity-55">{description}</p></div>; }
 function Field({ label, children, wide = false }: { label: string; children: React.ReactNode; wide?: boolean }) { return <label className={wide ? "block md:col-span-2" : "block"}><span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-[#b88900]">{label}</span>{children}</label>; }
 function CategoryButton({ label, description, active, onClick }: { label: string; description: string; active: boolean; onClick: () => void }) { return <button type="button" onClick={onClick} className={`min-h-28 rounded-2xl border p-4 text-left transition ${active ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-current/15"}`}><span className="text-lg font-black">{label}</span><span className={`mt-2 block text-xs leading-5 ${active ? "text-black/60" : "opacity-55"}`}>{description}</span></button>; }
-function DocumentInput({ label, required = false, file, onChange }: { label: string; required?: boolean; file: File | null; onChange: (file: File | null) => void }) { return <label className="flex min-h-28 cursor-pointer flex-col justify-center rounded-2xl border border-[#f6b800]/35 bg-[#f6b800]/5 px-4 py-4"><span className="text-xs font-black uppercase tracking-[0.12em] text-[#b88900]">{label}{required ? " *" : ""}</span><span className="mt-2 truncate text-sm font-bold">{file ? file.name : "Choose image or PDF"}</span><span className="mt-1 text-[10px] opacity-45">JPG, PNG, WEBP or PDF · maximum 10 MB</span><input type="file" accept={acceptedDocuments} required={required && !file} onChange={(event) => onChange(event.target.files?.[0] || null)} className="hidden" /></label>; }
+function DocumentInput({ label, required = false, file, onChange }: { label: string; required?: boolean; file: File | null; onChange: (file: File | null) => void }) {
+  return (
+    <label className="flex min-h-28 cursor-pointer flex-col justify-center rounded-2xl border border-[#f6b800]/35 bg-[#f6b800]/5 px-4 py-4">
+      <span className="text-xs font-black uppercase tracking-[0.12em] text-[#b88900]">{label}{required ? " *" : ""}</span>
+      <span className="mt-2 truncate text-sm font-bold">{file ? file.name : "Choose image or PDF"}</span>
+      <span className="mt-1 text-[10px] opacity-45">JPG, PNG, WEBP or PDF · maximum 10 MB</span>
+      <input
+        type="file"
+        accept="image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf"
+        aria-required={required}
+        onClick={(event) => { event.currentTarget.value = ""; }}
+        onChange={(event) => onChange(event.target.files?.[0] || null)}
+        className="hidden"
+      />
+    </label>
+  );
+}
 function CheckRow({ checked, onChange, label }: { checked: boolean; onChange: (value: boolean) => void; label: string }) { return <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[#f6b800]/30 p-4"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="mt-1 h-5 w-5 accent-[#f6b800]" /><span className="text-sm font-semibold leading-6">{label}</span></label>; }

@@ -16,6 +16,7 @@ import { getAccountOwnerKey } from "@/lib/chatKeys";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
+import { prepareImageForUpload, readableUploadError, validateImageFile } from "@/lib/mobilePosting";
 
 type VehicleGroup = "Catering / Event" | "Trucks / Trailers" | "Farming / Mining";
 type ListingMode = "job" | "asset" | "contract";
@@ -63,29 +64,6 @@ function saveOwnedJob(jobId: string, ownerKey: string) {
   } catch {
     localStorage.setItem("loadlink-owned-job-keys", JSON.stringify({ [jobId]: ownerKey }));
   }
-}
-
-function resizePhoto(file: File, maxWidth = 1200, quality = 0.8): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const image = new Image();
-      image.onload = () => {
-        const scale = Math.min(1, maxWidth / image.width);
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(1, Math.round(image.width * scale));
-        canvas.height = Math.max(1, Math.round(image.height * scale));
-        const context = canvas.getContext("2d");
-        if (!context) return reject(new Error("Could not process image."));
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Could not convert image.")), "image/jpeg", quality);
-      };
-      image.onerror = () => reject(new Error("Could not read image."));
-      image.src = String(reader.result);
-    };
-    reader.onerror = () => reject(new Error("Could not read file."));
-    reader.readAsDataURL(file);
-  });
 }
 
 export default function ListJobPage() {
@@ -142,6 +120,22 @@ export default function ListJobPage() {
     requireAccount().catch(() => router.replace(loginHref(currentRelativePath())));
   }, [router]);
 
+  useEffect(() => {
+    const previews = files.map((file) => URL.createObjectURL(file));
+    setPreviewPhotos(previews);
+    return () => previews.forEach((preview) => URL.revokeObjectURL(preview));
+  }, [files]);
+
+  useEffect(() => {
+    if (!posterPhoto) {
+      setPosterPhotoPreview("");
+      return;
+    }
+    const preview = URL.createObjectURL(posterPhoto);
+    setPosterPhotoPreview(preview);
+    return () => URL.revokeObjectURL(preview);
+  }, [posterPhoto]);
+
   const pageCopy = useMemo(() => {
     if (listingMode === "asset") {
       return {
@@ -174,40 +168,57 @@ export default function ListJobPage() {
     window.dispatchEvent(new Event("loadlink-theme-change"));
   }
 
-  async function handlePosterPhoto(event: ChangeEvent<HTMLInputElement>) {
+  function handlePosterPhoto(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] || null;
-    setPosterPhoto(file);
+    setMessage("");
     if (!file) {
-      setPosterPhotoPreview("");
+      setPosterPhoto(null);
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => setPosterPhotoPreview(String(reader.result));
-    reader.readAsDataURL(file);
+    const validationError = validateImageFile(file, "Profile picture");
+    if (validationError) {
+      setPosterPhoto(null);
+      setMessage(validationError);
+      event.target.value = "";
+      return;
+    }
+    setPosterPhoto(file);
   }
 
-  async function handlePhotos(event: ChangeEvent<HTMLInputElement>) {
+  function handlePhotos(event: ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(event.target.files || []);
     setMessage("");
-    const limited = selected.slice(0, photoLimit);
-    if (selected.length > photoLimit) setMessage(`This package allows up to ${photoLimit} photos. Extra photos were ignored.`);
-    setFiles(limited);
-    const previews = await Promise.all(limited.map((file) => new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    })));
-    setPreviewPhotos(previews);
+    const accepted: File[] = [];
+    let firstError = "";
+    for (const file of selected) {
+      const validationError = validateImageFile(file, "Listing photo");
+      if (validationError) {
+        firstError ||= validationError;
+        continue;
+      }
+      accepted.push(file);
+    }
+    if (files.length + accepted.length > photoLimit && !firstError) firstError = `This package allows up to ${photoLimit} photos. Extra photos were ignored.`;
+    setFiles((current) => {
+      const combined = [...current, ...accepted].filter((file, index, rows) =>
+        rows.findIndex((candidate) => candidate.name === file.name && candidate.size === file.size && candidate.lastModified === file.lastModified) === index,
+      );
+      return combined.slice(0, photoLimit);
+    });
+    if (firstError) setMessage(firstError);
   }
 
   async function uploadOne(file: File, folder: string, maxWidth = 1200) {
-    const resized = await resizePhoto(file, maxWidth, folder === "posters" ? 0.82 : 0.78);
-    const safeName = file.name.replace(/[^a-z0-9.]/gi, "-").toLowerCase();
-    const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}`;
-    const upload = await supabase.storage.from("job-photos").upload(path, resized, {
+    const prepared = await prepareImageForUpload(file, {
+      maxWidth,
+      maxHeight: maxWidth,
+      quality: folder === "posters" ? 0.82 : 0.78,
+    });
+    const safeName = file.name.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "photo";
+    const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}.${prepared.extension}`;
+    const upload = await supabase.storage.from("job-photos").upload(path, prepared.blob, {
       cacheControl: "3600",
-      contentType: "image/jpeg",
+      contentType: prepared.contentType,
       upsert: false,
     });
     if (upload.error) throw upload.error;
@@ -325,7 +336,7 @@ export default function ListJobPage() {
     } catch (error) {
       await minimumLoading;
       setIsSaving(false);
-      setMessage(error instanceof Error ? error.message : "The listing could not be uploaded.");
+      setMessage(readableUploadError(error, "The listing could not be uploaded. Please try again."));
     }
   }
 
@@ -362,7 +373,7 @@ export default function ListJobPage() {
       </section>
 
       <section className="mx-auto max-w-4xl px-4 py-6 md:px-6 md:py-10">
-        <form onSubmit={submitJob} className="grid gap-5">
+        <form onSubmit={submitJob} noValidate className="grid gap-5">
           <FormCard number="01" title="Listing details" subtitle="Keep it specific so the right operators can find it quickly." darkMode={darkMode}>
             <div className="grid gap-4 md:grid-cols-2">
               <FieldLabel label={listingMode === "asset" ? "Listing title" : listingMode === "contract" ? "Contract title" : "Job title"} darkMode={darkMode} wide>
@@ -419,7 +430,7 @@ export default function ListJobPage() {
                   </div>
                   <label className="inline-flex cursor-pointer rounded-full border border-[#f6b800] px-4 py-2 text-xs font-black uppercase tracking-wide text-[#b88900]">
                     Choose photo
-                    <input type="file" accept="image/*" onChange={handlePosterPhoto} className="hidden" />
+                    <input type="file" accept="image/jpeg,image/png,image/webp" onClick={(event) => { event.currentTarget.value = ""; }} onChange={handlePosterPhoto} className="hidden" />
                   </label>
                 </div>
               </div>
@@ -430,7 +441,7 @@ export default function ListJobPage() {
             <label className={`block cursor-pointer rounded-2xl border border-dashed border-[#f6b800]/70 p-5 text-center ${darkMode ? "bg-[#12100a]" : "bg-[#fff9e8]"}`}>
               <span className="block text-sm font-black">Upload listing photos</span>
               <span className={`mt-2 block text-xs ${muted}`}>Choose clear landscape or square images. Selected: {files.length}/{photoLimit}</span>
-              <input type="file" accept="image/*" multiple onChange={handlePhotos} className="mt-4 block w-full text-sm" />
+              <input type="file" accept="image/jpeg,image/png,image/webp" multiple onClick={(event) => { event.currentTarget.value = ""; }} onChange={handlePhotos} className="mt-4 block w-full text-sm" />
             </label>
 
             {previewPhotos.length > 0 ? (
