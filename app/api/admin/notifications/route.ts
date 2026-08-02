@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { safeInternalHref } from "@/lib/marketplace/navigation";
+import { safeInternalHref } from "@/lib/safeNavigation";
 import { requireAdmin, safeApiError } from "@/lib/server/supabase";
 
 export async function POST(request: Request) {
