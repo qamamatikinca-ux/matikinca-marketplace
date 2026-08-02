@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatListingRate } from "@/lib/formatCurrency";
 
 type RecentItem = {
@@ -71,6 +71,7 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
   const [postedLoading, setPostedLoading] = useState(true);
   const [viewed, setViewed] = useState<RecentItem[]>([]);
   const [liked, setLiked] = useState<RecentItem[]>([]);
+  const sliderRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -115,6 +116,17 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
   }, []);
 
   const items = useMemo(() => (tab === "posted" ? posted : tab === "viewed" ? viewed : liked), [liked, posted, tab, viewed]);
+  useEffect(() => {
+    sliderRef.current?.scrollTo({ left: 0, behavior: "auto" });
+  }, [tab]);
+
+  function moveSlider(direction: number) {
+    sliderRef.current?.scrollBy({
+      left: direction * Math.min(340, window.innerWidth * 0.82),
+      behavior: "smooth",
+    });
+  }
+
   const emptyCopy = tab === "liked"
     ? "You have not saved any listings yet. Use the Save button on a listing to keep it here."
     : tab === "posted"
@@ -124,9 +136,17 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
   return (
     <section className={`${darkMode ? "bg-black text-white" : "bg-white text-black"} px-5 py-12`}>
       <div className="mx-auto max-w-5xl">
-        <h2 className="text-3xl font-black tracking-[-0.05em] md:text-5xl">Continue where you left off</h2>
+        <div className="flex items-end justify-between gap-4">
+          <h2 className="text-3xl font-black tracking-[-0.05em] md:text-5xl">Continue where you left off</h2>
+          {items.length > 1 ? (
+            <div className="hidden shrink-0 gap-2 sm:flex">
+              <button type="button" onClick={() => moveSlider(-1)} className={`flex h-10 w-10 items-center justify-center border outline-none ${darkMode ? "border-white/20" : "border-black/15"}`} aria-label="Previous recent item">←</button>
+              <button type="button" onClick={() => moveSlider(1)} className="flex h-10 w-10 items-center justify-center bg-[#f6b800] text-black outline-none" aria-label="Next recent item">→</button>
+            </div>
+          ) : null}
+        </div>
 
-        <div className="mt-6 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 no-scrollbar">
+        <div data-loadlink-no-swipe-dots="true" className="mt-6 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 no-scrollbar">
           {([[
             "posted",
             "Recently Posted",
@@ -156,12 +176,12 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
 
         {tab === "posted" && postedLoading ? (
           <div className="mt-6 flex gap-4 overflow-hidden" aria-label="Loading recently posted listings">
-            {[0, 1, 2].map((item) => <div key={item} className={`h-64 min-w-[78%] animate-pulse border md:min-w-[300px] ${darkMode ? "border-white/10 bg-white/[.04]" : "border-black/10 bg-black/[.04]"}`} />)}
+            {[0, 1, 2].map((item) => <div key={item} className={`h-64 w-[82vw] max-w-[310px] shrink-0 animate-pulse border ${darkMode ? "border-white/10 bg-white/[.04]" : "border-black/10 bg-black/[.04]"}`} />)}
           </div>
         ) : items.length ? (
-          <div className="mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3 no-scrollbar">
+          <div ref={sliderRef} data-loadlink-swipe-dots="true" className="no-scrollbar mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-3 touch-pan-x" aria-label={`${tab === "posted" ? "Recently posted" : tab === "viewed" ? "Recently viewed" : "Liked"} listings`}>
             {items.map((item) => (
-              <Link key={`${item.href}-${item.id}`} href={item.href} className={`min-w-[78%] snap-center overflow-hidden border md:min-w-[300px] ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+              <Link key={`${item.href}-${item.id}`} href={item.href} className={`w-[82vw] max-w-[310px] shrink-0 snap-start overflow-hidden border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
                 <div className="aspect-[4/3] overflow-hidden bg-black/10">
                   {item.image ? <img src={item.image} alt={item.title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center bg-[#f6b800] text-2xl font-black text-black">LL</div>}
                 </div>

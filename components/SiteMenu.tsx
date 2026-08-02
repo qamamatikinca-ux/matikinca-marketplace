@@ -104,11 +104,11 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
       { label: "Notifications", href: "/notifications", description: "Reviews, messages and account updates", icon: "notifications" },
       { label: "My posts", href: "/my-posts", description: "Manage your listings", icon: "posts" },
       { label: "Profile settings", href: "/account/settings", description: "Profile, account and alerts", icon: "settings" },
-      { label: "Driver profile", href: "/driver-portal", description: "View drivers or manage your profile", icon: "driver" },
+      ...(account.driverProfile ? [{ label: "Driver profile", href: "/driver-profile", description: "Manage your driver profile", icon: "driver" as const }] : []),
       dealerLink,
       { label: "Packages", href: "/packages", description: "Manual, Pro and Dealer plans", icon: "packages" },
     ];
-  }, [account.dealer]);
+  }, [account.dealer, account.driverProfile]);
 
   function continueAsGuest() { try { localStorage.setItem("loadlink-guest-mode", "true"); } catch {} setGuestMode(true); }
   async function signOut() {
@@ -129,12 +129,12 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
 
   const overlay = open ? (
     <div className="fixed inset-0 z-[10000]" role="presentation" data-loadlink-menu-overlay>
-      <button type="button" className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={() => setOpen(false)} aria-label="Close menu" />
-      <aside ref={panelRef} className={`absolute inset-y-0 left-0 flex w-[min(94vw,430px)] flex-col border-r shadow-[24px_0_80px_rgba(0,0,0,.28)] ${panel} ${border}`} role="dialog" aria-modal="true" aria-label="LoadLink menu">
+      <button type="button" data-loadlink-menu-backdrop className="absolute inset-0 bg-black/65 backdrop-blur-sm outline-none [-webkit-tap-highlight-color:transparent]" onClick={() => setOpen(false)} aria-label="Close menu" />
+      <aside ref={panelRef} data-loadlink-menu-panel className={`absolute inset-y-0 left-0 flex w-[min(94vw,430px)] flex-col border-r outline-none shadow-[24px_0_80px_rgba(0,0,0,.28)] ${panel} ${border}`} role="dialog" aria-modal="true" aria-label="LoadLink menu">
         <header className={`border-b px-5 pb-5 pt-4 ${border}`}>
           <div className="flex items-center justify-between gap-4">
             <Link href="/" aria-label="LoadLink home"><img src={darkMode ? "/images/loadlink-logo-dark.png" : "/images/loadlink-logo-light.png"} alt="LoadLink" className="h-9 w-auto" /></Link>
-            <button ref={closeButtonRef} type="button" onClick={() => setOpen(false)} className={`flex h-10 w-10 items-center justify-center rounded-full border ${border}`} aria-label="Close menu"><CloseIcon /></button>
+            <button ref={closeButtonRef} data-loadlink-menu-close type="button" onClick={() => setOpen(false)} className={`flex h-10 w-10 items-center justify-center rounded-full border outline-none focus:outline-none [-webkit-tap-highlight-color:transparent] ${border}`} aria-label="Close menu"><CloseIcon /></button>
           </div>
           {signedIn ? (
             <div className={`mt-5 flex items-center gap-3 rounded-2xl border p-3 ${border} ${darkMode ? "bg-white/[.04]" : "bg-white"}`}>
@@ -158,7 +158,7 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
     </div>
   ) : null;
 
-  return <><button ref={openButtonRef} type="button" onClick={() => setOpen(true)} className={`flex h-10 w-10 items-center justify-center ${className}`} aria-label="Open LoadLink menu" aria-expanded={open}><MenuIcon /></button>{mounted && overlay ? createPortal(overlay, document.body) : null}</>;
+  return <><button ref={openButtonRef} data-loadlink-menu-trigger type="button" onClick={() => setOpen(true)} className={`flex h-10 w-10 items-center justify-center outline-none focus:outline-none [-webkit-tap-highlight-color:transparent] ${className}`} aria-label="Open LoadLink menu" aria-expanded={open}><MenuIcon /></button>{mounted && overlay ? createPortal(overlay, document.body) : null}</>;
 }
 
 function MenuSection({ title, links, pathname, darkMode, border, muted, unreadNotifications = null, unreadMessages = 0 }: { title: string; links: MenuLink[]; pathname: string; darkMode: boolean; border: string; muted: string; unreadNotifications?: number | null; unreadMessages?: number }) {

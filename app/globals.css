@@ -265,3 +265,17 @@ html[data-loadlink-theme="dark"] .loadlink-messages [class*="bg-[#f6b800]"] { co
 html[data-loadlink-theme="dark"] .loadlink-messages [class*="bg-white"] { background-color: #121212 !important; }
 html[data-loadlink-theme="dark"] .loadlink-messages [class*="border-black/"] { border-color: rgba(255,255,255,.12) !important; }
 .loadlink-messages video { max-height: min(70vh, 680px); object-fit: contain; }
+
+
+/* Keep iOS/Safari from painting the default blue focus outline around the menu drawer and close control. */
+[data-loadlink-menu-overlay],
+[data-loadlink-menu-overlay] *,
+[data-loadlink-menu-trigger] {
+  -webkit-tap-highlight-color: transparent;
+}
+[data-loadlink-menu-panel]:focus,
+[data-loadlink-menu-backdrop]:focus,
+[data-loadlink-menu-close]:focus,
+[data-loadlink-menu-trigger]:focus {
+  outline: none !important;
+}

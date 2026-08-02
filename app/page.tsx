@@ -221,27 +221,13 @@ function HomeExperience() {
       >
         <div className="mx-auto max-w-7xl">
           <div className="mb-12 flex justify-center">
-            <div className="relative flex items-center justify-center">
-              <span
-                className={`absolute -top-2 left-10 h-2 w-24 rounded-full ${
-                  darkMode ? "bg-[#5c4300]" : "bg-[#f6b800]"
-                }`}
+            <Link href="/" aria-label="LoadLink home" className="block max-w-full outline-none">
+              <img
+                src={darkMode ? "/images/loadlink-logo-dark.png" : "/images/loadlink-logo-light.png"}
+                alt="LoadLink"
+                className="h-auto w-[min(78vw,430px)] object-contain"
               />
-
-              <span
-                className={`text-4xl font-black italic tracking-tight ${
-                  darkMode ? "text-white" : "text-black"
-                }`}
-              >
-                LOADLINK
-              </span>
-
-              <span
-                className={`absolute -bottom-2 right-4 h-2 w-28 rounded-full ${
-                  darkMode ? "bg-[#5c4300]" : "bg-[#f6b800]"
-                }`}
-              />
-            </div>
+            </Link>
           </div>
 
           <div

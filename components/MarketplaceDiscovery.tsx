@@ -29,6 +29,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
   const [location, setLocation] = useState("");
   const [scope, setScope] = useState<SearchScope>("all");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeSearchField, setActiveSearchField] = useState<"query" | "location" | null>(null);
   const [fabOpen, setFabOpen] = useState(false);
   const [liveListings, setLiveListings] = useState<ListingSearchRow[]>([]);
   const [liveDrivers, setLiveDrivers] = useState<DriverSearchRow[]>([]);
@@ -74,7 +75,10 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
   useEffect(() => {
     function closeMenus(event: MouseEvent | TouchEvent) {
       const target = event.target as Node;
-      if (!searchWrapperRef.current?.contains(target)) setShowSuggestions(false);
+      if (!searchWrapperRef.current?.contains(target)) {
+        setShowSuggestions(false);
+        setActiveSearchField(null);
+      }
       if (!fabWrapperRef.current?.contains(target)) setFabOpen(false);
     }
 
@@ -110,11 +114,13 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
 
   function launchSearch(destination?: string) {
     setShowSuggestions(false);
+    setActiveSearchField(null);
     router.push(destination || routeForScope(scope, query, location));
   }
 
   function chooseScope(value: SearchScope) {
     setScope(value);
+    setActiveSearchField("query");
     setShowSuggestions(true);
   }
 
@@ -150,14 +156,21 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                 <input
                   id="loadlink-marketplace-search"
                   value={query}
-                  onFocus={() => setShowSuggestions(true)}
+                  onFocus={() => {
+                    setActiveSearchField("query");
+                    setShowSuggestions(true);
+                  }}
                   onChange={(event) => {
                     setQuery(event.target.value);
+                    setActiveSearchField("query");
                     setShowSuggestions(true);
                   }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") launchSearch();
-                    if (event.key === "Escape") setShowSuggestions(false);
+                    if (event.key === "Escape") {
+                      setShowSuggestions(false);
+                      setActiveSearchField(null);
+                    }
                   }}
                   autoComplete="off"
                   placeholder={placeholderForScope(scope)}
@@ -166,7 +179,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                 <button type="button" onClick={() => launchSearch()} className="mr-1.5 h-11 rounded-xl bg-[#f6b800] px-4 text-xs font-black uppercase tracking-wide text-black">Search</button>
               </div>
 
-              {showSuggestions ? (
+              {showSuggestions && activeSearchField === "query" ? (
                 <div className={`absolute inset-x-0 top-[60px] z-40 max-h-[430px] overflow-y-auto rounded-2xl border shadow-2xl ${darkMode ? "border-white/15 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
                   {suggestions.length ? suggestions.map((item) => (
                     <button
@@ -191,9 +204,14 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
             <SouthAfricaLocationInput
               id="loadlink-marketplace-location"
               value={location}
+              onInputFocus={() => {
+                setActiveSearchField("location");
+                setShowSuggestions(false);
+              }}
               onChange={(value) => {
                 setLocation(value);
-                setShowSuggestions(true);
+                setActiveSearchField("location");
+                setShowSuggestions(false);
               }}
               darkMode={darkMode}
               placeholder="City, town or province (optional)"

@@ -56,6 +56,7 @@ export default function AccountSettingsPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [preferenceSaving, setPreferenceSaving] = useState<PreferenceKey | null>(null);
+  const [hasDriverProfile, setHasDriverProfile] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { void load(); }, []);
@@ -73,7 +74,11 @@ export default function AccountSettingsPage() {
     if (!isAuthenticatedUser(currentUser)) { window.location.href = loginHref("/account/settings"); return; }
     setUser(currentUser);
     const columns = "full_name,phone,whatsapp_number,company_name,job_title,city,province,bio,avatar_url,email_notifications,chat_notifications,listing_notifications,marketing_notifications,verification_status,subscription_plan";
-    const { data, error } = await supabase.from("profiles").select(columns).eq("id", currentUser.id).maybeSingle();
+    const [{ data, error }, { data: driverProfile }] = await Promise.all([
+      supabase.from("profiles").select(columns).eq("id", currentUser.id).maybeSingle(),
+      supabase.from("driver_profiles").select("id").eq("user_id", currentUser.id).maybeSingle(),
+    ]);
+    setHasDriverProfile(Boolean(driverProfile?.id));
     if (error && !isMissingSchemaError(error.message)) setMessage(friendlyError(error));
     const metadata = currentUser.user_metadata || {};
     const next: ProfileForm = {
@@ -218,7 +223,7 @@ export default function AccountSettingsPage() {
             <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="mt-5 h-11 w-full rounded-xl bg-[#f6b800] px-4 text-xs font-black uppercase tracking-wide text-black disabled:opacity-50">{uploading ? "Uploading…" : "Change profile picture"}</button>
             <div className={`mt-5 rounded-xl border p-4 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-black/[.02]"}`}><p className="text-[10px] font-black uppercase tracking-[.12em] opacity-55">Profile complete</p><p className="mt-1 text-2xl font-black">{completion}%</p>{completion < 100 ? <p className={`mt-2 text-xs leading-5 ${muted}`}>Add your location, contact details, role, summary and photo to complete your account.</p> : null}</div>
             <div className={`mt-5 border-t pt-5 ${darkMode ? "border-white/10" : "border-black/10"}`}><Info label="Email" value={user?.email || "Not available"} /><Info label="Verification" value={form.verification_status.replaceAll("_", " ")} /><Info label="Package" value={form.subscription_plan} /></div>
-            <div className="mt-5 grid gap-2"><Link href="/verify" className="flex h-11 items-center justify-center rounded-xl border border-[#f6b800] px-3 text-center text-xs font-black uppercase text-[#b88900]">Verification centre</Link><Link href="/account/packages" className="flex h-11 items-center justify-center rounded-xl border border-current/15 px-3 text-center text-xs font-black uppercase">Package settings</Link><Link href="/driver-profile" className="flex h-11 items-center justify-center rounded-xl border border-current/15 px-3 text-center text-xs font-black uppercase">Driver profile</Link></div>
+            <div className="mt-5 grid gap-2"><Link href="/verify" className="flex h-11 items-center justify-center rounded-xl border border-[#f6b800] px-3 text-center text-xs font-black uppercase text-[#b88900]">Verification centre</Link><Link href="/account/packages" className="flex h-11 items-center justify-center rounded-xl border border-current/15 px-3 text-center text-xs font-black uppercase">Package settings</Link>{hasDriverProfile ? <Link href="/driver-profile" className="flex h-11 items-center justify-center rounded-xl border border-current/15 px-3 text-center text-xs font-black uppercase">Driver profile</Link> : null}</div>
           </aside>
 
           <div className="grid gap-5">

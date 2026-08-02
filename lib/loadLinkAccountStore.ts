@@ -16,11 +16,17 @@ type DealerState = {
   is_public: boolean;
 };
 
+type DriverProfileState = {
+  id: string;
+  status: string;
+};
+
 type AccountSnapshot = {
   ready: boolean;
   user: User | null;
   profile: AccountProfile;
   dealer: DealerState | null;
+  driverProfile: DriverProfileState | null;
 };
 
 const EMPTY_PROFILE: AccountProfile = {
@@ -35,6 +41,7 @@ let snapshot: AccountSnapshot = {
   user: null,
   profile: EMPTY_PROFILE,
   dealer: null,
+  driverProfile: null,
 };
 let started = false;
 let loadSequence = 0;
@@ -48,7 +55,7 @@ function emit(next: AccountSnapshot) {
 async function applyUser(user: User | null) {
   const sequence = ++loadSequence;
   if (!user) {
-    emit({ ready: true, user: null, profile: EMPTY_PROFILE, dealer: null });
+    emit({ ready: true, user: null, profile: EMPTY_PROFILE, dealer: null, driverProfile: null });
     return;
   }
 
@@ -60,9 +67,9 @@ async function applyUser(user: User | null) {
     subscription_plan: "standard",
   };
 
-  emit({ ready: false, user, profile: fallbackProfile, dealer: null });
+  emit({ ready: false, user, profile: fallbackProfile, dealer: null, driverProfile: null });
 
-  const [profileResult, dealerResult] = await Promise.all([
+  const [profileResult, dealerResult, driverProfileResult] = await Promise.all([
     supabase
       .from("profiles")
       .select("full_name,avatar_url,role,subscription_plan")
@@ -73,11 +80,17 @@ async function applyUser(user: User | null) {
       .select("verification_status,is_public")
       .eq("owner_user_id", user.id)
       .maybeSingle(),
+    supabase
+      .from("driver_profiles")
+      .select("id,status")
+      .eq("user_id", user.id)
+      .maybeSingle(),
   ]);
 
   if (sequence !== loadSequence) return;
   const profile = profileResult.data as Partial<AccountProfile> | null;
   const dealer = dealerResult.data as DealerState | null;
+  const driverProfile = driverProfileResult.data as DriverProfileState | null;
 
   emit({
     ready: true,
@@ -89,6 +102,7 @@ async function applyUser(user: User | null) {
       subscription_plan: String(profile?.subscription_plan || "standard"),
     },
     dealer: dealerResult.error ? null : dealer,
+    driverProfile: driverProfileResult.error ? null : driverProfile,
   });
 }
 

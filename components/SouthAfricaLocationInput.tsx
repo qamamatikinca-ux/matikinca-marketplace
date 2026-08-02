@@ -20,6 +20,7 @@ type Props = {
   disabled?: boolean;
   allowAllSouthAfrica?: boolean;
   ariaLabel?: string;
+  onInputFocus?: () => void;
 };
 
 export default function SouthAfricaLocationInput({
@@ -34,6 +35,7 @@ export default function SouthAfricaLocationInput({
   disabled,
   allowAllSouthAfrica = true,
   ariaLabel,
+  onInputFocus,
 }: Props) {
   const generatedId = useId();
   const inputId = id || `loadlink-location-${generatedId.replace(/:/g, "")}`;
@@ -82,7 +84,10 @@ export default function SouthAfricaLocationInput({
         aria-activedescendant={open && activeIndex >= 0 ? `${inputId}-option-${activeIndex}` : undefined}
         placeholder={placeholder}
         className={className}
-        onFocus={() => setOpen(true)}
+        onFocus={() => {
+          onInputFocus?.();
+          setOpen(true);
+        }}
         onChange={(event) => {
           onChange(event.target.value, resolveSouthAfricanLocation(event.target.value));
           setOpen(true);
