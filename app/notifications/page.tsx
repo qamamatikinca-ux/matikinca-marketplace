@@ -142,13 +142,13 @@ export default function NotificationsPage() {
     window.dispatchEvent(new Event("loadlink-notifications-updated"));
   }
 
-  const page = darkMode ? "bg-[#07111f] text-white" : "bg-[#fffaf0] text-black";
-  const surface = darkMode ? "border-white/10 bg-[#0d1726]" : "border-black/10 bg-white";
+  const page = darkMode ? "bg-black text-white" : "bg-[#fffaf0] text-black";
+  const surface = darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white";
   const muted = darkMode ? "text-white/60" : "text-black/55";
 
   return (
     <main className={`min-h-screen ${page}`}>
-      <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-[#07111f]" : "border-black/10 bg-white"}`}>
+      <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
         <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4">
           <div className="flex items-center gap-2">
             <SiteMenu darkMode={darkMode} />
@@ -161,11 +161,10 @@ export default function NotificationsPage() {
 
       <section className="mx-auto max-w-5xl px-5 py-8 md:px-8 md:py-12">
         <div className={`overflow-hidden rounded-[28px] border ${surface}`}>
-          <div className={`border-b px-5 py-7 md:px-8 md:py-9 ${darkMode ? "border-white/10 bg-[#111d2e]" : "border-black/10 bg-[#fff7e2]"}`}>
+          <div className={`border-b px-5 py-7 md:px-8 md:py-9 ${darkMode ? "border-white/10 bg-[#111111]" : "border-black/10 bg-[#fff7e2]"}`}>
             <div className="flex flex-wrap items-end justify-between gap-5">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#b88900]">Account activity</p>
-                <div className="mt-2 flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-4xl font-black tracking-[-.055em] md:text-6xl">Notifications</h1>
                   <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[.1em] ${darkMode ? "border-white/15 bg-white/[.05] text-white/70" : "border-black/10 bg-white text-black/60"}`}>
                     {unread} unread
@@ -223,7 +222,7 @@ export default function NotificationsPage() {
                 ))}
               </div>
             ) : visibleNotifications.length === 0 ? (
-              <div className={`rounded-2xl border px-6 py-14 text-center ${darkMode ? "border-white/10 bg-[#111d2e]" : "border-black/10 bg-[#fffaf0]"}`}>
+              <div className={`rounded-2xl border px-6 py-14 text-center ${darkMode ? "border-white/10 bg-[#111111]" : "border-black/10 bg-[#fffaf0]"}`}>
                 <span className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${darkMode ? "bg-white/[.06] text-[#f6b800]" : "bg-[#f6b800]/20 text-[#8a6500]"}`}>
                   <BellIcon />
                 </span>
@@ -242,10 +241,10 @@ export default function NotificationsPage() {
                     <div className={`group flex gap-4 rounded-2xl border p-4 text-left transition md:p-5 ${
                       item.is_read
                         ? darkMode
-                          ? "border-white/10 bg-[#0d1726] hover:bg-[#111d2e]"
+                          ? "border-white/10 bg-[#0b0b0b] hover:bg-[#111111]"
                           : "border-black/10 bg-white hover:bg-[#fffaf0]"
                         : darkMode
-                          ? "border-[#f6b800]/35 bg-[#17243a]"
+                          ? "border-[#f6b800]/35 bg-[#17120a]"
                           : "border-[#f6b800]/50 bg-[#fff7df]"
                     }`}>
                       <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${item.is_read ? darkMode ? "bg-white/[.06] text-white/65" : "bg-black/[.04] text-black/55" : "bg-[#f6b800] text-black"}`}>

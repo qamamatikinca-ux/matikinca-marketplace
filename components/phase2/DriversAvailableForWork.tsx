@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { browserSupabase } from "@/lib/phase2/supabase";
 import styles from "./DriversAvailableForWork.module.css";
 import LoadLinkPagination from "@/components/LoadLinkPagination";
@@ -20,6 +20,8 @@ type Driver = {
   total_count?: number | string;
 };
 
+type SortOption = "recommended" | "experience" | "name" | "location" | "available";
+
 const PAGE_SIZE = 7;
 
 export default function DriversAvailableForWork({
@@ -31,19 +33,37 @@ export default function DriversAvailableForWork({
   fullPage?: boolean;
   showHero?: boolean;
 }) {
-  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [allDrivers, setAllDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [sort, setSort] = useState<SortOption>("recommended");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
+  const [filtersReady, setFiltersReady] = useState(!fullPage);
 
   useEffect(() => {
+    if (!fullPage) return;
+    const params = new URLSearchParams(window.location.search);
+    setSearchTerm(params.get("search") || "");
+    setCityFilter(params.get("city") || "");
+    setFiltersReady(true);
+  }, [fullPage]);
+
+  useEffect(() => {
+    if (!filtersReady) return;
     let active = true;
     setLoading(true);
-    const limit = fullPage ? PAGE_SIZE : 4;
-    const offset = fullPage ? (page - 1) * PAGE_SIZE : 0;
     setNotice("");
-    fetch(`/api/phase2/public-drivers?limit=${limit}&offset=${offset}`)
+
+    const params = new URLSearchParams({
+      limit: fullPage ? "50" : "4",
+      offset: "0",
+    });
+    if (fullPage && searchTerm) params.set("search", searchTerm);
+    if (fullPage && cityFilter) params.set("city", cityFilter);
+
+    fetch(`/api/phase2/public-drivers?${params.toString()}`, { cache: "no-store" })
       .then(async (response) => {
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(String(result.error || "Driver profiles could not be loaded."));
@@ -51,13 +71,12 @@ export default function DriversAvailableForWork({
       })
       .then((result) => {
         if (!active) return;
-        const rows = (result.drivers ?? []) as Driver[];
-        setDrivers(rows);
-        setTotal(Number(result.total || rows[0]?.total_count || rows.length));
+        setAllDrivers((result.drivers ?? []) as Driver[]);
+        setPage(1);
       })
       .catch((error) => {
         if (!active) return;
-        setDrivers([]);
+        setAllDrivers([]);
         setNotice(error instanceof Error ? error.message : "Driver profiles could not be loaded.");
       })
       .finally(() => {
@@ -66,7 +85,21 @@ export default function DriversAvailableForWork({
     return () => {
       active = false;
     };
-  }, [fullPage, page]);
+  }, [cityFilter, filtersReady, fullPage, searchTerm]);
+
+  const sortedDrivers = useMemo(() => {
+    const rows = [...allDrivers];
+    if (sort === "experience") return rows.sort((a, b) => Number(b.years_experience || 0) - Number(a.years_experience || 0));
+    if (sort === "name") return rows.sort((a, b) => String(a.full_name || "").localeCompare(String(b.full_name || "")));
+    if (sort === "location") return rows.sort((a, b) => `${a.province || ""} ${a.city || ""}`.localeCompare(`${b.province || ""} ${b.city || ""}`));
+    if (sort === "available") return rows.sort((a, b) => availabilityScore(b.availability) - availabilityScore(a.availability));
+    return rows;
+  }, [allDrivers, sort]);
+
+  const drivers = fullPage
+    ? sortedDrivers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    : sortedDrivers.slice(0, 4);
+  const pageCount = Math.max(1, Math.ceil(sortedDrivers.length / PAGE_SIZE));
 
   async function contact(id: string) {
     setNotice("");
@@ -94,7 +127,6 @@ export default function DriversAvailableForWork({
     else if (result.email) window.location.href = `mailto:${result.email}`;
   }
 
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const sectionClass = `${styles.section} ${darkMode ? styles.dark : styles.light} ${fullPage ? styles.fullPage : ""} ${showHero ? "" : styles.embedded}`;
 
   return (
@@ -108,28 +140,43 @@ export default function DriversAvailableForWork({
             <p className={styles.subtitle}>Approved drivers can present their licence details, experience, routes and availability directly to logistics companies and truck owners.</p>
             <div className={styles.actions}>
               <Link data-marketplace-action className={styles.primary} href="/driver-profile">Create driver profile</Link>
-              {!fullPage ? <Link className={styles.secondary} href="/drivers">View all drivers</Link> : <Link className={styles.secondary} href="/account/settings">Profile settings</Link>}
+              {fullPage ? <Link className={styles.secondary} href="/account/settings">Profile settings</Link> : null}
             </div>
           </div>
         </div>
       ) : null}
 
       <div className={styles.content}>
-        {!showHero ? (
-          <div className={styles.embeddedIntro}>
+        <div className={styles.resultsHeader}>
+          {!showHero ? (
             <div>
-              <p className={styles.embeddedEyebrow}>Available drivers</p>
               <h2 className={styles.embeddedHeading}>Approved drivers ready for work</h2>
               <p className={styles.embeddedCopy}>Browse approved profiles and contact a suitable driver through LoadLink.</p>
             </div>
-            <Link className={styles.viewAll} href="/drivers">View all drivers</Link>
-          </div>
-        ) : null}
+          ) : (
+            <div>
+              <h2 className={styles.resultsTitle}>Available drivers</h2>
+              {(searchTerm || cityFilter) ? <p className={styles.resultsCopy}>Showing matches for {[searchTerm, cityFilter].filter(Boolean).join(" · ")}.</p> : null}
+            </div>
+          )}
+
+          <label className={styles.sortControl}>
+            <span>Sort</span>
+            <select value={sort} onChange={(event) => { setSort(event.target.value as SortOption); setPage(1); }}>
+              <option value="recommended">Recommended</option>
+              <option value="available">Available first</option>
+              <option value="experience">Most experience</option>
+              <option value="name">Name A–Z</option>
+              <option value="location">Location A–Z</option>
+            </select>
+          </label>
+        </div>
+
         {notice ? <p role="alert" className={styles.empty}>{notice}</p> : null}
         {loading ? (
           <div className={styles.empty}>Loading approved drivers…</div>
         ) : drivers.length === 0 ? (
-          <div className={styles.empty}>No approved driver profiles are available yet.</div>
+          <div className={styles.empty}>No approved driver profiles match this search yet.</div>
         ) : (
           <div className={styles.grid}>
             {drivers.map((driver) => (
@@ -167,4 +214,12 @@ export default function DriversAvailableForWork({
 
 function initials(name: string) {
   return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0] || "").join("").toUpperCase() || "LL";
+}
+
+function availabilityScore(value: string) {
+  const clean = String(value || "").toLowerCase();
+  if (clean.includes("immediate") || clean.includes("available now")) return 3;
+  if (clean.includes("available")) return 2;
+  if (clean.includes("notice")) return 1;
+  return 0;
 }

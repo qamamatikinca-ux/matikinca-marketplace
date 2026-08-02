@@ -11,11 +11,11 @@ import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 export default function DriverPortalPage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
-  const page = darkMode ? "bg-[#07111f] text-white" : "bg-[#fffaf0] text-black";
+  const page = darkMode ? "bg-black text-white" : "bg-[#fffaf0] text-black";
 
   return (
     <main className={`min-h-screen ${page}`}>
-      <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-[#07111f]" : "border-black/10 bg-white"}`}>
+      <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
         <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4">
           <div className="flex items-center gap-2">
             <SiteMenu darkMode={darkMode} />
@@ -51,7 +51,7 @@ export default function DriverPortalPage() {
             </Link>
             <RequireAuthLink
               href="/driver-profile"
-              className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-[#07111f]/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]"
+              className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]"
             >
               Create driver profile
             </RequireAuthLink>

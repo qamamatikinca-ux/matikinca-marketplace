@@ -166,7 +166,7 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
                   {item.image ? <img src={item.image} alt={item.title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center bg-[#f6b800] text-2xl font-black text-black">LL</div>}
                 </div>
                 <div className="p-4">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#b88900]">{item.category}</p>
+                  <p className={`text-[10px] font-black uppercase tracking-[0.18em] ${darkMode ? "text-white/45" : "text-black/45"}`}>{item.category}</p>
                   <h3 className="mt-2 text-lg font-black">{item.title}</h3>
                   <p className={`mt-2 text-xs font-bold ${darkMode ? "text-white/50" : "text-black/50"}`}>{item.meta || item.type}</p>
                 </div>
