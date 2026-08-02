@@ -1,0 +1,68 @@
+name: Apply LoadLink Notifications Import Fix
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Replace the broken import
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          FILE="app/api/admin/notifications/route.ts"
+
+          if [ ! -f "$FILE" ]; then
+            echo "::error::$FILE does not exist in the repository root."
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("app/api/admin/notifications/route.ts")
+          text = path.read_text(encoding="utf-8")
+
+          wrong = 'import { safeInternalHref } from "@/lib/marketplace/navigation";'
+          correct = 'import { safeInternalHref } from "@/lib/safeNavigation";'
+
+          if wrong in text:
+              path.write_text(text.replace(wrong, correct), encoding="utf-8")
+              print("The broken import was replaced.")
+          elif correct in text:
+              print("The import is already correct.")
+          else:
+              raise SystemExit("The expected import line was not found.")
+          PY
+
+          grep -n 'safeInternalHref' "$FILE"
+
+      - name: Commit the fix
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "LoadLink Fix"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add app/api/admin/notifications/route.ts
+
+          if git diff --cached --quiet; then
+            echo "No commit was needed because the file is already correct."
+            exit 0
+          fi
+
+          git commit -m "Fix notifications import path"
+          git push origin HEAD:main
