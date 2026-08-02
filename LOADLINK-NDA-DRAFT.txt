@@ -1,0 +1,64 @@
+LOADLINK CONFIDENTIALITY AND RESTRICTED-USE AGREEMENT
+
+Effective date: 2 August 2026
+Operator contact: loadlinksouthafrica@gmail.com
+
+This Confidentiality and Restricted-Use Agreement (the “Agreement”) is entered into electronically between LoadLink, its owner or authorised operator (“LoadLink”), and the person accepting it (“User”). By selecting “Accept and enter LoadLink”, typing the User’s full name and continuing into the platform, the User confirms that the User has read, understood and agreed to be legally bound by this Agreement.
+
+1. PURPOSE
+LoadLink operates a logistics marketplace and related digital services that connect truck owners, mobile-unit owners, drivers, dealerships, businesses and other logistics participants. The User may receive access to information, tools, listings, contacts, documents, workflows, software features and business processes that LoadLink makes available only for legitimate use of the platform. This Agreement limits how that information and access may be used.
+
+2. CONFIDENTIAL INFORMATION
+“Confidential Information” means non-public information made available through or because of LoadLink, including private listing details, contact information, identity or verification information, documents, pricing discussions, rates, routes, cargo information, job or contract details, dealership information, user communications, unpublished features, security controls, administrative or Control Centre information, internal procedures, business plans, analytics, source code, database structures, algorithms, designs, workflows and technical methods.
+
+Confidential Information does not include information that the User can prove: (a) was lawfully public without breach of this Agreement; (b) was already lawfully known to the User without a duty of confidentiality; (c) was independently developed without using LoadLink Confidential Information; or (d) was lawfully received from a third party who was permitted to disclose it.
+
+3. PERMITTED USE
+The User may use LoadLink and information obtained through LoadLink only for genuine logistics, employment, vehicle, dealership, contracting, communication or marketplace activity that is authorised by the platform. The User must use only the minimum information reasonably necessary for that purpose and must protect all non-public information from unauthorised access or disclosure.
+
+4. PROHIBITED COPYING, REPLICATION AND COMPETITIVE USE
+Except where LoadLink gives prior written permission, the User may not:
+(a) copy, reproduce, republish, distribute, sell, license or commercially exploit LoadLink content or data;
+(b) scrape, crawl, harvest, index, download in bulk, mirror or systematically capture listings, profiles, contact details, prices, routes, images, documents or other platform information;
+(c) use LoadLink information, designs, workflows, software, database structures, business methods or marketplace intelligence to create, train, improve, operate or support a competing or substantially similar website, application, database, service or private marketplace;
+(d) reverse engineer, decompile, disassemble, probe, test or attempt to discover source code, private APIs, security controls or non-public technical methods, except to the limited extent that applicable law expressly prevents such a restriction;
+(e) remove ownership notices, watermarks, branding or access controls;
+(f) sell, exchange or disclose user contact information or use it for unsolicited marketing, spam, fraud, profiling or any unrelated purpose;
+(g) share account credentials, permit unauthorised account use, impersonate another person or use false information to obtain access; or
+(h) use screenshots, recordings or extracts to disclose non-public information or to build a competing product. Ordinary screenshots kept only as reasonable evidence of a genuine transaction or support complaint are not prohibited.
+
+5. USER AND THIRD-PARTY INFORMATION
+The User must treat personal information, documents, messages and commercial information belonging to other LoadLink users as confidential. The User may contact another user only for the purpose connected to the relevant listing, profile, job, contract or transaction. The User must not retain such information longer than reasonably necessary or disclose it to anyone who does not need it for that authorised purpose.
+
+6. INTELLECTUAL PROPERTY AND LIMITED ACCESS LICENCE
+LoadLink and its licensors retain all rights in the platform, branding, software, layouts, designs, databases, original content and business methods. Acceptance gives the User a limited, revocable, non-exclusive and non-transferable permission to use the platform for its intended purpose. No ownership, source-code right, database right, trademark right or right to reproduce LoadLink is transferred to the User.
+
+7. SECURITY, ACCOUNT RESTRICTIONS AND NO BYPASS
+Access to LoadLink is conditional and may be suspended or blocked where LoadLink reasonably believes there has been fraud, abuse, unlawful activity, a security risk, a breach of this Agreement or another serious platform violation. A suspended or blocked User may not bypass the restriction by creating or using another account, changing an email address, using false identity details, sharing credentials, clearing browser data, using another device or employing a technical workaround. LoadLink may link a restriction to account and one-way identity records for security and enforcement purposes, subject to applicable law.
+
+8. REQUIRED DISCLOSURE
+Where the User is legally compelled to disclose Confidential Information, the User must, to the extent legally permitted, promptly notify LoadLink and disclose only the minimum information legally required. Nothing in this Agreement prevents a lawful report to a regulator, law-enforcement authority or court.
+
+9. PRIVACY AND ACCEPTANCE RECORD
+LoadLink may record the User’s account identifier, name, email address, agreement version, acceptance time, agreement hash and security audit data associated with acceptance or access denial. This information is used to prove acceptance, administer access, prevent abuse and protect the platform. Personal information must be processed in accordance with applicable South African data-protection law and LoadLink’s privacy notices.
+
+10. DURATION
+The User’s access obligations apply while the User has access to LoadLink. The confidentiality and restricted-use obligations continue for three years after the User’s last access, except that obligations relating to trade secrets, source code, security information, personal information and information that remains lawfully confidential continue for as long as the information remains protected by law or retains its confidential character.
+
+11. BREACH AND REMEDIES
+A breach may cause harm that cannot be adequately repaired by money alone. Subject to applicable law, LoadLink may suspend access, preserve evidence, seek an interdict or other urgent relief, claim proven damages and recover legal costs where a court permits. This clause does not create a penalty or remove any right or remedy available under law.
+
+12. ELECTRONIC AGREEMENT
+The User agrees that the electronic acceptance process, including the typed name, account record, timestamp and recorded agreement version, is intended to identify the User and show the User’s approval of this Agreement. Electronic records may be retained and used as evidence to the extent permitted by South African law.
+
+13. CHANGES AND RE-ACCEPTANCE
+LoadLink may publish a revised agreement where reasonably necessary for legal, security or platform changes. A material new version will require the User to review and accept it before access is restored. Continued access is not permitted until the current required version has been accepted.
+
+14. GOVERNING LAW AND JURISDICTION
+This Agreement is governed by the laws of the Republic of South Africa. The parties submit to the jurisdiction of the competent South African courts, including a court with jurisdiction in Gauteng, subject to any mandatory consumer or other legal rights that cannot lawfully be excluded.
+
+15. GENERAL
+If a provision is invalid or unenforceable, it must be limited or severed only to the minimum extent necessary, and the remaining provisions continue in effect. A failure to enforce a provision immediately is not a waiver. This Agreement does not exclude liability or rights that applicable law does not allow to be excluded. This Agreement, together with any applicable privacy policy and platform terms, records the agreement concerning confidentiality and restricted use of LoadLink.
+
+ACKNOWLEDGEMENT
+By accepting, the User confirms that the User is authorised to enter this Agreement, has had an opportunity to read it, understands that declining prevents access to LoadLink, and agrees not to copy, replicate, scrape, misuse or disclose protected LoadLink information.

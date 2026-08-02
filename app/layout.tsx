@@ -8,8 +8,9 @@ import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";
 import AuthBootstrap from "@/components/AuthBootstrap";
 import NotificationCenter from "@/components/NotificationCenter";
 import ThemeCoordinator from "@/components/ThemeCoordinator";
-
+import LoadLinkAccessBoundary from "@/components/LoadLinkAccessBoundary";
 import MarketplaceRestrictionGuard from "@/components/phase2/MarketplaceRestrictionGuard";
+
 export const metadata: Metadata = {
   title: "LoadLink",
   description: "Logistics marketplace",
@@ -23,14 +24,16 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body>
         <ThemeCoordinator />
-        <MarketplaceRestrictionGuard />
-        <Suspense fallback={null}><GlobalLoading /></Suspense>
-        <SwipeDotsEnhancer />
-        <AuthBootstrap />
-        <NotificationCenter />
-        <ChatLauncher />
-        <NetworkRecovery />
-        {children}
+        <LoadLinkAccessBoundary>
+          <MarketplaceRestrictionGuard />
+          <Suspense fallback={null}><GlobalLoading /></Suspense>
+          <SwipeDotsEnhancer />
+          <AuthBootstrap />
+          <NotificationCenter />
+          <ChatLauncher />
+          <NetworkRecovery />
+          {children}
+        </LoadLinkAccessBoundary>
       </body>
     </html>
   );

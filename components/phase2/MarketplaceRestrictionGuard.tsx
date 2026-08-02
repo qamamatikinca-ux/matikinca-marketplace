@@ -21,20 +21,25 @@ export default function MarketplaceRestrictionGuard(){
       const persisted=sessionStorage.getItem('loadlink-marketplace-restricted')==='1';
       if(!token && persisted){ document.documentElement.dataset.loadlinkActionsHidden='true'; hide(); }
       if(!token) return;
-      const response=await fetch('/api/phase2/capabilities',{headers:{Authorization:`Bearer ${token}`}});
+      const response=await fetch('/api/phase2/capabilities',{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
       if(!response.ok) return;
       const capabilities=await response.json();
       if(cancelled) return;
-      if(capabilities.hideActions || !capabilities.canLogin){
+      const accountRestricted=capabilities.status==='blocked'||capabilities.status==='suspended';
+      if(accountRestricted){
         sessionStorage.setItem('loadlink-marketplace-restricted','1');
         document.documentElement.dataset.loadlinkActionsHidden='true';
         hide();
         observer=new MutationObserver(hide); observer.observe(document.body,{childList:true,subtree:true});
-        await supabase.auth.signOut();
-      } else sessionStorage.removeItem('loadlink-marketplace-restricted');
+      } else {
+        sessionStorage.removeItem('loadlink-marketplace-restricted');
+        delete document.documentElement.dataset.loadlinkActionsHidden;
+      }
     };
     run().catch(()=>undefined);
-    return()=>{cancelled=true;observer?.disconnect();};
+    const sync=()=>run().catch(()=>undefined);
+    window.addEventListener('loadlink-access-state-changed',sync);
+    return()=>{cancelled=true;observer?.disconnect();window.removeEventListener('loadlink-access-state-changed',sync);};
   },[]);
   return null;
 }
