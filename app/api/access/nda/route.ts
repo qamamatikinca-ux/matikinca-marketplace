@@ -65,10 +65,13 @@ export async function POST(request: Request) {
 
     if (action !== "accept") return NextResponse.json({ error: "Unsupported access action." }, { status: 400 });
 
-    const acceptedName = String(payload?.acceptedName || "").trim();
-    if (acceptedName.length < 2 || acceptedName.length > 160) {
-      return NextResponse.json({ error: "Enter your full legal name before accepting." }, { status: 400 });
-    }
+    const metadataName = String(
+      userData.user.user_metadata?.full_name ||
+      userData.user.user_metadata?.name ||
+      "",
+    ).trim();
+    const emailName = String(userData.user.email || "").split("@")[0]?.trim() || "";
+    const acceptedName = String(payload?.acceptedName || metadataName || emailName || "LoadLink user").trim().slice(0, 160);
 
     const userAgent = request.headers.get("user-agent") || "";
     const ip = requestIp(request);
