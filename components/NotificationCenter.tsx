@@ -121,6 +121,7 @@ export default function NotificationCenter() {
   async function markRead(id: string) {
     setNotifications((current) => current.map((item) => item.id === id ? { ...item, is_read: true } : item));
     await supabase.from("user_notifications").update({ is_read: true, read_at: new Date().toISOString() }).eq("id", id);
+    window.dispatchEvent(new Event("loadlink-notifications-updated"));
   }
 
   async function markAllRead() {
@@ -133,6 +134,7 @@ export default function NotificationCenter() {
     setOpen(false);
     setShowLauncher(false);
     await supabase.from("user_notifications").update({ is_read: true, read_at: new Date().toISOString() }).in("id", ids);
+    window.dispatchEvent(new Event("loadlink-notifications-updated"));
   }
 
   if (

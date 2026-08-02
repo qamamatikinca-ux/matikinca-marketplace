@@ -16,6 +16,7 @@ const MarketplaceDiscovery = lazy(() => import("@/components/MarketplaceDiscover
 const LogisticsNews = lazy(() => import("@/components/LogisticsNews"));
 const AuthStatusButton = lazy(() => import("@/components/AuthStatusButton"));
 const SiteMenu = lazy(() => import("@/components/SiteMenu"));
+const HomepageMarketplaceSections = lazy(() => import("@/components/HomepageMarketplaceSections"));
 type PortalImage = {
   src: string;
   position: string;
@@ -62,9 +63,9 @@ const portalCards: PortalCard[] = [
   },
   {
     title: "Driver Profile",
-    buttonText: "Create or update your driver profile",
+    buttonText: "View drivers or create your profile",
     images: [{ src: "/images/driver-profile-hero.jpg", position: "center center" }],
-    href: "/driver-profile",
+    href: "/driver-portal",
     type: "Driver profile portal",
     category: "Driver",
     packageType: "basic",
@@ -252,6 +253,12 @@ function HomeExperience() {
           })}
         </div>
       </section>
+
+      <LoadLinkBoundary name="homepage marketplace activity">
+        <Suspense fallback={null}>
+          <HomepageMarketplaceSections darkMode={darkMode} />
+        </Suspense>
+      </LoadLinkBoundary>
 
       <LoadLinkBoundary name="recent activity"><Suspense fallback={null}><RecentActivityPanel darkMode={darkMode} /></Suspense></LoadLinkBoundary>
 

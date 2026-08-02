@@ -3,12 +3,41 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-function getSupabaseConfig() {
-  const url =
-    process.env.SUPABASE_URL ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    "";
+const PUBLIC_FIELDS = [
+  "id",
+  "title",
+  "city",
+  "vehicle_group",
+  "rate",
+  "posted_by",
+  "contact_number",
+  "whatsapp_number",
+  "poster_photo",
+  "description",
+  "photos",
+  "sponsored",
+  "package_type",
+  "created_at",
+  "view_count",
+  "last_viewed_at",
+  "user_id",
+  "listing_kind",
+  "status",
+  "moderation_status",
+  "expires_at",
+  "stock_status",
+  "dealership_id",
+].join(",");
 
+
+function toPublicRow(row: Record<string, unknown>) {
+  return Object.fromEntries(
+    PUBLIC_FIELDS.split(",").map((field) => [field, row[field] ?? null]),
+  );
+}
+
+function getSupabaseConfig() {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const key =
     process.env.SUPABASE_ANON_KEY ||
     process.env.SUPABASE_PUBLISHABLE_KEY ||
@@ -42,15 +71,12 @@ export async function GET() {
     );
   }
 
-  // Read the real table first. The user already confirmed that public SELECT
-  // can see seven rows in this project.
   let response = await supabaseRequest(
     url,
     key,
-    "job_listings?select=*&order=created_at.desc.nullslast",
+    `job_listings?select=${encodeURIComponent(PUBLIC_FIELDS)}&order=created_at.desc.nullslast`,
   );
 
-  // Fall back to the public RPC installed by the LoadLink repair SQL.
   if (!response.ok) {
     response = await supabaseRequest(url, key, "rpc/get_public_job_listings", {
       method: "POST",
@@ -69,14 +95,25 @@ export async function GET() {
     );
   }
 
-  const rows = await response.json();
+  const rows = (await response.json()) as unknown;
+  const now = Date.now();
   const visibleRows = Array.isArray(rows)
-    ? rows.filter((row) => {
-        const active = !row?.status || row.status === "active";
-        const approved = row?.moderation_status === undefined || row.moderation_status === "approved";
-        return active && approved;
-      })
+    ? (rows as Array<{
+        status?: string | null;
+        moderation_status?: string | null;
+        expires_at?: string | null;
+        stock_status?: string | null;
+        [key: string]: unknown;
+      }>).filter((row) => {
+        const active = !row.status || row.status === "active";
+        const approved = row.moderation_status === undefined || row.moderation_status === "approved";
+        const expiry = row.expires_at ? new Date(row.expires_at).getTime() : 0;
+        const current = !expiry || !Number.isFinite(expiry) || expiry > now;
+        const inStock = !row.stock_status || row.stock_status !== "removed";
+        return active && approved && current && inStock;
+      }).map(toPublicRow)
     : [];
+
   return NextResponse.json(
     { rows: visibleRows },
     { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } },
