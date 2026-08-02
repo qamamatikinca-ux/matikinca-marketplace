@@ -1,6 +1,7 @@
 "use client";
 
 import RequireAuthLink from "@/components/RequireAuthLink";
+import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
@@ -21,22 +22,6 @@ import {
   scopeLabel,
   searchScopes,
 } from "@/lib/loadlinkSearch";
-import { normaliseSearch } from "@/lib/smartSearch";
-
-const locationSuggestions = [
-  "Gauteng",
-  "Johannesburg",
-  "Pretoria",
-  "Centurion",
-  "Durban",
-  "Cape Town",
-  "Gqeberha",
-  "East London",
-  "Bloemfontein",
-  "Polokwane",
-  "Mbombela",
-  "Rustenburg",
-];
 
 export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }) {
   const router = useRouter();
@@ -44,13 +29,11 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
   const [location, setLocation] = useState("");
   const [scope, setScope] = useState<SearchScope>("all");
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [showLocations, setShowLocations] = useState(false);
   const [fabOpen, setFabOpen] = useState(false);
   const [liveListings, setLiveListings] = useState<ListingSearchRow[]>([]);
   const [liveDrivers, setLiveDrivers] = useState<DriverSearchRow[]>([]);
   const [liveDealers, setLiveDealers] = useState<DealerSearchRow[]>([]);
   const searchWrapperRef = useRef<HTMLDivElement | null>(null);
-  const locationWrapperRef = useRef<HTMLDivElement | null>(null);
   const fabWrapperRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -92,7 +75,6 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
     function closeMenus(event: MouseEvent | TouchEvent) {
       const target = event.target as Node;
       if (!searchWrapperRef.current?.contains(target)) setShowSuggestions(false);
-      if (!locationWrapperRef.current?.contains(target)) setShowLocations(false);
       if (!fabWrapperRef.current?.contains(target)) setFabOpen(false);
     }
 
@@ -125,15 +107,9 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
     return query.trim() || location.trim() ? [...ranked, browse].slice(0, 12) : [browse, ...ranked.slice(0, 7)];
   }, [allSearchItems, location, query, scope]);
 
-  const filteredLocations = useMemo(() => {
-    const clean = normaliseSearch(location);
-    if (!clean) return locationSuggestions;
-    return locationSuggestions.filter((item) => normaliseSearch(item).includes(clean)).slice(0, 8);
-  }, [location]);
 
   function launchSearch(destination?: string) {
     setShowSuggestions(false);
-    setShowLocations(false);
     router.push(destination || routeForScope(scope, query, location));
   }
 
@@ -212,43 +188,18 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
               ) : null}
             </div>
 
-            <div ref={locationWrapperRef} className="relative">
-              <label htmlFor="loadlink-marketplace-location" className="sr-only">Optional city or province</label>
-              <input
-                id="loadlink-marketplace-location"
-                value={location}
-                onFocus={() => setShowLocations(true)}
-                onChange={(event) => {
-                  setLocation(event.target.value);
-                  setShowLocations(true);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") launchSearch();
-                  if (event.key === "Escape") setShowLocations(false);
-                }}
-                autoComplete="address-level2"
-                placeholder="City or province (optional)"
-                className={`h-14 w-full rounded-2xl border px-4 text-sm font-bold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-black text-white placeholder:text-white/35" : "border-black/15 bg-white text-black placeholder:text-black/40"}`}
-              />
-              {showLocations ? (
-                <div className={`absolute inset-x-0 top-[60px] z-30 max-h-72 overflow-y-auto rounded-2xl border shadow-2xl ${darkMode ? "border-white/15 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
-                  {filteredLocations.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => {
-                        setLocation(item);
-                        setShowLocations(false);
-                        setShowSuggestions(true);
-                      }}
-                      className={`block w-full border-b px-4 py-3 text-left text-sm font-black last:border-b-0 ${darkMode ? "border-white/10 hover:bg-white/5" : "border-black/5 hover:bg-[#fff6dc]"}`}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+            <SouthAfricaLocationInput
+              id="loadlink-marketplace-location"
+              value={location}
+              onChange={(value) => {
+                setLocation(value);
+                setShowSuggestions(true);
+              }}
+              darkMode={darkMode}
+              placeholder="City, town or province (optional)"
+              ariaLabel="Optional South African city, town or province"
+              className={`h-14 w-full rounded-2xl border px-4 text-sm font-bold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-black text-white placeholder:text-white/35" : "border-black/15 bg-white text-black placeholder:text-black/40"}`}
+            />
           </div>
         </div>
       </section>

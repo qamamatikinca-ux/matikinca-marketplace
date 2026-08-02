@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import HomeLogoLink from "@/components/HomeLogoLink";
+import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
 import SiteMenu from "@/components/SiteMenu";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
@@ -112,7 +113,7 @@ export default function SearchResultsClient() {
             {searchScopes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
           <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Search everything on LoadLink" className={`h-14 rounded-xl border px-4 text-sm font-bold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-black" : "border-black/15 bg-white"}`} />
-          <input value={place} onChange={(event) => setPlace(event.target.value)} placeholder="City or province" className={`h-14 rounded-xl border px-4 text-sm font-bold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-black" : "border-black/15 bg-white"}`} />
+          <SouthAfricaLocationInput value={place} onChange={setPlace} darkMode={darkMode} placeholder="City, town or province" ariaLabel="Filter all LoadLink results by South African location" className={`h-14 w-full rounded-xl border px-4 text-sm font-bold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-black text-white" : "border-black/15 bg-white text-black"}`} />
           <button type="submit" className="h-14 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase tracking-wide text-black">Search</button>
         </form>
 

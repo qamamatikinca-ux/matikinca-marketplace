@@ -5,6 +5,7 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import HomeLogoLink from "@/components/HomeLogoLink";
+import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import { formatListingRate } from "@/lib/formatCurrency";
@@ -19,14 +20,6 @@ import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 type VehicleGroup = "Catering / Event" | "Trucks / Trailers" | "Farming / Mining";
 type ListingMode = "job" | "asset" | "contract";
 
-const cityOptions = [
-  "Johannesburg", "Sandton", "Midrand", "Pretoria", "Centurion", "Soweto", "Tembisa", "Kempton Park",
-  "Boksburg", "Benoni", "Germiston", "Alberton", "Randburg", "Roodepoort", "Krugersdorp", "Vereeniging",
-  "Vanderbijlpark", "Springs", "Durban", "Pinetown", "Umhlanga", "Pietermaritzburg", "Richards Bay",
-  "Cape Town", "Bellville", "Stellenbosch", "Paarl", "George", "Gqeberha", "East London", "Mthatha",
-  "Bloemfontein", "Welkom", "Kimberley", "Upington", "Rustenburg", "Klerksdorp", "Polokwane", "Mbombela",
-  "Emalahleni", "Middelburg", "Secunda",
-];
 
 const groups: VehicleGroup[] = ["Catering / Event", "Trucks / Trailers", "Farming / Mining"];
 
@@ -376,9 +369,7 @@ export default function ListJobPage() {
                 <input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder={listingMode === "asset" ? "Mobile fridge available for hire" : listingMode === "contract" ? "Weekly construction material deliveries" : "Side tipper needed for mine route"} className={inputClass} />
               </FieldLabel>
               <FieldLabel label="Location" darkMode={darkMode}>
-                <select value={city} onChange={(e) => setCity(e.target.value)} className={inputClass}>
-                  {cityOptions.map((item) => <option key={item} value={item}>{item}</option>)}
-                </select>
+                <SouthAfricaLocationInput value={city} onChange={setCity} darkMode={darkMode} placeholder="City, town or province" ariaLabel="Listing location" className={inputClass} required />
               </FieldLabel>
               {listingMode === "job" ? (
                 <FieldLabel label="Vehicle or mobile unit needed" darkMode={darkMode}>

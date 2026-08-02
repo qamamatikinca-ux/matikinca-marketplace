@@ -5,6 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 import { browserSupabase } from "@/lib/phase2/supabase";
 import styles from "./DriversAvailableForWork.module.css";
 import LoadLinkPagination from "@/components/LoadLinkPagination";
+import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
+import { flexibleMatch } from "@/lib/smartSearch";
+import { matchesSouthAfricanLocation } from "@/lib/southAfricaLocations";
 
 type Driver = {
   id: string;
@@ -60,8 +63,6 @@ export default function DriversAvailableForWork({
       limit: fullPage ? "50" : "4",
       offset: "0",
     });
-    if (fullPage && searchTerm) params.set("search", searchTerm);
-    if (fullPage && cityFilter) params.set("city", cityFilter);
 
     fetch(`/api/phase2/public-drivers?${params.toString()}`, { cache: "no-store" })
       .then(async (response) => {
@@ -85,16 +86,21 @@ export default function DriversAvailableForWork({
     return () => {
       active = false;
     };
-  }, [cityFilter, filtersReady, fullPage, searchTerm]);
+  }, [filtersReady, fullPage]);
+
+  const filteredDrivers = useMemo(() => allDrivers.filter((driver) => {
+    const searchable = `${driver.full_name || ""} ${driver.headline || ""} ${driver.city || ""} ${driver.province || ""} ${driver.licence_code || ""} ${(driver.vehicle_types || []).join(" ")} ${driver.years_experience || ""} ${driver.availability || ""}`;
+    return (!searchTerm.trim() || flexibleMatch(searchable, searchTerm)) && matchesSouthAfricanLocation(driver.city || driver.province, cityFilter);
+  }), [allDrivers, cityFilter, searchTerm]);
 
   const sortedDrivers = useMemo(() => {
-    const rows = [...allDrivers];
+    const rows = [...filteredDrivers];
     if (sort === "experience") return rows.sort((a, b) => Number(b.years_experience || 0) - Number(a.years_experience || 0));
     if (sort === "name") return rows.sort((a, b) => String(a.full_name || "").localeCompare(String(b.full_name || "")));
     if (sort === "location") return rows.sort((a, b) => `${a.province || ""} ${a.city || ""}`.localeCompare(`${b.province || ""} ${b.city || ""}`));
     if (sort === "available") return rows.sort((a, b) => availabilityScore(b.availability) - availabilityScore(a.availability));
     return rows;
-  }, [allDrivers, sort]);
+  }, [filteredDrivers, sort]);
 
   const drivers = fullPage
     ? sortedDrivers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -147,6 +153,19 @@ export default function DriversAvailableForWork({
       ) : null}
 
       <div className={styles.content}>
+        {fullPage ? (
+          <div className={styles.filterBar}>
+            <label className={styles.filterField}>
+              <span>Search drivers</span>
+              <input value={searchTerm} onChange={(event) => { setSearchTerm(event.target.value); setPage(1); }} placeholder="Name, licence, vehicle experience" />
+            </label>
+            <label className={styles.filterField}>
+              <span>Location</span>
+              <SouthAfricaLocationInput value={cityFilter} onChange={(value) => { setCityFilter(value); setPage(1); }} darkMode={darkMode} placeholder="City, town or province" ariaLabel="Filter drivers by South African location" className={styles.locationInput} />
+            </label>
+          </div>
+        ) : null}
+
         <div className={styles.resultsHeader}>
           {!showHero ? (
             <div>

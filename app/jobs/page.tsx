@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import RecentActivityPanel from "@/components/RecentActivityPanel";
 import { VerifiedBadge } from "@/components/MarketplaceDiscovery";
+import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { formatListingRate } from "@/lib/formatCurrency";
 import AuthStatusButton from "@/components/AuthStatusButton";
@@ -16,6 +17,7 @@ import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import { isAuthenticatedUser } from "@/lib/auth";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 import { detectIntent, detectRegion, flexibleMatch, normaliseSearch, searchTokens } from "@/lib/smartSearch";
+import { matchesSouthAfricanLocation, SOUTH_AFRICA_LOCATIONS } from "@/lib/southAfricaLocations";
 
 type VehicleGroup = "Catering / Event" | "Trucks / Trailers" | "Farming / Mining";
 type QuickCategory = "truck" | "event-catering" | "logistics" | "mining-farming" | "";
@@ -65,24 +67,6 @@ type JobRow = {
   user_id?: string | null;
 };
 
-const cityOptions = [
-  "Johannesburg", "Sandton", "Midrand", "Pretoria", "Centurion", "Soweto", "Tembisa", "Kempton Park",
-  "Boksburg", "Benoni", "Germiston", "Alberton", "Randburg", "Roodepoort", "Krugersdorp", "Vereeniging",
-  "Vanderbijlpark", "Springs", "Brakpan", "Nigel", "Heidelberg", "Meyerton", "Carletonville", "Westonaria",
-  "Bronkhorstspruit", "Cullinan", "Durban", "Pinetown", "Umhlanga", "Ballito", "Pietermaritzburg",
-  "Richards Bay", "Empangeni", "Newcastle", "Ladysmith", "Dundee", "Vryheid", "Amanzimtoti", "Tongaat",
-  "KwaDukuza", "Stanger", "Port Shepstone", "Margate", "Chatsworth", "Umlazi", "Cape Town", "Bellville",
-  "Stellenbosch", "Paarl", "Worcester", "George", "Mossel Bay", "Knysna", "Hermanus", "Somerset West",
-  "Atlantis", "Malmesbury", "Robertson", "Langebaan", "Saldanha", "Vredenburg", "Mitchells Plain",
-  "Khayelitsha", "Caledon", "Beaufort West", "Port Elizabeth", "Gqeberha", "East London", "Mthatha",
-  "Queenstown", "Komani", "Uitenhage", "Kariega", "Graaff-Reinet", "Butterworth", "King William's Town",
-  "Qonce", "Mount Frere", "Bloemfontein", "Welkom", "Bethlehem", "Sasolburg", "Parys", "Phuthaditjhaba",
-  "Kroonstad", "Harrismith", "Kimberley", "Upington", "Kuruman", "Springbok", "De Aar", "Rustenburg",
-  "Klerksdorp", "Potchefstroom", "Mahikeng", "Brits", "Lichtenburg", "Polokwane", "Tzaneen",
-  "Thohoyandou", "Lephalale", "Louis Trichardt", "Mokopane", "Phalaborwa", "Musina", "Nelspruit",
-  "Mbombela", "Witbank", "Emalahleni", "Middelburg", "Secunda", "Ermelo", "Standerton", "Barberton",
-  "Lydenburg"
-];
 
 const vehicleGroups: VehicleGroup[] = ["Catering / Event", "Trucks / Trailers", "Farming / Mining"];
 
@@ -344,8 +328,6 @@ export default function JobsPortalPage() {
   const [keyword, setKeyword] = useState("");
   const [city, setCity] = useState("");
   const [group, setGroup] = useState<VehicleGroup | "">("");
-  const [showCityOptions, setShowCityOptions] = useState(false);
-  const [showAllCities, setShowAllCities] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [sharedJobs, setSharedJobs] = useState<JobListing[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -359,7 +341,6 @@ export default function JobsPortalPage() {
   const [analyticsJob, setAnalyticsJob] = useState<JobListing | null>(null);
   const [loadError, setLoadError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const cityWrapperRef = useRef<HTMLLabelElement | null>(null);
 
   async function fetchJobs() {
     setLoadError("");
@@ -436,10 +417,10 @@ export default function JobsPortalPage() {
     const homeSearch = localStorage.getItem("loadlink-home-search") || querySearch;
     if (homeSearch) {
       const lower = homeSearch.toLowerCase();
-      const cityMatch = cityOptions.find((item) => lower.includes(item.toLowerCase()));
+      const cityMatch = SOUTH_AFRICA_LOCATIONS.find((item) => item.kind === "place" && [item.name, ...item.aliases].some((name) => lower.includes(name.toLowerCase())));
       const inferredIntent = detectIntent(homeSearch);
       setKeyword(homeSearch);
-      if (cityMatch) setCity(cityMatch);
+      if (cityMatch) setCity(cityMatch.name);
       if (inferredIntent === "job" || inferredIntent === "contract" || inferredIntent === "asset") setPortalFilter(inferredIntent);
       if (lower.includes("truck") || lower.includes("superlink") || lower.includes("tipper") || lower.includes("flat deck") || lower.includes("lowbed") || lower.includes("tautliner") || lower.includes("bakkie")) setGroup("Trucks / Trailers");
       if (lower.includes("mining") || lower.includes("farming")) setGroup("Farming / Mining");
@@ -479,18 +460,6 @@ export default function JobsPortalPage() {
     }
   }, [loadingJobs, sharedJobs.length]);
 
-  useEffect(() => {
-    function closeCityOptions(e: MouseEvent | TouchEvent) {
-      if (!cityWrapperRef.current?.contains(e.target as Node)) setShowCityOptions(false);
-    }
-
-    document.addEventListener("mousedown", closeCityOptions);
-    document.addEventListener("touchstart", closeCityOptions);
-    return () => {
-      document.removeEventListener("mousedown", closeCityOptions);
-      document.removeEventListener("touchstart", closeCityOptions);
-    };
-  }, []);
 
   function toggleDarkMode() {
     const nextMode = !darkMode;
@@ -499,12 +468,6 @@ export default function JobsPortalPage() {
     window.dispatchEvent(new Event("loadlink-theme-change"));
   }
 
-  const cityMatches = useMemo(() => {
-    const sorted = [...cityOptions].sort((a, b) => a.localeCompare(b));
-    if (showAllCities) return sorted;
-    if (!city.trim()) return sorted.slice(0, 12);
-    return sorted.filter((item) => item.toLowerCase().includes(city.toLowerCase())).slice(0, 16);
-  }, [city, showAllCities]);
 
   const allJobs = useMemo(() => sharedJobs, [sharedJobs]);
 
@@ -519,7 +482,7 @@ export default function JobsPortalPage() {
     return allJobs.filter((job) => {
       const searchable = `${job.title} ${job.city} ${job.group} ${job.vehicleNeeded || ""} ${job.rate} ${job.postedBy} ${job.description} ${job.packageType || "standard"} ${job.sponsored ? "premium sponsored pro" : "standard"} ${job.verified ? "verified" : ""}`;
       const keywordMatch = !meaningfulQuery || flexibleMatch(searchable, meaningfulQuery);
-      const selectedCityMatch = !city.trim() || normaliseSearch(job.city).includes(normaliseSearch(city));
+      const selectedCityMatch = matchesSouthAfricanLocation(job.city, city);
       const regionMatch = !region || region[1].some((place) => normaliseSearch(job.city).includes(normaliseSearch(place)));
       const groupMatch = !group || job.group === group;
       const categoryMatch = !quickCategory || (
@@ -668,33 +631,16 @@ export default function JobsPortalPage() {
                 </datalist>
               </label>
 
-              <label ref={cityWrapperRef} className="relative block">
+              <label className="relative block">
                 <span className="mb-2 block text-xs font-black uppercase tracking-[0.18em] text-[#f6b800]">Location</span>
-                <input
+                <SouthAfricaLocationInput
                   value={city}
-                  onFocus={() => setShowCityOptions(true)}
-                  onChange={(e) => {
-                    setCity(e.target.value);
-                    setShowCityOptions(true);
-                    setShowAllCities(false);
-                  }}
-                  placeholder="Enter city"
+                  onChange={setCity}
+                  darkMode={false}
+                  placeholder="City, town or province"
+                  ariaLabel="Filter jobs by South African location"
                   className="h-12 w-full rounded-xl border border-white/15 bg-white px-4 text-sm font-semibold text-black outline-none placeholder:text-neutral-500 focus:border-[#f6b800]"
                 />
-
-                {showCityOptions ? (
-                  <div className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-[#f6b800]/50 bg-white text-black shadow-2xl">
-                    <button type="button" onClick={() => setShowAllCities((value) => !value)} className="block w-full border-b border-black/10 bg-[#fff2bf] px-4 py-3 text-left text-xs font-black uppercase tracking-[0.14em] text-black">
-                      {showAllCities ? "Show matching cities" : "Show all cities"}
-                    </button>
-
-                    {cityMatches.map((item) => (
-                      <button key={item} type="button" onClick={() => { setCity(item); setShowCityOptions(false); }} className="block w-full border-b border-black/5 px-4 py-3 text-left text-sm font-bold hover:bg-[#fff2bf]">
-                        {item}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
               </label>
 
               <label className="block">
@@ -1098,7 +1044,7 @@ function EditJobModal({ job, ownerKey, onClose, onUpdated }: { job: JobListing; 
 
         <div className="grid gap-3">
           <input value={title} onChange={(e) => setTitle(e.target.value)} className="h-12 bg-white px-4 font-bold text-black" />
-          <input value={city} onChange={(e) => setCity(e.target.value)} className="h-12 bg-white px-4 font-bold text-black" />
+          <SouthAfricaLocationInput value={city} onChange={setCity} darkMode={false} placeholder="City, town or province" className="h-12 w-full bg-white px-4 font-bold text-black" />
           <select value={group} onChange={(e) => setGroup(e.target.value as VehicleGroup)} className="h-12 bg-white px-4 font-bold text-black">
             {vehicleGroups.map((item) => <option key={item}>{item}</option>)}
           </select>

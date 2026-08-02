@@ -4,6 +4,7 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import AuthStatusButton from "@/components/AuthStatusButton";
+import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
 import BusinessPlans, { type BusinessPlanId } from "@/components/BusinessPlans";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
@@ -18,13 +19,6 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { getTruckModel, getTruckModels, truckCatalog, truckYears, validateTruckTransmission } from "@/lib/truckCatalog";
 
-const cityOptions = [
-  "Johannesburg", "Sandton", "Midrand", "Pretoria", "Centurion", "Soweto", "Kempton Park", "Boksburg",
-  "Benoni", "Germiston", "Alberton", "Randburg", "Roodepoort", "Krugersdorp", "Vereeniging", "Vanderbijlpark",
-  "Durban", "Pinetown", "Umhlanga", "Pietermaritzburg", "Richards Bay", "Cape Town", "Bellville", "Stellenbosch",
-  "Paarl", "George", "Gqeberha", "East London", "Mthatha", "Bloemfontein", "Welkom", "Kimberley", "Upington",
-  "Rustenburg", "Klerksdorp", "Polokwane", "Mbombela", "Emalahleni", "Middelburg", "Secunda", "Other",
-];
 
 const truckBodyTypes = [
   "Tractor unit / horse", "Side tipper", "Dropside", "Flat deck", "Tautliner", "Refrigerated body", "Closed box body",
@@ -460,7 +454,7 @@ export default function ListYourVehiclePage() {
                 <Field label="GVM kg"><input type="number" min="0" value={gvmKg} onChange={(event) => setGvmKg(event.target.value)} className={inputClass} /></Field>
                 <Field label="Payload / capacity kg"><input type="number" min="0" value={payloadKg} onChange={(event) => setPayloadKg(event.target.value)} className={inputClass} /></Field>
                 <Field label="Price" wide><input value={rate} onChange={(event) => setRate(event.target.value)} placeholder="Example: 850000" inputMode="decimal" className={inputClass} required /></Field>
-                <Field label="Location"><select value={city} onChange={(event) => setCity(event.target.value)} className={inputClass}>{cityOptions.map((item) => <option key={item}>{item}</option>)}</select></Field>
+                <Field label="Location"><SouthAfricaLocationInput value={city} onChange={setCity} darkMode={darkMode} placeholder="City, town or province" ariaLabel="Vehicle location" className={inputClass} required /></Field>
                 <Field label="Description" wide><textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the vehicle, maintenance, features, faults and anything a buyer should know." className={textAreaClass} required /></Field>
               </div>
             </section>

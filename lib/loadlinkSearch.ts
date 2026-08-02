@@ -1,4 +1,5 @@
 import { flexibleMatch, normaliseSearch, searchTokens, tokenMatches } from "@/lib/smartSearch";
+import { locationSearchTerms, matchesSouthAfricanLocation } from "@/lib/southAfricaLocations";
 
 export type SearchScope = "all" | "job" | "contract" | "asset" | "driver" | "dealer" | "page";
 
@@ -48,6 +49,7 @@ export type SearchResult = {
   searchable: string;
   scope: SearchScope;
   priority: number;
+  location?: string;
 };
 
 export const searchScopes: { label: string; value: SearchScope }[] = [
@@ -108,7 +110,8 @@ export function listingToSearchResult(item: ListingSearchRow): SearchResult {
     label: title,
     meta: `${scopeLabel(scope)} · ${city}`,
     href: `/jobs?portal=${scope}&search=${encodeURIComponent(`${title} ${city}`)}#job-${item.id}`,
-    searchable: `${title} ${city} ${item.vehicle_group || ""} ${item.rate || ""} ${item.posted_by || ""} ${item.description || ""}`,
+    searchable: `${title} ${locationSearchTerms(city)} ${item.vehicle_group || ""} ${item.rate || ""} ${item.posted_by || ""} ${item.description || ""}`,
+    location: city,
     scope,
     priority: 140,
   };
@@ -122,7 +125,8 @@ export function driverToSearchResult(driver: DriverSearchRow): SearchResult {
     label: name,
     meta: `${place} · Licence ${driver.licence_code || "on request"}`,
     href: `/drivers?search=${encodeURIComponent(name)}`,
-    searchable: `${name} ${driver.headline || ""} ${driver.city || ""} ${driver.province || ""} ${driver.licence_code || ""} ${(driver.vehicle_types || []).join(" ")} ${driver.years_experience || ""} ${driver.availability || ""}`,
+    searchable: `${name} ${driver.headline || ""} ${locationSearchTerms(driver.city || driver.province)} ${driver.city || ""} ${driver.province || ""} ${driver.licence_code || ""} ${(driver.vehicle_types || []).join(" ")} ${driver.years_experience || ""} ${driver.availability || ""}`,
+    location: driver.city || driver.province || "",
     scope: "driver",
     priority: 138,
   };
@@ -135,15 +139,17 @@ export function dealerToSearchResult(dealer: DealerSearchRow): SearchResult {
     label: name,
     meta: `${dealer.physical_location || dealer.province || "South Africa"} · Approved dealership`,
     href: dealer.slug ? `/dealership/${dealer.slug}` : "/dealer",
-    searchable: `${name} ${dealer.short_bio || ""} ${dealer.business_description || ""} ${dealer.physical_location || ""} ${dealer.province || ""} dealership dealer vehicles stock`,
+    searchable: `${name} ${dealer.short_bio || ""} ${dealer.business_description || ""} ${locationSearchTerms(dealer.physical_location || dealer.province)} ${dealer.physical_location || ""} ${dealer.province || ""} dealership dealer vehicles stock`,
+    location: dealer.physical_location || dealer.province || "",
     scope: "dealer",
     priority: 136,
   };
 }
 
 export function scoreSearchResult(item: SearchResult, query: string, location = "") {
-  const combined = normaliseSearch(`${query} ${location}`);
-  if (!combined) return item.priority;
+  if (location.trim() && item.scope !== "page" && !matchesSouthAfricanLocation(item.location || item.meta, location)) return -1;
+  const combined = normaliseSearch(query);
+  if (!combined) return item.priority + (location.trim() ? 18 : 0);
   const tokens = searchTokens(combined);
   const searchable = normaliseSearch(`${item.label} ${item.meta} ${item.searchable}`);
   const matches = tokens.filter((token) => tokenMatches(searchable, token)).length;
@@ -153,7 +159,7 @@ export function scoreSearchResult(item: SearchResult, query: string, location = 
   const cleanQuery = normaliseSearch(query);
   if (cleanQuery && normaliseSearch(item.label).startsWith(cleanQuery)) score += 42;
   if (cleanQuery && searchable.includes(cleanQuery)) score += 24;
-  if (location && searchable.includes(normaliseSearch(location))) score += 18;
+  if (location.trim() && item.scope !== "page") score += 18;
   return score;
 }
 

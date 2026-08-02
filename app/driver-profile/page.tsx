@@ -2,11 +2,13 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import AuthStatusButton from "@/components/AuthStatusButton";
+import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import { browserSupabase } from "@/lib/phase2/supabase";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
+import { SOUTH_AFRICAN_PROVINCES } from "@/lib/southAfricaLocations";
 
 type Doc = { id: string; document_type: string; original_filename: string; size_bytes: number };
 type FormState = {
@@ -221,8 +223,8 @@ export default function DriverProfilePage() {
             <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7">
               <Field label="Full name"><input className={input} value={form.full_name} onChange={(event) => field("full_name", event.target.value)} required /></Field>
               <Field label="Professional headline"><input className={input} value={form.headline} onChange={(event) => field("headline", event.target.value)} placeholder="Code 14 long-distance driver" /></Field>
-              <Field label="City"><input className={input} value={form.city} onChange={(event) => field("city", event.target.value)} required /></Field>
-              <Field label="Province"><input className={input} value={form.province} onChange={(event) => field("province", event.target.value)} required /></Field>
+              <Field label="City or town"><SouthAfricaLocationInput className={input} value={form.city} onChange={(value, selected) => { field("city", value); if (selected?.province) field("province", selected.province); }} darkMode={darkMode} allowAllSouthAfrica={false} required /></Field>
+              <Field label="Province"><select className={input} value={form.province} onChange={(event) => field("province", event.target.value)} required><option value="">Select province</option>{SOUTH_AFRICAN_PROVINCES.map((province) => <option key={province} value={province}>{province}</option>)}</select></Field>
               <Field label="Contact number"><input className={input} value={form.phone} onChange={(event) => field("phone", event.target.value)} required /></Field>
               <Field label="Email"><input className={input} type="email" value={form.email} onChange={(event) => field("email", event.target.value)} required /></Field>
               <Field label="Years of experience"><input className={input} type="number" min="0" max="60" value={form.years_experience} onChange={(event) => field("years_experience", Number(event.target.value))} /></Field>

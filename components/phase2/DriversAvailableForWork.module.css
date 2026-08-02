@@ -57,3 +57,10 @@
 .dark .verified { background:#241b00; }
 .primary,.secondary,.contact { border-radius:999px; }
 @media (max-width:640px){.resultsHeader{align-items:stretch;flex-direction:column}.sortControl{justify-content:space-between}.sortControl select{min-width:190px}.embedded .content{padding-top:34px}}
+.filterBar { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:22px; }
+.filterField { display:block; min-width:0; font-size:.68rem; font-weight:900; text-transform:uppercase; letter-spacing:.1em; }
+.filterField > span { display:block; margin-bottom:8px; }
+.filterField > input,.locationInput { width:100%; height:48px; border:1px solid rgba(17,17,17,.16); border-radius:14px; background:#fff; color:#111; padding:0 15px; font-size:.86rem; font-weight:750; text-transform:none; letter-spacing:normal; outline:none; }
+.filterField > input:focus,.locationInput:focus { border-color:#f6b800; }
+.dark .filterField > input,.dark .locationInput { border-color:rgba(255,255,255,.18); background:#080808; color:#fff; }
+@media (max-width:640px){.filterBar{grid-template-columns:1fr}.filterField > input,.locationInput{height:50px}}
