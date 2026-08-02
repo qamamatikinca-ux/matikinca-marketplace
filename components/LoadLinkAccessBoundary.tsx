@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import LoadLinkLogo from "@/components/LoadLinkLogo";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
@@ -20,7 +20,7 @@ type AccessState = {
   authenticated: boolean;
   allowed: boolean;
   isAdmin: boolean;
-  status: "active" | "flagged" | "suspended" | "blocked" | "guest" | string;
+  status: "active" | "flagged" | "suspended" | "blocked" | "guest" | "verification-error" | string;
   reason?: string | null;
   suspendedUntil?: string | null;
   requiresAcceptance: boolean;
@@ -36,8 +36,7 @@ const FALLBACK_NDA: NdaRecord = {
   id: "loadlink-default-nda",
   version: FALLBACK_NDA_VERSION,
   title: "LoadLink Confidentiality and Restricted-Use Agreement",
-  summary:
-    "LoadLink information and platform content may be used only for genuine activity on the LoadLink logistics platform.",
+  summary: "LoadLink information and platform content may be used only for genuine activity on the LoadLink logistics platform.",
   effectiveAt: "2026-08-02T00:00:00+02:00",
   sha256: "local-fallback-version-2026-08-02-1",
   agreementText: `LOADLINK CONFIDENTIALITY AND RESTRICTED-USE AGREEMENT
@@ -95,7 +94,7 @@ function saveLocalAcceptance(accepted: boolean) {
     if (accepted) window.localStorage.setItem(LOCAL_ACCEPTANCE_KEY, "accepted");
     else window.localStorage.removeItem(LOCAL_ACCEPTANCE_KEY);
   } catch {
-    // Private browsing and storage restrictions must not break the gate.
+    // Storage restrictions must not break the gate.
   }
 }
 
@@ -109,13 +108,12 @@ async function responseJson<T>(response: Response): Promise<T> {
 }
 
 function normaliseAccess(result: AccessState, localAccepted: boolean): AccessState {
-  const serverNdaMissing = !result.nda;
   const nda = result.nda || FALLBACK_NDA;
-  if (result.status === "blocked" || result.status === "suspended" || result.isAdmin) {
-    return { ...result, nda };
-  }
+  const restricted = result.status === "blocked" || result.status === "suspended";
 
-  if (!result.authenticated || serverNdaMissing) {
+  if (restricted || result.isAdmin) return { ...result, nda };
+
+  if (!result.authenticated || !result.nda) {
     return {
       ...result,
       nda,
@@ -138,7 +136,6 @@ export default function LoadLinkAccessBoundary({ children }: { children: ReactNo
   const [declined, setDeclined] = useState(false);
 
   const exempt = isAuthRoute(pathname);
-  const currentPath = useMemo(() => pathname || "/", [pathname]);
 
   const recordAccountAcceptance = useCallback(async (token: string) => {
     const response = await fetch("/api/access/nda", {
@@ -187,8 +184,6 @@ export default function LoadLinkAccessBoundary({ children }: { children: ReactNo
       });
       let result = normaliseAccess(await responseJson<AccessState>(response), localAccepted);
 
-      // A guest who already clicked Enter should not be shown a second login-style gate.
-      // When that guest later signs in, link the earlier acceptance to the account automatically.
       if (
         token &&
         localAccepted &&
@@ -201,14 +196,13 @@ export default function LoadLinkAccessBoundary({ children }: { children: ReactNo
         try {
           result = normaliseAccess(await recordAccountAcceptance(token), true);
         } catch {
-          // Keep the one-click gate visible if the server could not record it automatically.
+          // The visible Enter button remains available when automatic linking fails.
         }
       }
 
       setAccess(result);
       setDeclined(false);
-    } catch (loadError) {
-      // Anonymous visitors still receive the NDA gate even if the database agreement row is absent.
+    } catch {
       let hasSession = false;
       try {
         const sessionResult = await supabase.auth.getSession();
@@ -216,6 +210,7 @@ export default function LoadLinkAccessBoundary({ children }: { children: ReactNo
       } catch {
         hasSession = false;
       }
+
       if (!hasSession) {
         setAccess({
           authenticated: false,
@@ -236,7 +231,6 @@ export default function LoadLinkAccessBoundary({ children }: { children: ReactNo
           ndaAccepted: false,
           nda: FALLBACK_NDA,
         });
-        setError(loadError instanceof Error ? loadError.message : "LoadLink could not verify account access.");
       }
     } finally {
       setLoading(false);
@@ -245,7 +239,7 @@ export default function LoadLinkAccessBoundary({ children }: { children: ReactNo
 
   useEffect(() => {
     void loadAccess();
-  }, [loadAccess, currentPath]);
+  }, [loadAccess, pathname]);
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -272,9 +266,8 @@ export default function LoadLinkAccessBoundary({ children }: { children: ReactNo
     setError("");
 
     try {
-      saveLocalAcceptance(true);
-
       if (!access?.authenticated) {
+        saveLocalAcceptance(true);
         setAccess((current) =>
           current
             ? { ...current, allowed: true, ndaAccepted: true, requiresAcceptance: false, nda: current.nda || FALLBACK_NDA }
@@ -284,15 +277,10 @@ export default function LoadLinkAccessBoundary({ children }: { children: ReactNo
         return;
       }
 
-      if (access.status === "verification-error") {
-        saveLocalAcceptance(false);
-        await loadAccess();
-        return;
-      }
-
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       if (!token) {
+        saveLocalAcceptance(true);
         setAccess((current) =>
           current
             ? { ...current, authenticated: false, status: "guest", allowed: true, ndaAccepted: true, requiresAcceptance: false }
@@ -302,22 +290,19 @@ export default function LoadLinkAccessBoundary({ children }: { children: ReactNo
       }
 
       const result = normaliseAccess(await recordAccountAcceptance(token), true);
-      setAccess(result);
+      if (result.status === "blocked" || result.status === "suspended") {
+        saveLocalAcceptance(false);
+        setAccess(result);
+        return;
+      }
+
+      saveLocalAcceptance(true);
+      setAccess({ ...result, allowed: true, ndaAccepted: true, requiresAcceptance: false });
       setDeclined(false);
       window.dispatchEvent(new Event("loadlink-access-state-changed"));
     } catch (acceptError) {
-      // If the server has no active NDA row, the verified non-blocked account can still
-      // use the built-in agreement while the Control Centre configuration is repaired.
-      if (access?.nda?.id === FALLBACK_NDA.id && access.status !== "blocked" && access.status !== "suspended") {
-        saveLocalAcceptance(true);
-        setAccess((current) =>
-          current ? { ...current, allowed: true, ndaAccepted: true, requiresAcceptance: false, nda: FALLBACK_NDA } : current,
-        );
-        setDeclined(false);
-      } else {
-        saveLocalAcceptance(false);
-        setError(acceptError instanceof Error ? acceptError.message : "The agreement could not be accepted.");
-      }
+      saveLocalAcceptance(false);
+      setError(acceptError instanceof Error ? acceptError.message : "LoadLink could not confirm access.");
     } finally {
       setBusy(false);
     }
@@ -410,16 +395,14 @@ export default function LoadLinkAccessBoundary({ children }: { children: ReactNo
       <AccessShell>
         <div className="mx-auto max-w-xl text-center">
           <StatusIcon>×</StatusIcon>
-          <h1 className="mt-6 text-3xl font-black tracking-[-0.04em] text-white">You declined the NDA</h1>
-          <p className="mt-4 text-sm leading-7 text-white/65">
-            LoadLink cannot be entered until the current confidentiality and restricted-use agreement is accepted.
-          </p>
+          <h1 className="mt-6 text-3xl font-black tracking-[-0.04em] text-white">NDA declined</h1>
+          <p className="mt-4 text-sm leading-7 text-white/65">You cannot enter LoadLink unless you accept the agreement.</p>
           <button
             type="button"
             onClick={() => setDeclined(false)}
             className="mt-7 h-12 w-full bg-[#f6b800] px-5 text-xs font-black uppercase tracking-[0.14em] text-black"
           >
-            Review NDA
+            Return
           </button>
         </div>
       </AccessShell>
@@ -430,26 +413,20 @@ export default function LoadLinkAccessBoundary({ children }: { children: ReactNo
 
   return (
     <AccessShell>
-      <div className="mx-auto w-full max-w-2xl text-center">
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6b800]">Required before entry</p>
-        <h1 className="mt-3 text-3xl font-black tracking-[-0.04em] text-white md:text-4xl">LoadLink NDA</h1>
-        <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-white/65">
-          Information, listings, contacts, designs, workflows and platform content may not be copied, scraped, replicated, redistributed or used to build a competing service.
-        </p>
-
-        <div className="mt-7 border border-[#f6b800]/35 bg-[#080808] p-5 text-left">
-          <p className="text-sm font-black text-white">
+      <div className="mx-auto w-full max-w-xl">
+        <div className="border border-[#f6b800]/40 bg-[#080808] p-5 md:p-6">
+          <p className="text-base font-black leading-7 text-white md:text-lg">
             By clicking <span className="text-[#f6b800]">Enter LoadLink</span>, you agree to the LoadLink Confidentiality and Restricted-Use Agreement.
           </p>
+
           <details className="mt-5 border-t border-white/10 pt-4">
             <summary className="cursor-pointer list-none text-xs font-black uppercase tracking-[0.14em] text-[#f6b800]">
               Read the NDA
             </summary>
-            <div className="mt-4 max-h-[38vh] overflow-y-auto whitespace-pre-wrap border border-white/10 bg-black px-4 py-4 text-xs leading-6 text-white/65">
+            <div className="mt-4 max-h-[42vh] overflow-y-auto whitespace-pre-wrap border border-white/10 bg-black px-4 py-4 text-xs leading-6 text-white/65">
               {nda.agreementText}
             </div>
           </details>
-          <p className="mt-4 text-[11px] font-semibold text-white/35">Agreement version {nda.version}</p>
         </div>
 
         {error ? (
@@ -458,20 +435,20 @@ export default function LoadLinkAccessBoundary({ children }: { children: ReactNo
           </div>
         ) : null}
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <button
             type="button"
             onClick={() => void enterLoadLink()}
             disabled={busy}
-            className="h-13 min-h-13 bg-[#f6b800] px-5 py-4 text-xs font-black uppercase tracking-[0.14em] text-black disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2"
+            className="min-h-13 bg-[#f6b800] px-5 py-4 text-xs font-black uppercase tracking-[0.14em] text-black disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2"
           >
-            {busy ? "Checking access…" : access?.status === "verification-error" ? "Retry access check" : "Enter LoadLink"}
+            {busy ? "Checking access…" : "Enter LoadLink"}
           </button>
           <button
             type="button"
             onClick={() => void declineAgreement()}
             disabled={busy}
-            className="h-13 min-h-13 border border-white/20 px-5 py-4 text-xs font-black uppercase tracking-[0.14em] text-white disabled:opacity-50"
+            className="min-h-13 border border-white/20 px-5 py-4 text-xs font-black uppercase tracking-[0.14em] text-white disabled:opacity-50"
           >
             Decline
           </button>
@@ -488,7 +465,7 @@ function AccessShell({ children }: { children: ReactNode }) {
         <LoadLinkLogo theme="dark" showGlow className="h-auto max-h-12 w-auto max-w-[220px]" />
       </div>
       {children}
-      <footer className="mx-auto mt-8 max-w-2xl border-t border-white/10 pt-5 text-center text-[11px] leading-5 text-white/40">
+      <footer className="mx-auto mt-8 max-w-xl border-t border-white/10 pt-5 text-center text-[11px] leading-5 text-white/40">
         LoadLink South Africa · loadlinksouthafrica@gmail.com
       </footer>
     </main>
