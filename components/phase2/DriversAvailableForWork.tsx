@@ -25,9 +25,11 @@ const PAGE_SIZE = 7;
 export default function DriversAvailableForWork({
   darkMode = false,
   fullPage = false,
+  showHero = true,
 }: {
   darkMode?: boolean;
   fullPage?: boolean;
+  showHero?: boolean;
 }) {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,24 +95,36 @@ export default function DriversAvailableForWork({
   }
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const sectionClass = `${styles.section} ${darkMode ? styles.dark : styles.light} ${fullPage ? styles.fullPage : ""}`;
+  const sectionClass = `${styles.section} ${darkMode ? styles.dark : styles.light} ${fullPage ? styles.fullPage : ""} ${showHero ? "" : styles.embedded}`;
 
   return (
     <section className={sectionClass} data-loadlink-phase2-home>
-      <div className={styles.hero}>
-        <img src="/images/driver-profile-hero.jpg" alt="Truck drivers ready for logistics opportunities" className={styles.heroImage} />
-        <div className={styles.heroShade} />
-        <div className={styles.heroContent}>
-          <h2 className={styles.title}>Drivers Available for Work</h2>
-          <p className={styles.subtitle}>Approved drivers can present their licence details, experience, routes and availability directly to logistics companies and truck owners.</p>
-          <div className={styles.actions}>
-            <Link data-marketplace-action className={styles.primary} href="/driver-profile">Create driver profile</Link>
-            {!fullPage ? <Link className={styles.secondary} href="/drivers">View all drivers</Link> : <Link className={styles.secondary} href="/account/settings">Profile settings</Link>}
+      {showHero ? (
+        <div className={styles.hero}>
+          <img src="/images/driver-profile-hero.jpg" alt="Truck drivers ready for logistics opportunities" className={styles.heroImage} />
+          <div className={styles.heroShade} />
+          <div className={styles.heroContent}>
+            <h2 className={styles.title}>Drivers Available for Work</h2>
+            <p className={styles.subtitle}>Approved drivers can present their licence details, experience, routes and availability directly to logistics companies and truck owners.</p>
+            <div className={styles.actions}>
+              <Link data-marketplace-action className={styles.primary} href="/driver-profile">Create driver profile</Link>
+              {!fullPage ? <Link className={styles.secondary} href="/drivers">View all drivers</Link> : <Link className={styles.secondary} href="/account/settings">Profile settings</Link>}
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
 
       <div className={styles.content}>
+        {!showHero ? (
+          <div className={styles.embeddedIntro}>
+            <div>
+              <p className={styles.embeddedEyebrow}>Available drivers</p>
+              <h2 className={styles.embeddedHeading}>Approved drivers ready for work</h2>
+              <p className={styles.embeddedCopy}>Browse approved profiles and contact a suitable driver through LoadLink.</p>
+            </div>
+            <Link className={styles.viewAll} href="/drivers">View all drivers</Link>
+          </div>
+        ) : null}
         {notice ? <p role="alert" className={styles.empty}>{notice}</p> : null}
         {loading ? (
           <div className={styles.empty}>Loading approved drivers…</div>

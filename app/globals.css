@@ -218,12 +218,18 @@ html[data-loadlink-theme="light"] {
   background: #f4efe3;
 }
 html[data-loadlink-theme="dark"] {
-  --background: #050505;
+  --background: #07111f;
   --foreground: #f7f7f7;
-  background: #050505;
+  --loadlink-dark-page: #07111f;
+  --loadlink-dark-surface: #0d1726;
+  --loadlink-dark-surface-raised: #111d2e;
+  --loadlink-dark-input: #132033;
+  --loadlink-dark-border: rgba(255,255,255,.12);
+  background: #07111f;
+  color-scheme: dark;
 }
 html[data-loadlink-theme="light"] body { background:#f4efe3; color:#111; }
-html[data-loadlink-theme="dark"] body { background:#050505; color:#f7f7f7; }
+html[data-loadlink-theme="dark"] body { background:#07111f; color:#f7f7f7; }
 body { min-height:100vh; }
 
 /* Keep status and moderation copy readable in both themes. */
@@ -265,3 +271,77 @@ html[data-loadlink-theme="dark"] .loadlink-messages [class*="bg-[#f6b800]"] { co
 html[data-loadlink-theme="dark"] .loadlink-messages [class*="bg-white"] { background-color: #121212 !important; }
 html[data-loadlink-theme="dark"] .loadlink-messages [class*="border-black/"] { border-color: rgba(255,255,255,.12) !important; }
 .loadlink-messages video { max-height: min(70vh, 680px); object-fit: contain; }
+
+
+/* LoadLink navy dark mode
+   Keeps the current black, white and gold design language while replacing flat black surfaces
+   with a consistent Instagram-inspired deep navy palette. */
+html[data-loadlink-theme="dark"] body,
+html[data-loadlink-theme="dark"] main {
+  background-color: var(--loadlink-dark-page) !important;
+  color: #f7f7f7;
+}
+
+html[data-loadlink-theme="dark"] [class~="bg-black"],
+html[data-loadlink-theme="dark"] [class~="bg-[#050505]"] {
+  background-color: var(--loadlink-dark-page) !important;
+}
+
+html[data-loadlink-theme="dark"] [class~="bg-[#080808]"],
+html[data-loadlink-theme="dark"] [class~="bg-[#090909]"],
+html[data-loadlink-theme="dark"] [class~="bg-[#0b0b0b]"],
+html[data-loadlink-theme="dark"] [class~="bg-[#0c0c0c]"],
+html[data-loadlink-theme="dark"] [class~="bg-[#0d0d0d]"],
+html[data-loadlink-theme="dark"] [class~="bg-[#101010]"],
+html[data-loadlink-theme="dark"] [class~="bg-[#11100d]"],
+html[data-loadlink-theme="dark"] [class~="bg-[#111111]"],
+html[data-loadlink-theme="dark"] [class~="bg-[#120f03]"],
+html[data-loadlink-theme="dark"] [class~="bg-[#12100a]"],
+html[data-loadlink-theme="dark"] [class~="bg-[#121212]"],
+html[data-loadlink-theme="dark"] [class~="bg-[#151515]"] {
+  background-color: var(--loadlink-dark-surface) !important;
+}
+
+html[data-loadlink-theme="dark"] [class~="bg-[#171717]"],
+html[data-loadlink-theme="dark"] [class~="bg-[#111d2e]"] {
+  background-color: var(--loadlink-dark-surface-raised) !important;
+}
+
+html[data-loadlink-theme="dark"] header,
+html[data-loadlink-theme="dark"] nav,
+html[data-loadlink-theme="dark"] footer {
+  background-color: var(--loadlink-dark-page);
+}
+
+html[data-loadlink-theme="dark"] input,
+html[data-loadlink-theme="dark"] textarea,
+html[data-loadlink-theme="dark"] select {
+  background-color: var(--loadlink-dark-input) !important;
+  border-color: var(--loadlink-dark-border) !important;
+  color: #ffffff !important;
+}
+
+html[data-loadlink-theme="dark"] input::placeholder,
+html[data-loadlink-theme="dark"] textarea::placeholder {
+  color: rgba(255,255,255,.42) !important;
+}
+
+html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-inbox-panel,
+html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-details-panel,
+html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-chat-header,
+html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-chat-composer {
+  background: var(--loadlink-dark-surface) !important;
+}
+
+html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-chat-panel {
+  background: var(--loadlink-dark-page) !important;
+}
+
+html[data-loadlink-theme="dark"] .loadlink-messages input,
+html[data-loadlink-theme="dark"] .loadlink-messages textarea {
+  background: var(--loadlink-dark-input) !important;
+}
+
+html[data-loadlink-theme="dark"] .loadlink-network-banner {
+  background: var(--loadlink-dark-surface-raised);
+}

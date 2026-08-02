@@ -43,16 +43,15 @@ function parseItems(key: string): RecentItem[] {
 }
 
 function getViewedItems() {
-  const viewed = parseItems("loadlink-recent-viewed-jobs");
-  const portals = parseItems("loadlink-recent-activity").map((item) => ({
-    ...item,
-    id: item.id || item.title,
-    category: item.category || "Portal",
-    type: item.type || "Recently viewed",
-    image: item.image || (item as RecentItem & { images?: { src?: string }[] }).images?.[0]?.src,
-    meta: item.meta || "Viewed from homepage",
-  }));
-  return uniqueItems([...viewed, ...portals]);
+  return uniqueItems(
+    parseItems("loadlink-recent-viewed-jobs").filter((item) => {
+      const href = String(item.href || "").toLowerCase();
+      const category = String(item.category || "").toLowerCase();
+      const isPortal = ["/jobs", "/contracts", "/driver-portal", "/driver-profile", "/drivers", "/list-your-vehicle"].includes(href);
+      const isListing = href.includes("#job-") || href.startsWith("/listing/") || href.startsWith("/vehicle/") || ["job", "contract", "vehicle", "listing", "product"].includes(category);
+      return !isPortal && isListing;
+    }),
+  );
 }
 
 function uniqueItems(items: RecentItem[]) {
@@ -120,7 +119,7 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
     ? "You have not saved any listings yet. Use the Save button on a listing to keep it here."
     : tab === "posted"
       ? "No approved marketplace listings have been published yet."
-      : "Nothing has been viewed yet. Open a job, contract, vehicle, driver or dealership and it will appear here.";
+      : "Nothing has been viewed yet. Open a job, contract or vehicle listing and it will appear here.";
 
   return (
     <section className={`${darkMode ? "bg-black text-white" : "bg-white text-black"} px-5 py-12`}>

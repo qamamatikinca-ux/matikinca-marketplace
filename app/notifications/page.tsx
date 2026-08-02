@@ -21,6 +21,8 @@ type UserNotification = {
   created_at: string;
 };
 
+type NotificationFilter = "all" | "unread";
+
 function safeActionHref(value?: string | null) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "";
   return value;
@@ -33,8 +35,13 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
+  const [filter, setFilter] = useState<NotificationFilter>("all");
 
   const unread = useMemo(() => notifications.filter((item) => !item.is_read).length, [notifications]);
+  const visibleNotifications = useMemo(
+    () => (filter === "unread" ? notifications.filter((item) => !item.is_read) : notifications),
+    [filter, notifications],
+  );
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -135,13 +142,13 @@ export default function NotificationsPage() {
     window.dispatchEvent(new Event("loadlink-notifications-updated"));
   }
 
-  const page = darkMode ? "bg-black text-white" : "bg-[#fffaf0] text-black";
-  const surface = darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white";
-  const muted = darkMode ? "text-white/55" : "text-black/55";
+  const page = darkMode ? "bg-[#07111f] text-white" : "bg-[#fffaf0] text-black";
+  const surface = darkMode ? "border-white/10 bg-[#0d1726]" : "border-black/10 bg-white";
+  const muted = darkMode ? "text-white/60" : "text-black/55";
 
   return (
     <main className={`min-h-screen ${page}`}>
-      <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
+      <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-[#07111f]" : "border-black/10 bg-white"}`}>
         <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4">
           <div className="flex items-center gap-2">
             <SiteMenu darkMode={darkMode} />
@@ -152,68 +159,126 @@ export default function NotificationsPage() {
         </div>
       </header>
 
-      <section className="mx-auto max-w-4xl px-5 py-10 md:px-8 md:py-14">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[.18em] text-[#b88900]">Account updates</p>
-            <h1 className="mt-2 text-4xl font-black tracking-[-.05em] md:text-6xl">Notifications</h1>
-            <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>
-              Listing reviews, messages, verification decisions and account updates appear here.
-            </p>
+      <section className="mx-auto max-w-5xl px-5 py-8 md:px-8 md:py-12">
+        <div className={`overflow-hidden rounded-[28px] border ${surface}`}>
+          <div className={`border-b px-5 py-7 md:px-8 md:py-9 ${darkMode ? "border-white/10 bg-[#111d2e]" : "border-black/10 bg-[#fff7e2]"}`}>
+            <div className="flex flex-wrap items-end justify-between gap-5">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#b88900]">Account activity</p>
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <h1 className="text-4xl font-black tracking-[-.055em] md:text-6xl">Notifications</h1>
+                  <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[.1em] ${darkMode ? "border-white/15 bg-white/[.05] text-white/70" : "border-black/10 bg-white text-black/60"}`}>
+                    {unread} unread
+                  </span>
+                </div>
+                <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>
+                  Messages, listing decisions, verification updates and account activity are kept together here.
+                </p>
+              </div>
+
+              {unread > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => void markAllRead()}
+                  className="min-h-11 rounded-full border border-[#f6b800] px-5 text-xs font-black uppercase tracking-[.1em] text-[#b88900] transition active:scale-[.99]"
+                >
+                  Mark all as read
+                </button>
+              ) : null}
+            </div>
           </div>
-          {unread > 0 ? (
-            <button
-              type="button"
-              onClick={() => void markAllRead()}
-              className="h-11 border border-[#f6b800] px-5 text-xs font-black uppercase tracking-[.12em] text-[#b88900]"
-            >
-              Mark all as read
-            </button>
-          ) : null}
-        </div>
 
-        {notice ? <p role="alert" className={`mt-6 border p-4 text-sm font-bold ${surface}`}>{notice}</p> : null}
+          <div className={`flex items-center gap-2 border-b px-5 py-4 md:px-8 ${darkMode ? "border-white/10" : "border-black/10"}`}>
+            {([[
+              "all",
+              "All",
+            ], [
+              "unread",
+              `Unread ${unread}`,
+            ]] as [NotificationFilter, string][]).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setFilter(value)}
+                className={`rounded-full px-4 py-2 text-xs font-black uppercase tracking-[.08em] transition ${
+                  filter === value
+                    ? "bg-[#f6b800] text-black"
+                    : darkMode
+                      ? "border border-white/10 bg-white/[.04] text-white/65"
+                      : "border border-black/10 bg-black/[.03] text-black/60"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
-        <div className={`mt-7 overflow-hidden border ${surface}`}>
-          {authLoading || loading ? (
-            <div className={`p-8 text-sm font-semibold ${muted}`}>Loading notifications…</div>
-          ) : notifications.length === 0 ? (
-            <div className="p-10 text-center">
-              <h2 className="text-2xl font-black">No notifications yet</h2>
-              <p className={`mx-auto mt-3 max-w-md text-sm leading-6 ${muted}`}>
-                New messages, listing decisions and account updates will appear here when they are available.
-              </p>
-            </div>
-          ) : (
-            <div className={`divide-y ${darkMode ? "divide-white/10" : "divide-black/10"}`}>
-              {notifications.map((item) => {
-                const href = safeActionHref(item.action_url);
-                const content = (
-                  <div className={`flex gap-4 p-5 text-left transition ${item.is_read ? "" : darkMode ? "bg-[#f6b800]/[.06]" : "bg-[#fff6dc]"}`}>
-                    <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${item.is_read ? darkMode ? "bg-white/20" : "bg-black/20" : "bg-[#f6b800]"}`} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <h2 className="text-base font-black">{item.title}</h2>
-                        <time className={`text-[10px] font-black uppercase tracking-[.1em] ${muted}`}>{formatDate(item.created_at)}</time>
+          {notice ? <p role="alert" className={`m-5 rounded-2xl border p-4 text-sm font-bold md:m-8 ${surface}`}>{notice}</p> : null}
+
+          <div className="p-4 md:p-6">
+            {authLoading || loading ? (
+              <div className="grid gap-3" aria-label="Loading notifications">
+                {[0, 1, 2].map((item) => (
+                  <div key={item} className={`h-28 animate-pulse rounded-2xl border ${darkMode ? "border-white/10 bg-white/[.04]" : "border-black/10 bg-black/[.03]"}`} />
+                ))}
+              </div>
+            ) : visibleNotifications.length === 0 ? (
+              <div className={`rounded-2xl border px-6 py-14 text-center ${darkMode ? "border-white/10 bg-[#111d2e]" : "border-black/10 bg-[#fffaf0]"}`}>
+                <span className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${darkMode ? "bg-white/[.06] text-[#f6b800]" : "bg-[#f6b800]/20 text-[#8a6500]"}`}>
+                  <BellIcon />
+                </span>
+                <h2 className="mt-5 text-2xl font-black">{filter === "unread" ? "You are all caught up" : "No notifications yet"}</h2>
+                <p className={`mx-auto mt-3 max-w-md text-sm leading-6 ${muted}`}>
+                  {filter === "unread"
+                    ? "There are no unread account updates at the moment."
+                    : "New messages, listing decisions and verification updates will appear here."}
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {visibleNotifications.map((item) => {
+                  const href = safeActionHref(item.action_url);
+                  const content = (
+                    <div className={`group flex gap-4 rounded-2xl border p-4 text-left transition md:p-5 ${
+                      item.is_read
+                        ? darkMode
+                          ? "border-white/10 bg-[#0d1726] hover:bg-[#111d2e]"
+                          : "border-black/10 bg-white hover:bg-[#fffaf0]"
+                        : darkMode
+                          ? "border-[#f6b800]/35 bg-[#17243a]"
+                          : "border-[#f6b800]/50 bg-[#fff7df]"
+                    }`}>
+                      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${item.is_read ? darkMode ? "bg-white/[.06] text-white/65" : "bg-black/[.04] text-black/55" : "bg-[#f6b800] text-black"}`}>
+                        <NotificationTypeIcon type={item.type} />
+                      </span>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <h2 className="text-base font-black md:text-lg">{item.title}</h2>
+                          <time className={`text-[10px] font-black uppercase tracking-[.09em] ${muted}`}>{formatDate(item.created_at)}</time>
+                        </div>
+                        <p className={`mt-2 text-sm leading-6 ${muted}`}>{item.message}</p>
+                        <div className="mt-3 flex items-center gap-3">
+                          {!item.is_read ? <span className="rounded-full bg-[#f6b800] px-2.5 py-1 text-[9px] font-black uppercase tracking-[.1em] text-black">Unread</span> : null}
+                          {href ? <span className="text-[10px] font-black uppercase tracking-[.1em] text-[#b88900]">Open update</span> : null}
+                        </div>
                       </div>
-                      <p className={`mt-2 text-sm leading-6 ${muted}`}>{item.message}</p>
-                      {!item.is_read ? <span className="mt-3 inline-block text-[10px] font-black uppercase tracking-[.12em] text-[#b88900]">Unread</span> : null}
                     </div>
-                  </div>
-                );
+                  );
 
-                return href ? (
-                  <Link key={item.id} href={href} onClick={() => void markRead(item.id)}>
-                    {content}
-                  </Link>
-                ) : (
-                  <button key={item.id} type="button" onClick={() => void markRead(item.id)} className="block w-full">
-                    {content}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+                  return href ? (
+                    <Link key={item.id} href={href} onClick={() => void markRead(item.id)}>
+                      {content}
+                    </Link>
+                  ) : (
+                    <button key={item.id} type="button" onClick={() => void markRead(item.id)} className="block w-full">
+                      {content}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </section>
     </main>
@@ -230,4 +295,33 @@ function formatDate(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function NotificationTypeIcon({ type }: { type: string }) {
+  const value = type.toLowerCase();
+  if (value.includes("message") || value.includes("chat")) return <MessageIcon />;
+  if (value.includes("verify") || value.includes("approval") || value.includes("approved")) return <CheckIcon />;
+  if (value.includes("listing") || value.includes("post")) return <DocumentIcon />;
+  return <BellIcon />;
+}
+
+function BellIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 6 2.5 6.5 2.5 6.5H4s2.5-.5 2.5-6.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M9.5 19a2.8 2.8 0 0 0 5 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MessageIcon() {
+  return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M8 9h8M8 12h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
+}
+
+function CheckIcon() {
+  return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" /><path d="m8 12 2.5 2.5L16 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function DocumentIcon() {
+  return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3h7l4 4v14H7V3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M14 3v5h5M10 12h5M10 16h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
 }

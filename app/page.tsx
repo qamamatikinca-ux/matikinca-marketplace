@@ -5,7 +5,6 @@ import HomeLogoLink from "@/components/HomeLogoLink";
 import Link from "next/link";
 import { lazy, Suspense, useEffect, useState } from "react";
 import RequireAuthLink from "@/components/RequireAuthLink";
-import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import LoadLinkBoundary from "@/components/platform/LoadLinkBoundary";
@@ -16,7 +15,6 @@ const MarketplaceDiscovery = lazy(() => import("@/components/MarketplaceDiscover
 const LogisticsNews = lazy(() => import("@/components/LogisticsNews"));
 const AuthStatusButton = lazy(() => import("@/components/AuthStatusButton"));
 const SiteMenu = lazy(() => import("@/components/SiteMenu"));
-const HomepageMarketplaceSections = lazy(() => import("@/components/HomepageMarketplaceSections"));
 type PortalImage = {
   src: string;
   position: string;
@@ -27,9 +25,6 @@ type PortalCard = {
   buttonText: string;
   images: PortalImage[];
   href: string;
-  type: string;
-  category: string;
-  packageType: "basic" | "premium" | "pro";
 };
 
 const IMAGE_ROTATION_INTERVAL = 5 * 60 * 1000;
@@ -44,9 +39,6 @@ const portalCards: PortalCard[] = [
       { src: "/images/jobs-3.jpg", position: "center center" },
     ],
     href: "/jobs",
-    type: "Jobs portal",
-    category: "Job",
-    packageType: "premium",
   },
   {
     title: "Find Contracts",
@@ -57,18 +49,12 @@ const portalCards: PortalCard[] = [
       { src: "/images/contracts-3.jpg", position: "center center" },
     ],
     href: "/contracts",
-    type: "Contracts portal",
-    category: "Contract",
-    packageType: "pro",
   },
   {
     title: "Driver Profile",
     buttonText: "View drivers or create your profile",
     images: [{ src: "/images/driver-profile-hero.jpg", position: "center center" }],
     href: "/driver-portal",
-    type: "Driver profile portal",
-    category: "Driver",
-    packageType: "basic",
   },
   {
     title: "List Your Vehicle",
@@ -79,9 +65,6 @@ const portalCards: PortalCard[] = [
       { src: "/images/truck-3.jpg", position: "center center" },
     ],
     href: "/list-your-vehicle",
-    type: "Truck owner portal",
-    category: "Truck Hire",
-    packageType: "basic",
   },
 ];
 
@@ -95,35 +78,9 @@ export default function Home() {
 
 function HomeExperience() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
-  const [recentActivity, setRecentActivity] = useState<PortalCard[]>([]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
-  useEffect(() => {
-    try {
-      const savedActivity = localStorage.getItem("loadlink-recent-activity");
 
-      if (savedActivity) {
-        const parsedActivity = JSON.parse(savedActivity);
-
-        if (Array.isArray(parsedActivity) && parsedActivity.length > 0) {
-          const cleanedActivity: PortalCard[] = parsedActivity
-            .map((item: Partial<PortalCard>) => {
-              return portalCards.find((card) => card.title === item.title);
-            })
-            .filter((item): item is PortalCard => Boolean(item));
-
-          setRecentActivity(cleanedActivity);
-        }
-      }
-    } catch {
-      try {
-        localStorage.removeItem("loadlink-recent-activity");
-      } catch {
-        // Browser storage may be unavailable; continue without recent activity.
-      }
-      setRecentActivity([]);
-    }
-  }, []);
 
   useEffect(() => {
     const rotationTimer = window.setInterval(() => {
@@ -141,30 +98,6 @@ function HomeExperience() {
     return card.images[activeImageIndex % card.images.length];
   }
 
-  function saveRecentActivity(card: PortalCard) {
-    const updatedActivity = [
-      card,
-      ...recentActivity.filter((item) => item.title !== card.title),
-    ].slice(0, 3);
-
-    setRecentActivity(updatedActivity);
-
-    try {
-      localStorage.setItem(
-        "loadlink-recent-activity",
-        JSON.stringify(updatedActivity)
-      );
-      window.dispatchEvent(new Event("loadlink-account-state-changed"));
-      recordUserActivity("portal_view", {
-        entityType: "portal",
-        entityId: card.href,
-        metadata: { title: card.title, category: card.category },
-      }).catch(() => undefined);
-      syncAccountState().catch(() => undefined);
-    } catch {
-      console.log("Could not save recent activity");
-    }
-  }
 
   return (
     <main
@@ -214,7 +147,6 @@ function HomeExperience() {
               <Link
                 key={card.title}
                 href={card.href}
-                onClick={() => saveRecentActivity(card)}
                 className="group relative block h-[52vh] min-h-[380px] w-full overflow-hidden md:h-[65vh]"
               >
                 <img
@@ -254,11 +186,6 @@ function HomeExperience() {
         </div>
       </section>
 
-      <LoadLinkBoundary name="homepage marketplace activity">
-        <Suspense fallback={null}>
-          <HomepageMarketplaceSections darkMode={darkMode} />
-        </Suspense>
-      </LoadLinkBoundary>
 
       <LoadLinkBoundary name="recent activity"><Suspense fallback={null}><RecentActivityPanel darkMode={darkMode} /></Suspense></LoadLinkBoundary>
 
