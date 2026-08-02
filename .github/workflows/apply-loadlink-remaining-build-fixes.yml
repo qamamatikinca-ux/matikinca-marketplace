@@ -1,0 +1,184 @@
+name: Apply LoadLink Remaining Build Fixes
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply all known production build fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          changed = []
+
+          def replace_text(file_name: str, old: str, new: str) -> None:
+              path = Path(file_name)
+              if not path.is_file():
+                  print(f"Skipped missing optional file: {file_name}")
+                  return
+
+              text = path.read_text(encoding="utf-8")
+              if new in text:
+                  print(f"Already fixed: {file_name}")
+                  return
+              if old not in text:
+                  print(f"Pattern not present, left unchanged: {file_name}")
+                  return
+
+              path.write_text(text.replace(old, new), encoding="utf-8")
+              changed.append(file_name)
+              print(f"Fixed: {file_name}")
+
+          # 1. Notifications import.
+          replace_text(
+              "app/api/admin/notifications/route.ts",
+              'import { safeInternalHref } from "@/lib/marketplace/navigation";',
+              'import { safeInternalHref } from "@/lib/safeNavigation";',
+          )
+
+          # 2. Admin records implicit-any error shown by Vercel.
+          replace_text(
+              "app/api/admin/records/route.ts",
+              'const rows = (result.data || []).filter((row) => !search || JSON.stringify(row).toLowerCase().includes(search.toLowerCase()));',
+              'const rows = ((result.data || []) as Record<string, unknown>[]).filter((row) => !search || JSON.stringify(row).toLowerCase().includes(search.toLowerCase()));',
+          )
+
+          # 3. Listing-details row typing.
+          replace_text(
+              "app/api/listings/[id]/route.ts",
+              'similar: (similar.data || []).filter((row) => isPubliclyVisible(row as Record<string, unknown>)),',
+              'similar: ((similar.data || []) as Record<string, unknown>[]).filter(isPubliclyVisible),',
+          )
+
+          # 4. My Posts verification row typing.
+          replace_text(
+              "app/my-posts/page.tsx",
+              '(verification.data || []).forEach((row) => { next[row.listing_id] = row.status; });',
+              '((verification.data || []) as Array<{ listing_id: string; status: string }>).forEach((row) => { next[row.listing_id] = row.status; });',
+          )
+
+          # 5. Prevent null job-interest result access.
+          replace_text(
+              "app/api/jobs/interest/route.ts",
+              'if (result.error) throw result.error;\n    await client.rpc("loadlink_emit_event"',
+              'if (result.error) throw result.error;\n    if (!result.data) throw new Error("The interest record was not returned after saving.");\n    await client.rpc("loadlink_emit_event"',
+          )
+
+          # 6. Prevent null payment-event result access.
+          replace_text(
+              "app/api/payments/webhook/route.ts",
+              'if (insert.error) throw insert.error;\n    if (!insert.data.processed_at)',
+              'if (insert.error) throw insert.error;\n    if (!insert.data) throw new Error("The payment event was not returned after saving.");\n    if (!insert.data.processed_at)',
+          )
+
+          # 7. Explicit React click-event type.
+          home_logo = Path("components/HomeLogoLink.tsx")
+          if home_logo.is_file():
+              text = home_logo.read_text(encoding="utf-8")
+              original = text
+              if 'import type { MouseEvent } from "react";' not in text:
+                  text = text.replace(
+                      'import { usePathname } from "next/navigation";',
+                      'import { usePathname } from "next/navigation";\nimport type { MouseEvent } from "react";',
+                  )
+              text = text.replace(
+                  'onClick={(event) => {',
+                  'onClick={(event: MouseEvent<HTMLAnchorElement>) => {',
+              )
+              if text != original:
+                  home_logo.write_text(text, encoding="utf-8")
+                  changed.append(str(home_logo))
+                  print(f"Fixed: {home_logo}")
+              else:
+                  print(f"Already fixed: {home_logo}")
+
+          # 8. Dealership profile creation result typing.
+          dealer = Path("app/dealer/page.tsx")
+          if dealer.is_file():
+              text = dealer.read_text(encoding="utf-8")
+              original = text
+              pattern = re.compile(
+                  r' async function saveProfile\(\)\{.*?\}\n'
+                  r'  async function changeBrandImage',
+                  re.S,
+              )
+              corrected = ''' async function saveProfile(){if(!allowed){setMessage("An active Dealer subscription is required before creating a dealership profile.");return;}if(form.name.trim().length<2||form.slug.trim().length<2){setMessage("Enter a dealership name and profile address.");return;}const payload={owner_user_id:userId,name:form.name.trim(),slug:form.slug.toLowerCase().trim().replace(/[^a-z0-9-]+/g,"-").replace(/^-|-$/g,""),short_bio:form.short_bio.trim()||null,business_description:form.business_description.trim()||null,physical_location:form.physical_location.trim()||null,contact_email:form.contact_email.trim()||null,phone_number:form.phone_number.trim()||null,whatsapp_number:form.whatsapp_number.trim()||null,website_url:form.website_url.trim()||null,trading_hours:form.trading_hours.trim()||null,year_established:form.year_established?Number(form.year_established):null};if(profile){const updateResult=await supabase.from("dealership_profiles").update(payload).eq("id",profile.id);if(updateResult.error){setMessage(updateResult.error.message);return;}}else{const createResult=await supabase.from("dealership_profiles").insert({...payload,verification_status:"pending",is_public:false}).select("id").single();if(createResult.error){setMessage(createResult.error.message);return;}if(!createResult.data){setMessage("The dealership profile was saved but no profile ID was returned.");return;}const staffResult=await supabase.from("dealership_staff").insert({dealership_id:createResult.data.id,user_id:userId,role:"owner",is_active:true,invited_by:userId});if(staffResult.error){setMessage(staffResult.error.message);return;}}setSuccess(true);setTimeout(()=>setSuccess(false),1900);await load(userId);}
+  async function changeBrandImage'''
+              if "let r;if(profile)" in text:
+                  text, count = pattern.subn(corrected, text, count=1)
+                  if count != 1:
+                      raise SystemExit("The dealership saveProfile block could not be updated safely.")
+              if text != original:
+                  dealer.write_text(text, encoding="utf-8")
+                  changed.append(str(dealer))
+                  print(f"Fixed: {dealer}")
+              else:
+                  print(f"Already fixed or not applicable: {dealer}")
+
+          # Remove an accidental empty file that can confuse tooling.
+          stray = Path("app/npm")
+          if stray.exists() and stray.is_file() and stray.stat().st_size == 0:
+              stray.unlink()
+              changed.append(str(stray))
+              print("Removed accidental empty file: app/npm")
+
+          # Final direct checks for the two errors already observed on Vercel.
+          notifications = Path("app/api/admin/notifications/route.ts").read_text(encoding="utf-8")
+          records = Path("app/api/admin/records/route.ts").read_text(encoding="utf-8")
+
+          if '@/lib/marketplace/navigation' in notifications:
+              raise SystemExit("The broken notifications import still exists.")
+          if 'const rows = (result.data || []).filter((row)' in records:
+              raise SystemExit("The untyped admin records row still exists.")
+
+          print(f"Completed. Files changed: {len(changed)}")
+          PY
+
+      - name: Commit and push fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "LoadLink Build Fix"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add \
+            app/api/admin/notifications/route.ts \
+            app/api/admin/records/route.ts \
+            'app/api/listings/[id]/route.ts' \
+            app/my-posts/page.tsx \
+            app/api/jobs/interest/route.ts \
+            app/api/payments/webhook/route.ts \
+            components/HomeLogoLink.tsx \
+            app/dealer/page.tsx
+
+          if [ ! -e app/npm ]; then
+            git add -u app/npm 2>/dev/null || true
+          fi
+
+          if git diff --cached --quiet; then
+            echo "All fixes were already present. No commit was required."
+            exit 0
+          fi
+
+          git commit -m "Apply remaining LoadLink production build fixes"
+          git push origin HEAD:main
+
+          echo "All known build fixes were pushed. Vercel will redeploy automatically."
