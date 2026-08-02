@@ -17,6 +17,7 @@ export async function POST(request: Request) {
     if (listing.data.user_id === user.id) return NextResponse.json({ error: "You cannot express interest in your own post." }, { status: 400 });
     const result = await client.from("job_interests").upsert({ listing_id: body.listingId, applicant_user_id: user.id, message, proposed_rate: body.proposedRate ?? null, status: "submitted", updated_at: new Date().toISOString() }, { onConflict: "listing_id,applicant_user_id" }).select("id,status").single();
     if (result.error) throw result.error;
+    if (!result.data) throw new Error("The interest record was not returned after saving.");
     await client.rpc("loadlink_emit_event", { p_event_type: "job.interest_submitted", p_entity_type: "listing", p_entity_id: body.listingId, p_payload: { interest_id: result.data.id } });
     return NextResponse.json({ interest: result.data, message: "Interest sent to the poster." }, { status: 201, headers: rateLimitHeaders(limiter) });
   } catch (error) {

@@ -149,7 +149,7 @@ export default function MyPostsPage() {
           .in("listing_id", results.map((item) => item.id));
         if (!verification.error) {
           const next: VerificationMap = {};
-          (verification.data || []).forEach((row) => { next[row.listing_id] = row.status; });
+          ((verification.data || []) as Array<{ listing_id: string; status: string }>).forEach((row) => { next[row.listing_id] = row.status; });
           setVerificationStatuses(next);
         }
       }

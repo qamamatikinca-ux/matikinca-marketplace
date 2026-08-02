@@ -19,6 +19,7 @@ export async function POST(request: Request) {
     const client = serviceSupabase();
     const insert = await client.from("payment_events").upsert({ provider: event.provider || "configured-provider", provider_event_id: event.id, event_type: event.type, payment_reference: event.reference || null, user_id: event.userId || null, amount_cents: event.amountCents || null, currency: event.currency || "ZAR", signature_verified: true, payload: event }, { onConflict: "provider,provider_event_id", ignoreDuplicates: false }).select("id,processed_at").single();
     if (insert.error) throw insert.error;
+    if (!insert.data) throw new Error("The payment event was not returned after saving.");
     if (!insert.data.processed_at) {
       const applied = await client.rpc("loadlink_apply_verified_payment_event", { p_payment_event_id: insert.data.id });
       if (applied.error) throw applied.error;

@@ -33,7 +33,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({
       listing: { ...listing, ...(details.data || {}) },
       dealership: dealer.data || null,
-      similar: (similar.data || []).filter((row) => isPubliclyVisible(row as Record<string, unknown>)),
+      similar: ((similar.data || []) as Record<string, unknown>[]).filter(isPubliclyVisible),
     }, { headers: { "Cache-Control": "public, max-age=20, s-maxage=60" } });
   } catch (error) {
     const safe = safeApiError(error, "This listing could not be loaded.");

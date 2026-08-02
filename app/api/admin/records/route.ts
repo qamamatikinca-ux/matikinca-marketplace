@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     let query: any = (client as any).from(config.table).select(config.select, { count: "exact" }).order(config.order, { ascending: false }).limit(100);
     if (status) query = query.eq(type === "listings" || type === "reviews" ? "moderation_status" : type === "users" ? "verification_status" : "status", status);
     const result = await query; if (result.error) throw result.error;
-    const rows = (result.data || []).filter((row) => !search || JSON.stringify(row).toLowerCase().includes(search.toLowerCase()));
+    const rows = ((result.data || []) as Record<string, unknown>[]).filter((row) => !search || JSON.stringify(row).toLowerCase().includes(search.toLowerCase()));
     return NextResponse.json({ rows, count: search ? rows.length : (result.count || 0) });
   } catch (error) { const safe = safeApiError(error); return NextResponse.json({ error: safe.message }, { status: safe.status }); }
 }
