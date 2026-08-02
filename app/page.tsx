@@ -10,8 +10,6 @@ import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import LoadLinkBoundary from "@/components/platform/LoadLinkBoundary";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
-import DealerInventorySlider from "@/components/platform/DealerInventorySlider";
-import ProfessionalFooter from "@/components/platform/ProfessionalFooter";
 
 const RecentActivityPanel = lazy(() => import("@/components/RecentActivityPanel"));
 const MarketplaceDiscovery = lazy(() => import("@/components/MarketplaceDiscovery"));
@@ -278,13 +276,200 @@ function HomeExperience() {
         </div>
       </section>
 
-      <DealerInventorySlider darkMode={darkMode} />
-
       <LoadLinkBoundary name="logistics news"><Suspense fallback={null}><LogisticsNews darkMode={darkMode} /></Suspense></LoadLinkBoundary>
 
 
-      {/* PROFESSIONAL FOOTER */}
-      <ProfessionalFooter darkMode={darkMode} />
+      {/* FOOTER / FINAL SECTION */}
+      <footer
+        className={`px-5 py-16 transition-colors duration-300 md:px-12 ${
+          darkMode ? "bg-black text-white" : "bg-white text-black"
+        }`}
+      >
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-12 flex justify-center">
+            <div className="relative flex items-center justify-center">
+              <span
+                className={`absolute -top-2 left-10 h-2 w-24 rounded-full ${
+                  darkMode ? "bg-[#5c4300]" : "bg-[#f6b800]"
+                }`}
+              />
+
+              <span
+                className={`text-4xl font-black italic tracking-tight ${
+                  darkMode ? "text-white" : "text-black"
+                }`}
+              >
+                LOADLINK
+              </span>
+
+              <span
+                className={`absolute -bottom-2 right-4 h-2 w-28 rounded-full ${
+                  darkMode ? "bg-[#5c4300]" : "bg-[#f6b800]"
+                }`}
+              />
+            </div>
+          </div>
+
+          <div
+            className={`divide-y border-y ${
+              darkMode
+                ? "divide-white/10 border-white/10"
+                : "divide-black/10 border-black/10"
+            }`}
+          >
+            <details open className="group py-6">
+              <summary className="flex cursor-pointer list-none items-center justify-between text-2xl font-black">
+                Company
+                <span className="text-[#b98400] group-open:rotate-180">v</span>
+              </summary>
+
+              <div
+                className={`mt-6 grid gap-6 text-xl ${
+                  darkMode ? "text-white/70" : "text-black/75"
+                }`}
+              >
+                <Link href="#">About LoadLink</Link>
+                <Link href="#">Contact us</Link>
+                <Link href="#">Work with LoadLink</Link>
+                <Link href="#">Feedback</Link>
+                <Link href="/help">Help & FAQ</Link>
+                <Link href="#">Industry insights</Link>
+              </div>
+            </details>
+
+            <details className="group py-6">
+              <summary className="flex cursor-pointer list-none items-center justify-between text-2xl font-black">
+                Logistics
+                <span className="text-[#b98400] group-open:rotate-180">v</span>
+              </summary>
+
+              <div
+                className={`mt-6 grid gap-6 text-xl ${
+                  darkMode ? "text-white/70" : "text-black/75"
+                }`}
+              >
+                <Link href="/jobs">Find jobs</Link>
+                <Link href="/contracts">Find contracts</Link>
+                <RequireAuthLink href="/list-your-vehicle">List your vehicle</RequireAuthLink>
+                <Link href="#">Truck hire</Link>
+                <Link href="#">Available loads</Link>
+              </div>
+            </details>
+
+            <details className="group py-6">
+              <summary className="flex cursor-pointer list-none items-center justify-between text-2xl font-black">
+                Services
+                <span className="text-[#b98400] group-open:rotate-180">v</span>
+              </summary>
+
+              <div
+                className={`mt-6 grid gap-6 text-xl ${
+                  darkMode ? "text-white/70" : "text-black/75"
+                }`}
+              >
+                <Link href="#">Premium packages</Link>
+                <Link href="#">Pro packages</Link>
+                <Link href="#">Sponsored listings</Link>
+                <Link href="#">Business support</Link>
+                <Link href="#">Ratings & reviews</Link>
+              </div>
+            </details>
+
+            <details className="group py-6">
+              <summary className="flex cursor-pointer list-none items-center justify-between text-2xl font-black">
+                Customers
+                <span className="text-[#b98400] group-open:rotate-180">v</span>
+              </summary>
+
+              <div
+                className={`mt-6 grid gap-6 text-xl ${
+                  darkMode ? "text-white/70" : "text-black/75"
+                }`}
+              >
+                <Link href="#">Safety & security</Link>
+                <Link href="#">Terms & conditions</Link>
+                <Link href="/help">Privacy and safety help</Link>
+                <Link href="#">Cookie policy</Link>
+                <Link href="#">Help centre</Link>
+              </div>
+            </details>
+          </div>
+
+          <div className="mt-12">
+            <h3 className="text-2xl font-black">Download the app</h3>
+
+            <div className="mt-5 flex flex-nowrap items-center gap-3 overflow-x-auto pb-1">
+              <Link href="#" aria-label="Download on the App Store">
+                <img
+                  src="/images/app-store-badge.png"
+                  alt="Download on the App Store"
+                  className="h-10 w-auto object-contain"
+                />
+              </Link>
+
+              <Link href="#" aria-label="Get it on Google Play">
+                <img
+                  src="/images/google-play-badge.png"
+                  alt="Get it on Google Play"
+                  className="h-10 w-auto object-contain"
+                />
+              </Link>
+            </div>
+          </div>
+
+          <div className="mt-12 flex flex-wrap items-center gap-7">
+            <Link
+              href="#"
+              className="flex h-11 w-11 items-center justify-center bg-[#f6b800] text-lg font-black text-black"
+            >
+              f
+            </Link>
+
+            <Link
+              href="#"
+              className="flex h-11 w-11 items-center justify-center text-3xl font-black"
+            >
+              X
+            </Link>
+
+            <Link
+              href="#"
+              className="flex h-11 w-11 items-center justify-center bg-red-600 text-sm font-black text-white"
+            >
+              YT
+            </Link>
+
+            <Link
+              href="#"
+              className="flex h-11 w-11 items-center justify-center bg-[#f6b800] text-sm font-black text-black"
+            >
+              IG
+            </Link>
+
+            <Link
+              href="#"
+              className="flex h-11 w-11 items-center justify-center bg-black text-sm font-black text-white"
+            >
+              TT
+            </Link>
+
+            <Link
+              href="#"
+              className="flex h-11 w-11 items-center justify-center rounded bg-blue-700 text-sm font-black text-white"
+            >
+              in
+            </Link>
+          </div>
+
+          <p
+            className={`mt-12 text-base font-semibold ${
+              darkMode ? "text-white/45" : "text-black/50"
+            }`}
+          >
+            © Copyright 2026 LoadLink
+          </p>
+        </div>
+      </footer>
 </main>
   );
 }

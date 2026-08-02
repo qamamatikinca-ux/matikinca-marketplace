@@ -1,33 +1,30 @@
 "use client";
 
+import AuthStatusButton from "@/components/AuthStatusButton";
 import BusinessPlans from "@/components/BusinessPlans";
-import ProfessionalFooter from "@/components/platform/ProfessionalFooter";
-import ProfessionalHeader from "@/components/platform/ProfessionalHeader";
+import HomeLogoLink from "@/components/HomeLogoLink";
+import SiteMenu from "@/components/SiteMenu";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
+import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 
 export default function PackagesPage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   return (
     <main className={darkMode ? "min-h-screen bg-black text-white" : "min-h-screen bg-[#f4efe3] text-black"}>
-      <ProfessionalHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
+      <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
+        <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4">
+          <div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div>
+          <HomeLogoLink theme={darkMode ? "dark" : "light"} />
+          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="ml-auto" />
+        </div>
+      </header>
       <BusinessPlans darkMode={darkMode} />
-      <section className={`px-5 pb-16 md:px-12 ${darkMode ? "bg-black" : "bg-[#f4efe3]"}`}>
+      <section className={`px-4 pb-16 md:px-6 ${darkMode ? "bg-black" : "bg-[#f4efe3]"}`}>
         <div className={`mx-auto max-w-6xl rounded-[28px] border p-6 md:p-8 ${darkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
-          <p className="text-xs font-black uppercase tracking-[.2em] text-[#b88900]">Clear package rules</p>
-          <h2 className="mt-3 text-3xl font-black tracking-[-0.04em]">Logistics work posts remain free.</h2>
-          <p className={`mt-3 max-w-3xl text-sm leading-7 ${darkMode ? "text-white/55" : "text-black/55"}`}>Free posting is for companies offering work to truck owners and mobile-unit owners. Vehicle sales are not free: manual vehicle listings cost R15 per vehicle per day. Pro and dealership limits are enforced by the server, not only by the page.</p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <Rule title="Standard" body="5 vehicle photos, 50 messages per day and no private analytics." />
-            <Rule title="Pro" body="15 photos, analytics and expanded marketplace tools." />
-            <Rule title="Dealership" body="15 photos, stock management, lead handling and business reporting." />
-          </div>
+          <h2 className="text-3xl font-black tracking-[-0.04em]">Logistics job posts remain free.</h2>
+          <p className={`mt-3 max-w-3xl text-sm leading-7 ${darkMode ? "text-white/55" : "text-black/55"}`}>Opportunity posters can publish logistics work at no cost. An optional R14 boost places one job on the homepage for seven days and does not create a subscription.</p>
         </div>
       </section>
-      <ProfessionalFooter darkMode={darkMode} />
     </main>
   );
-}
-
-function Rule({ title, body }: { title: string; body: string }) {
-  return <article className="rounded-2xl border border-current/10 p-4"><h3 className="font-black">{title}</h3><p className="mt-2 text-sm leading-6 opacity-60">{body}</p></article>;
 }

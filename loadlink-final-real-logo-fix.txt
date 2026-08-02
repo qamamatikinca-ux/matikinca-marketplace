@@ -1,0 +1,8 @@
+Applied final real LoadLink logo fix at 2026-07-10T18:09:30.843Z
+
+Changed files:
+public/images/loadlink-logo-light.png
+public/images/loadlink-logo-dark.png
+public/images/loadlink-logo.png
+components/LoadLinkLogo.tsx
+app/globals.css

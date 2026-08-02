@@ -1,2 +1,0 @@
-import type { MetadataRoute } from "next";
-export default function sitemap(): MetadataRoute.Sitemap { const base=process.env.NEXT_PUBLIC_SITE_URL||"https://matikinca-marketplace.vercel.app"; return ["","/jobs","/contracts","/vehicles","/dealerships","/drivers","/help","/safety","/about","/contact","/terms","/privacy"].map(path=>({url:`${base}${path}`,lastModified:new Date(),changeFrequency:path?"weekly":"daily",priority:path?0.8:1})); }

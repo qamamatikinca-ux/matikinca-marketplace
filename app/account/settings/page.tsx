@@ -11,7 +11,6 @@ import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import { clearActiveAccountState, syncAccountState } from "@/lib/accountState";
 import { isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
-import { secureUpload } from "@/lib/client/secureUpload";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 type ProfileForm = {
@@ -163,7 +162,7 @@ export default function AccountSettingsPage() {
       setMessage("Your profile settings have been saved.");
     } catch (error) {
       const text = error instanceof Error ? error.message : "Profile settings could not be saved.";
-      setMessage(/column|schema cache/i.test(text) ? "Run supabase/migrations/20260801_000001_loadlink_professional_marketplace.sql in Supabase, then save again." : text);
+      setMessage(/column|schema cache/i.test(text) ? "Run LOADLINK-PHASE-2-FINAL.sql in Supabase, then save again." : text);
     } finally {
       setSaving(false);
     }
@@ -179,18 +178,21 @@ export default function AccountSettingsPage() {
     setUploading(true);
     setMessage("");
     try {
-      const uploaded = await secureUpload(file, "profile-image", file.name);
-      if (!uploaded.publicUrl) throw new Error("The profile picture could not be published.");
-      field("avatar_url", uploaded.publicUrl);
+      const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${user.id}/avatar-${Date.now()}.${extension}`;
+      const { error } = await supabase.storage.from("profile-media").upload(path, file, { upsert: true, contentType: file.type });
+      if (error) throw error;
+      const { data } = supabase.storage.from("profile-media").getPublicUrl(path);
+      field("avatar_url", data.publicUrl);
       const { error: profileError } = await supabase.rpc("loadlink_update_my_profile", {
-        p_payload: { ...form, avatar_url: uploaded.publicUrl },
+        p_payload: { ...form, avatar_url: data.publicUrl },
       });
       if (profileError) throw profileError;
-      await supabase.auth.updateUser({ data: { avatar_url: uploaded.publicUrl } });
+      await supabase.auth.updateUser({ data: { avatar_url: data.publicUrl } });
       setMessage("Profile picture updated.");
     } catch (error) {
       const text = error instanceof Error ? error.message : "Profile picture could not be uploaded.";
-      setMessage(/bucket|not found|row-level/i.test(text) ? "Run supabase/migrations/20260801_000001_loadlink_professional_marketplace.sql in Supabase before uploading a profile picture." : text);
+      setMessage(/bucket|not found|row-level/i.test(text) ? "Run LOADLINK-PHASE-2-FINAL.sql in Supabase before uploading a profile picture." : text);
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";

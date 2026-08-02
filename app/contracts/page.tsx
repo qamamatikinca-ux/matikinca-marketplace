@@ -1,2 +1,5 @@
-import WorkMarketplace from "@/components/platform/WorkMarketplace";
-export default function ContractsPage() { return <WorkMarketplace kind="contract"/>; }
+import { redirect } from "next/navigation";
+
+export default function ContractsPage() {
+  redirect("/jobs?portal=contract");
+}

@@ -3,6 +3,7 @@
 import RequireAuthLink from "@/components/RequireAuthLink";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { detectIntent, flexibleMatch, normaliseSearch, searchTokens, tokenMatches } from "@/lib/smartSearch";
 
 type PortalKind = "job" | "contract" | "asset";
@@ -29,7 +30,7 @@ const catalogue: SearchSuggestion[] = [
   { id: "jobs", label: "Find logistics jobs", meta: "Jobs for truck owners, drivers and mobile-unit operators", href: "/jobs?portal=job", searchable: "job jobs work opportunity load route delivery driver owner driver logistics transport", priority: 100 },
   { id: "contracts", label: "Find logistics contracts", meta: "Recurring, project and tender opportunities", href: "/jobs?portal=contract", searchable: "contract contracts tender recurring construction mining farming transport", priority: 100 },
   { id: "drivers", label: "Browse drivers available for work", meta: "Approved professional driver profiles", href: "/drivers", searchable: "driver drivers code 10 code 14 prdp professional profile hire", priority: 95 },
-  { id: "dealer", label: "Browse verified dealerships", meta: "Live approved commercial stock from LoadLink businesses", href: "/dealerships", searchable: "dealer dealership showroom truck sales commercial verified", priority: 90 },
+  { id: "dealer", label: "LoadLink Commercial Centurion", meta: "Featured verified dealership", href: "/dealership/loadlink-commercial-centurion", searchable: "dealer dealership showroom truck sales centurion gauteng commercial", priority: 90 },
   { id: "delivery", label: "Delivery jobs", meta: "Local and regional logistics work", href: "/jobs?portal=job&search=delivery", searchable: "delivery courier warehouse local route job work gauteng johannesburg pretoria", priority: 80 },
   { id: "mining", label: "Mining transport opportunities", meta: "Jobs and contracts", href: "/jobs?search=mining", searchable: "mining side tipper transport job contract mpumalanga limpopo north west", priority: 80 },
   { id: "event", label: "Event and catering opportunities", meta: "Mobile kitchens, toilets, fridges and food trucks", href: "/jobs?category=event-catering", searchable: "event catering food truck mobile kitchen mobile toilet mobile fridge job", priority: 78 },
@@ -67,15 +68,10 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
   const fabWrapperRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
     let active = true;
-    void fetch("/api/job-listings?limit=150", { cache: "no-store" })
-      .then(async (response) => {
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || "Marketplace suggestions could not be loaded.");
-        return payload.rows || [];
-      })
-      .then((rows) => { if (active) setLiveListings(rows as ListingRow[]); })
-      .catch(() => { if (active) setLiveListings([]); });
+    supabase.from("job_listings").select("id,title,city,vehicle_group,rate,posted_by,description").order("created_at", { ascending: false }).limit(150)
+      .then(({ data, error }) => { if (active && !error && data) setLiveListings(data as ListingRow[]); });
     return () => { active = false; };
   }, []);
 
@@ -119,7 +115,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
     if (term) {
       const intent = detectIntent(term);
       const portal = intent === "contract" ? "contract" : intent === "asset" ? "asset" : "job";
-      const smartHref = intent === "driver" ? `/drivers?search=${encodeURIComponent(term)}` : intent === "dealer" ? `/dealerships?search=${encodeURIComponent(term)}` : `/jobs?portal=${portal}&search=${encodeURIComponent(term)}`;
+      const smartHref = intent === "driver" ? `/drivers?search=${encodeURIComponent(term)}` : intent === "dealer" ? `/dealership/loadlink-commercial-centurion` : `/jobs?portal=${portal}&search=${encodeURIComponent(term)}`;
       ranked.unshift({ id: "smart-search", label: `Search all LoadLink for “${term}”`, meta: "Smart search across wording, locations and related terms", href: smartHref, searchable: term, priority: 999 });
     }
     return ranked.slice(0, 9);

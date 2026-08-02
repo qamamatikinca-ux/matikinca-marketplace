@@ -1,0 +1,10 @@
+This repair removes the one-card demo fallback from the live Jobs page.
+
+The Jobs page now requests listings from a server-side API route at runtime.
+That route reads the connected Supabase job_listings table with no browser cache,
+then falls back to get_public_job_listings if needed.
+
+Result: the page displays the real rows from the connected Supabase project instead
+of silently displaying the single Daily delivery route demo card.
+
+No additional SQL is required when SUPABASE-GUEST-CHAT-LEGACY-REPAIR.sql has already run.

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { MouseEvent } from "react";
 import LoadLinkLogo from "@/components/LoadLinkLogo";
 
 export default function HomeLogoLink({
@@ -21,7 +20,7 @@ export default function HomeLogoLink({
       href="/"
       className={className}
       aria-label="Go to LoadLink homepage"
-      onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+      onClick={(event) => {
         if (pathname === "/") {
           event.preventDefault();
           window.scrollTo({ top: 0, behavior: "smooth" });

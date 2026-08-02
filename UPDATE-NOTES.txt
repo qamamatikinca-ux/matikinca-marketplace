@@ -1,0 +1,6 @@
+LoadLink public website update:
+- moves notifications to a clean top-right position
+- improves My Posts visibility in light mode
+- adds dealership listing mode and private business documents
+- adds success tick animation and optional vibration feedback
+- blends/fades the List Your Truck hero image

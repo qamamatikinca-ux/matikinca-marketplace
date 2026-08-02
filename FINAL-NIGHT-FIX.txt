@@ -1,0 +1,8 @@
+LOADLINK TARGETED REPAIR
+
+- Removes duplicate currency prefixes such as "R From R1 850 / day".
+- Displays rates as "From R1 850/day" or "R7 000".
+- Restores visible rounded listing tags for listing type, category, vehicle need, verification and promotion.
+- Loads public listings through get_public_job_listings first, then falls back to the table query.
+- Keeps the legacy guest-chat handoff: old listings can receive a pending conversation and the poster receives it when LoadLink opens again on the original posting device.
+- Keeps article-image extraction, the server image proxy and the local logistics fallback cover.

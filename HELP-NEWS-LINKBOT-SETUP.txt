@@ -1,0 +1,23 @@
+LOADLINK HELP, LINKBOT AND NEWS SETUP
+
+This update includes:
+- Currency fallback on listings (South African rand)
+- Professional searchable /help page
+- LinkBot on homepage and help page
+- Automated answers limited to LoadLink topics
+- Optional OpenAI-powered answers when OPENAI_API_KEY is configured
+- South African logistics news feed with source credit and original links
+
+OPTIONAL REAL AI SETUP
+Add these environment variables to the Vercel project:
+OPENAI_API_KEY=your_private_server_key
+OPENAI_LINKBOT_MODEL=gpt-5-mini
+
+Never place OPENAI_API_KEY in NEXT_PUBLIC variables or browser code.
+Without the key, LinkBot still works with built-in guided LoadLink answers.
+
+AGENT HANDOFF
+The current agent option explains what information the user should prepare. Connect your support email or ticketing system later when ready.
+
+NEWS
+The news route refreshes about every 30 minutes. It fetches current South African logistics headlines and links to the credited original publisher. If a publisher image cannot be loaded, LoadLink uses an existing logistics image as a visual fallback.

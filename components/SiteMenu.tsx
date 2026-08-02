@@ -6,30 +6,25 @@ import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState } from "react";
 import { clearActiveAccountState } from "@/lib/accountState";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
-import { isAuthenticatedUser } from "@/lib/auth";
 import LoadLinkGearIcon from "@/components/LoadLinkGearIcon";
 
-type IconName = "home" | "briefcase" | "contract" | "vehicles" | "drivers" | "help" | "messages" | "posts" | "settings" | "driver" | "dealer" | "packages" | "saved" | "account";
+type IconName = "home" | "briefcase" | "contract" | "drivers" | "help" | "messages" | "posts" | "settings" | "driver" | "dealer" | "packages";
 type MenuLink = { label: string; href: string; description: string; icon: IconName };
 
 const marketplaceLinks: MenuLink[] = [
   { label: "Home", href: "/", description: "LoadLink marketplace", icon: "home" },
-  { label: "Work", href: "/jobs?portal=job", description: "Logistics work opportunities", icon: "briefcase" },
-  { label: "Contracts", href: "/contracts", description: "Recurring and project work", icon: "contract" },
-  { label: "Vehicles", href: "/vehicles", description: "Commercial vehicles and units", icon: "vehicles" },
-  { label: "Dealerships", href: "/dealerships", description: "Verified business inventory", icon: "dealer" },
-  { label: "Drivers", href: "/drivers", description: "Approved drivers for hire", icon: "drivers" },
-  { label: "Messages", href: "/messages", description: "Listing and business enquiries", icon: "messages" },
+  { label: "Find jobs", href: "/jobs", description: "Available logistics work", icon: "briefcase" },
+  { label: "Find contracts", href: "/contracts", description: "Recurring and project work", icon: "contract" },
+  { label: "Driver profiles", href: "/drivers", description: "Approved drivers for hire", icon: "drivers" },
   { label: "Help centre", href: "/help", description: "Support and safety guidance", icon: "help" },
 ];
 
 const accountLinks: MenuLink[] = [
-  { label: "Account hub", href: "/account", description: "All account tools in one place", icon: "account" },
-  { label: "My posts", href: "/my-posts", description: "Manage listings and status", icon: "posts" },
-  { label: "Saved", href: "/saved", description: "Saved vehicles and opportunities", icon: "saved" },
+  { label: "Messages", href: "/messages", description: "Your conversations", icon: "messages" },
+  { label: "My posts", href: "/my-posts", description: "Manage your listings", icon: "posts" },
   { label: "Profile settings", href: "/account/settings", description: "Profile, account and alerts", icon: "settings" },
   { label: "Driver profile", href: "/driver-profile", description: "Create or update your profile", icon: "driver" },
-  { label: "Dealership centre", href: "/dealer", description: "Apply and manage stock", icon: "dealer" },
+  { label: "Dealership centre", href: "/dealer", description: "Manage approved stock", icon: "dealer" },
   { label: "Packages", href: "/packages", description: "Manual, Pro and Dealer plans", icon: "packages" },
 ];
 
@@ -51,7 +46,7 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
     let active = true;
     async function applyUser(user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"]) {
       if (!active) return;
-      setSignedIn(isAuthenticatedUser(user));
+      setSignedIn(Boolean(user));
       setEmail(user?.email || "");
       const metadata = user?.user_metadata || {};
       setAvatar(String(metadata.avatar_url || metadata.picture || ""));
@@ -148,9 +143,6 @@ function MenuItemIcon({ name }: { name: IconName }) {
     case "home": return <svg {...common}><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>;
     case "briefcase": return <svg {...common}><path d="M4 7h16v13H4V7Zm5 0V4h6v3M4 12h16" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>;
     case "contract": return <svg {...common}><path d="M6 3h9l3 3v15H6V3Zm9 0v4h4M9 11h6M9 15h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
-    case "vehicles": return <svg {...common}><path d="M4 15V9l2-4h12l2 4v6M6 15h12M7 15v3M17 15v3M6 11h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="7" cy="13" r="1" fill="currentColor" /><circle cx="17" cy="13" r="1" fill="currentColor" /></svg>;
-    case "saved": return <svg {...common}><path d="M6 3h12v18l-6-4-6 4V3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>;
-    case "account": return <svg {...common}><circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2" /><path d="M4 21a8 8 0 0 1 16 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
     case "drivers": return <svg {...common}><path d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8-1a3 3 0 1 0 0-6M2 21a6 6 0 0 1 12 0m1-7a5 5 0 0 1 7 4.6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
     case "help": return <svg {...common}><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" /><path d="M9.8 9a2.3 2.3 0 1 1 3.5 2c-.9.5-1.3 1-1.3 2M12 17h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
     case "messages": return <svg {...common}><path d="M4 5h16v11H8l-4 4V5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>;

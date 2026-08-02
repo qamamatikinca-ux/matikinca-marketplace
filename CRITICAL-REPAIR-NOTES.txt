@@ -1,0 +1,7 @@
+This repair does only four things:
+1. Creates the invisible guest session globally, without a login screen.
+2. Lets buyers start a conversation on older listings that have no user_id yet.
+3. Connects those conversations to the poster automatically when the poster next opens LoadLink on the original posting device.
+4. Adds a secure public-listings RPC fallback so all database listings can load even if table RLS is misconfigured.
+
+Run SUPABASE-GUEST-CHAT-LEGACY-REPAIR.sql once after deploying.

@@ -1,0 +1,32 @@
+LOADLINK UPDATE - COMPLETED FEATURES
+
+Homepage
+- Live suggestions while typing in the homepage search bar.
+- Quick filters in a horizontal swipe row.
+- Swipe-only Featured Listings carousel using snap scrolling.
+- Trending searches.
+- Save website button using the device share sheet or copied-link fallback.
+- Floating listing action button.
+- Existing approved portal card layout preserved.
+
+Listings
+- Save / unsave listing.
+- Liked tab in Recent Activity.
+- Share listing using native share or copied-link fallback.
+- Report listing stored locally until the complaints email is connected.
+- Professional empty search state with Clear Filters.
+- Listing skeletons while data loads.
+- Optional Premium visibility ribbon on the listing form.
+- Gold Verified badge only when the listing is linked to a user whose profile is approved.
+
+Verification
+- Phone OTP page.
+- Private South African ID/passport upload.
+- Required selfie upload.
+- Optional company document.
+- Pending, verified and rejected statuses.
+- Admin review page with approve, reject and rejection reason.
+- Realtime status updates plus 15-second fallback checking.
+- Verification timing note: usually a few minutes when a reviewer is available.
+
+No emoji characters are used in the updated homepage, jobs page or listing form controls.

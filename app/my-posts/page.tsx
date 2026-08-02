@@ -10,8 +10,8 @@ import LoadLinkLoading from "@/components/LoadLinkLoading";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkPagination from "@/components/LoadLinkPagination";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
-import AccessibleDialog from "@/components/platform/AccessibleDialog";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
+import { getOwnerKeys } from "@/lib/chatKeys";
 import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { requestListingRenewal } from "@/lib/packageAccess";
@@ -35,6 +35,7 @@ type MyListing = {
   created_at: string | null;
   view_count: number | null;
   last_viewed_at: string | null;
+  owner_key: string;
   user_id: string | null;
   status?: ListingStatus | null;
   moderation_status?: ModerationStatus | null;
@@ -73,9 +74,6 @@ export default function MyPostsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsPayload | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [lockedAnalytics, setLockedAnalytics] = useState<MyListing | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<MyListing | null>(null);
-  const [renewTarget, setRenewTarget] = useState<MyListing | null>(null);
-  const [renewDays, setRenewDays] = useState("7");
 
   useEffect(() => {
     let active = true;
@@ -121,7 +119,7 @@ export default function MyPostsPage() {
       const results: MyListing[] = [];
       const byUser = await supabase
         .from("job_listings")
-        .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,user_id,status,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status")
+        .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,status,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status")
         .eq("user_id", currentUserId)
         .order("created_at", { ascending: false });
 
@@ -129,7 +127,7 @@ export default function MyPostsPage() {
       else if (/status|column|schema cache/i.test(byUser.error.message)) {
         const fallback = await supabase
           .from("job_listings")
-          .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,user_id,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status")
+          .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status")
           .eq("user_id", currentUserId)
           .order("created_at", { ascending: false });
         if (fallback.error) throw fallback.error;
@@ -138,6 +136,20 @@ export default function MyPostsPage() {
         throw byUser.error;
       }
 
+      const existingIds = new Set(results.map((item) => item.id));
+      const ownerKeys = getOwnerKeys();
+      if (ownerKeys.length) {
+        const byOwner = await supabase
+          .from("job_listings")
+          .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,status,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status")
+          .in("owner_key", ownerKeys)
+          .order("created_at", { ascending: false });
+        if (!byOwner.error) {
+          ((byOwner.data || []) as MyListing[]).forEach((item) => {
+            if (!existingIds.has(item.id)) results.push(item);
+          });
+        }
+      }
 
       results.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
       setListings(results);
@@ -149,7 +161,7 @@ export default function MyPostsPage() {
           .in("listing_id", results.map((item) => item.id));
         if (!verification.error) {
           const next: VerificationMap = {};
-          ((verification.data || []) as Array<{ listing_id: string; status: string }>).forEach((row) => { next[row.listing_id] = row.status; });
+          (verification.data || []).forEach((row) => { next[row.listing_id] = row.status; });
           setVerificationStatuses(next);
         }
       }
@@ -161,19 +173,19 @@ export default function MyPostsPage() {
   }
 
   async function deleteListing(listing: MyListing) {
+    if (!confirm(`Delete “${listing.title}” permanently?`)) return;
     setMessage("");
-    const result = await supabase.rpc("loadlink_delete_my_listing", { p_listing_id: listing.id });
+    const result = await supabase.rpc("delete_my_listing", { p_listing_id: listing.id, p_owner_key: listing.owner_key || "" });
     if (result.error || result.data !== true) {
       setMessage(result.error?.message || "This post could not be deleted. Run the new LoadLink SQL if this is your first update.");
       return;
     }
     setListings((current) => current.filter((item) => item.id !== listing.id));
-    setDeleteTarget(null);
   }
 
   async function setStatus(listing: MyListing, status: ListingStatus) {
     setMessage("");
-    const result = await supabase.rpc("loadlink_set_my_listing_status", { p_listing_id: listing.id, p_status: status });
+    const result = await supabase.rpc("set_my_listing_status", { p_listing_id: listing.id, p_status: status, p_owner_key: listing.owner_key || "" });
     if (result.error || result.data !== true) {
       setMessage(result.error?.message || "The listing status could not be changed.");
       return;
@@ -181,14 +193,15 @@ export default function MyPostsPage() {
     setListings((current) => current.map((item) => item.id === listing.id ? { ...item, status } : item));
   }
 
-  async function renewListing(listing: MyListing, rawDays: string) {
-    const days = Math.max(1, Math.min(365, Math.floor(Number(rawDays) || 0)));
-    if (!days) { setMessage("Choose a renewal period between 1 and 365 days."); return; }
+  async function renewListing(listing: MyListing) {
+    const raw = window.prompt("How many days would you like to renew this listing for? Each day costs R15.", "7");
+    if (!raw) return;
+    const days = Math.max(1, Math.min(365, Math.floor(Number(raw) || 0)));
+    if (!days) return;
     setMessage("");
     try {
       const payment = await requestListingRenewal(listing.id, days);
-      setMessage(`Renewal request ${payment.reference} was created for R${(payment.amount_cents / 100).toFixed(2)}. The expiry date updates automatically only after verified payment.`);
-      setRenewTarget(null);
+      setMessage(`Renewal request ${payment.reference} was created for R${(payment.amount_cents / 100).toFixed(2)}. The expiry date updates automatically when payment is marked paid.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "The renewal request could not be created.");
     }
@@ -202,8 +215,9 @@ export default function MyPostsPage() {
     setAnalyticsListing(listing);
     setAnalytics(null);
     setAnalyticsLoading(true);
-    const result = await supabase.rpc("loadlink_get_my_listing_analytics", {
-      p_listing_id: listing.id,
+    const result = await supabase.rpc("get_pro_job_analytics", {
+      p_job_id: listing.id,
+      p_owner_key: listing.owner_key || "",
     });
     if (!result.error) setAnalytics((result.data || {}) as AnalyticsPayload);
     setAnalyticsLoading(false);
@@ -297,7 +311,7 @@ export default function MyPostsPage() {
 
                       <p className={`mt-4 line-clamp-3 text-sm leading-6 ${muted}`}>{cleanDescription(listing.description)}</p>
                       <p className={`mt-3 text-xs font-semibold ${muted}`}>Posted {formatDate(listing.created_at)}</p>
-                      {isManualVehicle && listing.expires_at ? <div className={`mt-3 border px-4 py-3 ${expired ? "border-red-500/50 bg-red-500/10" : "border-[#f6b800]/40 bg-[#f6b800]/10"}`}><p className={`text-[10px] font-black uppercase ${expired ? "text-red-500" : "text-[#b88900]"}`}>{expired ? "Listing expired" : `${Math.max(0, Math.ceil((new Date(listing.expires_at).getTime() - Date.now()) / 86400000))} paid days remaining`}</p><p className={`mt-1 text-xs font-bold ${muted}`}>Expires {formatDate(listing.expires_at)} · R15 per day</p><button type="button" onClick={() => { setRenewTarget(listing); setRenewDays("7"); }} className="mt-3 rounded-full bg-[#f6b800] px-4 py-2 text-[10px] font-black uppercase text-black">Renew listing</button></div> : null}
+                      {isManualVehicle && listing.expires_at ? <div className={`mt-3 border px-4 py-3 ${expired ? "border-red-500/50 bg-red-500/10" : "border-[#f6b800]/40 bg-[#f6b800]/10"}`}><p className={`text-[10px] font-black uppercase ${expired ? "text-red-500" : "text-[#b88900]"}`}>{expired ? "Listing expired" : `${Math.max(0, Math.ceil((new Date(listing.expires_at).getTime() - Date.now()) / 86400000))} paid days remaining`}</p><p className={`mt-1 text-xs font-bold ${muted}`}>Expires {formatDate(listing.expires_at)} · R15 per day</p><button type="button" onClick={() => void renewListing(listing)} className="mt-3 rounded-full bg-[#f6b800] px-4 py-2 text-[10px] font-black uppercase text-black">Renew listing</button></div> : null}
 
                       {moderationStatus === "rejected" ? (
                         <div className={`loadlink-rejection-panel mt-4 rounded-2xl border px-4 py-4 ${darkMode ? "border-red-500/45 bg-red-950/25 text-red-100" : "border-red-400 bg-red-50 text-red-950"}`}>
@@ -351,14 +365,6 @@ export default function MyPostsPage() {
       {editing ? <EditModal listing={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); loadListings(); }} /> : null}
       {lockedAnalytics ? <LockedAnalyticsModal onClose={() => setLockedAnalytics(null)} /> : null}
       {analyticsListing ? <AnalyticsModal listing={analyticsListing} data={analytics} loading={analyticsLoading} onClose={() => setAnalyticsListing(null)} /> : null}
-      <AccessibleDialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} title="Delete listing permanently?" description="This removes the listing from My Posts and the public marketplace. This action cannot be undone." darkMode={darkMode}>
-        <div className="grid gap-3 sm:grid-cols-2"><button type="button" onClick={() => setDeleteTarget(null)} className="h-12 rounded-xl border border-current/15 font-black">Keep listing</button><button type="button" onClick={() => deleteTarget && void deleteListing(deleteTarget)} className="h-12 rounded-xl bg-red-600 font-black text-white">Delete permanently</button></div>
-      </AccessibleDialog>
-      <AccessibleDialog open={Boolean(renewTarget)} onClose={() => setRenewTarget(null)} title="Renew vehicle listing" description="Manual vehicle listings cost R15 per day. The listing is extended only after verified payment." darkMode={darkMode}>
-        <label className="grid gap-2 text-xs font-black uppercase tracking-wide">Number of days<input value={renewDays} onChange={(event) => setRenewDays(event.target.value.replace(/\D/g, "").slice(0, 3))} inputMode="numeric" className="h-12 rounded-xl border border-current/15 bg-transparent px-4 text-base outline-none focus:border-[#f6b800]" /></label>
-        <p className={`mt-3 text-sm font-bold ${muted}`}>Estimated total: R{(Math.max(1, Math.min(365, Number(renewDays) || 0)) * 15).toFixed(2)}</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2"><button type="button" onClick={() => setRenewTarget(null)} className="h-12 rounded-xl border border-current/15 font-black">Cancel</button><button type="button" onClick={() => renewTarget && void renewListing(renewTarget, renewDays)} className="h-12 rounded-xl bg-[#f6b800] font-black text-black">Create payment request</button></div>
-      </AccessibleDialog>
     </main>
   );
 }
@@ -404,15 +410,14 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
   async function save() {
     setSaving(true);
     setError("");
-    const result = await supabase.rpc("loadlink_update_my_listing", {
+    const result = await supabase.rpc("update_my_listing", {
       p_listing_id: listing.id,
-      p_changes: {
-        title: title.trim(),
-        city: city.trim(),
-        rate: rate.trim(),
-        contact_number: contact.trim(),
-        description: description.trim(),
-      },
+      p_title: title.trim(),
+      p_city: city.trim(),
+      p_rate: rate.trim(),
+      p_contact_number: contact.trim(),
+      p_description: description.trim(),
+      p_owner_key: listing.owner_key || "",
     });
     setSaving(false);
     if (result.error || result.data !== true) {

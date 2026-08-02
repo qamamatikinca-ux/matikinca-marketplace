@@ -1,0 +1,32 @@
+LOADLINK VERIFICATION SETUP
+
+1. Open Supabase Dashboard > SQL Editor.
+2. Open supabase/verification-system.sql from this project.
+3. Paste the entire file into SQL Editor and run it once.
+4. In Supabase Dashboard > Authentication > Providers > Phone, enable Phone authentication.
+5. Configure an SMS provider supported by your Supabase project. Without an SMS provider, OTP codes cannot be delivered.
+6. Create your own normal LoadLink account and sign in once.
+7. In Supabase SQL Editor, make your account an administrator:
+
+   update public.profiles
+   set role = 'admin'
+   where id = (select id from auth.users where email = 'YOUR-EMAIL-HERE');
+
+   If your profile row does not exist yet, run:
+
+   insert into public.profiles (id, full_name, role)
+   select id, 'LoadLink Admin', 'admin'
+   from auth.users
+   where email = 'YOUR-EMAIL-HERE'
+   on conflict (id) do update set role = 'admin';
+
+8. Admin review page: /admin/verifications
+9. User verification page: /verify
+10. User status page: /verification-status
+
+IMPORTANT
+- Identity files are stored in a private bucket.
+- Users can only read their own files.
+- Admins can review submissions through temporary signed links.
+- Approval updates immediately through Supabase Realtime; the status page also checks every 15 seconds.
+- “A few minutes” depends on an admin being available to review. The software cannot truthfully guarantee a fixed review time.

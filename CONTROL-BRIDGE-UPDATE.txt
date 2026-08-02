@@ -1,0 +1,5 @@
+LOADLINK CONTROL BRIDGE UPDATE
+
+This patch connects public user-facing moderation status and notifications to the private admin Control Centre through Supabase.
+
+Required: run LOADLINK-CONTROL-BRIDGE.sql once in Supabase after installing both website updates.

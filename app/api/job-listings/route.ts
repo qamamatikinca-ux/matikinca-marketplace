@@ -1,76 +1,84 @@
-import { NextRequest, NextResponse } from "next/server";
-import { PUBLIC_LISTING_SELECT, isPubliclyVisible } from "@/lib/marketplace/publicListing";
-import { publicSupabase, safeApiError } from "@/lib/server/supabase";
-import { requestIdentity, rateLimitHeaders, takeRateLimit } from "@/lib/server/rateLimit";
+import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const FALLBACK_FIELDS = "id,title,city,vehicle_group,rate,posted_by,poster_photo,description,photos,sponsored,package_type,created_at,expires_at,featured_until,view_count,dealership_id,stock_status,moderation_status,status,listing_kind";
+function getSupabaseConfig() {
+  const url =
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    "";
 
-function cleanLimit(value: string | null) {
-  const parsed = Number(value || 100);
-  return Number.isFinite(parsed) ? Math.min(200, Math.max(1, Math.floor(parsed))) : 100;
+  const key =
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    "";
+
+  return { url: url.replace(/\/$/, ""), key };
 }
 
-export async function GET(request: NextRequest) {
-  const limiter = takeRateLimit(`public-listings:${requestIdentity(request)}`, 120, 60_000);
-  if (!limiter.allowed) {
-    return NextResponse.json({ error: "Too many listing requests. Try again shortly." }, { status: 429, headers: rateLimitHeaders(limiter) });
-  }
+async function supabaseRequest(url: string, key: string, path: string, init?: RequestInit) {
+  return fetch(`${url}/rest/v1/${path}`, {
+    ...init,
+    cache: "no-store",
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      ...(init?.headers || {}),
+    },
+  });
+}
 
-  try {
-    const client = publicSupabase();
-    const search = (request.nextUrl.searchParams.get("search") || "").trim().toLowerCase().slice(0, 120);
-    const kind = (request.nextUrl.searchParams.get("kind") || "").trim().toLowerCase();
-    const city = (request.nextUrl.searchParams.get("city") || "").trim().toLowerCase();
-    const dealershipId = (request.nextUrl.searchParams.get("dealership") || "").trim();
-    const limit = cleanLimit(request.nextUrl.searchParams.get("limit"));
+export async function GET() {
+  const { url, key } = getSupabaseConfig();
 
-    const primaryResult = await client
-      .from("loadlink_public_listings")
-      .select(PUBLIC_LISTING_SELECT)
-      .order("created_at", { ascending: false })
-      .limit(Math.max(limit, 200));
-
-    let listingData =
-      primaryResult.data as unknown as Record<string, unknown>[] | null;
-    let listingError = primaryResult.error;
-
-    if (listingError) {
-      const fallbackResult = await client
-        .from("job_listings")
-        .select(FALLBACK_FIELDS)
-        .order("created_at", { ascending: false })
-        .limit(Math.max(limit, 200));
-
-      listingData =
-        fallbackResult.data as unknown as Record<string, unknown>[] | null;
-      listingError = fallbackResult.error;
-    }
-
-    if (listingError) throw listingError;
-
-    const rows = (listingData || [])
-      .filter(isPubliclyVisible)
-      .filter((row) => !kind || String(row.listing_kind || "job").toLowerCase() === kind)
-      .filter((row) => !city || String(row.city || "").toLowerCase().includes(city))
-      .filter((row) => !dealershipId || String(row.dealership_id || "") === dealershipId)
-      .filter((row) => {
-        if (!search) return true;
-        const haystack = [row.title, row.city, row.province, row.vehicle_group, row.vehicle_type, row.brand, row.model, row.description, row.posted_by]
-          .map((value) => String(value || "").toLowerCase())
-          .join(" ");
-        return search.split(/\s+/).every((token) => haystack.includes(token));
-      })
-      .slice(0, limit);
-
+  if (!url.startsWith("https://") || !key) {
     return NextResponse.json(
-      { rows, count: rows.length, generatedAt: new Date().toISOString() },
-      { headers: { ...rateLimitHeaders(limiter), "Cache-Control": "public, max-age=20, s-maxage=45, stale-while-revalidate=120" } },
+      { error: "The live deployment is missing its Supabase project URL or publishable key." },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
     );
-  } catch (error) {
-    const safe = safeApiError(error, "Listings could not be loaded.");
-    return NextResponse.json({ error: safe.message, code: safe.code }, { status: safe.status, headers: rateLimitHeaders(limiter) });
   }
+
+  // Read the real table first. The user already confirmed that public SELECT
+  // can see seven rows in this project.
+  let response = await supabaseRequest(
+    url,
+    key,
+    "job_listings?select=*&order=created_at.desc.nullslast",
+  );
+
+  // Fall back to the public RPC installed by the LoadLink repair SQL.
+  if (!response.ok) {
+    response = await supabaseRequest(url, key, "rpc/get_public_job_listings", {
+      method: "POST",
+      body: "{}",
+    });
+  }
+
+  if (!response.ok) {
+    const details = await response.text().catch(() => "");
+    return NextResponse.json(
+      {
+        error: "The connected Supabase project did not return its listings.",
+        details: details.slice(0, 400),
+      },
+      { status: response.status || 500, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const rows = await response.json();
+  const visibleRows = Array.isArray(rows)
+    ? rows.filter((row) => {
+        const active = !row?.status || row.status === "active";
+        const approved = row?.moderation_status === undefined || row.moderation_status === "approved";
+        return active && approved;
+      })
+    : [];
+  return NextResponse.json(
+    { rows: visibleRows },
+    { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } },
+  );
 }

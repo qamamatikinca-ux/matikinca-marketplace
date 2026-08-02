@@ -1,0 +1,41 @@
+name: Install LoadLink Vercel hotfix
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open repository
+        uses: actions/checkout@v4
+
+      - name: Apply TypeScript hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP="LoadLink-Vercel-TypeScript-Hotfix.zip"
+          test -f "$ZIP" || { echo "Missing $ZIP in repository root"; exit 1; }
+          rm -rf /tmp/loadlink-hotfix
+          mkdir -p /tmp/loadlink-hotfix
+          unzip -q "$ZIP" -d /tmp/loadlink-hotfix
+          test -f /tmp/loadlink-hotfix/app/jobs/list/page.tsx || { echo "Unexpected ZIP structure"; exit 1; }
+          cp /tmp/loadlink-hotfix/app/jobs/list/page.tsx app/jobs/list/page.tsx
+          rm -f "$ZIP"
+
+      - name: Save hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes were found."
+          else
+            git commit -m "Fix Vercel TypeScript build error"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
