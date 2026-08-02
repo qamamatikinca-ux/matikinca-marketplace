@@ -1,0 +1,162 @@
+name: LoadLink Automatic Build Fix
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/loadlink-auto-build-fix.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    name: Apply fixes automatically
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply all confirmed LoadLink build fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          changed = []
+
+          def replace_exact(file_name: str, old: str, new: str) -> None:
+              path = Path(file_name)
+
+              if not path.is_file():
+                  print(f"Skipped missing file: {file_name}")
+                  return
+
+              text = path.read_text(encoding="utf-8")
+
+              if new in text:
+                  print(f"Already fixed: {file_name}")
+                  return
+
+              if old not in text:
+                  print(f"Expected old code was not present: {file_name}")
+                  return
+
+              path.write_text(text.replace(old, new), encoding="utf-8")
+              changed.append(file_name)
+              print(f"Fixed: {file_name}")
+
+          replace_exact(
+              "app/api/admin/notifications/route.ts",
+              'import { safeInternalHref } from "@/lib/marketplace/navigation";',
+              'import { safeInternalHref } from "@/lib/safeNavigation";',
+          )
+
+          replace_exact(
+              "app/api/admin/records/route.ts",
+              'const rows = (result.data || []).filter((row) => !search || JSON.stringify(row).toLowerCase().includes(search.toLowerCase()));',
+              'const rows = ((result.data || []) as Record<string, unknown>[]).filter((row) => !search || JSON.stringify(row).toLowerCase().includes(search.toLowerCase()));',
+          )
+
+          replace_exact(
+              "app/api/listings/[id]/route.ts",
+              'similar: (similar.data || []).filter((row) => isPubliclyVisible(row as Record<string, unknown>)),',
+              'similar: ((similar.data || []) as Record<string, unknown>[]).filter(isPubliclyVisible),',
+          )
+
+          replace_exact(
+              "app/my-posts/page.tsx",
+              '(verification.data || []).forEach((row) => { next[row.listing_id] = row.status; });',
+              '((verification.data || []) as Array<{ listing_id: string; status: string }>).forEach((row) => { next[row.listing_id] = row.status; });',
+          )
+
+          replace_exact(
+              "app/api/jobs/interest/route.ts",
+              'if (result.error) throw result.error;\n    await client.rpc("loadlink_emit_event"',
+              'if (result.error) throw result.error;\n    if (!result.data) throw new Error("The interest record was not returned after saving.");\n    await client.rpc("loadlink_emit_event"',
+          )
+
+          replace_exact(
+              "app/api/payments/webhook/route.ts",
+              'if (insert.error) throw insert.error;\n    if (!insert.data.processed_at)',
+              'if (insert.error) throw insert.error;\n    if (!insert.data) throw new Error("The payment event was not returned after saving.");\n    if (!insert.data.processed_at)',
+          )
+
+          logo = Path("components/HomeLogoLink.tsx")
+          if logo.is_file():
+              text = logo.read_text(encoding="utf-8")
+              original = text
+
+              if 'import type { MouseEvent } from "react";' not in text:
+                  text = text.replace(
+                      'import { usePathname } from "next/navigation";',
+                      'import { usePathname } from "next/navigation";\nimport type { MouseEvent } from "react";',
+                  )
+
+              text = text.replace(
+                  'onClick={(event) => {',
+                  'onClick={(event: MouseEvent<HTMLAnchorElement>) => {',
+              )
+
+              if text != original:
+                  logo.write_text(text, encoding="utf-8")
+                  changed.append(str(logo))
+                  print(f"Fixed: {logo}")
+              else:
+                  print(f"Already fixed: {logo}")
+
+          stray = Path("app/npm")
+          if stray.is_file() and stray.stat().st_size == 0:
+              stray.unlink()
+              changed.append(str(stray))
+              print("Removed accidental empty file: app/npm")
+
+          notifications = Path(
+              "app/api/admin/notifications/route.ts"
+          ).read_text(encoding="utf-8")
+
+          records = Path(
+              "app/api/admin/records/route.ts"
+          ).read_text(encoding="utf-8")
+
+          if "@/lib/marketplace/navigation" in notifications:
+              raise SystemExit("The broken notifications import still exists.")
+
+          if "const rows = (result.data || []).filter((row)" in records:
+              raise SystemExit("The admin records TypeScript error still exists.")
+
+          print(f"Completed. Changed entries: {len(changed)}")
+          PY
+
+      - name: Commit fixes to main
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "LoadLink Automatic Fix"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add -A
+
+          # Never include workflow-file changes in the automatic commit.
+          git restore --staged .github/workflows 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "The source files were already corrected."
+            exit 0
+          fi
+
+          git commit -m "Apply confirmed LoadLink production build fixes"
+          git push origin HEAD:main
+
+          echo "Fixes pushed. Vercel will redeploy automatically."
