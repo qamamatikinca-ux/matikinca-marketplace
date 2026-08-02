@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       client.from("loadlink_public_driver_profiles").select("id,full_name,headline,city,province,licence_code,vehicle_types,years_experience,availability,verification_level").limit(150),
     ]);
 
-    const listings = ((listingsResult.data || []) as Record<string, unknown>[]).filter(isPubliclyVisible).filter((row) => matches(row, tokens));
+    const listings = ((listingsResult.data || []) as unknown as Record<string, unknown>[]).filter(isPubliclyVisible).filter((row) => matches(row, tokens));
     const groups = {
       jobs: listings.filter((row) => String(row.listing_kind || "job") === "job").slice(0, 8),
       contracts: listings.filter((row) => String(row.listing_kind || "") === "contract").slice(0, 8),

@@ -27,13 +27,31 @@ export async function GET(request: NextRequest) {
     const dealershipId = (request.nextUrl.searchParams.get("dealership") || "").trim();
     const limit = cleanLimit(request.nextUrl.searchParams.get("limit"));
 
-    let result = await client.from("loadlink_public_listings").select(PUBLIC_LISTING_SELECT).order("created_at", { ascending: false }).limit(Math.max(limit, 200));
-    if (result.error) {
-      result = await client.from("job_listings").select(FALLBACK_FIELDS).order("created_at", { ascending: false }).limit(Math.max(limit, 200));
-    }
-    if (result.error) throw result.error;
+    const primaryResult = await client
+      .from("loadlink_public_listings")
+      .select(PUBLIC_LISTING_SELECT)
+      .order("created_at", { ascending: false })
+      .limit(Math.max(limit, 200));
 
-    const rows = ((result.data || []) as Record<string, unknown>[])
+    let listingData =
+      primaryResult.data as unknown as Record<string, unknown>[] | null;
+    let listingError = primaryResult.error;
+
+    if (listingError) {
+      const fallbackResult = await client
+        .from("job_listings")
+        .select(FALLBACK_FIELDS)
+        .order("created_at", { ascending: false })
+        .limit(Math.max(limit, 200));
+
+      listingData =
+        fallbackResult.data as unknown as Record<string, unknown>[] | null;
+      listingError = fallbackResult.error;
+    }
+
+    if (listingError) throw listingError;
+
+    const rows = (listingData || [])
       .filter(isPubliclyVisible)
       .filter((row) => !kind || String(row.listing_kind || "job").toLowerCase() === kind)
       .filter((row) => !city || String(row.city || "").toLowerCase().includes(city))

@@ -26,7 +26,7 @@ export async function GET(_request: Request, context: { params: Promise<{ slug: 
     ]);
     if (stockResult.error) throw stockResult.error;
 
-    const stock = ((stockResult.data || []) as Record<string, unknown>[]).filter(isPubliclyVisible);
+    const stock = ((stockResult.data || []) as unknown as Record<string, unknown>[]).filter(isPubliclyVisible);
     const updates = updatesResult.error ? [] : (updatesResult.data || []);
     const social = socialResult.error ? { follower_count: 0, is_following: false } : (socialResult.data || {});
     return NextResponse.json({ dealer, stock, updates, social }, { headers: { "Cache-Control": "public, max-age=20, s-maxage=60" } });

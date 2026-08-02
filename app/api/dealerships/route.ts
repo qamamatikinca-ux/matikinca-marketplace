@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const client = publicSupabase();
     const search = (request.nextUrl.searchParams.get("search") || "").trim().toLowerCase();
     const province = (request.nextUrl.searchParams.get("province") || "").trim().toLowerCase();
-    let result = await client.from("loadlink_public_dealerships").select("id,slug,name,profile_image_url,cover_image_url,short_bio,physical_location,province,verification_status,average_response_minutes,trust_score,active_stock_count,year_established").order("name").limit(200);
+    let result: any = await client.from("loadlink_public_dealerships").select("id,slug,name,profile_image_url,cover_image_url,short_bio,physical_location,province,verification_status,average_response_minutes,trust_score,active_stock_count,year_established").order("name").limit(200);
     if (result.error) {
       result = await client.from("dealership_profiles").select("id,slug,name,profile_image_url,cover_image_url,short_bio,physical_location,verification_status,average_response_minutes,trust_score,year_established").eq("verification_status", "approved").order("name").limit(200);
     }
