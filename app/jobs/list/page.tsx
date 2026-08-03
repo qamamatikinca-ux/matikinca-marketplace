@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import HomeLogoLink from "@/components/HomeLogoLink";
@@ -10,8 +10,10 @@ import SiteMenu from "@/components/SiteMenu";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
-import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
+import { currentRelativePath, loginHref } from "@/lib/auth";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
+import { createSafeRandomId, prepareImageForUpload, readableUploadError, validateImageFile } from "@/lib/mobilePosting";
+import { getFreshAuthenticatedUser, postingErrorMessage, withTransientRetry } from "@/lib/reliableSupabase";
 import { getAccountOwnerKey } from "@/lib/chatKeys";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
@@ -38,17 +40,6 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function getAuthenticatedUserSafely() {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (isAuthenticatedUser(sessionData.session?.user)) return sessionData.session!.user;
-    const { data: userData } = await supabase.auth.getUser();
-    if (isAuthenticatedUser(userData.user)) return userData.user;
-    await wait(250 * (attempt + 1));
-  }
-  return null;
-}
-
 function normalizePhone(value: string) {
   return value.replace(/[^\d+]/g, "");
 }
@@ -65,7 +56,6 @@ function groupForVehicle(value: string): VehicleGroup {
   return "Trucks / Trailers";
 }
 
-
 function saveOwnedJob(jobId: string, ownerKey: string) {
   try {
     const current = JSON.parse(localStorage.getItem("loadlink-owned-job-keys") || "{}") as Record<string, string>;
@@ -74,29 +64,6 @@ function saveOwnedJob(jobId: string, ownerKey: string) {
   } catch {
     localStorage.setItem("loadlink-owned-job-keys", JSON.stringify({ [jobId]: ownerKey }));
   }
-}
-
-function resizePhoto(file: File, maxWidth = 1200, quality = 0.8): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const image = new Image();
-      image.onload = () => {
-        const scale = Math.min(1, maxWidth / image.width);
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(1, Math.round(image.width * scale));
-        canvas.height = Math.max(1, Math.round(image.height * scale));
-        const context = canvas.getContext("2d");
-        if (!context) return reject(new Error("Could not process image."));
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Could not convert image.")), "image/jpeg", quality);
-      };
-      image.onerror = () => reject(new Error("Could not read image."));
-      image.src = String(reader.result);
-    };
-    reader.onerror = () => reject(new Error("Could not read file."));
-    reader.readAsDataURL(file);
-  });
 }
 
 export default function ListJobPage() {
@@ -123,6 +90,8 @@ export default function ListJobPage() {
   const [message, setMessage] = useState("");
   const [authReady, setAuthReady] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const submitLockRef = useRef(false);
+  const submissionIdRef = useRef("");
 
   const photoLimit = 5;
 
@@ -137,7 +106,7 @@ export default function ListJobPage() {
         return;
       }
 
-      const user = await getAuthenticatedUserSafely();
+      const user = await getFreshAuthenticatedUser();
 
       if (!user) {
         router.replace(loginHref(currentRelativePath()));
@@ -153,17 +122,24 @@ export default function ListJobPage() {
 
   useEffect(() => {
     try {
+      submissionIdRef.current = localStorage.getItem("loadlink-job-submission-id") || createSafeRandomId();
+      localStorage.setItem("loadlink-job-submission-id", submissionIdRef.current);
       const saved = JSON.parse(localStorage.getItem("loadlink-job-draft-v1") || "null");
       if (!saved) return;
       setListingMode(saved.listingMode || "job"); setAssetType(saved.assetType || "Truck"); setVehicleNeeded(saved.vehicleNeeded || "Any suitable vehicle");
       setTitle(saved.title || ""); setCity(saved.city || "Johannesburg"); setGroup(saved.group || "Trucks / Trailers");
       setRate(saved.rate || ""); setPostedBy(saved.postedBy || ""); setContactNumber(saved.contactNumber || "");
       setWhatsappNumber(saved.whatsappNumber || ""); setDescription(saved.description || ""); setBoostJob(Boolean(saved.boostJob));
-    } catch {}
+      submissionIdRef.current = String(saved.submissionId || localStorage.getItem("loadlink-job-submission-id") || createSafeRandomId());
+      localStorage.setItem("loadlink-job-submission-id", submissionIdRef.current);
+    } catch {
+      submissionIdRef.current = localStorage.getItem("loadlink-job-submission-id") || createSafeRandomId();
+      localStorage.setItem("loadlink-job-submission-id", submissionIdRef.current);
+    }
   }, []);
 
   useEffect(() => {
-    const draft = { listingMode, assetType, vehicleNeeded, title, city, group, rate, postedBy, contactNumber, whatsappNumber, description, boostJob };
+    const draft = { listingMode, assetType, vehicleNeeded, title, city, group, rate, postedBy, contactNumber, whatsappNumber, description, boostJob, submissionId: submissionIdRef.current || localStorage.getItem("loadlink-job-submission-id") || "" };
     const timer = window.setTimeout(() => localStorage.setItem("loadlink-job-draft-v1", JSON.stringify(draft)), 150);
     return () => window.clearTimeout(timer);
   }, [listingMode, assetType, vehicleNeeded, title, city, group, rate, postedBy, contactNumber, whatsappNumber, description, boostJob]);
@@ -200,54 +176,96 @@ export default function ListJobPage() {
     window.dispatchEvent(new Event("loadlink-theme-change"));
   }
 
+  function replacePosterPreview(nextUrl: string) {
+    setPosterPhotoPreview((current) => {
+      if (current.startsWith("blob:")) URL.revokeObjectURL(current);
+      return nextUrl;
+    });
+  }
+
   async function handlePosterPhoto(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] || null;
-    setPosterPhoto(file);
+    event.target.value = "";
+    setMessage("");
     if (!file) {
-      setPosterPhotoPreview("");
+      setPosterPhoto(null);
+      replacePosterPreview("");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => setPosterPhotoPreview(String(reader.result));
-    reader.readAsDataURL(file);
+    const validation = validateImageFile(file, "Profile photo");
+    if (validation) {
+      setMessage(validation);
+      return;
+    }
+    setPosterPhoto(file);
+    replacePosterPreview(URL.createObjectURL(file));
   }
 
   async function handlePhotos(event: ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(event.target.files || []);
+    event.target.value = "";
     setMessage("");
-    const limited = selected.slice(0, photoLimit);
+    const valid: File[] = [];
+    for (const file of selected.slice(0, photoLimit)) {
+      const validation = validateImageFile(file, file.name || "Photo");
+      if (validation) {
+        setMessage(validation);
+        continue;
+      }
+      valid.push(file);
+    }
     if (selected.length > photoLimit) setMessage(`This package allows up to ${photoLimit} photos. Extra photos were ignored.`);
-    setFiles(limited);
-    const previews = await Promise.all(limited.map((file) => new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    })));
-    setPreviewPhotos(previews);
-  }
-
-  async function uploadOne(file: File, folder: string, maxWidth = 1200) {
-    const resized = await resizePhoto(file, maxWidth, folder === "posters" ? 0.82 : 0.78);
-    const safeName = file.name.replace(/[^a-z0-9.]/gi, "-").toLowerCase();
-    const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}`;
-    const upload = await supabase.storage.from("job-photos").upload(path, resized, {
-      cacheControl: "3600",
-      contentType: "image/jpeg",
-      upsert: false,
+    setFiles(valid);
+    setPreviewPhotos((current) => {
+      current.forEach((url) => { if (url.startsWith("blob:")) URL.revokeObjectURL(url); });
+      return valid.map((file) => URL.createObjectURL(file));
     });
-    if (upload.error) throw upload.error;
-    return supabase.storage.from("job-photos").getPublicUrl(path).data.publicUrl;
   }
 
-  async function uploadPhotos() {
+  useEffect(() => () => {
+    previewPhotos.forEach((url) => { if (url.startsWith("blob:")) URL.revokeObjectURL(url); });
+    if (posterPhotoPreview.startsWith("blob:")) URL.revokeObjectURL(posterPhotoPreview);
+  }, [previewPhotos, posterPhotoPreview]);
+
+  function currentSubmissionId() {
+    if (!submissionIdRef.current) {
+      submissionIdRef.current = localStorage.getItem("loadlink-job-submission-id") || createSafeRandomId();
+      localStorage.setItem("loadlink-job-submission-id", submissionIdRef.current);
+    }
+    return submissionIdRef.current;
+  }
+
+  async function uploadOne(file: File, userId: string, submissionId: string, folder: string, index: number, maxWidth = 1600) {
+    const prepared = await prepareImageForUpload(file, {
+      maxWidth,
+      maxHeight: maxWidth,
+      quality: folder === "posters" ? 0.84 : 0.8,
+    });
+    const path = `${userId}/${folder}/${submissionId}/${index}.${prepared.extension}`;
+    await withTransientRetry(async () => {
+      const upload = await supabase.storage.from("job-photos").upload(path, prepared.blob, {
+        cacheControl: "3600",
+        contentType: prepared.contentType,
+        upsert: true,
+      });
+      if (upload.error) throw upload.error;
+    });
+    const publicUrl = supabase.storage.from("job-photos").getPublicUrl(path).data.publicUrl;
+    if (!publicUrl) throw new Error("The uploaded photo URL could not be created.");
+    return publicUrl;
+  }
+
+  async function uploadPhotos(userId: string, submissionId: string) {
     const urls: string[] = [];
-    for (const file of files) urls.push(await uploadOne(file, "jobs"));
+    for (let index = 0; index < files.length; index += 1) {
+      urls.push(await uploadOne(files[index], userId, submissionId, "jobs", index));
+    }
     return urls;
   }
 
   async function submitJob(event: FormEvent) {
     event.preventDefault();
+    if (submitLockRef.current || isSaving) return;
     setMessage("");
 
     if (!isSupabaseConfigured) {
@@ -271,18 +289,17 @@ export default function ListJobPage() {
       return;
     }
 
+    submitLockRef.current = true;
     setIsSaving(true);
-    const minimumLoading = wait(900);
+    const minimumLoading = wait(350);
     try {
-      const user = await getAuthenticatedUserSafely();
-      if (!user) {
-        setMessage("Your sign-in session could not be confirmed. Your details are still here—please wait a moment and tap Publish again.");
-        return;
-      }
+      const user = await getFreshAuthenticatedUser();
+      if (!user) throw new Error("Your sign-in session could not be confirmed.");
 
+      const submissionId = currentSubmissionId();
       const ownerKey = getAccountOwnerKey(user.id);
-      const uploadedUrls = await uploadPhotos();
-      const posterPhotoUrl = posterPhoto ? await uploadOne(posterPhoto, "posters", 500) : "";
+      const uploadedUrls = await uploadPhotos(user.id, submissionId);
+      const posterPhotoUrl = posterPhoto ? await uploadOne(posterPhoto, user.id, submissionId, "posters", 0, 700) : "";
       const listingType = listingMode === "asset" ? assetType : listingMode === "contract" ? "Contract" : "Job";
       const vehicleLine = listingMode === "job" ? `Vehicle needed: ${vehicleNeeded}\n` : "";
       const storedDescription = `Listing type: ${listingType}\n${vehicleLine}${description.trim()}`;
@@ -302,55 +319,71 @@ export default function ListJobPage() {
         package_type: packageType,
         owner_key: ownerKey,
         user_id: user.id,
+        listing_kind: listingMode === "contract" ? "contract" : listingMode === "asset" ? "asset" : "job",
+        status: "active",
+        moderation_status: "pending",
+        client_request_id: submissionId,
       };
 
-      let result = await supabase.from("job_listings").insert(fullListing).select("id").single();
-      if (result.error && /column|schema cache|whatsapp_number|poster_photo/i.test(result.error.message)) {
-        result = await supabase.from("job_listings").insert({
-          title: fullListing.title,
-          city: fullListing.city,
-          vehicle_group: fullListing.vehicle_group,
-          rate: fullListing.rate,
-          posted_by: fullListing.posted_by,
-          contact_number: fullListing.contact_number,
-          description: fullListing.description,
-          photos: fullListing.photos,
-          sponsored: fullListing.sponsored,
-          package_type: fullListing.package_type,
-          owner_key: fullListing.owner_key,
-          user_id: fullListing.user_id,
-        }).select("id").single();
-      }
-      if (result.error) throw result.error;
-      if (result.data?.id) {
-        if (boostJob) {
-          const boostResult = await supabase.from("job_boosts").insert({
-            listing_id: result.data.id,
-            user_id: user.id,
-            amount_cents: 1400,
-            status: "pending_payment",
-            requested_at: new Date().toISOString(),
-          });
-          if (boostResult.error && !/relation|schema cache|does not exist/i.test(boostResult.error.message)) throw boostResult.error;
+      let listingId = "";
+      try {
+        const result = await withTransientRetry(async () => {
+          const response = await supabase.from("job_listings").insert(fullListing).select("id").single();
+          if (response.error) throw response.error;
+          return response;
+        }, 2);
+        listingId = String(result.data?.id || "");
+      } catch (insertError) {
+        const message = readableUploadError(insertError, "");
+        const code = insertError && typeof insertError === "object" && "code" in insertError
+          ? String((insertError as { code?: unknown }).code || "")
+          : "";
+        if (code === "23505" || /duplicate key|unique constraint/i.test(message)) {
+          const existing = await supabase
+            .from("job_listings")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("client_request_id", submissionId)
+            .maybeSingle();
+          if (existing.error) throw existing.error;
+          listingId = String(existing.data?.id || "");
+        } else {
+          throw insertError;
         }
-        saveOwnedJob(result.data.id, ownerKey);
-        window.dispatchEvent(new Event("loadlink-account-state-changed"));
-        await recordUserActivity("listing_posted", {
-          entityType: "listing",
-          entityId: result.data.id,
-          metadata: { title: fullListing.title, listingType },
-        }).catch(() => undefined);
-        await syncAccountState().catch(() => undefined);
       }
+      if (!listingId) throw new Error("The listing was not assigned an ID.");
+
+      if (boostJob) {
+        const boostResult = await supabase.from("job_boosts").upsert({
+          listing_id: listingId,
+          user_id: user.id,
+          amount_cents: 1400,
+          status: "pending_payment",
+          requested_at: new Date().toISOString(),
+        }, { onConflict: "listing_id,user_id" });
+        if (boostResult.error && !/relation|schema cache|does not exist|constraint/i.test(boostResult.error.message)) throw boostResult.error;
+      }
+
+      saveOwnedJob(listingId, ownerKey);
+      window.dispatchEvent(new Event("loadlink-account-state-changed"));
+      await recordUserActivity("listing_posted", {
+        entityType: "listing",
+        entityId: listingId,
+        metadata: { title: fullListing.title, listingType },
+      }).catch(() => undefined);
+      await syncAccountState().catch(() => undefined);
       await minimumLoading;
       localStorage.removeItem("loadlink-job-draft-v1");
-      setIsSaving(false);
+      localStorage.removeItem("loadlink-job-submission-id");
+      submissionIdRef.current = createSafeRandomId();
       setSubmissionSuccess(true);
-      window.setTimeout(() => router.push("/jobs?posted=success"), 1700);
+      window.setTimeout(() => router.push("/jobs?posted=success"), 1400);
     } catch (error) {
       await minimumLoading;
+      setMessage(postingErrorMessage(error, readableUploadError(error, "The listing could not be uploaded.")));
+    } finally {
+      submitLockRef.current = false;
       setIsSaving(false);
-      setMessage(error instanceof Error ? error.message : "The listing could not be uploaded.");
     }
   }
 
@@ -482,7 +515,7 @@ export default function ListJobPage() {
           {message ? <p className="rounded-2xl border border-[#f6b800] bg-[#fff4c8] p-4 text-sm font-bold text-[#6f5200]">{message}</p> : null}
 
           <button type="submit" disabled={isSaving} className="h-14 w-full rounded-2xl border border-[#f6b800] bg-[#f6b800] text-sm font-black uppercase tracking-[0.12em] text-black shadow-[0_16px_35px_rgba(184,137,0,.2)] transition active:scale-[.99] disabled:opacity-50">
-            {pageCopy.submit}
+            {isSaving ? "Publishing…" : pageCopy.submit}
           </button>
         </form>
 

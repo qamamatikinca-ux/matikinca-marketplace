@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import AuthStatusButton from "@/components/AuthStatusButton";
@@ -12,11 +12,13 @@ import LoadLinkLoading from "@/components/LoadLinkLoading";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
-import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
+import { currentRelativePath, loginHref } from "@/lib/auth";
 import { getAccountOwnerKey, getOwnedJobKeys, setOwnedJobKeys } from "@/lib/chatKeys";
 import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
+import { createSafeRandomId, inferUploadContentType, prepareImageForUpload, readableUploadError, validateImageFile } from "@/lib/mobilePosting";
+import { getFreshAuthenticatedUser, postingErrorMessage, withTransientRetry } from "@/lib/reliableSupabase";
 import { getTruckModel, getTruckModels, truckCatalog, truckYears, validateTruckTransmission } from "@/lib/truckCatalog";
 
 
@@ -57,45 +59,6 @@ function normalizePhone(value: string) { return value.replace(/[^\d+]/g, ""); }
 function isValidSouthAfricanPhone(value: string) { const clean = normalizePhone(value); return /^0\d{9}$/.test(clean) || /^\+27\d{9}$/.test(clean); }
 function safeFileName(value: string) { return value.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/^-+|-+$/g, "") || "document"; }
 function categoryLabel(category: VehicleCategory) { return category === "truck" ? "Truck" : category === "trailer" ? "Trailer" : "Mobile Unit"; }
-function makeUploadFolder() {
-  return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-async function getAuthenticatedUserSafely() {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (isAuthenticatedUser(sessionData.session?.user)) return sessionData.session!.user;
-    const { data: userData } = await supabase.auth.getUser();
-    if (isAuthenticatedUser(userData.user)) return userData.user;
-    await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
-  }
-  return null;
-}
-
-function resizePhoto(file: File, maxWidth = 1600, quality = 0.82): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const image = new Image();
-      image.onload = () => {
-        const scale = Math.min(1, maxWidth / image.width);
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(1, Math.round(image.width * scale));
-        canvas.height = Math.max(1, Math.round(image.height * scale));
-        const context = canvas.getContext("2d");
-        if (!context) return reject(new Error("Could not process the vehicle image."));
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Could not prepare the vehicle image.")), "image/jpeg", quality);
-      };
-      image.onerror = () => reject(new Error("Could not read the vehicle image."));
-      image.src = String(reader.result);
-    };
-    reader.onerror = () => reject(new Error("Could not read the vehicle image."));
-    reader.readAsDataURL(file);
-  });
-}
-
 export default function ListYourVehiclePage() {
   const router = useRouter();
   const { darkMode, toggleTheme } = useLoadLinkTheme();
@@ -145,6 +108,8 @@ export default function ListYourVehiclePage() {
   const [confirmAccuracy, setConfirmAccuracy] = useState(false);
   const [companyRegistrationNumber, setCompanyRegistrationNumber] = useState("");
   const [taxNumber, setTaxNumber] = useState("");
+  const submitLockRef = useRef(false);
+  const submissionIdRef = useRef("");
 
   const availableModels = useMemo(() => vehicleCategory === "truck" ? getTruckModels(brand, year) : [], [brand, vehicleCategory, year]);
   const selectedModel = useMemo(() => vehicleCategory === "truck" ? getTruckModel(brand, modelName, year) : null, [brand, modelName, vehicleCategory, year]);
@@ -153,7 +118,7 @@ export default function ListYourVehiclePage() {
   useEffect(() => {
     async function requireAccount() {
       if (!isSupabaseConfigured) { router.replace(loginHref(currentRelativePath())); return; }
-      const user = await getAuthenticatedUserSafely();
+      const user = await getFreshAuthenticatedUser();
       if (!user) { router.replace(loginHref(currentRelativePath())); return; }
       await syncAccountState().catch(() => undefined);
       setPostedBy(String(user.user_metadata?.full_name || user.user_metadata?.name || ""));
@@ -186,6 +151,8 @@ export default function ListYourVehiclePage() {
 
   useEffect(() => {
     try {
+      submissionIdRef.current = localStorage.getItem("loadlink-vehicle-submission-id") || createSafeRandomId();
+      localStorage.setItem("loadlink-vehicle-submission-id", submissionIdRef.current);
       const d = JSON.parse(localStorage.getItem("loadlink-vehicle-draft-v1") || "null");
       if (!d) return;
       setSellerType(d.sellerType || "private"); setVehicleCategory(d.vehicleCategory || null); setVehicleSubtype(d.vehicleSubtype || "");
@@ -197,11 +164,16 @@ export default function ListYourVehiclePage() {
       setPayloadKg(d.payloadKg || ""); setRate(d.rate || ""); setPostedBy(d.postedBy || ""); setContactNumber(d.contactNumber || "");
       setWhatsappNumber(d.whatsappNumber || ""); setDescription(d.description || ""); setConfirmOwnership(Boolean(d.confirmOwnership));
       setConfirmAccuracy(Boolean(d.confirmAccuracy)); setSelectedPlan(d.selectedPlan || null); setPackageType(d.packageType || "standard");
-    } catch {}
+      submissionIdRef.current = String(d.submissionId || submissionIdRef.current);
+      localStorage.setItem("loadlink-vehicle-submission-id", submissionIdRef.current);
+    } catch {
+      submissionIdRef.current = localStorage.getItem("loadlink-vehicle-submission-id") || createSafeRandomId();
+      localStorage.setItem("loadlink-vehicle-submission-id", submissionIdRef.current);
+    }
   }, []);
 
   useEffect(() => {
-    const draft = { sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, gvmKg, payloadKg, rate, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType };
+    const draft = { sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, gvmKg, payloadKg, rate, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType, submissionId: submissionIdRef.current || localStorage.getItem("loadlink-vehicle-submission-id") || "" };
     const timer = window.setTimeout(() => localStorage.setItem("loadlink-vehicle-draft-v1", JSON.stringify(draft)), 150);
     return () => window.clearTimeout(timer);
   }, [sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, gvmKg, payloadKg, rate, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType]);
@@ -245,28 +217,67 @@ export default function ListYourVehiclePage() {
   }
 
   async function handleVehiclePhotos(event: ChangeEvent<HTMLInputElement>) {
-    const max = packageType === "pro" || packageType === "dealer" ? 15 : 8;
-    const selected = Array.from(event.target.files ?? []).slice(0, max) as File[];
+    const max = packageType === "pro" || packageType === "dealer" ? 15 : 5;
+    const candidates = Array.from(event.target.files ?? []).slice(0, max) as File[];
+    event.target.value = "";
+    const selected: File[] = [];
+    for (const file of candidates) {
+      const validation = validateImageFile(file, file.name || "Vehicle photo");
+      if (validation) {
+        setMessage(validation);
+        continue;
+      }
+      selected.push(file);
+    }
     setVehiclePhotos(selected);
-    const previews = await Promise.all(selected.map((file) => new Promise<string>((resolve, reject) => {
-      const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file);
-    })));
-    setVehiclePreviews(previews);
+    setVehiclePreviews((current) => {
+      current.forEach((url) => { if (url.startsWith("blob:")) URL.revokeObjectURL(url); });
+      return selected.map((file) => URL.createObjectURL(file));
+    });
+  }
+
+  useEffect(() => () => {
+    vehiclePreviews.forEach((url) => { if (url.startsWith("blob:")) URL.revokeObjectURL(url); });
+  }, [vehiclePreviews]);
+
+  function currentSubmissionId() {
+    if (!submissionIdRef.current) {
+      submissionIdRef.current = localStorage.getItem("loadlink-vehicle-submission-id") || createSafeRandomId();
+      localStorage.setItem("loadlink-vehicle-submission-id", submissionIdRef.current);
+    }
+    return submissionIdRef.current;
   }
 
   function setDocument(key: keyof VerificationFiles, file: File | null) { setDocuments((current) => ({ ...current, [key]: file })); }
-  async function uploadVehiclePhoto(file: File, userId: string) {
-    const resized = await resizePhoto(file);
-    const path = `vehicles/${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeFileName(file.name)}.jpg`;
-    const result = await supabase.storage.from("job-photos").upload(path, resized, { cacheControl: "3600", contentType: "image/jpeg", upsert: false });
-    if (result.error) throw result.error;
-    return supabase.storage.from("job-photos").getPublicUrl(path).data.publicUrl;
+
+  async function uploadVehiclePhoto(file: File, userId: string, submissionId: string, index: number) {
+    const prepared = await prepareImageForUpload(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.82 });
+    const path = `${userId}/vehicles/${submissionId}/${index}.${prepared.extension}`;
+    await withTransientRetry(async () => {
+      const result = await supabase.storage.from("job-photos").upload(path, prepared.blob, {
+        cacheControl: "3600",
+        contentType: prepared.contentType,
+        upsert: true,
+      });
+      if (result.error) throw result.error;
+    });
+    const publicUrl = supabase.storage.from("job-photos").getPublicUrl(path).data.publicUrl;
+    if (!publicUrl) throw new Error("The uploaded vehicle photo URL could not be created.");
+    return publicUrl;
   }
+
   async function uploadVerificationDocument(file: File, userId: string, folder: string, label: string) {
     if (file.size > 10 * 1024 * 1024) throw new Error(`${label} must be smaller than 10 MB.`);
-    const path = `${userId}/${folder}/${Date.now()}-${safeFileName(file.name)}`;
-    const result = await supabase.storage.from("vehicle-verification").upload(path, file, { cacheControl: "3600", contentType: file.type || undefined, upsert: false });
-    if (result.error) throw result.error;
+    const extension = safeFileName(file.name);
+    const path = `${userId}/${folder}/${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${extension}`;
+    await withTransientRetry(async () => {
+      const result = await supabase.storage.from("vehicle-verification").upload(path, file, {
+        cacheControl: "3600",
+        contentType: inferUploadContentType(file),
+        upsert: true,
+      });
+      if (result.error) throw result.error;
+    });
     return path;
   }
 
@@ -298,19 +309,25 @@ export default function ListYourVehiclePage() {
 
   async function submitVehicle(event: FormEvent) {
     event.preventDefault();
+    if (submitLockRef.current || saving) return;
     setMessage("");
     const validationMessage = validateBeforeSubmit();
     if (validationMessage) { setMessage(validationMessage); return; }
+    submitLockRef.current = true;
     setSaving(true);
     let createdListingId = "";
     let createdOwnerKey = "";
+    let createdThisAttempt = false;
     try {
-      const user = await getAuthenticatedUserSafely();
-      if (!user) { setMessage("Your sign-in session could not be confirmed. Your form is still saved—wait a moment and submit again."); return; }
+      const user = await getFreshAuthenticatedUser();
+      if (!user) throw new Error("Your sign-in session could not be confirmed.");
+      const submissionId = currentSubmissionId();
       const ownerKey = getAccountOwnerKey(user.id); createdOwnerKey = ownerKey;
-      const folder = makeUploadFolder();
+      const folder = submissionId;
       const photoUrls: string[] = [];
-      for (const file of vehiclePhotos) photoUrls.push(await uploadVehiclePhoto(file, user.id));
+      for (let index = 0; index < vehiclePhotos.length; index += 1) {
+        photoUrls.push(await uploadVehiclePhoto(vehiclePhotos[index], user.id, submissionId, index));
+      }
 
       const idPath = await uploadVerificationDocument(documents.idDocument!, user.id, folder, "ID document");
       const licencePath = documents.driverLicence ? await uploadVerificationDocument(documents.driverLicence, user.id, folder, "Driver's licence") : null;
@@ -347,7 +364,7 @@ export default function ListYourVehiclePage() {
         description.trim(),
       ].filter(Boolean).join("\n");
 
-      const listingResult = await supabase.from("job_listings").insert({
+      const listingPayload = {
         title: title.trim(), city,
         vehicle_group: vehicleCategory === "mobile_unit" ? "Mobile Units" : "Trucks / Trailers",
         rate: formatListingRate(rate), posted_by: postedBy.trim(), contact_number: contactNumber.trim(), whatsapp_number: whatsappNumber.trim(),
@@ -355,23 +372,46 @@ export default function ListYourVehiclePage() {
         sponsored: packageType === "pro" || packageType === "dealer", package_type: packageType,
         listing_kind: "vehicle", display_tier: packageType === "dealer" ? 4 : packageType === "pro" ? 3 : 1,
         stock_status: "available", dealership_id: dealershipId || null, owner_key: ownerKey, user_id: user.id,
-      }).select("id").single();
-      if (listingResult.error || !listingResult.data?.id) throw listingResult.error || new Error("The vehicle listing could not be created.");
-      const listingId = String(listingResult.data.id); createdListingId = listingId;
+        status: "active", moderation_status: "pending", client_request_id: submissionId,
+      };
+
+      try {
+        const listingResult = await withTransientRetry(async () => {
+          const response = await supabase.from("job_listings").insert(listingPayload).select("id").single();
+          if (response.error) throw response.error;
+          return response;
+        }, 2);
+        createdListingId = String(listingResult.data?.id || "");
+        createdThisAttempt = Boolean(createdListingId);
+      } catch (insertError) {
+        const raw = readableUploadError(insertError, "");
+        const code = insertError && typeof insertError === "object" && "code" in insertError
+          ? String((insertError as { code?: unknown }).code || "")
+          : "";
+        if (code === "23505" || /duplicate key|unique constraint/i.test(raw)) {
+          const existing = await supabase.from("job_listings").select("id").eq("user_id", user.id).eq("client_request_id", submissionId).maybeSingle();
+          if (existing.error) throw existing.error;
+          createdListingId = String(existing.data?.id || "");
+        } else {
+          throw insertError;
+        }
+      }
+      if (!createdListingId) throw new Error("The vehicle listing could not be created.");
+      const listingId = createdListingId;
 
       if (vehicleCategory === "truck") {
-        const detailsResult = await supabase.from("truck_listing_details").insert({
+        const detailsResult = await supabase.from("truck_listing_details").upsert({
           listing_id: listingId, user_id: user.id, vehicle_year: year, brand, model: modelName, body_type: bodyType,
           transmission, fuel_type: fuelType, axle_configuration: axleConfiguration,
           registration_number: registrationNumber.trim().toUpperCase(), vin: vin.trim().toUpperCase(), engine_number: engineNumber.trim().toUpperCase(),
           odometer_km: Number(odometerKm), gvm_kg: gvmKg ? Number(gvmKg) : null, payload_kg: payloadKg ? Number(payloadKg) : null,
           reference_image_url: referenceImage?.imageUrl || null, reference_image_source: referenceImage?.sourceUrl || null,
           factory_transmissions: selectedModel?.transmissions || [], specification_status: transmissionCheck?.requiresModificationProof ? "modified_pending_review" : "catalogue_match",
-        });
+        }, { onConflict: "listing_id" });
         if (detailsResult.error) throw detailsResult.error;
       }
 
-      const verificationResult = await supabase.from("vehicle_verifications").insert({
+      const verificationResult = await supabase.from("vehicle_verifications").upsert({
         listing_id: listingId, user_id: user.id, id_document_path: idPath, licence_document_path: licencePath,
         registration_document_path: registrationPath, ownership_document_path: ownershipPath, roadworthy_document_path: roadworthyPath,
         operating_licence_document_path: operatingLicencePath, modification_document_path: modificationProofPath,
@@ -381,7 +421,7 @@ export default function ListYourVehiclePage() {
         tax_number: sellerType === "dealership" && !dealerPost ? taxNumber.trim().toUpperCase() : null,
         company_registration_document_path: companyRegistrationPath, tax_document_path: taxDocumentPath,
         business_address_document_path: businessAddressPath, representative_authority_document_path: representativeAuthorityPath, status: "pending",
-      });
+      }, { onConflict: "listing_id" });
       if (verificationResult.error) throw verificationResult.error;
 
       const owned = getOwnedJobKeys(); owned[listingId] = ownerKey; setOwnedJobKeys(owned);
@@ -389,13 +429,17 @@ export default function ListYourVehiclePage() {
       await recordUserActivity("vehicle_listing_posted", { entityType: "listing", entityId: listingId, metadata: { title: title.trim(), category: vehicleCategory, dealershipId: dealershipId || null } }).catch(() => undefined);
       await syncAccountState().catch(() => undefined);
       localStorage.removeItem("loadlink-vehicle-draft-v1");
-      setSaving(false); setSubmissionSuccess(true);
-      window.setTimeout(() => router.push(dealershipId ? "/dealer?posted=vehicle" : "/my-posts?posted=vehicle"), 1800);
+      localStorage.removeItem("loadlink-vehicle-submission-id");
+      submissionIdRef.current = createSafeRandomId();
+      setSubmissionSuccess(true);
+      window.setTimeout(() => router.push(dealershipId ? "/dealer?posted=vehicle" : "/my-posts?posted=vehicle"), 1500);
     } catch (error) {
-      if (createdListingId) {
+      if (createdListingId && createdThisAttempt) {
         try { await supabase.rpc("delete_my_listing", { p_listing_id: createdListingId, p_owner_key: createdOwnerKey }); } catch {}
       }
-      setMessage(error instanceof Error ? error.message : "The vehicle listing could not be submitted.");
+      setMessage(postingErrorMessage(error, readableUploadError(error, "The vehicle listing could not be submitted.")));
+    } finally {
+      submitLockRef.current = false;
       setSaving(false);
     }
   }

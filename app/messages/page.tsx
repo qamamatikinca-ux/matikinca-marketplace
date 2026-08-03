@@ -21,6 +21,7 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { getBuyerKey, getBuyerKeys, getOwnerKeys } from "@/lib/chatKeys";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
+import { errorMessage, getFreshAuthenticatedUser } from "@/lib/reliableSupabase";
 
 type Role = "buyer" | "owner";
 
@@ -181,15 +182,49 @@ function base64ToBlob(base64: string, mimeType: string) {
   return new Blob([bytes], { type: mimeType || "application/octet-stream" });
 }
 
+function normaliseAttachmentType(file: File) {
+  const supplied = file.type.toLowerCase().split(";")[0].trim();
+  if (supplied === "image/jpg") return "image/jpeg";
+  if (ACCEPTED_FILE_TYPES.includes(supplied)) return supplied;
+  const name = file.name.toLowerCase();
+  if (/\.jpe?g$/.test(name)) return "image/jpeg";
+  if (/\.png$/.test(name)) return "image/png";
+  if (/\.webp$/.test(name)) return "image/webp";
+  if (/\.pdf$/.test(name)) return "application/pdf";
+  if (/\.doc$/.test(name)) return "application/msword";
+  if (/\.docx$/.test(name)) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (/\.xls$/.test(name)) return "application/vnd.ms-excel";
+  if (/\.xlsx$/.test(name)) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  if (/\.txt$/.test(name)) return "text/plain";
+  if (/\.m4a$/.test(name)) return "audio/mp4";
+  if (/\.mp3$/.test(name)) return "audio/mpeg";
+  if (/\.ogg$/.test(name)) return "audio/ogg";
+  if (/\.wav$/.test(name)) return "audio/wav";
+  if (/\.webm$/.test(name)) return supplied.startsWith("audio/") ? supplied : "audio/webm";
+  return supplied;
+}
+
 function cleanError(error: unknown, fallback: string) {
-  const message = error instanceof Error ? error.message : fallback;
+  const message = errorMessage(error, fallback);
+  if (/ACCOUNT_ACCESS_RESTRICTED|account access is restricted|blocked|suspended/i.test(message)) {
+    return "This account is blocked or suspended and cannot send messages.";
+  }
+  if (/CURRENT_NDA_ACCEPTANCE_REQUIRED|NO_ACTIVE_AGREEMENT|platform access/i.test(message)) {
+    return "An outdated access restriction is still active. Run the supplied LoadLink Supabase repair SQL once.";
+  }
+  if (/row level security|permission denied|violates row-level security/i.test(message)) {
+    return "Messaging permissions need the supplied LoadLink Supabase repair SQL.";
+  }
   if (/function|schema cache|does not exist/i.test(message)) {
-    return "Messaging is finishing its setup. Refresh after the chat upgrade has been installed.";
+    return "Messaging needs the supplied LoadLink Supabase repair SQL, then a refresh.";
   }
   if (/daily message limit|50 free messages|message limit/i.test(message)) {
     return "You have used today’s 50 free messages. Upgrade to Pro to keep messaging today.";
   }
-  if (/fetch|network/i.test(message))
+  if (/jwt|session|unauthorized|401/i.test(message)) {
+    return "Your sign-in session expired. Sign in again and your conversation will remain available.";
+  }
+  if (/fetch|network|timeout|connection/i.test(message))
     return "Connection interrupted. Check your signal and try again.";
   return message || fallback;
 }
@@ -212,9 +247,14 @@ export default function MessagesPage() {
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [blockState, setBlockState] = useState<BlockState>({ blocked_by_me: false, blocked_by_other: false });
   const [blockBusy, setBlockBusy] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
 
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const messageViewportRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const forceScrollRef = useRef(true);
+  const messageSignatureRef = useRef("");
+  const lastTypingPingRef = useRef(0);
+  const typingActiveRef = useRef(false);
   const selectedIdRef = useRef("");
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -231,6 +271,20 @@ export default function MessagesPage() {
     }, 8000);
     return () => window.clearTimeout(safety);
   }, [loading]);
+
+  useEffect(() => {
+    const updateViewportHeight = () => {
+      const height = Math.round(window.visualViewport?.height || window.innerHeight);
+      setViewportHeight(height);
+    };
+    updateViewportHeight();
+    window.addEventListener("resize", updateViewportHeight);
+    window.visualViewport?.addEventListener("resize", updateViewportHeight);
+    return () => {
+      window.removeEventListener("resize", updateViewportHeight);
+      window.visualViewport?.removeEventListener("resize", updateViewportHeight);
+    };
+  }, []);
 
   const selectedConversation = useMemo(
     () =>
@@ -329,13 +383,24 @@ export default function MessagesPage() {
           p_access_key: conversation.accessKey,
         });
         if (result.error) throw result.error;
-        setMessages((result.data || []) as ChatMessage[]);
+        const rows = (result.data || []) as ChatMessage[];
+        const signature = rows.map((row) => `${row.id}:${row.created_at}:${row.body}:${row.attachment_id || ""}`).join("|");
+        const changed = signature !== messageSignatureRef.current;
+        if (changed) {
+          const viewport = messageViewportRef.current;
+          const nearBottom = !viewport || viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 140;
+          forceScrollRef.current = showLoader || nearBottom;
+          messageSignatureRef.current = signature;
+          setMessages(rows);
+        }
 
-        await supabase.rpc("mark_listing_guest_read", {
-          p_thread_id: conversation.id,
-          p_access_key: conversation.accessKey,
-        });
-        window.dispatchEvent(new Event("loadlink-chat-unread-updated"));
+        if (showLoader || changed) {
+          await supabase.rpc("mark_listing_guest_read", {
+            p_thread_id: conversation.id,
+            p_access_key: conversation.accessKey,
+          });
+          window.dispatchEvent(new Event("loadlink-chat-unread-updated"));
+        }
       } catch (loadError) {
         setError(cleanError(loadError, "Messages could not load."));
       } finally {
@@ -358,9 +423,7 @@ export default function MessagesPage() {
     async function initialise() {
       try {
         setError("");
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        const user = await getFreshAuthenticatedUser();
 
         if (!isAuthenticatedUser(user)) {
           router.replace(loginHref(currentRelativePath()));
@@ -442,6 +505,8 @@ export default function MessagesPage() {
 
     let active = true;
     setMessages([]);
+    messageSignatureRef.current = "";
+    forceScrollRef.current = true;
     setBlockState({ blocked_by_me: false, blocked_by_other: false });
     loadMessages(selectedConversation, true);
     supabase.rpc("get_listing_guest_block_status", {
@@ -455,20 +520,26 @@ export default function MessagesPage() {
     const messageTimer = setInterval(() => {
       if (active) loadMessages(selectedConversation).catch(() => undefined);
     }, 2500);
-    const presenceTimer = setInterval(() => {
-      supabase
-        .rpc("touch_listing_guest_presence", {
-          p_thread_id: selectedConversation.id,
-          p_access_key: selectedConversation.accessKey,
-          p_is_typing: false,
-        })
-        .then(() => undefined);
-    }, 25_000);
+    const touchPresence = () => {
+      if (document.visibilityState === "hidden") return;
+      supabase.rpc("touch_listing_guest_presence", {
+        p_thread_id: selectedConversation.id,
+        p_access_key: selectedConversation.accessKey,
+        p_is_typing: typingActiveRef.current,
+      }).then(() => undefined);
+    };
+    touchPresence();
+    const presenceTimer = setInterval(touchPresence, 15_000);
+    const handleVisibility = () => { if (document.visibilityState === "visible") touchPresence(); };
+    window.addEventListener("focus", touchPresence);
+    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       active = false;
       clearInterval(messageTimer);
       clearInterval(presenceTimer);
+      window.removeEventListener("focus", touchPresence);
+      document.removeEventListener("visibilitychange", handleVisibility);
       if (mediaRecorderRef.current?.state === "recording") stopRecording(true);
       supabase
         .rpc("touch_listing_guest_presence", {
@@ -481,10 +552,15 @@ export default function MessagesPage() {
   }, [loadMessages, selectedId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({
-      behavior: messagesLoading ? "auto" : "smooth",
+    if (!forceScrollRef.current) return;
+    const frame = window.requestAnimationFrame(() => {
+      const viewport = messageViewportRef.current;
+      if (!viewport) return;
+      viewport.scrollTo({ top: viewport.scrollHeight, behavior: messagesLoading ? "auto" : "smooth" });
+      forceScrollRef.current = false;
     });
-  }, [messages, messagesLoading]);
+    return () => window.cancelAnimationFrame(frame);
+  }, [messages, messagesLoading, selectedId]);
 
   async function send(event?: FormEvent) {
     event?.preventDefault();
@@ -503,12 +579,16 @@ export default function MessagesPage() {
     setSending(true);
     setError("");
     try {
+      const user = await getFreshAuthenticatedUser();
+      if (!user) throw new Error("Your sign-in session expired.");
       const result = await supabase.rpc("send_listing_guest_message", {
         p_thread_id: selectedConversation.id,
         p_access_key: selectedConversation.accessKey,
         p_body: text.trim(),
       });
       if (result.error) throw result.error;
+      forceScrollRef.current = true;
+      typingActiveRef.current = false;
       setText("");
       await recordUserActivity("message_sent", {
         entityType: "conversation",
@@ -526,18 +606,22 @@ export default function MessagesPage() {
 
   function updateTyping(nextText: string) {
     setText(nextText);
+    typingActiveRef.current = Boolean(nextText.trim());
     if (!selectedConversation) return;
 
-    supabase
-      .rpc("touch_listing_guest_presence", {
+    const now = Date.now();
+    if (!nextText.trim() || now - lastTypingPingRef.current > 2500) {
+      lastTypingPingRef.current = now;
+      supabase.rpc("touch_listing_guest_presence", {
         p_thread_id: selectedConversation.id,
         p_access_key: selectedConversation.accessKey,
         p_is_typing: Boolean(nextText.trim()),
-      })
-      .then(() => undefined);
+      }).then(() => undefined);
+    }
 
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     typingTimerRef.current = setTimeout(() => {
+      typingActiveRef.current = false;
       supabase
         .rpc("touch_listing_guest_presence", {
           p_thread_id: selectedConversation.id,
@@ -545,7 +629,7 @@ export default function MessagesPage() {
           p_is_typing: false,
         })
         .then(() => undefined);
-    }, 5000);
+    }, 2200);
   }
 
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -565,8 +649,9 @@ export default function MessagesPage() {
       setError("You have used today’s 50 free messages. Upgrade to Pro to keep messaging today.");
       return;
     }
-    if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
-      setError("Use a photo, document or supported voice-note file.");
+    const fileType = normaliseAttachmentType(file);
+    if (!ACCEPTED_FILE_TYPES.includes(fileType)) {
+      setError("Use a JPG, PNG, WEBP, PDF, Office document, text file or supported voice note.");
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
@@ -577,26 +662,30 @@ export default function MessagesPage() {
     setUploading(true);
     setError("");
     try {
+      const user = await getFreshAuthenticatedUser();
+      if (!user) throw new Error("Your sign-in session expired.");
       const base64 = await fileToBase64(file);
       const result = await supabase.rpc("send_listing_guest_attachment", {
         p_thread_id: selectedConversation.id,
         p_access_key: selectedConversation.accessKey,
         p_file_name: file.name,
-        p_file_type: file.type,
+        p_file_type: fileType,
         p_file_base64: base64,
         p_caption: caption ?? (text.trim() || null),
       });
       if (result.error) throw result.error;
+      forceScrollRef.current = true;
+      typingActiveRef.current = false;
       setText("");
-      await recordUserActivity(file.type.startsWith("audio/") ? "voice_note_sent" : "attachment_sent", {
+      await recordUserActivity(fileType.startsWith("audio/") ? "voice_note_sent" : "attachment_sent", {
         entityType: "conversation",
         entityId: selectedConversation.id,
-        metadata: { listingId: selectedConversation.listing_id, fileType: file.type },
+        metadata: { listingId: selectedConversation.listing_id, fileType },
       }).catch(() => undefined);
       await loadMessages(selectedConversation);
       await loadConversations(selectedConversation.id);
     } catch (uploadError) {
-      setError(cleanError(uploadError, file.type.startsWith("audio/") ? "The voice note could not be sent." : "The file could not be sent."));
+      setError(cleanError(uploadError, fileType.startsWith("audio/") ? "The voice note could not be sent." : "The file could not be sent."));
     } finally {
       setUploading(false);
     }
@@ -758,7 +847,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <main data-theme={darkMode ? "dark" : "light"} className={`loadlink-messages h-[100dvh] overflow-hidden ${darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"}`}>
+    <main data-theme={darkMode ? "dark" : "light"} style={viewportHeight ? { height: `${viewportHeight}px` } : undefined} className={`loadlink-messages flex h-[100dvh] flex-col overflow-hidden ${darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"}`}>
       <header className={`grid h-[72px] grid-cols-[56px_1fr_92px] items-center border-b px-3 md:h-20 md:grid-cols-[120px_1fr_140px] md:px-5 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"}`}>
         <div className="flex items-center gap-1">
           <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
@@ -782,7 +871,7 @@ export default function MessagesPage() {
         </div>
       </header>
 
-      <div className="mx-auto grid h-[calc(100dvh-72px)] max-w-[1500px] md:h-[calc(100dvh-80px)] md:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)_300px]">
+      <div className="mx-auto grid min-h-0 w-full max-w-[1500px] flex-1 md:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)_300px]">
         <aside
           className={`${selectedId ? "hidden md:flex" : "flex"} loadlink-inbox-panel min-h-0 flex-col border-r border-black/10 bg-white`}
         >
@@ -993,7 +1082,7 @@ export default function MessagesPage() {
                 </div>
               ) : null}
 
-              <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8">
+              <div ref={messageViewportRef} className="loadlink-message-viewport min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8">
                 {messagesLoading && messages.length === 0 ? (
                   <div className="flex h-full items-center justify-center">
                     <div className="h-9 w-9 animate-spin rounded-full border-2 border-black/10 border-t-[#f6b800]" />
@@ -1075,7 +1164,6 @@ export default function MessagesPage() {
                         </div>
                       </div>
                     ) : null}
-                    <div ref={bottomRef} />
                   </div>
                 ) : (
                   <div className="flex h-full items-center justify-center px-5 text-center">
