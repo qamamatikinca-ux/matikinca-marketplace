@@ -3,6 +3,7 @@
 import { ImgHTMLAttributes, useEffect, useState } from "react";
 
 type LogoTheme = "auto" | "light" | "dark";
+type ResolvedTheme = "light" | "dark";
 
 type LoadLinkLogoProps = ImgHTMLAttributes<HTMLImageElement> & {
   containerClassName?: string;
@@ -10,18 +11,13 @@ type LoadLinkLogoProps = ImgHTMLAttributes<HTMLImageElement> & {
   theme?: LogoTheme;
 };
 
-function detectDarkMode() {
-  if (typeof window === "undefined") return false;
-
-  const mainClass = document.querySelector("main")?.getAttribute("class") || "";
-  const headerClass = document.querySelector("header")?.getAttribute("class") || "";
-  const pageClasses = `${mainClass} ${headerClass}`;
-
-  if (pageClasses.includes("bg-[#050505]") || pageClasses.includes("bg-black")) return true;
-  if (pageClasses.includes("bg-white") || pageClasses.includes("bg-[#fff")) return false;
-
-  const pageTheme = localStorage.getItem("loadlink-theme");
-  return pageTheme === "dark";
+function readDocumentTheme(): ResolvedTheme {
+  if (typeof document === "undefined") return "light";
+  const explicit = document.documentElement.dataset.loadlinkTheme;
+  if (explicit === "dark" || explicit === "light") return explicit;
+  const stored = window.localStorage.getItem("loadlink-theme");
+  if (stored === "dark" || stored === "light") return stored;
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 export default function LoadLinkLogo({
@@ -32,42 +28,53 @@ export default function LoadLinkLogo({
   alt = "LoadLink",
   ...props
 }: LoadLinkLogoProps) {
-  const [autoDarkMode, setAutoDarkMode] = useState(false);
+  const [resolved, setResolved] = useState<ResolvedTheme>("light");
 
   useEffect(() => {
-    if (theme !== "auto") return;
+    if (theme !== "auto") {
+      setResolved(theme);
+      return;
+    }
 
-    const sync = () => setAutoDarkMode(detectDarkMode());
+    const sync = () => setResolved(readDocumentTheme());
     sync();
 
     const observer = new MutationObserver(sync);
-    observer.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
-    if (document.body) observer.observe(document.body, { attributes: true, childList: true, subtree: true });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-loadlink-theme", "class"],
+    });
 
-    const timer = window.setInterval(sync, 250);
     window.addEventListener("storage", sync);
-    window.addEventListener("click", sync);
     window.addEventListener("loadlink-theme-change", sync);
+    window.addEventListener("pageshow", sync);
+    window.addEventListener("focus", sync);
 
     return () => {
       observer.disconnect();
-      window.clearInterval(timer);
       window.removeEventListener("storage", sync);
-      window.removeEventListener("click", sync);
       window.removeEventListener("loadlink-theme-change", sync);
+      window.removeEventListener("pageshow", sync);
+      window.removeEventListener("focus", sync);
     };
   }, [theme]);
 
-  const darkMode = theme === "dark" || (theme === "auto" && autoDarkMode);
+  const activeTheme = theme === "auto" ? resolved : theme;
+  const src = activeTheme === "dark"
+    ? "/images/loadlink-logo-dark.png?v=universal-theme-v1"
+    : "/images/loadlink-logo-light.png?v=universal-theme-v1";
 
   return (
-    <span className={`loadlink-logo-wrap ${containerClassName}`}>
+    <span
+      className={`loadlink-logo-wrap ${containerClassName}`}
+      data-logo-theme={activeTheme}
+    >
       {showGlow ? <span aria-hidden="true" className="loadlink-logo-glow" /> : null}
       <img
-        src={darkMode ? "/images/loadlink-logo-dark.png?v=guest-chat-fix" : "/images/loadlink-logo-light.png?v=guest-chat-fix"}
+        src={src}
         alt={alt}
         className={`loadlink-logo-img ${className}`}
-        style={{ filter: "none" }}
+        draggable={false}
         {...props}
       />
     </span>

@@ -299,3 +299,100 @@ html[data-loadlink-theme="dark"] .loadlink-messages [class*="border-black/"] { b
 .loadlink-chat-composer {
   flex-shrink: 0;
 }
+
+/* LOADLINK UNIVERSAL THEME NORMALISATION V1 */
+html[data-loadlink-theme="light"] {
+  color-scheme: light;
+  --loadlink-page: #f4efe3;
+  --loadlink-surface: #ffffff;
+  --loadlink-surface-soft: #f8f5ed;
+  --loadlink-text: #111111;
+  --loadlink-muted: rgba(17,17,17,.58);
+  --loadlink-border: rgba(17,17,17,.12);
+}
+
+html[data-loadlink-theme="dark"] {
+  color-scheme: dark;
+  --loadlink-page: #050505;
+  --loadlink-surface: #111111;
+  --loadlink-surface-soft: #171717;
+  --loadlink-text: #f7f7f7;
+  --loadlink-muted: rgba(247,247,247,.58);
+  --loadlink-border: rgba(255,255,255,.12);
+}
+
+html[data-loadlink-theme] body {
+  background-color: var(--loadlink-page) !important;
+  color: var(--loadlink-text);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html[data-loadlink-theme] input,
+html[data-loadlink-theme] textarea,
+html[data-loadlink-theme] select,
+html[data-loadlink-theme] button {
+  font: inherit;
+}
+
+html[data-loadlink-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html[data-loadlink-theme="dark"] textarea,
+html[data-loadlink-theme="dark"] select {
+  background-color: #171717;
+  color: #ffffff;
+  border-color: rgba(255,255,255,.14);
+}
+
+html[data-loadlink-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html[data-loadlink-theme="light"] textarea,
+html[data-loadlink-theme="light"] select {
+  background-color: #ffffff;
+  color: #111111;
+  border-color: rgba(17,17,17,.14);
+}
+
+html[data-loadlink-theme="dark"] input::placeholder,
+html[data-loadlink-theme="dark"] textarea::placeholder {
+  color: rgba(255,255,255,.42);
+  opacity: 1;
+}
+
+html[data-loadlink-theme="light"] input::placeholder,
+html[data-loadlink-theme="light"] textarea::placeholder {
+  color: rgba(17,17,17,.44);
+  opacity: 1;
+}
+
+html[data-loadlink-theme] input,
+html[data-loadlink-theme] textarea,
+html[data-loadlink-theme] select,
+html[data-loadlink-theme] button,
+html[data-loadlink-theme] a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-loadlink-theme="dark"] .loadlink-logo-glow {
+  opacity: .38;
+}
+
+html[data-loadlink-theme="light"] .loadlink-logo-glow {
+  opacity: .20;
+}
+
+html[data-loadlink-theme="dark"] .loadlink-logo-wrap[data-logo-theme="dark"] {
+  filter: drop-shadow(0 0 10px rgba(246,184,0,.10));
+}
+
+html[data-loadlink-theme] img.loadlink-logo-img {
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+  forced-color-adjust: none;
+}
+
+@media (forced-colors: active) {
+  html[data-loadlink-theme] img.loadlink-logo-img {
+    forced-color-adjust: none;
+  }
+}

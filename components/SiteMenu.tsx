@@ -9,6 +9,7 @@ import { useLoadLinkAccount } from "@/lib/loadLinkAccountStore";
 import { useUnreadMessages } from "@/lib/useUnreadMessages";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import LoadLinkGearIcon from "@/components/LoadLinkGearIcon";
+import LoadLinkLogo from "@/components/LoadLinkLogo";
 
 type IconName = "home" | "briefcase" | "contract" | "drivers" | "help" | "messages" | "notifications" | "posts" | "settings" | "driver" | "dealer" | "packages";
 type MenuLink = { label: string; href: string; description: string; icon: IconName };
@@ -133,7 +134,7 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
       <aside ref={panelRef} data-loadlink-menu-panel className={`absolute inset-y-0 left-0 flex w-[min(94vw,430px)] flex-col border-r outline-none shadow-[24px_0_80px_rgba(0,0,0,.28)] ${panel} ${border}`} role="dialog" aria-modal="true" aria-label="LoadLink menu">
         <header className={`border-b px-5 pb-5 pt-4 ${border}`}>
           <div className="flex items-center justify-between gap-4">
-            <Link href="/" aria-label="LoadLink home"><img src={darkMode ? "/images/loadlink-logo-dark.png" : "/images/loadlink-logo-light.png"} alt="LoadLink" className="h-9 w-auto" /></Link>
+            <Link href="/" aria-label="LoadLink home"><LoadLinkLogo theme={darkMode ? "dark" : "light"} showGlow={false} containerClassName="!w-[150px]" className="h-9 w-auto" /></Link>
             <button ref={closeButtonRef} data-loadlink-menu-close type="button" onClick={() => setOpen(false)} className={`flex h-10 w-10 items-center justify-center rounded-full border outline-none focus:outline-none [-webkit-tap-highlight-color:transparent] ${border}`} aria-label="Close menu"><CloseIcon /></button>
           </div>
           {signedIn ? (
