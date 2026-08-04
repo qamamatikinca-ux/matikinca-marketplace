@@ -1,4 +1,5 @@
 const MAX_ANDROID_IMAGE_BYTES = 25 * 1024 * 1024;
+const SAFE_UPLOAD_BYTES = 4.5 * 1024 * 1024;
 
 export type PreparedUploadImage = {
   blob: Blob;
@@ -6,12 +7,17 @@ export type PreparedUploadImage = {
   extension: "jpg" | "png" | "webp";
 };
 
+export type PreparedFormImage = {
+  file: File;
+  previewUrl: string;
+};
+
 export function createSafeRandomId() {
   try {
     const randomUUID = globalThis.crypto?.randomUUID;
     if (typeof randomUUID === "function") return randomUUID.call(globalThis.crypto);
   } catch {
-    // Older Android browsers may expose crypto without randomUUID support.
+    // Older browsers may expose crypto without randomUUID support.
   }
 
   const randomPart = () => Math.random().toString(36).slice(2, 10);
@@ -20,12 +26,12 @@ export function createSafeRandomId() {
 
 export function isSupportedImageFile(file: File) {
   if (file.type.startsWith("image/")) return true;
-  return /\.(jpe?g|png|webp)$/i.test(file.name);
+  return /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
 }
 
 export function validateImageFile(file: File, label = "Image") {
   if (!isSupportedImageFile(file)) {
-    return `${label} must be a JPG, PNG or WEBP image.`;
+    return `${label} must be a JPG, PNG, WEBP or phone-camera image.`;
   }
   if (file.size <= 0) return `${label} is empty. Choose another image.`;
   if (file.size > MAX_ANDROID_IMAGE_BYTES) {
@@ -34,16 +40,19 @@ export function validateImageFile(file: File, label = "Image") {
   return "";
 }
 
-export function inferUploadContentType(file: File) {
+export function inferUploadContentType(file: File | Blob) {
   if (file.type) return file.type;
-  const lower = file.name.toLowerCase();
-  if (lower.endsWith(".pdf")) return "application/pdf";
-  if (lower.endsWith(".png")) return "image/png";
-  if (lower.endsWith(".webp")) return "image/webp";
+  if (file instanceof File) {
+    const lower = file.name.toLowerCase();
+    if (lower.endsWith(".pdf")) return "application/pdf";
+    if (lower.endsWith(".png")) return "image/png";
+    if (lower.endsWith(".webp")) return "image/webp";
+    if (/\.(jpe?g)$/i.test(lower)) return "image/jpeg";
+  }
   return "application/octet-stream";
 }
 
-function extensionForContentType(contentType: string): PreparedUploadImage["extension"] {
+export function imageExtension(contentType: string): PreparedUploadImage["extension"] {
   if (contentType === "image/png") return "png";
   if (contentType === "image/webp") return "webp";
   return "jpg";
@@ -60,7 +69,7 @@ function loadImageWithObjectUrl(file: File): Promise<HTMLImageElement> {
     };
     image.onerror = () => {
       URL.revokeObjectURL(objectUrl);
-      reject(new Error("Could not decode this image."));
+      reject(new Error("This phone could not read the selected image. Try a JPG screenshot of it."));
     };
     image.src = objectUrl;
   });
@@ -69,11 +78,35 @@ function loadImageWithObjectUrl(file: File): Promise<HTMLImageElement> {
 function canvasToBlob(canvas: HTMLCanvasElement, contentType: string, quality: number) {
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("Could not prepare this image."))),
+      (blob) => (blob ? resolve(blob) : reject(new Error("This browser could not prepare the image."))),
       contentType,
       quality,
     );
   });
+}
+
+async function decodeImage(file: File) {
+  let bitmap: ImageBitmap | null = null;
+  let image: HTMLImageElement | null = null;
+
+  if (typeof createImageBitmap === "function") {
+    try {
+      bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    } catch {
+      bitmap = null;
+    }
+  }
+
+  if (!bitmap) image = await loadImageWithObjectUrl(file);
+
+  const width = bitmap?.width ?? image?.naturalWidth ?? 0;
+  const height = bitmap?.height ?? image?.naturalHeight ?? 0;
+  if (!width || !height) {
+    bitmap?.close();
+    throw new Error("The selected image has invalid dimensions.");
+  }
+
+  return { bitmap, image, width, height };
 }
 
 export async function prepareImageForUpload(
@@ -83,30 +116,16 @@ export async function prepareImageForUpload(
   const validationError = validateImageFile(file);
   if (validationError) throw new Error(validationError);
 
-  const maxWidth = options.maxWidth ?? 1600;
-  const maxHeight = options.maxHeight ?? 1600;
-  const quality = options.quality ?? 0.82;
-  let bitmap: ImageBitmap | null = null;
-  let image: HTMLImageElement | null = null;
+  const maxWidth = options.maxWidth ?? 1500;
+  const maxHeight = options.maxHeight ?? 1500;
+  const quality = options.quality ?? 0.78;
+  let decoded: Awaited<ReturnType<typeof decodeImage>> | null = null;
 
   try {
-    if (typeof createImageBitmap === "function") {
-      try {
-        bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-      } catch {
-        bitmap = null;
-      }
-    }
-
-    if (!bitmap) image = await loadImageWithObjectUrl(file);
-
-    const sourceWidth = bitmap?.width ?? image?.naturalWidth ?? 0;
-    const sourceHeight = bitmap?.height ?? image?.naturalHeight ?? 0;
-    if (!sourceWidth || !sourceHeight) throw new Error("The selected image has invalid dimensions.");
-
-    const scale = Math.min(1, maxWidth / sourceWidth, maxHeight / sourceHeight);
-    const outputWidth = Math.max(1, Math.round(sourceWidth * scale));
-    const outputHeight = Math.max(1, Math.round(sourceHeight * scale));
+    decoded = await decodeImage(file);
+    const scale = Math.min(1, maxWidth / decoded.width, maxHeight / decoded.height);
+    const outputWidth = Math.max(1, Math.round(decoded.width * scale));
+    const outputHeight = Math.max(1, Math.round(decoded.height * scale));
     const canvas = document.createElement("canvas");
     canvas.width = outputWidth;
     canvas.height = outputHeight;
@@ -114,37 +133,68 @@ export async function prepareImageForUpload(
     const context = canvas.getContext("2d", { alpha: false });
     if (!context) throw new Error("This browser could not prepare the image.");
 
-    context.drawImage(bitmap ?? image!, 0, 0, outputWidth, outputHeight);
-    const blob = await canvasToBlob(canvas, "image/jpeg", quality);
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, outputWidth, outputHeight);
+    context.drawImage(decoded.bitmap ?? decoded.image!, 0, 0, outputWidth, outputHeight);
+
+    let blob = await canvasToBlob(canvas, "image/jpeg", quality);
+    if (blob.size > SAFE_UPLOAD_BYTES) {
+      blob = await canvasToBlob(canvas, "image/jpeg", Math.max(0.58, quality - 0.18));
+    }
+
     canvas.width = 1;
     canvas.height = 1;
 
+    if (blob.size > SAFE_UPLOAD_BYTES) {
+      throw new Error("The selected image is still too large after compression. Choose a smaller image.");
+    }
+
     return { blob, contentType: "image/jpeg", extension: "jpg" };
   } catch (error) {
-    // Some Android browsers fail while decoding or converting large camera images.
-    // Upload a supported original file instead of blocking the entire listing.
+    // A supported original can still be uploaded when a browser cannot decode it,
+    // but only when it already fits safely inside the storage limit.
     const originalType = inferUploadContentType(file);
-    if (["image/jpeg", "image/png", "image/webp"].includes(originalType) && file.size <= 12 * 1024 * 1024) {
+    if (["image/jpeg", "image/png", "image/webp"].includes(originalType) && file.size <= SAFE_UPLOAD_BYTES) {
       return {
         blob: file,
         contentType: originalType,
-        extension: extensionForContentType(originalType),
+        extension: imageExtension(originalType),
       };
     }
     throw error;
   } finally {
-    bitmap?.close();
+    decoded?.bitmap?.close();
   }
+}
+
+export async function prepareImageFileForForm(
+  file: File,
+  options: { maxWidth?: number; maxHeight?: number; quality?: number; namePrefix?: string } = {},
+): Promise<PreparedFormImage> {
+  const prepared = await prepareImageForUpload(file, options);
+  const base = (options.namePrefix || file.name.replace(/\.[^.]+$/, "") || "loadlink-photo")
+    .replace(/[^a-z0-9_-]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 70) || "loadlink-photo";
+  const output = new File([prepared.blob], `${base}.jpg`, {
+    type: prepared.contentType,
+    lastModified: Date.now(),
+  });
+  return { file: output, previewUrl: URL.createObjectURL(output) };
+}
+
+export function revokePreviewUrl(url: string) {
+  if (url.startsWith("blob:")) URL.revokeObjectURL(url);
 }
 
 export function readableUploadError(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) return error.message;
   if (typeof error === "string" && error) return error;
   if (error && typeof error === "object") {
-    const candidate = error as { message?: unknown; error_description?: unknown; details?: unknown };
-    if (typeof candidate.message === "string" && candidate.message) return candidate.message;
-    if (typeof candidate.error_description === "string" && candidate.error_description) return candidate.error_description;
-    if (typeof candidate.details === "string" && candidate.details) return candidate.details;
+    const candidate = error as { message?: unknown; error_description?: unknown; details?: unknown; hint?: unknown };
+    const values = [candidate.message, candidate.error_description, candidate.details, candidate.hint]
+      .filter((value): value is string => typeof value === "string" && Boolean(value.trim()));
+    if (values.length) return Array.from(new Set(values)).join(" · ");
   }
   return fallback;
 }

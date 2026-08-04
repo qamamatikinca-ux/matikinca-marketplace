@@ -12,7 +12,7 @@ import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { currentRelativePath, loginHref } from "@/lib/auth";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
-import { createSafeRandomId, prepareImageForUpload, readableUploadError, validateImageFile } from "@/lib/mobilePosting";
+import { createSafeRandomId, imageExtension, inferUploadContentType, prepareImageFileForForm, readableUploadError, revokePreviewUrl, validateImageFile } from "@/lib/mobilePosting";
 import { getFreshAuthenticatedUser, postingErrorMessage, withTransientRetry } from "@/lib/reliableSupabase";
 import { getAccountOwnerKey } from "@/lib/chatKeys";
 import AuthStatusButton from "@/components/AuthStatusButton";
@@ -87,11 +87,15 @@ export default function ListJobPage() {
   const [posterPhoto, setPosterPhoto] = useState<File | null>(null);
   const [posterPhotoPreview, setPosterPhotoPreview] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isPreparingPhotos, setIsPreparingPhotos] = useState(false);
+  const [photoProgress, setPhotoProgress] = useState("");
   const [message, setMessage] = useState("");
   const [authReady, setAuthReady] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const submitLockRef = useRef(false);
   const submissionIdRef = useRef("");
+  const previewUrlsRef = useRef<string[]>([]);
+  const posterPreviewRef = useRef("");
 
   const photoLimit = 5;
 
@@ -177,10 +181,15 @@ export default function ListJobPage() {
   }
 
   function replacePosterPreview(nextUrl: string) {
-    setPosterPhotoPreview((current) => {
-      if (current.startsWith("blob:")) URL.revokeObjectURL(current);
-      return nextUrl;
-    });
+    revokePreviewUrl(posterPreviewRef.current);
+    posterPreviewRef.current = nextUrl;
+    setPosterPhotoPreview(nextUrl);
+  }
+
+  function replaceListingPreviews(nextUrls: string[]) {
+    previewUrlsRef.current.forEach(revokePreviewUrl);
+    previewUrlsRef.current = nextUrls;
+    setPreviewPhotos(nextUrls);
   }
 
   async function handlePosterPhoto(event: ChangeEvent<HTMLInputElement>) {
@@ -192,40 +201,78 @@ export default function ListJobPage() {
       replacePosterPreview("");
       return;
     }
+
     const validation = validateImageFile(file, "Profile photo");
     if (validation) {
       setMessage(validation);
       return;
     }
-    setPosterPhoto(file);
-    replacePosterPreview(URL.createObjectURL(file));
+
+    setIsPreparingPhotos(true);
+    setPhotoProgress("Preparing profile photo…");
+    try {
+      const prepared = await prepareImageFileForForm(file, {
+        maxWidth: 720,
+        maxHeight: 720,
+        quality: 0.78,
+        namePrefix: "loadlink-profile",
+      });
+      setPosterPhoto(prepared.file);
+      replacePosterPreview(prepared.previewUrl);
+    } catch (error) {
+      setMessage(readableUploadError(error, "The profile photo could not be prepared."));
+    } finally {
+      setIsPreparingPhotos(false);
+      setPhotoProgress("");
+    }
   }
 
   async function handlePhotos(event: ChangeEvent<HTMLInputElement>) {
-    const selected = Array.from(event.target.files || []);
+    const selected = Array.from(event.target.files || []).slice(0, photoLimit);
+    const hadExtraPhotos = (event.target.files?.length || 0) > photoLimit;
     event.target.value = "";
     setMessage("");
-    const valid: File[] = [];
-    for (const file of selected.slice(0, photoLimit)) {
-      const validation = validateImageFile(file, file.name || "Photo");
-      if (validation) {
-        setMessage(validation);
-        continue;
+    if (!selected.length) return;
+
+    setIsPreparingPhotos(true);
+    const preparedFiles: File[] = [];
+    const preparedUrls: string[] = [];
+
+    try {
+      for (let index = 0; index < selected.length; index += 1) {
+        const source = selected[index];
+        const validation = validateImageFile(source, source.name || `Photo ${index + 1}`);
+        if (validation) throw new Error(validation);
+        setPhotoProgress(`Preparing photo ${index + 1} of ${selected.length}…`);
+        const prepared = await prepareImageFileForForm(source, {
+          maxWidth: 1440,
+          maxHeight: 1440,
+          quality: 0.76,
+          namePrefix: `loadlink-listing-${index + 1}`,
+        });
+        preparedFiles.push(prepared.file);
+        preparedUrls.push(prepared.previewUrl);
+        await wait(20);
       }
-      valid.push(file);
+
+      setFiles(preparedFiles);
+      replaceListingPreviews(preparedUrls);
+      if (hadExtraPhotos) {
+        setMessage(`This package allows up to ${photoLimit} photos. Extra photos were ignored.`);
+      }
+    } catch (error) {
+      preparedUrls.forEach(revokePreviewUrl);
+      setMessage(readableUploadError(error, "One selected photo could not be prepared."));
+    } finally {
+      setIsPreparingPhotos(false);
+      setPhotoProgress("");
     }
-    if (selected.length > photoLimit) setMessage(`This package allows up to ${photoLimit} photos. Extra photos were ignored.`);
-    setFiles(valid);
-    setPreviewPhotos((current) => {
-      current.forEach((url) => { if (url.startsWith("blob:")) URL.revokeObjectURL(url); });
-      return valid.map((file) => URL.createObjectURL(file));
-    });
   }
 
   useEffect(() => () => {
-    previewPhotos.forEach((url) => { if (url.startsWith("blob:")) URL.revokeObjectURL(url); });
-    if (posterPhotoPreview.startsWith("blob:")) URL.revokeObjectURL(posterPhotoPreview);
-  }, [previewPhotos, posterPhotoPreview]);
+    previewUrlsRef.current.forEach(revokePreviewUrl);
+    revokePreviewUrl(posterPreviewRef.current);
+  }, []);
 
   function currentSubmissionId() {
     if (!submissionIdRef.current) {
@@ -235,17 +282,13 @@ export default function ListJobPage() {
     return submissionIdRef.current;
   }
 
-  async function uploadOne(file: File, userId: string, submissionId: string, folder: string, index: number, maxWidth = 1600) {
-    const prepared = await prepareImageForUpload(file, {
-      maxWidth,
-      maxHeight: maxWidth,
-      quality: folder === "posters" ? 0.84 : 0.8,
-    });
-    const path = `${userId}/${folder}/${submissionId}/${index}.${prepared.extension}`;
+  async function uploadOne(file: File, userId: string, submissionId: string, folder: string, index: number) {
+    const contentType = inferUploadContentType(file);
+    const path = `${userId}/${folder}/${submissionId}/${index}.${imageExtension(contentType)}`;
     await withTransientRetry(async () => {
-      const upload = await supabase.storage.from("job-photos").upload(path, prepared.blob, {
+      const upload = await supabase.storage.from("job-photos").upload(path, file, {
         cacheControl: "3600",
-        contentType: prepared.contentType,
+        contentType,
         upsert: true,
       });
       if (upload.error) throw upload.error;
@@ -265,7 +308,7 @@ export default function ListJobPage() {
 
   async function submitJob(event: FormEvent) {
     event.preventDefault();
-    if (submitLockRef.current || isSaving) return;
+    if (submitLockRef.current || isSaving || isPreparingPhotos) return;
     setMessage("");
 
     if (!isSupabaseConfigured) {
@@ -284,6 +327,10 @@ export default function ListJobPage() {
       setMessage("Enter a valid WhatsApp number or leave it empty.");
       return;
     }
+    if (isPreparingPhotos) {
+      setMessage("Wait for the selected photos to finish preparing.");
+      return;
+    }
     if (files.length < 1) {
       setMessage("Please upload at least one clear listing photo.");
       return;
@@ -299,7 +346,7 @@ export default function ListJobPage() {
       const submissionId = currentSubmissionId();
       const ownerKey = getAccountOwnerKey(user.id);
       const uploadedUrls = await uploadPhotos(user.id, submissionId);
-      const posterPhotoUrl = posterPhoto ? await uploadOne(posterPhoto, user.id, submissionId, "posters", 0, 700) : "";
+      const posterPhotoUrl = posterPhoto ? await uploadOne(posterPhoto, user.id, submissionId, "posters", 0) : "";
       const listingType = listingMode === "asset" ? assetType : listingMode === "contract" ? "Contract" : "Job";
       const vehicleLine = listingMode === "job" ? `Vehicle needed: ${vehicleNeeded}\n` : "";
       const storedDescription = `Listing type: ${listingType}\n${vehicleLine}${description.trim()}`;
@@ -325,32 +372,29 @@ export default function ListJobPage() {
         client_request_id: submissionId,
       };
 
-      let listingId = "";
-      try {
-        const result = await withTransientRetry(async () => {
-          const response = await supabase.from("job_listings").insert(fullListing).select("id").single();
-          if (response.error) throw response.error;
-          return response;
-        }, 2);
-        listingId = String(result.data?.id || "");
-      } catch (insertError) {
-        const message = readableUploadError(insertError, "");
-        const code = insertError && typeof insertError === "object" && "code" in insertError
-          ? String((insertError as { code?: unknown }).code || "")
-          : "";
-        if (code === "23505" || /duplicate key|unique constraint/i.test(message)) {
-          const existing = await supabase
-            .from("job_listings")
-            .select("id")
-            .eq("user_id", user.id)
-            .eq("client_request_id", submissionId)
-            .maybeSingle();
-          if (existing.error) throw existing.error;
-          listingId = String(existing.data?.id || "");
-        } else {
-          throw insertError;
-        }
-      }
+      const rpcResult = await withTransientRetry(async () => {
+        const response = await supabase.rpc("loadlink_submit_listing_v2", {
+          p_title: fullListing.title,
+          p_city: fullListing.city,
+          p_vehicle_group: fullListing.vehicle_group,
+          p_rate: fullListing.rate,
+          p_posted_by: fullListing.posted_by,
+          p_contact_number: fullListing.contact_number,
+          p_whatsapp_number: fullListing.whatsapp_number,
+          p_poster_photo: fullListing.poster_photo,
+          p_description: fullListing.description,
+          p_photos: fullListing.photos,
+          p_listing_kind: fullListing.listing_kind,
+          p_client_request_id: fullListing.client_request_id,
+          p_owner_key: fullListing.owner_key,
+        });
+        if (response.error) throw response.error;
+        return response.data;
+      }, 2);
+
+      const listingId = typeof rpcResult === "string"
+        ? rpcResult
+        : String((rpcResult as { id?: unknown } | null)?.id || "");
       if (!listingId) throw new Error("The listing was not assigned an ID.");
 
       if (boostJob) {
@@ -476,7 +520,7 @@ export default function ListJobPage() {
                   </div>
                   <label className="inline-flex cursor-pointer rounded-full border border-[#f6b800] px-4 py-2 text-xs font-black uppercase tracking-wide text-[#b88900]">
                     Choose photo
-                    <input type="file" accept="image/*" onChange={handlePosterPhoto} className="hidden" />
+                    <input type="file" accept="image/*" onChange={handlePosterPhoto} disabled={isPreparingPhotos || isSaving} className="hidden" />
                   </label>
                 </div>
               </div>
@@ -486,8 +530,8 @@ export default function ListJobPage() {
           <FormCard number="03" title="Photos and visibility" subtitle="Your first image becomes the cover shown in search results." darkMode={darkMode}>
             <label className={`block cursor-pointer rounded-2xl border border-dashed border-[#f6b800]/70 p-5 text-center ${darkMode ? "bg-[#12100a]" : "bg-[#fff9e8]"}`}>
               <span className="block text-sm font-black">Upload listing photos</span>
-              <span className={`mt-2 block text-xs ${muted}`}>Choose clear landscape or square images. Selected: {files.length}/{photoLimit}</span>
-              <input type="file" accept="image/*" multiple onChange={handlePhotos} className="mt-4 block w-full text-sm" />
+              <span className={`mt-2 block text-xs ${muted}`}>{photoProgress || `Choose clear landscape or square images. Selected: ${files.length}/${photoLimit}`}</span>
+              <input type="file" accept="image/*" multiple onChange={handlePhotos} disabled={isPreparingPhotos || isSaving} className="mt-4 block w-full text-sm disabled:opacity-50" />
             </label>
 
             {previewPhotos.length > 0 ? (
@@ -514,8 +558,8 @@ export default function ListJobPage() {
 
           {message ? <p className="rounded-2xl border border-[#f6b800] bg-[#fff4c8] p-4 text-sm font-bold text-[#6f5200]">{message}</p> : null}
 
-          <button type="submit" disabled={isSaving} className="h-14 w-full rounded-2xl border border-[#f6b800] bg-[#f6b800] text-sm font-black uppercase tracking-[0.12em] text-black shadow-[0_16px_35px_rgba(184,137,0,.2)] transition active:scale-[.99] disabled:opacity-50">
-            {isSaving ? "Publishing…" : pageCopy.submit}
+          <button type="submit" disabled={isSaving || isPreparingPhotos} className="h-14 w-full rounded-2xl border border-[#f6b800] bg-[#f6b800] text-sm font-black uppercase tracking-[0.12em] text-black shadow-[0_16px_35px_rgba(184,137,0,.2)] transition active:scale-[.99] disabled:opacity-50">
+            {isPreparingPhotos ? "Preparing photos…" : isSaving ? "Publishing…" : pageCopy.submit}
           </button>
         </form>
 

@@ -17,7 +17,7 @@ import { getAccountOwnerKey, getOwnedJobKeys, setOwnedJobKeys } from "@/lib/chat
 import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
-import { createSafeRandomId, inferUploadContentType, prepareImageForUpload, readableUploadError, validateImageFile } from "@/lib/mobilePosting";
+import { createSafeRandomId, imageExtension, inferUploadContentType, prepareImageFileForForm, readableUploadError, revokePreviewUrl, validateImageFile } from "@/lib/mobilePosting";
 import { getFreshAuthenticatedUser, postingErrorMessage, withTransientRetry } from "@/lib/reliableSupabase";
 import { getTruckModel, getTruckModels, truckCatalog, truckYears, validateTruckTransmission } from "@/lib/truckCatalog";
 
@@ -64,6 +64,8 @@ export default function ListYourVehiclePage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [authReady, setAuthReady] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [preparingVehiclePhotos, setPreparingVehiclePhotos] = useState(false);
+  const [vehiclePhotoProgress, setVehiclePhotoProgress] = useState("");
   const [message, setMessage] = useState("");
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [sellerType, setSellerType] = useState<SellerType>("private");
@@ -110,6 +112,7 @@ export default function ListYourVehiclePage() {
   const [taxNumber, setTaxNumber] = useState("");
   const submitLockRef = useRef(false);
   const submissionIdRef = useRef("");
+  const vehiclePreviewUrlsRef = useRef<string[]>([]);
 
   const availableModels = useMemo(() => vehicleCategory === "truck" ? getTruckModels(brand, year) : [], [brand, vehicleCategory, year]);
   const selectedModel = useMemo(() => vehicleCategory === "truck" ? getTruckModel(brand, modelName, year) : null, [brand, modelName, vehicleCategory, year]);
@@ -218,27 +221,50 @@ export default function ListYourVehiclePage() {
 
   async function handleVehiclePhotos(event: ChangeEvent<HTMLInputElement>) {
     const max = packageType === "pro" || packageType === "dealer" ? 15 : 5;
-    const candidates = Array.from(event.target.files ?? []).slice(0, max) as File[];
+    const allSelected = Array.from(event.target.files ?? []) as File[];
+    const candidates = allSelected.slice(0, max);
     event.target.value = "";
+    setMessage("");
+    if (!candidates.length) return;
+
+    setPreparingVehiclePhotos(true);
     const selected: File[] = [];
-    for (const file of candidates) {
-      const validation = validateImageFile(file, file.name || "Vehicle photo");
-      if (validation) {
-        setMessage(validation);
-        continue;
+    const previews: string[] = [];
+
+    try {
+      for (let index = 0; index < candidates.length; index += 1) {
+        const source = candidates[index];
+        const validation = validateImageFile(source, source.name || `Vehicle photo ${index + 1}`);
+        if (validation) throw new Error(validation);
+        setVehiclePhotoProgress(`Preparing vehicle photo ${index + 1} of ${candidates.length}…`);
+        const prepared = await prepareImageFileForForm(source, {
+          maxWidth: 1440,
+          maxHeight: 1440,
+          quality: 0.76,
+          namePrefix: `loadlink-vehicle-${index + 1}`,
+        });
+        selected.push(prepared.file);
+        previews.push(prepared.previewUrl);
+        await new Promise((resolve) => window.setTimeout(resolve, 20));
       }
-      selected.push(file);
+
+      vehiclePreviewUrlsRef.current.forEach(revokePreviewUrl);
+      vehiclePreviewUrlsRef.current = previews;
+      setVehiclePhotos(selected);
+      setVehiclePreviews(previews);
+      if (allSelected.length > max) setMessage(`This package allows up to ${max} vehicle photos. Extra photos were ignored.`);
+    } catch (error) {
+      previews.forEach(revokePreviewUrl);
+      setMessage(readableUploadError(error, "One selected vehicle photo could not be prepared."));
+    } finally {
+      setPreparingVehiclePhotos(false);
+      setVehiclePhotoProgress("");
     }
-    setVehiclePhotos(selected);
-    setVehiclePreviews((current) => {
-      current.forEach((url) => { if (url.startsWith("blob:")) URL.revokeObjectURL(url); });
-      return selected.map((file) => URL.createObjectURL(file));
-    });
   }
 
   useEffect(() => () => {
-    vehiclePreviews.forEach((url) => { if (url.startsWith("blob:")) URL.revokeObjectURL(url); });
-  }, [vehiclePreviews]);
+    vehiclePreviewUrlsRef.current.forEach(revokePreviewUrl);
+  }, []);
 
   function currentSubmissionId() {
     if (!submissionIdRef.current) {
@@ -251,12 +277,12 @@ export default function ListYourVehiclePage() {
   function setDocument(key: keyof VerificationFiles, file: File | null) { setDocuments((current) => ({ ...current, [key]: file })); }
 
   async function uploadVehiclePhoto(file: File, userId: string, submissionId: string, index: number) {
-    const prepared = await prepareImageForUpload(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.82 });
-    const path = `${userId}/vehicles/${submissionId}/${index}.${prepared.extension}`;
+    const contentType = inferUploadContentType(file);
+    const path = `${userId}/vehicles/${submissionId}/${index}.${imageExtension(contentType)}`;
     await withTransientRetry(async () => {
-      const result = await supabase.storage.from("job-photos").upload(path, prepared.blob, {
+      const result = await supabase.storage.from("job-photos").upload(path, file, {
         cacheControl: "3600",
-        contentType: prepared.contentType,
+        contentType,
         upsert: true,
       });
       if (result.error) throw result.error;
@@ -295,6 +321,7 @@ export default function ListYourVehiclePage() {
     if (!odometerKm || Number(odometerKm) < 0) return "Enter a valid mileage or usage reading.";
     if (!isValidSouthAfricanPhone(contactNumber)) return "Enter a valid South African contact number.";
     if (whatsappNumber && !isValidSouthAfricanPhone(whatsappNumber)) return "Enter a valid WhatsApp number or leave it blank.";
+    if (preparingVehiclePhotos) return "Wait for the selected photos to finish preparing.";
     if (vehiclePhotos.length < 2) return "Upload at least two clear photos of the actual vehicle or unit.";
     if (!documents.idDocument || !documents.registrationPaper || !documents.ownershipProof) return "Upload your ID, registration paper and proof of ownership or authority to list.";
     if (vehicleCategory === "truck" && !documents.driverLicence) return "Upload the driver’s licence for the truck listing.";
@@ -309,7 +336,7 @@ export default function ListYourVehiclePage() {
 
   async function submitVehicle(event: FormEvent) {
     event.preventDefault();
-    if (submitLockRef.current || saving) return;
+    if (submitLockRef.current || saving || preparingVehiclePhotos) return;
     setMessage("");
     const validationMessage = validateBeforeSubmit();
     if (validationMessage) { setMessage(validationMessage); return; }
@@ -542,7 +569,7 @@ export default function ListYourVehiclePage() {
 
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="04" title="Photos and verification" description="Upload clear product photos and the critical documents required for review." />
-              <div className="p-5 md:p-7"><label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>Minimum 2 photos · up to {packageType === "pro" || packageType === "dealer" ? 15 : 8}</span><input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} className="hidden" /></label>{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <img key={preview} src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 shrink-0 snap-start rounded-xl object-cover" />)}</div> : null}</div>
+              <div className="p-5 md:p-7"><label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>{vehiclePhotoProgress || `Minimum 2 photos · up to ${packageType === "pro" || packageType === "dealer" ? 15 : 5}`}</span><input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} disabled={preparingVehiclePhotos || saving} className="hidden" /></label>{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <img key={preview} src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 shrink-0 snap-start rounded-xl object-cover" />)}</div> : null}</div>
               {sellerType === "dealership" && !dealerPost ? <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><Field label="Dealership name"><input value={dealershipName} onChange={(event) => setDealershipName(event.target.value)} className={inputClass} required /></Field><Field label="Company registration number"><input value={companyRegistrationNumber} onChange={(event) => setCompanyRegistrationNumber(event.target.value)} className={inputClass} required /></Field><Field label="SARS tax number"><input value={taxNumber} onChange={(event) => setTaxNumber(event.target.value)} className={inputClass} required /></Field><DocumentInput label="CIPC company registration" required file={documents.companyRegistration} onChange={(file) => setDocument("companyRegistration", file)} /><DocumentInput label="SARS tax document" required file={documents.taxDocument} onChange={(file) => setDocument("taxDocument", file)} /><DocumentInput label="Proof of business address" required file={documents.businessAddress} onChange={(file) => setDocument("businessAddress", file)} /><DocumentInput label="Representative authority" required file={documents.representativeAuthority} onChange={(file) => setDocument("representativeAuthority", file)} /></div> : null}
               <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><DocumentInput label="South African ID or passport" required file={documents.idDocument} onChange={(file) => setDocument("idDocument", file)} />{vehicleCategory === "truck" ? <DocumentInput label="Driver’s licence" required file={documents.driverLicence} onChange={(file) => setDocument("driverLicence", file)} /> : null}<DocumentInput label="Vehicle registration certificate" required file={documents.registrationPaper} onChange={(file) => setDocument("registrationPaper", file)} /><DocumentInput label="Proof of ownership or authority to list" required file={documents.ownershipProof} onChange={(file) => setDocument("ownershipProof", file)} /><DocumentInput label="Roadworthy certificate" file={documents.roadworthy} onChange={(file) => setDocument("roadworthy", file)} /><DocumentInput label="Operating licence" file={documents.operatingLicence} onChange={(file) => setDocument("operatingLicence", file)} />{transmissionCheck?.requiresModificationProof ? <DocumentInput label="Gearbox conversion paperwork" required file={documents.modificationProof} onChange={(file) => setDocument("modificationProof", file)} /> : null}</div>
             </section>
@@ -551,7 +578,7 @@ export default function ListYourVehiclePage() {
               <SectionHeading step="05" title="Contact and confirmation" description="Confirm the details before the product is added to LoadLink." />
               <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7"><Field label={sellerType === "dealership" ? "Dealership / contact name" : "Owner / company name"}><input value={postedBy} onChange={(event) => setPostedBy(event.target.value)} className={inputClass} required /></Field><Field label="Contact number"><input value={contactNumber} onChange={(event) => setContactNumber(event.target.value)} placeholder="0821234567" className={inputClass} required /></Field><Field label="WhatsApp number — optional"><input value={whatsappNumber} onChange={(event) => setWhatsappNumber(event.target.value)} placeholder="0821234567" className={inputClass} /></Field><Field label="Selected plan"><div className={`${inputClass} flex items-center`}>{selectedPlan === "manual" ? "Manual listing — R15 per vehicle per day" : selectedPlan === "pro" ? "Pro listing — analytics enabled" : "Dealer package — dealership inventory"}</div></Field></div>
               <div className="grid gap-3 px-5 pb-5 md:px-7 md:pb-7"><CheckRow checked={confirmOwnership} onChange={setConfirmOwnership} label="I own this vehicle or have written authority from the owner to list it." /><CheckRow checked={confirmAccuracy} onChange={setConfirmAccuracy} label="I confirm that the details, mileage, ownership history and uploaded documents are accurate." /></div>
-              <div className="border-t border-[#f6b800]/25 bg-black p-5 text-white md:p-7">{message ? <div className="mb-4 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm font-bold leading-6 text-red-300">{message}</div> : null}<button type="submit" disabled={saving} className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[0.12em] text-black disabled:opacity-50">{saving ? "Submitting vehicle…" : dealershipId ? "Add to dealership inventory" : "Submit vehicle for verification"}</button><p className="mt-3 text-center text-xs leading-5 text-white/45">The product will appear in the dealership slider when linked to an approved dealership. Analytics remains available only on Pro listings.</p></div>
+              <div className="border-t border-[#f6b800]/25 bg-black p-5 text-white md:p-7">{message ? <div className="mb-4 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm font-bold leading-6 text-red-300">{message}</div> : null}<button type="submit" disabled={saving || preparingVehiclePhotos} className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[0.12em] text-black disabled:opacity-50">{saving ? "Submitting vehicle…" : dealershipId ? "Add to dealership inventory" : "Submit vehicle for verification"}</button><p className="mt-3 text-center text-xs leading-5 text-white/45">The product will appear in the dealership slider when linked to an approved dealership. Analytics remains available only on Pro listings.</p></div>
             </section>
           </> : null}
         </> : null}
