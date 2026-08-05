@@ -19,6 +19,7 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { createSafeRandomId, imageExtension, inferUploadContentType, prepareImageFileForForm, readableUploadError, revokePreviewUrl, validateImageFile } from "@/lib/mobilePosting";
 import { getFreshAuthenticatedUser, postingErrorMessage, withTransientRetry } from "@/lib/reliableSupabase";
+import { submitListingDirect } from "@/lib/listingSubmission";
 import { getTruckModel, getTruckModels, truckCatalog, truckYears, validateTruckTransmission } from "@/lib/truckCatalog";
 
 
@@ -402,27 +403,8 @@ export default function ListYourVehiclePage() {
         status: "active", moderation_status: "pending", client_request_id: submissionId,
       };
 
-      try {
-        const listingResult = await withTransientRetry(async () => {
-          const response = await supabase.from("job_listings").insert(listingPayload).select("id").single();
-          if (response.error) throw response.error;
-          return response;
-        }, 2);
-        createdListingId = String(listingResult.data?.id || "");
-        createdThisAttempt = Boolean(createdListingId);
-      } catch (insertError) {
-        const raw = readableUploadError(insertError, "");
-        const code = insertError && typeof insertError === "object" && "code" in insertError
-          ? String((insertError as { code?: unknown }).code || "")
-          : "";
-        if (code === "23505" || /duplicate key|unique constraint/i.test(raw)) {
-          const existing = await supabase.from("job_listings").select("id").eq("user_id", user.id).eq("client_request_id", submissionId).maybeSingle();
-          if (existing.error) throw existing.error;
-          createdListingId = String(existing.data?.id || "");
-        } else {
-          throw insertError;
-        }
-      }
+      createdListingId = await submitListingDirect(listingPayload, user.id, submissionId);
+      createdThisAttempt = Boolean(createdListingId);
       if (!createdListingId) throw new Error("The vehicle listing could not be created.");
       const listingId = createdListingId;
 

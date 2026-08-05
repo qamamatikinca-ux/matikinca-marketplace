@@ -91,16 +91,16 @@ export function postingErrorMessage(error: unknown, fallback: string) {
     return "This account is blocked or suspended and cannot publish or send messages.";
   }
   if (/CURRENT_NDA_ACCEPTANCE_REQUIRED|NO_ACTIVE_AGREEMENT|platform access/i.test(message)) {
-    return "An outdated access restriction is still active in Supabase. Run the supplied LoadLink repair SQL once.";
+    return "An outdated access restriction is still active in Supabase. Run LOADLINK-POSTING-RECOVERY.txt once.";
   }
   if (/loadlink_submit_listing_v2|function .* does not exist|schema cache/i.test(message)) {
-    return "The new LoadLink posting function is not installed in Supabase yet. Run LOADLINK-POSTING-RESET.sql once; your form is still saved.";
+    return "The new LoadLink posting function is not installed in Supabase yet. Run LOADLINK-POSTING-RECOVERY.txt once; your form is still saved.";
   }
   if (/job_listings_status_check|check constraint|23514/i.test(message)) {
-    return "The live database still has an old listing-status rule. Run LOADLINK-POSTING-RESET.sql once; your form is still saved.";
+    return "The live database still has an old listing-status rule. Run LOADLINK-POSTING-RECOVERY.txt once; your form is still saved.";
   }
   if (/row level security|violates row-level security|permission denied/i.test(message)) {
-    return "The live posting permissions are outdated. Run LOADLINK-POSTING-RESET.sql once; your form is still saved.";
+    return "The live posting permissions are outdated. Run LOADLINK-POSTING-RECOVERY.txt once; your form is still saved.";
   }
   if (/bucket not found|storage.*not found/i.test(message)) {
     return "The LoadLink photo bucket is missing. Run the supplied Supabase repair SQL, then publish again.";

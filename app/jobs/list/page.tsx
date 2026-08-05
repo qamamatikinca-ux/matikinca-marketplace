@@ -14,6 +14,7 @@ import { currentRelativePath, loginHref } from "@/lib/auth";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 import { createSafeRandomId, imageExtension, inferUploadContentType, prepareImageFileForForm, readableUploadError, revokePreviewUrl, validateImageFile } from "@/lib/mobilePosting";
 import { getFreshAuthenticatedUser, postingErrorMessage, withTransientRetry } from "@/lib/reliableSupabase";
+import { submitJobListing } from "@/lib/listingSubmission";
 import { getAccountOwnerKey } from "@/lib/chatKeys";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
@@ -372,8 +373,11 @@ export default function ListJobPage() {
         client_request_id: submissionId,
       };
 
-      const rpcResult = await withTransientRetry(async () => {
-        const response = await supabase.rpc("loadlink_submit_listing_v2", {
+      const listingId = await submitJobListing({
+        payload: fullListing,
+        userId: user.id,
+        submissionId,
+        rpcArguments: {
           p_title: fullListing.title,
           p_city: fullListing.city,
           p_vehicle_group: fullListing.vehicle_group,
@@ -387,15 +391,8 @@ export default function ListJobPage() {
           p_listing_kind: fullListing.listing_kind,
           p_client_request_id: fullListing.client_request_id,
           p_owner_key: fullListing.owner_key,
-        });
-        if (response.error) throw response.error;
-        return response.data;
-      }, 2);
-
-      const listingId = typeof rpcResult === "string"
-        ? rpcResult
-        : String((rpcResult as { id?: unknown } | null)?.id || "");
-      if (!listingId) throw new Error("The listing was not assigned an ID.");
+        },
+      });
 
       if (boostJob) {
         const boostResult = await supabase.from("job_boosts").upsert({
