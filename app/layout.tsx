@@ -1,5 +1,5 @@
 import NetworkRecovery from "@/components/platform/NetworkRecovery";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import "./globals.css";
 import GlobalLoading from "@/components/GlobalLoading";
@@ -10,6 +10,15 @@ import NotificationCenter from "@/components/NotificationCenter";
 import ThemeCoordinator from "@/components/ThemeCoordinator";
 
 import MarketplaceRestrictionGuard from "@/components/phase2/MarketplaceRestrictionGuard";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  minimumScale: 1,
+  viewportFit: "cover",
+  colorScheme: "light dark",
+};
+
 export const metadata: Metadata = {
   title: "LoadLink",
   description: "Logistics marketplace",
