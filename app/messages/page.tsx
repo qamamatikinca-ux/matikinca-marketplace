@@ -6,6 +6,7 @@ import {
   ChangeEvent,
   FormEvent,
   KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -22,6 +23,7 @@ import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth"
 import { getBuyerKey, getBuyerKeys, getOwnerKeys } from "@/lib/chatKeys";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 import { errorMessage, getFreshAuthenticatedUser } from "@/lib/reliableSupabase";
+import styles from "./messages.module.css";
 
 type Role = "buyer" | "owner";
 
@@ -42,6 +44,7 @@ type ConversationRow = {
   messages_used_today: number | string | null;
   daily_message_limit: number | string | null;
   is_pro: boolean | null;
+  archived?: boolean | null;
 };
 
 type Conversation = ConversationRow & {
@@ -73,6 +76,10 @@ type BlockState = {
   blocked_by_other: boolean;
 };
 
+type WaveformBar = {
+  height: number;
+};
+
 const ACCEPTED_FILE_TYPES = [
   "image/jpeg",
   "image/png",
@@ -92,6 +99,64 @@ const ACCEPTED_FILE_TYPES = [
 ];
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+const CHAT_WALLPAPER_COUNT = 10;
+const CHAT_ARCHIVE_STORAGE_KEY = "loadlink-archived-conversations-v1";
+
+function readLocalArchivedIds() {
+  if (typeof window === "undefined") return new Set<string>();
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(CHAT_ARCHIVE_STORAGE_KEY) || "[]");
+    return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function writeLocalArchivedIds(ids: Set<string>) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(CHAT_ARCHIVE_STORAGE_KEY, JSON.stringify(Array.from(ids)));
+}
+
+function defaultWaveformBars(count = 42): WaveformBar[] {
+  return Array.from({ length: count }, (_, index) => ({
+    height: 20 + ((index * 17 + index * index * 7) % 72),
+  }));
+}
+
+async function audioWaveform(blob: Blob, count = 42): Promise<WaveformBar[]> {
+  const AudioContextClass = window.AudioContext ||
+    (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioContextClass) return defaultWaveformBars(count);
+
+  const context = new AudioContextClass();
+  try {
+    const buffer = await context.decodeAudioData(await blob.arrayBuffer());
+    const samples = buffer.getChannelData(0);
+    const segment = Math.max(1, Math.floor(samples.length / count));
+    const values = Array.from({ length: count }, (_, index) => {
+      const start = index * segment;
+      const end = Math.min(samples.length, start + segment);
+      let peak = 0;
+      for (let sample = start; sample < end; sample += Math.max(1, Math.floor(segment / 80))) {
+        peak = Math.max(peak, Math.abs(samples[sample] || 0));
+      }
+      return peak;
+    });
+    const max = Math.max(...values, 0.01);
+    return values.map((value) => ({ height: 18 + Math.round((value / max) * 78) }));
+  } catch {
+    return defaultWaveformBars(count);
+  } finally {
+    void context.close().catch(() => undefined);
+  }
+}
+
+function timeLabel(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+  const whole = Math.floor(seconds);
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+}
 
 function toCount(value: number | string | null | undefined) {
   const parsed = Number(value || 0);
@@ -118,13 +183,14 @@ function formatConversationDate(value: string | null) {
   }).format(date);
 }
 
-function activityText(conversation: Conversation) {
+function activityText(conversation: Conversation, now = Date.now()) {
   if (conversation.other_typing) return "Typing…";
   if (!conversation.other_last_seen) return "Activity status unavailable";
 
-  const difference =
-    Date.now() - new Date(conversation.other_last_seen).getTime();
-  if (difference < 90_000) return "Active now";
+  const timestamp = new Date(conversation.other_last_seen).getTime();
+  if (!Number.isFinite(timestamp)) return "Activity status unavailable";
+  const difference = Math.max(0, now - timestamp);
+  if (difference < 60_000) return "Active in messages";
   if (difference < 3_600_000)
     return `Active ${Math.max(1, Math.round(difference / 60_000))} min ago`;
   if (difference < 86_400_000)
@@ -136,6 +202,12 @@ function activityText(conversation: Conversation) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(conversation.other_last_seen))}`;
+}
+
+function isRecentlyActive(value: string | null, now = Date.now()) {
+  if (!value) return false;
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) && Math.max(0, now - timestamp) < 60_000;
 }
 
 function replyText(minutes: number | null) {
@@ -237,6 +309,9 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
   const [query, setQuery] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
+  const [archiveBusy, setArchiveBusy] = useState(false);
+  const [wallpaperIndex, setWallpaperIndex] = useState(1);
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -248,6 +323,7 @@ export default function MessagesPage() {
   const [blockState, setBlockState] = useState<BlockState>({ blocked_by_me: false, blocked_by_other: false });
   const [blockBusy, setBlockBusy] = useState(false);
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const [presenceNow, setPresenceNow] = useState(() => Date.now());
 
   const messageViewportRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -258,6 +334,8 @@ export default function MessagesPage() {
   const selectedIdRef = useRef("");
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const conversationLoadSequenceRef = useRef(0);
+  const messageLoadSequenceRef = useRef(0);
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const recordingChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -271,6 +349,21 @@ export default function MessagesPage() {
     }, 8000);
     return () => window.clearTimeout(safety);
   }, [loading]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setPresenceNow(Date.now()), 10_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const key = "loadlink-chat-wallpaper-session-v1";
+    const stored = Number(window.sessionStorage.getItem(key));
+    const next = Number.isInteger(stored) && stored >= 1 && stored <= CHAT_WALLPAPER_COUNT
+      ? stored
+      : Math.floor(Math.random() * CHAT_WALLPAPER_COUNT) + 1;
+    window.sessionStorage.setItem(key, String(next));
+    setWallpaperIndex(next);
+  }, []);
 
   useEffect(() => {
     const updateViewportHeight = () => {
@@ -307,15 +400,22 @@ export default function MessagesPage() {
 
   const visibleConversations = useMemo(() => {
     const search = query.trim().toLowerCase();
-    if (!search) return conversations;
-    return conversations.filter((conversation) =>
-      `${conversation.other_name} ${conversation.listing_title} ${conversation.last_message || ""}`
+    return conversations.filter((conversation) => {
+      if (Boolean(conversation.archived) !== showArchived) return false;
+      if (!search) return true;
+      return `${conversation.other_name} ${conversation.listing_title} ${conversation.last_message || ""}`
         .toLowerCase()
-        .includes(search),
-    );
-  }, [conversations, query]);
+        .includes(search);
+    });
+  }, [conversations, query, showArchived]);
+
+  const archivedCount = useMemo(
+    () => conversations.filter((conversation) => Boolean(conversation.archived)).length,
+    [conversations],
+  );
 
   const loadConversations = useCallback(async (preferredId?: string) => {
+    const requestSequence = ++conversationLoadSequenceRef.current;
     const buyerKeys = getBuyerKeys();
     const ownerKeys = getOwnerKeys();
     const buyerRows: Conversation[] = [];
@@ -352,8 +452,17 @@ export default function MessagesPage() {
       );
     }
 
+    const locallyArchived = readLocalArchivedIds();
     const merged = new Map<string, Conversation>();
-    [...buyerRows, ...ownerRows].forEach((row) => merged.set(row.id, row));
+    [...buyerRows, ...ownerRows].forEach((row) => {
+      const hasNewMessage = row.unreadCount > 0;
+      if (hasNewMessage) locallyArchived.delete(row.id);
+      merged.set(row.id, {
+        ...row,
+        archived: hasNewMessage ? false : Boolean(row.archived) || locallyArchived.has(row.id),
+      });
+    });
+    writeLocalArchivedIds(locallyArchived);
     const rows = Array.from(merged.values()).sort((first, second) => {
       return (
         new Date(second.last_message_at || 0).getTime() -
@@ -361,6 +470,8 @@ export default function MessagesPage() {
       );
     });
 
+    if (requestSequence !== conversationLoadSequenceRef.current) return;
+    setPresenceNow(Date.now());
     setConversations(rows);
     const nextId =
       preferredId ||
@@ -376,6 +487,7 @@ export default function MessagesPage() {
 
   const loadMessages = useCallback(
     async (conversation: Conversation, showLoader = false) => {
+      const requestSequence = ++messageLoadSequenceRef.current;
       if (showLoader) setMessagesLoading(true);
       try {
         const result = await supabase.rpc("get_listing_guest_messages", {
@@ -384,6 +496,7 @@ export default function MessagesPage() {
         });
         if (result.error) throw result.error;
         const rows = (result.data || []) as ChatMessage[];
+        if (requestSequence !== messageLoadSequenceRef.current) return;
         const signature = rows.map((row) => `${row.id}:${row.created_at}:${row.body}:${row.attachment_id || ""}`).join("|");
         const changed = signature !== messageSignatureRef.current;
         if (changed) {
@@ -529,7 +642,7 @@ export default function MessagesPage() {
       }).then(() => undefined);
     };
     touchPresence();
-    const presenceTimer = setInterval(touchPresence, 15_000);
+    const presenceTimer = setInterval(touchPresence, 10_000);
     const handleVisibility = () => { if (document.visibilityState === "visible") touchPresence(); };
     window.addEventListener("focus", touchPresence);
     document.addEventListener("visibilitychange", handleVisibility);
@@ -706,10 +819,20 @@ export default function MessagesPage() {
     }
     setError("");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const preferredTypes = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"];
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: { ideal: 1 },
+          sampleRate: { ideal: 48_000 },
+        },
+      });
+      const preferredTypes = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg;codecs=opus"];
       const mimeType = preferredTypes.find((type) => MediaRecorder.isTypeSupported(type)) || "";
-      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      const options: MediaRecorderOptions = { audioBitsPerSecond: 128_000 };
+      if (mimeType) options.mimeType = mimeType;
+      const recorder = new MediaRecorder(stream, options);
       recordingStreamRef.current = stream;
       mediaRecorderRef.current = recorder;
       recordingChunksRef.current = [];
@@ -762,6 +885,43 @@ export default function MessagesPage() {
     recorder.stop();
     mediaRecorderRef.current = null;
     if (cancel) setError("Voice note cancelled.");
+  }
+
+  async function toggleArchive() {
+    if (!selectedConversation || archiveBusy) return;
+    const willArchive = !Boolean(selectedConversation.archived);
+    setArchiveBusy(true);
+    setError("");
+
+    const archivedIds = readLocalArchivedIds();
+    if (willArchive) archivedIds.add(selectedConversation.id);
+    else archivedIds.delete(selectedConversation.id);
+    writeLocalArchivedIds(archivedIds);
+    setConversations((current) =>
+      current.map((conversation) =>
+        conversation.id === selectedConversation.id
+          ? { ...conversation, archived: willArchive }
+          : conversation,
+      ),
+    );
+
+    try {
+      const result = await supabase.rpc("set_listing_guest_archived", {
+        p_thread_id: selectedConversation.id,
+        p_access_key: selectedConversation.accessKey,
+        p_archived: willArchive,
+      });
+      if (result.error && !/function|schema cache|does not exist/i.test(result.error.message)) {
+        throw result.error;
+      }
+      setError(willArchive ? "Conversation archived." : "Conversation restored to the inbox.");
+      if (willArchive && !showArchived) returnToInbox();
+      if (!willArchive && showArchived) returnToInbox();
+    } catch (archiveError) {
+      setError(cleanError(archiveError, "The archive setting could not be saved."));
+    } finally {
+      setArchiveBusy(false);
+    }
   }
 
   async function toggleBlock() {
@@ -833,23 +993,53 @@ export default function MessagesPage() {
   }
 
   if (loading) {
+    const loadingSurface = darkMode ? "border-white/10 bg-white/[.04]" : "border-black/10 bg-white";
     return (
-      <main className={`flex min-h-screen items-center justify-center px-6 ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-2 border-white/15 border-t-[#f6b800]" />
-          <p className="mt-6 text-xs font-black uppercase tracking-[.22em] text-[#f6b800]">
-            LoadLink messages
-          </p>
-          <h1 className="mt-3 text-3xl font-black">Opening your inbox</h1>
+      <main className={`min-h-[100dvh] overflow-hidden ${darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"}`}>
+        <header className={`grid h-[72px] grid-cols-[56px_1fr_56px] items-center border-b px-3 ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
+          <div className={`h-10 w-10 animate-pulse rounded-full ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
+          <HomeLogoLink theme={darkMode ? "dark" : "light"} />
+          <div className={`ml-auto h-10 w-10 animate-pulse rounded-full ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
+        </header>
+        <div className="mx-auto grid min-h-[calc(100dvh-72px)] w-full max-w-[1500px] md:grid-cols-[340px_minmax(0,1fr)]">
+          <aside className={`hidden border-r p-5 md:block ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+            <div className={`h-8 w-36 animate-pulse rounded ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
+            <div className={`mt-5 h-12 animate-pulse rounded-xl ${darkMode ? "bg-white/10" : "bg-black/5"}`} />
+            <div className="mt-5 space-y-4">
+              {[0, 1, 2, 3].map((item) => (
+                <div key={item} className="flex items-center gap-3">
+                  <div className={`h-12 w-12 animate-pulse rounded-full ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
+                  <div className="flex-1 space-y-2">
+                    <div className={`h-3 w-2/3 animate-pulse rounded ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
+                    <div className={`h-3 w-full animate-pulse rounded ${darkMode ? "bg-white/5" : "bg-black/5"}`} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </aside>
+          <section className="relative flex min-h-0 items-center justify-center overflow-hidden px-6">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(246,184,0,.14),transparent_42%)]" />
+            <div className={`relative w-full max-w-sm rounded-3xl border p-7 text-center shadow-2xl ${loadingSurface}`}>
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#f6b800]/55 bg-black text-[#f6b800] shadow-[0_0_35px_rgba(246,184,0,.16)]">
+                <MessageIcon />
+              </div>
+              <p className="mt-6 text-[10px] font-black uppercase tracking-[.24em] text-[#b88900]">LoadLink messages</p>
+              <h1 className="mt-2 text-2xl font-black">Connecting your inbox</h1>
+              <p className={`mx-auto mt-3 max-w-xs text-sm leading-6 ${darkMode ? "text-white/55" : "text-black/55"}`}>Loading conversations securely. Your messages will appear here without moving the page.</p>
+              <div className="mt-6 flex justify-center gap-2" aria-label="Loading messages">
+                {[0, 1, 2].map((item) => <span key={item} className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#f6b800]" style={{ animationDelay: `${item * 120}ms` }} />)}
+              </div>
+            </div>
+          </section>
         </div>
       </main>
     );
   }
 
   return (
-    <main data-theme={darkMode ? "dark" : "light"} style={viewportHeight ? { height: `${viewportHeight}px` } : undefined} className={`loadlink-messages flex h-[100dvh] flex-col overflow-hidden ${darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"}`}>
-      <header className={`grid h-[72px] grid-cols-[56px_1fr_92px] items-center border-b px-3 md:h-20 md:grid-cols-[120px_1fr_140px] md:px-5 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"}`}>
-        <div className="flex items-center gap-1">
+    <main data-theme={darkMode ? "dark" : "light"} style={viewportHeight ? { height: `${viewportHeight}px` } : undefined} className={`${styles.messageApp} loadlink-messages flex h-[100dvh] flex-col overflow-hidden ${darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"}`}>
+      <header className={`relative grid h-[72px] grid-cols-[56px_1fr_56px] items-center border-b px-3 md:h-20 md:grid-cols-[120px_1fr_120px] md:px-5 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"}`}>
+        <div className="relative z-10 flex items-center gap-1">
           <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
           <Link
             href="/"
@@ -860,8 +1050,12 @@ export default function MessagesPage() {
             <span>Home</span>
           </Link>
         </div>
-        <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-        <div className="flex items-center justify-end gap-2">
+        <HomeLogoLink
+          theme={darkMode ? "dark" : "light"}
+          className="pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+          logoClassName="loadlink-messages-header-logo"
+        />
+        <div className="relative z-10 flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={() => loadConversations(selectedIdRef.current).catch((refreshError) => setError(cleanError(refreshError, "Could not refresh.")))}
@@ -902,6 +1096,26 @@ export default function MessagesPage() {
                 className="h-12 w-full rounded-xl border border-black/10 bg-[#f5f3ed] px-4 text-sm font-semibold outline-none transition focus:border-[#f6b800] focus:bg-white"
               />
             </label>
+            <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-black/[.04] p-1" role="tablist" aria-label="Conversation folders">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!showArchived}
+                onClick={() => { setShowArchived(false); setQuery(""); }}
+                className={`rounded-lg px-3 py-2 text-[11px] font-black uppercase tracking-wide transition ${!showArchived ? "bg-black text-[#f6b800] shadow-sm" : "text-black/45"}`}
+              >
+                Inbox
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={showArchived}
+                onClick={() => { setShowArchived(true); setQuery(""); }}
+                className={`rounded-lg px-3 py-2 text-[11px] font-black uppercase tracking-wide transition ${showArchived ? "bg-black text-[#f6b800] shadow-sm" : "text-black/45"}`}
+              >
+                Archived{archivedCount ? ` (${archivedCount})` : ""}
+              </button>
+            </div>
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -922,10 +1136,7 @@ export default function MessagesPage() {
                       photo={conversation.other_photo}
                       size="h-12 w-12"
                       online={Boolean(
-                        conversation.other_last_seen &&
-                          Date.now() -
-                            new Date(conversation.other_last_seen).getTime() <
-                            90_000,
+                        isRecentlyActive(conversation.other_last_seen, presenceNow),
                       )}
                     />
                     <span className="min-w-0 flex-1">
@@ -968,11 +1179,12 @@ export default function MessagesPage() {
                   <MessageIcon />
                 </div>
                 <h2 className="mt-5 text-xl font-black">
-                  No conversations yet
+                  {showArchived ? "No archived conversations" : "No conversations yet"}
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-black/55">
-                  Open a listing and tap Message to start a private
-                  conversation.
+                  {showArchived
+                    ? "Archived conversations stay available here until you restore them."
+                    : "Open a listing and tap Message to start a private conversation."}
                 </p>
                 <Link
                   href="/jobs"
@@ -1004,12 +1216,7 @@ export default function MessagesPage() {
                   photo={selectedConversation.other_photo}
                   size="h-11 w-11"
                   online={Boolean(
-                    selectedConversation.other_last_seen &&
-                      Date.now() -
-                        new Date(
-                          selectedConversation.other_last_seen,
-                        ).getTime() <
-                        90_000,
+                    isRecentlyActive(selectedConversation.other_last_seen, presenceNow),
                   )}
                 />
                 <div className="min-w-0 flex-1">
@@ -1019,7 +1226,7 @@ export default function MessagesPage() {
                   <p
                     className={`truncate text-xs font-bold ${selectedConversation.other_typing ? "text-[#168b42]" : "text-black/45"}`}
                   >
-                    {activityText(selectedConversation)}
+                    {activityText(selectedConversation, presenceNow)}
                   </p>
                   <p className="hidden truncate text-[11px] font-semibold text-[#8a6700] sm:block">
                     {replyText(selectedConversation.average_reply_minutes)}
@@ -1056,15 +1263,16 @@ export default function MessagesPage() {
                   <button
                     type="button"
                     onClick={() => setShowDetails((value) => !value)}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-lg font-black xl:hidden"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black xl:hidden"
                     aria-label="Conversation details"
+                    aria-expanded={showDetails}
                   >
-                    i
+                    <InfoIcon />
                   </button>
                 </div>
               </header>
 
-              <div className="border-b border-[#d7b33b]/35 bg-[#fff7dc] px-4 py-2.5 text-[11px] font-semibold leading-5 text-black/60">
+              <div className="loadlink-chat-privacy border-b border-[#d7b33b]/35 bg-[#fff7dc] px-4 py-2.5 text-[11px] font-semibold leading-5 text-black/60">
                 Messages and attachments are protected in transit and stored
                 privately. Only people in this conversation can access them.
               </div>
@@ -1078,11 +1286,15 @@ export default function MessagesPage() {
 
               {showDetails ? (
                 <div className="border-b border-black/10 bg-white p-4 xl:hidden">
-                  <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} onToggleBlock={toggleBlock} />
+                  <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} />
                 </div>
               ) : null}
 
-              <div ref={messageViewportRef} className="loadlink-message-viewport min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8">
+              <div
+                ref={messageViewportRef}
+                className="loadlink-message-viewport loadlink-chat-wallpaper min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8"
+                style={{ backgroundImage: `url(/images/chat-wallpapers/chat-${String(wallpaperIndex).padStart(2, "0")}.svg)` }}
+              >
                 {messagesLoading && messages.length === 0 ? (
                   <div className="flex h-full items-center justify-center">
                     <div className="h-9 w-9 animate-spin rounded-full border-2 border-black/10 border-t-[#f6b800]" />
@@ -1111,10 +1323,18 @@ export default function MessagesPage() {
                             </div>
                           ) : null}
                           <div
-                            className={`flex ${mine ? "justify-end" : "justify-start"}`}
+                            className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"}`}
                           >
+                            {!mine ? (
+                              <Avatar
+                                name={selectedConversation.other_name}
+                                photo={selectedConversation.other_photo}
+                                size="h-8 w-8"
+                                online={isRecentlyActive(selectedConversation.other_last_seen, presenceNow)}
+                              />
+                            ) : null}
                             <div
-                              className={`max-w-[86%] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[72%] ${
+                              className={`max-w-[82%] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[72%] ${
                                 mine
                                   ? "rounded-br-sm bg-black text-white"
                                   : "rounded-bl-sm border border-black/5 bg-white text-black"
@@ -1156,7 +1376,8 @@ export default function MessagesPage() {
                       );
                     })}
                     {selectedConversation.other_typing ? (
-                      <div className="flex justify-start">
+                      <div className="flex items-end justify-start gap-2">
+                        <Avatar name={selectedConversation.other_name} photo={selectedConversation.other_photo} size="h-8 w-8" online />
                         <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-black/5 bg-white px-4 py-3 shadow-sm">
                           <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-black/40 [animation-delay:-.2s]" />
                           <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-black/40 [animation-delay:-.1s]" />
@@ -1256,7 +1477,7 @@ export default function MessagesPage() {
                     )}
                   </button>
                 </div>
-                <div className="mx-auto mt-2 flex max-w-3xl items-center justify-center gap-2 text-center text-[10px] font-semibold text-black/40">
+                <div className="loadlink-chat-composer-meta mx-auto mt-2 flex max-w-3xl flex-wrap items-center justify-center gap-2 text-center text-[10px] font-semibold text-black/40">
                   <span>Photos, documents and voice notes up to 5 MB</span>
                   <span aria-hidden="true">·</span>
                   {isPro ? (
@@ -1272,7 +1493,7 @@ export default function MessagesPage() {
                             : "font-black text-[#8a6700]"
                         }
                       >
-                        {messagesUsedToday}/{dailyMessageLimit} today
+                        {messagesUsedToday}/{dailyMessageLimit} messages used today
                       </span>
                       <Link
                         href="/help?topic=pro-messaging"
@@ -1308,7 +1529,7 @@ export default function MessagesPage() {
 
         <aside className="loadlink-details-panel hidden min-h-0 overflow-y-auto border-l border-black/10 bg-white p-5 xl:block">
           {selectedConversation ? (
-            <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} onToggleBlock={toggleBlock} />
+            <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} />
           ) : null}
         </aside>
       </div>
@@ -1319,18 +1540,43 @@ export default function MessagesPage() {
 function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatMessage; accessKey: string; mine: boolean; onError: (message: string) => void }) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [waveform, setWaveform] = useState<WaveformBar[]>(() => defaultWaveformBars());
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const autoplayRef = useRef(false);
 
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
 
-  async function loadVoiceNote() {
-    if (!message.attachment_id || loading || url) return;
+  useEffect(() => {
+    if (!url || !autoplayRef.current) return;
+    autoplayRef.current = false;
+    const timer = window.setTimeout(() => {
+      void audioRef.current?.play().catch(() => undefined);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [url]);
+
+  async function loadVoiceNote(playAfterLoad = false) {
+    if (!message.attachment_id || loading) return;
+    if (url) {
+      if (playAfterLoad) void audioRef.current?.play().catch(() => undefined);
+      return;
+    }
     setLoading(true);
     try {
-      const result = await supabase.rpc("get_listing_guest_attachment", { p_attachment_id: message.attachment_id, p_access_key: accessKey });
+      const result = await supabase.rpc("get_listing_guest_attachment", {
+        p_attachment_id: message.attachment_id,
+        p_access_key: accessKey,
+      });
       if (result.error) throw result.error;
       const payload = ((result.data || []) as AttachmentPayload[])[0];
       if (!payload) throw new Error("Voice note unavailable.");
-      setUrl(URL.createObjectURL(base64ToBlob(payload.file_base64, payload.file_type)));
+      const blob = base64ToBlob(payload.file_base64, payload.file_type);
+      setWaveform(await audioWaveform(blob));
+      autoplayRef.current = playAfterLoad;
+      setUrl(URL.createObjectURL(blob));
     } catch (error) {
       onError(cleanError(error, "Voice note could not be opened."));
     } finally {
@@ -1338,13 +1584,79 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
     }
   }
 
+  async function togglePlayback() {
+    if (!url) {
+      await loadVoiceNote(true);
+      return;
+    }
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) await audio.play().catch(() => undefined);
+    else audio.pause();
+  }
+
+  function seek(event: ReactMouseEvent<HTMLButtonElement>) {
+    const audio = audioRef.current;
+    if (!audio || !duration) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+    audio.currentTime = ratio * duration;
+    setCurrentTime(audio.currentTime);
+  }
+
+  const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
+
   return (
-    <div className={`mb-2 w-full rounded-xl border p-3 ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}>
+    <div className={`loadlink-voice-note mb-2 w-full min-w-[220px] rounded-2xl border px-3 py-2.5 ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}>
+      {url ? (
+        <audio
+          ref={audioRef}
+          src={url}
+          preload="metadata"
+          className="hidden"
+          onLoadedMetadata={(event) => setDuration(event.currentTarget.duration || 0)}
+          onDurationChange={(event) => setDuration(event.currentTarget.duration || 0)}
+          onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime || 0)}
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          onEnded={() => { setPlaying(false); setCurrentTime(0); }}
+        />
+      ) : null}
       <div className="flex items-center gap-3">
-        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${mine ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><MicrophoneIcon /></span>
-        <span className="min-w-0 flex-1"><strong className="block text-xs font-black">Voice note</strong><span className={`mt-0.5 block text-[10px] font-semibold ${mine ? "text-white/55" : "text-black/45"}`}>{fileSizeLabel(message.file_size)}</span></span>
+        <button
+          type="button"
+          onClick={() => void togglePlayback()}
+          disabled={loading}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full shadow-sm transition active:scale-95 ${mine ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}
+          aria-label={playing ? "Pause voice note" : "Play voice note"}
+        >
+          {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-current/25 border-t-current" /> : <PlayPauseIcon playing={playing} />}
+        </button>
+        <div className="min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={seek}
+            disabled={!url || !duration}
+            className="flex h-9 w-full items-center gap-[2px] overflow-hidden disabled:cursor-default"
+            aria-label="Seek voice note"
+          >
+            {waveform.map((bar, index) => {
+              const active = index / waveform.length <= progress;
+              return (
+                <span
+                  key={`${message.id}-wave-${index}`}
+                  className={`w-[3px] min-w-[2px] rounded-full transition-colors ${active ? "bg-[#f6b800]" : mine ? "bg-white/35" : "bg-black/25"}`}
+                  style={{ height: `${bar.height}%` }}
+                />
+              );
+            })}
+          </button>
+          <div className={`mt-0.5 flex items-center justify-between gap-3 text-[10px] font-bold ${mine ? "text-white/58" : "text-black/48"}`}>
+            <span>{url ? timeLabel(currentTime) : "Voice note"}</span>
+            <span>{duration ? timeLabel(duration) : fileSizeLabel(message.file_size)}</span>
+          </div>
+        </div>
       </div>
-      {url ? <audio controls preload="metadata" src={url} className="mt-3 h-9 w-full max-w-full" /> : <button type="button" onClick={() => void loadVoiceNote()} disabled={loading} className={`mt-3 h-9 w-full rounded-lg border text-[10px] font-black uppercase ${mine ? "border-white/20 text-white" : "border-black/15 text-black"}`}>{loading ? "Loading…" : "Play voice note"}</button>}
     </div>
   );
 }
@@ -1371,30 +1683,45 @@ function Avatar({
       .toUpperCase() || "LL";
 
   return (
-    <span
-      className={`relative flex ${size} shrink-0 items-center justify-center overflow-visible rounded-full bg-black text-xs font-black text-[#f6b800]`}
-    >
-      {photo && !imageFailed ? (
-        <img
-          src={photo}
-          alt={`${name} profile`}
-          className="h-full w-full rounded-full object-cover"
-          onError={() => setImageFailed(true)}
-        />
-      ) : (
-        <span aria-hidden="true">{initials}</span>
-      )}
+    <span className={`relative ${size} shrink-0`} style={{ aspectRatio: "1 / 1" }}>
+      <span className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-full bg-black text-xs font-black text-[#f6b800] ring-1 ring-[#f6b800]/35">
+        {photo && !imageFailed ? (
+          <img
+            src={photo}
+            alt={`${name} profile`}
+            className="absolute inset-0 block h-full w-full rounded-full object-cover"
+            style={{ aspectRatio: "1 / 1" }}
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <span aria-hidden="true">{initials}</span>
+        )}
+      </span>
       {online ? (
         <span
-          className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-[#25b85a]"
-          aria-label="Active now"
+          className="absolute bottom-[-1px] right-[-1px] h-3.5 w-3.5 rounded-full border-2 border-white bg-[#25b85a] shadow-sm"
+          aria-label="Active in messages"
         />
       ) : null}
     </span>
   );
 }
 
-function ConversationDetails({ conversation, blockState, blockBusy, onToggleBlock }: { conversation: Conversation; blockState: BlockState; blockBusy: boolean; onToggleBlock: () => Promise<void> }) {
+function ConversationDetails({
+  conversation,
+  blockState,
+  blockBusy,
+  archiveBusy,
+  onToggleArchive,
+  onToggleBlock,
+}: {
+  conversation: Conversation;
+  blockState: BlockState;
+  blockBusy: boolean;
+  archiveBusy: boolean;
+  onToggleArchive: () => Promise<void>;
+  onToggleBlock: () => Promise<void>;
+}) {
   return (
     <div>
       <p className="text-[10px] font-black uppercase tracking-[.22em] text-[#b88900]">
@@ -1405,11 +1732,7 @@ function ConversationDetails({ conversation, blockState, blockBusy, onToggleBloc
           name={conversation.other_name}
           photo={conversation.other_photo}
           size="h-12 w-12"
-          online={Boolean(
-            conversation.other_last_seen &&
-              Date.now() - new Date(conversation.other_last_seen).getTime() <
-                90_000,
-          )}
+          online={isRecentlyActive(conversation.other_last_seen)}
         />
         <div className="min-w-0">
           <h3 className="truncate font-black">{conversation.other_name}</h3>
@@ -1421,25 +1744,15 @@ function ConversationDetails({ conversation, blockState, blockBusy, onToggleBloc
 
       <div className="mt-6 space-y-3 border-y border-black/10 py-5">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-wide text-black/35">
-            Listing
-          </p>
-          <p className="mt-1 text-sm font-black leading-5">
-            {conversation.listing_title}
-          </p>
+          <p className="text-[10px] font-black uppercase tracking-wide text-black/35">Listing</p>
+          <p className="mt-1 text-sm font-black leading-5">{conversation.listing_title}</p>
         </div>
         <div>
-          <p className="text-[10px] font-black uppercase tracking-wide text-black/35">
-            Response pattern
-          </p>
-          <p className="mt-1 text-sm font-semibold leading-5">
-            {replyText(conversation.average_reply_minutes)}
-          </p>
+          <p className="text-[10px] font-black uppercase tracking-wide text-black/35">Response pattern</p>
+          <p className="mt-1 text-sm font-semibold leading-5">{replyText(conversation.average_reply_minutes)}</p>
         </div>
         <div>
-          <p className="text-[10px] font-black uppercase tracking-wide text-black/35">
-            Messaging plan
-          </p>
+          <p className="text-[10px] font-black uppercase tracking-wide text-black/35">Messaging plan</p>
           <p className="mt-1 text-sm font-semibold leading-5">
             {conversation.is_pro
               ? "Pro · unlimited daily messaging"
@@ -1449,6 +1762,15 @@ function ConversationDetails({ conversation, blockState, blockBusy, onToggleBloc
       </div>
 
       <div className="mt-5 grid gap-2">
+        <button
+          type="button"
+          onClick={() => void onToggleArchive()}
+          disabled={archiveBusy}
+          className="flex items-center justify-center gap-2 rounded-xl border border-[#b88900]/45 bg-[#fff8de] px-4 py-3 text-xs font-black uppercase tracking-wide text-[#705300] disabled:opacity-45"
+        >
+          <ArchiveIcon />
+          {archiveBusy ? "Saving…" : conversation.archived ? "Restore to inbox" : "Archive conversation"}
+        </button>
         <Link
           href={`/jobs#job-${conversation.listing_id}`}
           className="flex items-center justify-center rounded-xl border border-black/10 px-4 py-3 text-xs font-black uppercase tracking-wide"
@@ -1472,11 +1794,42 @@ function ConversationDetails({ conversation, blockState, blockBusy, onToggleBloc
       <div className="mt-6 rounded-xl border border-[#e5c34c]/35 bg-[#fff8de] p-4">
         <p className="text-xs font-black">Stay safe</p>
         <p className="mt-2 text-xs font-medium leading-5 text-black/55">
-          Confirm listing details before paying. Avoid sending passwords, PINs
-          or one-time verification codes.
+          Confirm listing details before paying. Avoid sending passwords, PINs or one-time verification codes.
         </p>
       </div>
     </div>
+  );
+}
+
+function PlayPauseIcon({ playing }: { playing: boolean }) {
+  return playing ? (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="6.5" y="5" width="4" height="14" rx="1" />
+      <rect x="13.5" y="5" width="4" height="14" rx="1" />
+    </svg>
+  ) : (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M8 5.8v12.4c0 .85.94 1.36 1.65.9l9.1-6.2a1.08 1.08 0 0 0 0-1.8l-9.1-6.2A1.08 1.08 0 0 0 8 5.8Z" />
+    </svg>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+      <path d="M12 10.7v5.6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="7.5" r="1.1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ArchiveIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 7.5h16v11A1.5 1.5 0 0 1 18.5 20h-13A1.5 1.5 0 0 1 4 18.5v-11Z" stroke="currentColor" strokeWidth="2" />
+      <path d="M3 4.5A1.5 1.5 0 0 1 4.5 3h15A1.5 1.5 0 0 1 21 4.5v3H3v-3ZM9 11h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
