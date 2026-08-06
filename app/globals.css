@@ -404,7 +404,7 @@ html {
   min-width: 0;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-
+  zoom: 1;
 }
 
 body {
@@ -413,7 +413,7 @@ body {
   max-width: 100%;
   margin: 0;
   overflow-x: hidden;
-
+  zoom: 1;
 }
 
 main,
@@ -439,70 +439,5 @@ svg {
   textarea,
   select {
     font-size: max(16px, 1rem);
-  }
-}
-
-
-/* LOADLINK RESPONSIVE SCALE AND DENSITY V2
-   Normal device viewport plus a denser mobile presentation. User pinch zoom remains available. */
-html {
-  width: 100%;
-  max-width: 100%;
-  font-size: 16px;
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-  overflow-x: clip;
-}
-
-body {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  margin: 0;
-  overflow-x: clip;
-}
-
-main,
-header,
-nav,
-section,
-article,
-footer,
-form,
-div {
-  min-width: 0;
-}
-
-img,
-video,
-canvas {
-  max-width: 100%;
-  height: auto;
-}
-
-/* Keep the brand visible without consuming a third of a small phone header. */
-.loadlink-logo-wrap {
-  width: clamp(108px, 25vw, 138px);
-}
-
-@media (min-width: 768px) {
-  .loadlink-logo-wrap {
-    width: clamp(138px, 15vw, 174px);
-  }
-}
-
-/* iOS only zooms focused fields when their computed font size is below 16px. */
-@media (max-width: 767px) {
-  input,
-  textarea,
-  select {
-    font-size: 16px !important;
-  }
-}
-
-@supports not (overflow: clip) {
-  html,
-  body {
-    overflow-x: hidden;
   }
 }

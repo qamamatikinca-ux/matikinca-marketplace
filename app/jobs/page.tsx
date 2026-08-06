@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
+import LoadLinkLoading from "@/components/LoadLinkLoading";
 import RecentActivityPanel from "@/components/RecentActivityPanel";
 import { VerifiedBadge } from "@/components/MarketplaceDiscovery";
 import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
@@ -329,6 +330,7 @@ export default function JobsPortalPage() {
   const [group, setGroup] = useState<VehicleGroup | "">("");
   const [hasSearched, setHasSearched] = useState(false);
   const [sharedJobs, setSharedJobs] = useState<JobListing[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [galleryJob, setGalleryJob] = useState<JobListing | null>(null);
   const [ownedJobs, setOwnedJobs] = useState<Record<string, string>>({});
@@ -524,9 +526,11 @@ export default function JobsPortalPage() {
   }
 
   function searchJobs() {
+    setIsSearching(true);
     setHasSearched(true);
     requestAnimationFrame(() => {
-      document.getElementById("matching-jobs")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("matching-jobs")?.scrollIntoView({ behavior: "smooth" });
+      setTimeout(() => setIsSearching(false), 900);
     });
   }
 
@@ -595,21 +599,22 @@ export default function JobsPortalPage() {
 
   return (
     <main className={`min-h-screen scroll-smooth transition-colors duration-500 ${darkMode ? "bg-black text-white" : "bg-[#fff7df] text-black"}`}>
+      {isSearching ? <LoadLinkLoading /> : null}
       <Header darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
 
-      <section className="relative min-h-[68svh] overflow-hidden border-b border-[#f6b800]/40 sm:min-h-[72svh] md:min-h-[76vh]">
+      <section className="relative min-h-[82vh] overflow-hidden border-b border-[#f6b800]/40">
         <img src="/images/jobs/jobs-hero-fleet.jpg" alt="Truck fleet ready for logistics work" className="absolute inset-0 h-full w-full object-cover grayscale" />
         <div className={`absolute inset-0 ${darkMode ? "bg-gradient-to-b from-black/15 via-black/45 to-black" : "bg-gradient-to-b from-black/5 via-black/35 to-[#fff7df]"}`} />
 
-        <div className="relative mx-auto flex min-h-[68svh] max-w-6xl flex-col justify-end px-4 pb-6 pt-16 sm:min-h-[72svh] sm:px-5 sm:pb-8 md:min-h-[76vh] md:pt-20">
+        <div className="relative mx-auto flex min-h-[82vh] max-w-5xl flex-col justify-end px-5 pb-8 pt-20">
           <div className="max-w-4xl text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">
-            <h1 className="text-4xl font-black leading-[0.94] tracking-[-0.05em] sm:text-5xl md:text-7xl">{portalCopy.title}</h1>
-            <p className="mt-4 max-w-2xl text-sm font-bold leading-6 sm:text-base sm:leading-7 md:text-lg">
+            <h1 className="text-5xl font-black leading-[0.92] tracking-[-0.06em] md:text-7xl">{portalCopy.title}</h1>
+            <p className="mt-5 max-w-2xl text-base font-bold leading-7 md:text-lg">
               {portalCopy.description}
             </p>
           </div>
 
-          <div className="mt-5 rounded-xl border border-[#f6b800] bg-black/78 p-3 shadow-[0_18px_48px_rgba(0,0,0,0.42)] backdrop-blur-sm sm:p-4 md:rounded-2xl md:p-5">
+          <div className="mt-6 rounded-2xl border border-[#f6b800] bg-black/78 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-sm md:p-5">
             <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr_auto]">
               <label className="block">
                 <span className="mb-2 block text-xs font-black uppercase tracking-[0.18em] text-[#f6b800]">Job or truck type</span>
@@ -665,10 +670,10 @@ export default function JobsPortalPage() {
 
       {portalRailJobs.length ? <FeaturedJobsRail jobs={portalRailJobs} darkMode={darkMode} onOpen={openGallery} /> : null}
 
-      <section id="matching-jobs" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-12 pt-4 sm:px-5">
+      <section id="matching-jobs" className="mx-auto max-w-5xl px-5 pb-12 pt-4">
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-3xl font-black tracking-[-0.04em] sm:text-4xl">{hasSearched ? `Matching ${portalCopy.results.toLowerCase()}` : portalCopy.results}</h2>
+            <h2 className="text-4xl font-black tracking-[-0.05em]">{hasSearched ? `Matching ${portalCopy.results.toLowerCase()}` : portalCopy.results}</h2>
           </div>
 
           <RequireAuthLink href={portalCopy.listHref} className={`hidden border px-5 py-3 text-xs font-black uppercase tracking-wide md:inline-flex ${darkMode ? "border-[#f6b800] text-[#f6b800]" : "border-black text-black"}`}>{portalCopy.listLabel}</RequireAuthLink>
@@ -720,9 +725,9 @@ export default function JobsPortalPage() {
 
 function FeaturedJobsRail({ jobs, darkMode, onOpen }: { jobs: JobListing[]; darkMode: boolean; onOpen: (job: JobListing) => void }) {
   return (
-    <section className={`border-b px-4 py-7 sm:px-5 md:px-12 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-[#fff7df] text-black"}`}>
-      <div className="mx-auto max-w-6xl">
-        <h2 className="text-2xl font-black tracking-[-.035em] sm:text-3xl">Promoted listings</h2>
+    <section className={`border-b px-5 py-8 md:px-12 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-[#fff7df] text-black"}`}>
+      <div className="mx-auto max-w-5xl">
+        <h2 className="text-3xl font-black tracking-[-.04em]">Promoted listings</h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {jobs.map((job) => (
             <button key={job.id} onClick={() => onOpen(job)} className={`overflow-hidden rounded-2xl border text-left ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
@@ -749,17 +754,17 @@ function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onRe
   const isPro = ["pro", "dealer"].includes(job.packageType || "");
 
   return (
-    <article id={`job-${job.id}`} className={`scroll-mt-24 overflow-hidden border md:grid md:grid-cols-[minmax(280px,42%)_minmax(0,1fr)] ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
-      <div role="button" tabIndex={0} onClick={onOpenGallery} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" ")onOpenGallery()}} className="group relative block h-full w-full cursor-pointer overflow-hidden bg-black text-left">
-        <div className="aspect-[4/3] w-full overflow-hidden md:h-full md:min-h-[360px] md:aspect-auto"><img src={coverPhoto} alt={job.title} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" /></div>
+    <article id={`job-${job.id}`} className={`scroll-mt-24 overflow-hidden border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+      <div role="button" tabIndex={0} onClick={onOpenGallery} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" ")onOpenGallery()}} className="group relative block w-full cursor-pointer overflow-hidden bg-black text-left">
+        <div className="aspect-[4/3] w-full overflow-hidden md:aspect-[16/9]"><img src={coverPhoto} alt={job.title} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" /></div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/45" />
         <span className="absolute right-3 bottom-3 rounded-full bg-black/75 px-3 py-1.5 text-xs font-black text-white">{photoCount} photos</span>
         {job.sponsored ? <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.15em] text-black">Promoted</span> : null}
         <button type="button" onClick={(e)=>{e.stopPropagation();onToggleLiked()}} className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full border border-white/25 ${isLiked?"bg-[#f6b800] text-black":"bg-black/65 text-white"}`} aria-label="Save listing"><SaveIcon filled={isLiked}/></button>
       </div>
 
-      <div className="p-4 sm:p-5">
-        <p className="text-2xl font-black tracking-[-.035em] text-[#b88900] sm:text-3xl">{formatListingRate(job.rate)}</p>
+      <div className="p-5">
+        <p className="text-3xl font-black tracking-[-.04em] text-[#b88900]">{formatListingRate(job.rate)}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="rounded-full bg-[#2f9f5b] px-3 py-1.5 text-[10px] font-black uppercase text-white">{job.listingLabel || "Job"}</span>
           <span className={`rounded-full px-3 py-1.5 text-[10px] font-black uppercase ${darkMode ? "bg-white/10 text-white" : "bg-[#eef2f8] text-[#263246]"}`}>{job.group}</span>
@@ -767,7 +772,7 @@ function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onRe
           {job.verified ? <VerifiedBadge /> : null}
           {job.sponsored ? <span className="rounded-full bg-[#168eea] px-3 py-1.5 text-[10px] font-black uppercase text-white">Promoted</span> : null}
         </div>
-        <h3 className="mt-4 text-xl font-black tracking-[-.025em] sm:text-2xl">{job.title}</h3>
+        <h3 className="mt-4 text-2xl font-black tracking-[-.03em]">{job.title}</h3>
         <p className={`mt-2 text-sm font-semibold ${darkMode?"text-white/60":"text-black/60"}`}>{job.city} · {job.group}</p>
         <p className={`mt-3 text-sm ${darkMode?"text-white/55":"text-black/55"}`}>Posted by <strong className={darkMode?"text-white":"text-black"}>{job.postedBy}</strong> · {formatPostedDate(job.createdAt)}</p>
 
@@ -1058,9 +1063,9 @@ function EditJobModal({ job, ownerKey, onClose, onUpdated }: { job: JobListing; 
 function Header({ darkMode, toggleDarkMode }: { darkMode: boolean; toggleDarkMode: () => void }) {
   return (
     <header className={`sticky top-0 z-50 border-b transition-colors duration-500 ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
-      <div className="grid h-16 w-full grid-cols-[76px_minmax(0,1fr)_44px] items-center px-3 sm:h-20 sm:grid-cols-[92px_minmax(0,1fr)_52px] sm:px-4">
+      <div className="grid h-20 w-full grid-cols-[92px_1fr_52px] items-center px-4">
         <div className="flex items-center gap-2">
-          <SiteMenu darkMode={darkMode} className={`text-2xl font-black sm:text-3xl ${darkMode ? "text-white" : "text-black"}`} />
+          <SiteMenu darkMode={darkMode} className={`text-3xl font-black ${darkMode ? "text-white" : "text-black"}`} />
           <AuthStatusButton darkMode={darkMode} />
         </div>
 
