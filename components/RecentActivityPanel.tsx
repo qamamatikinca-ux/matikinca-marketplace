@@ -134,10 +134,10 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
       : "Nothing has been viewed yet. Open a job, contract or vehicle listing and it will appear here.";
 
   return (
-    <section className={`${darkMode ? "bg-black text-white" : "bg-white text-black"} px-5 py-12`}>
-      <div className="mx-auto max-w-5xl">
+    <section className={`loadlink-home-activity-compact ${darkMode ? "bg-black text-white" : "bg-white text-black"} px-4 py-8 sm:px-5 md:px-10 md:py-10`}>
+      <div className="mx-auto max-w-7xl">
         <div className="flex items-end justify-between gap-4">
-          <h2 className="text-3xl font-black tracking-[-0.05em] md:text-5xl">Continue where you left off</h2>
+          <h2 className="text-2xl font-black tracking-[-0.045em] sm:text-3xl md:text-4xl">Continue where you left off</h2>
           {items.length > 1 ? (
             <div className="hidden shrink-0 gap-2 sm:flex">
               <button type="button" onClick={() => moveSlider(-1)} className={`flex h-10 w-10 items-center justify-center border outline-none ${darkMode ? "border-white/20" : "border-black/15"}`} aria-label="Previous recent item">←</button>
@@ -146,7 +146,7 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
           ) : null}
         </div>
 
-        <div data-loadlink-no-swipe-dots="true" className="mt-6 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 no-scrollbar">
+        <div data-loadlink-no-swipe-dots="true" className="no-scrollbar mt-4 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2">
           {([[
             "posted",
             "Recently Posted",
@@ -161,7 +161,7 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
               key={value}
               type="button"
               onClick={() => setTab(value)}
-              className={`shrink-0 snap-start border px-5 py-3 text-xs font-black uppercase tracking-wide ${
+              className={`shrink-0 snap-start border px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.1em] sm:text-[11px] ${
                 tab === value
                   ? "border-[#f6b800] bg-[#f6b800] text-black"
                   : darkMode
@@ -175,26 +175,26 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
         </div>
 
         {tab === "posted" && postedLoading ? (
-          <div className="mt-6 flex gap-4 overflow-hidden" aria-label="Loading recently posted listings">
-            {[0, 1, 2].map((item) => <div key={item} className={`h-64 w-[82vw] max-w-[310px] shrink-0 animate-pulse border ${darkMode ? "border-white/10 bg-white/[.04]" : "border-black/10 bg-black/[.04]"}`} />)}
+          <div className="mt-5 flex gap-3 overflow-hidden" aria-label="Loading recently posted listings">
+            {[0, 1, 2].map((item) => <div key={item} className={`h-[205px] w-[70vw] max-w-[260px] shrink-0 animate-pulse border sm:w-[280px] ${darkMode ? "border-white/10 bg-white/[.04]" : "border-black/10 bg-black/[.04]"}`} />)}
           </div>
         ) : items.length ? (
-          <div ref={sliderRef} data-loadlink-swipe-dots="true" className="no-scrollbar mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-3 touch-pan-x" aria-label={`${tab === "posted" ? "Recently posted" : tab === "viewed" ? "Recently viewed" : "Liked"} listings`}>
+          <div ref={sliderRef} data-loadlink-swipe-dots="true" className="no-scrollbar mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 touch-pan-x" aria-label={`${tab === "posted" ? "Recently posted" : tab === "viewed" ? "Recently viewed" : "Liked"} listings`}>
             {items.map((item) => (
-              <Link key={`${item.href}-${item.id}`} href={item.href} className={`w-[82vw] max-w-[310px] shrink-0 snap-start overflow-hidden border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
-                <div className="aspect-[4/3] overflow-hidden bg-black/10">
+              <Link key={`${item.href}-${item.id}`} href={item.href} className={`w-[70vw] max-w-[260px] shrink-0 snap-start overflow-hidden border sm:w-[280px] sm:max-w-[280px] ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+                <div className="aspect-[16/10] overflow-hidden bg-black/10">
                   {item.image ? <img src={item.image} alt={item.title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center bg-[#f6b800] text-2xl font-black text-black">LL</div>}
                 </div>
-                <div className="p-4">
+                <div className="p-3.5">
                   <p className={`text-[10px] font-black uppercase tracking-[0.18em] ${darkMode ? "text-white/45" : "text-black/45"}`}>{item.category}</p>
-                  <h3 className="mt-2 text-lg font-black">{item.title}</h3>
-                  <p className={`mt-2 text-xs font-bold ${darkMode ? "text-white/50" : "text-black/50"}`}>{item.meta || item.type}</p>
+                  <h3 className="mt-1.5 line-clamp-2 text-base font-black leading-snug sm:text-lg">{item.title}</h3>
+                  <p className={`mt-1.5 line-clamp-1 text-[11px] font-bold ${darkMode ? "text-white/50" : "text-black/50"}`}>{item.meta || item.type}</p>
                 </div>
               </Link>
             ))}
           </div>
         ) : (
-          <div className={`mt-6 border p-8 text-center ${darkMode ? "border-white/10 bg-[#090909] text-white/55" : "border-black/10 bg-[#fafafa] text-black/55"}`}>
+          <div className={`mt-5 border p-6 text-center ${darkMode ? "border-white/10 bg-[#090909] text-white/55" : "border-black/10 bg-[#fafafa] text-black/55"}`}>
             <p className="text-lg font-black">Nothing here yet</p>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6">{emptyCopy}</p>
             {tab === "liked" ? <Link href="/jobs" className="mt-5 inline-flex border border-[#f6b800] px-5 py-3 text-xs font-black uppercase tracking-wide text-[#b88900]">Browse listings</Link> : null}

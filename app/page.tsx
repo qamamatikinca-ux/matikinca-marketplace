@@ -137,55 +137,62 @@ function HomeExperience() {
 
       <LoadLinkBoundary name="marketplace search"><Suspense fallback={null}><MarketplaceDiscovery darkMode={darkMode} /></Suspense></LoadLinkBoundary>
 
-      {/* MAIN RECTANGLE PORTAL CARDS */}
-      <section className="w-full">
-        <div className="flex w-full flex-col gap-0">
-          {portalCards.map((card) => {
-            const activeImage = getActiveImage(card);
+      {/* COMPACT HOMEPAGE QUICK LINKS */}
+      <section
+        data-loadlink-home-quick-links="compact"
+        className={`loadlink-home-quick-links-compact border-y px-4 py-8 sm:px-5 md:px-10 md:py-10 ${
+          darkMode
+            ? "border-white/10 bg-[#050505] text-white"
+            : "border-black/10 bg-[#fffaf0] text-black"
+        }`}
+      >
+        <div className="mx-auto max-w-7xl">
+          <div className="flex items-end justify-between gap-5">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#b88900]">Marketplace portals</p>
+              <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] sm:text-3xl md:text-4xl">Quick links</h2>
+            </div>
+            <p className={`hidden max-w-md text-right text-sm font-semibold leading-6 md:block ${darkMode ? "text-white/45" : "text-black/50"}`}>
+              Move directly between jobs, contracts, drivers and vehicle listings.
+            </p>
+          </div>
 
-            return (
-              <Link
-                key={card.title}
-                href={card.href}
-                className="group relative block h-[52vh] min-h-[380px] w-full overflow-hidden md:h-[65vh]"
-              >
-                <img
-                  src={activeImage.src}
-                  alt={card.title}
-                  style={{ objectPosition: activeImage.position }}
-                  className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-[1.02]"
-                />
-
-                <div className="absolute inset-0 bg-black/45" />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/35 to-black/75" />
-
-                <div
-                  className={`absolute inset-x-0 bottom-0 h-40 blur-3xl transition ${
-                    darkMode ? "bg-[#5c4300]/20" : "bg-[#f6b800]/18"
+          <div
+            data-loadlink-swipe-dots="true"
+            className="no-scrollbar mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 touch-pan-x md:grid md:grid-cols-4 md:overflow-visible md:pb-0"
+            aria-label="LoadLink quick links"
+          >
+            {portalCards.map((card) => {
+              const activeImage = getActiveImage(card);
+              return (
+                <Link
+                  key={card.title}
+                  href={card.href}
+                  className={`group relative block h-[205px] w-[74vw] max-w-[270px] shrink-0 snap-start overflow-hidden border sm:h-[220px] sm:w-[43vw] md:h-[255px] md:w-auto md:max-w-none ${
+                    darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"
                   }`}
-                />
-
-                <div className="relative z-10 flex h-full w-full flex-col items-center justify-center px-6 text-center">
-                  <h2 className="text-5xl font-black leading-tight text-white md:text-7xl">
-                    {card.title}
-                  </h2>
-
-                  <div
-                    className={`mt-6 border px-8 py-4 text-base font-black uppercase tracking-wide transition md:text-lg ${
-                      darkMode
-                        ? "border-[#5c4300] bg-black/70 text-[#f6b800]"
-                        : "border-[#f6b800] bg-black/70 text-[#f6b800]"
-                    }`}
-                  >
-                    {card.buttonText}
+                >
+                  <img
+                    src={activeImage.src}
+                    alt={card.title}
+                    style={{ objectPosition: activeImage.position }}
+                    loading="lazy"
+                    decoding="async"
+                    className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.025]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/10" />
+                  <div className="absolute inset-x-0 bottom-0 z-10 p-4 sm:p-5">
+                    <h3 className="text-xl font-black leading-tight text-white sm:text-2xl">{card.title}</h3>
+                    <span className="mt-3 inline-flex border border-[#f6b800] bg-black/70 px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-[#f6b800] sm:text-[11px]">
+                      {card.buttonText}
+                    </span>
                   </div>
-                </div>
-              </Link>
-            );
-          })}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </section>
-
 
       <LoadLinkBoundary name="recent activity"><Suspense fallback={null}><RecentActivityPanel darkMode={darkMode} /></Suspense></LoadLinkBoundary>
 
