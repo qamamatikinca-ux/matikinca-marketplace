@@ -1,0 +1,235 @@
+--- /dev/null
++++ /dev/null
+@@ -127,11 +130,11 @@
+ 
+   const difference =
+     Date.now() - new Date(conversation.other_last_seen).getTime();
+-  if (difference < 90_000) return "Active now";
++  if (difference < 120_000) return "Active in messages";
+   if (difference < 3_600_000)
+-    return `Active ${Math.max(1, Math.round(difference / 60_000))} min ago`;
++    return `Active in messages ${Math.max(1, Math.round(difference / 60_000))} min ago`;
+   if (difference < 86_400_000)
+-    return `Active ${Math.max(1, Math.round(difference / 3_600_000))} hr ago`;
++    return `Active in messages ${Math.max(1, Math.round(difference / 3_600_000))} hr ago`;
+ 
+   return `Last active ${new Intl.DateTimeFormat("en-ZA", {
+     day: "2-digit",
+@@ -250,7 +253,6 @@
+   const [recordingSeconds, setRecordingSeconds] = useState(0);
+   const [blockState, setBlockState] = useState<BlockState>({ blocked_by_me: false, blocked_by_other: false });
+   const [blockBusy, setBlockBusy] = useState(false);
+-  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+ 
+   const messageViewportRef = useRef<HTMLDivElement>(null);
+   const fileInputRef = useRef<HTMLInputElement>(null);
+@@ -275,20 +290,6 @@
+     return () => window.clearTimeout(safety);
+   }, [loading]);
+ 
+-  useEffect(() => {
+-    const updateViewportHeight = () => {
+-      const height = Math.round(window.visualViewport?.height || window.innerHeight);
+-      setViewportHeight(height);
+-    };
+-    updateViewportHeight();
+-    window.addEventListener("resize", updateViewportHeight);
+-    window.visualViewport?.addEventListener("resize", updateViewportHeight);
+-    return () => {
+-      window.removeEventListener("resize", updateViewportHeight);
+-      window.visualViewport?.removeEventListener("resize", updateViewportHeight);
+-    };
+-  }, []);
+-
+   const selectedConversation = useMemo(
+     () =>
+       conversations.find((conversation) => conversation.id === selectedId) ||
+@@ -527,17 +569,17 @@
+     });
+     const messageTimer = setInterval(() => {
+       if (active) loadMessages(selectedConversation).catch(() => undefined);
+-    }, 2500);
++    }, 5000);
+     const touchPresence = () => {
+       if (document.visibilityState === "hidden") return;
+       supabase.rpc("touch_listing_guest_presence", {
+         p_thread_id: selectedConversation.id,
+         p_access_key: selectedConversation.accessKey,
+-        p_is_typing: typingActiveRef.current,
++        p_is_typing: messagePrivacy.typingIndicators && typingActiveRef.current,
+       }).then(() => undefined);
+     };
+     touchPresence();
+-    const presenceTimer = setInterval(touchPresence, 15_000);
++    const presenceTimer = setInterval(touchPresence, 10_000);
+     const handleVisibility = () => { if (document.visibilityState === "visible") touchPresence(); };
+     window.addEventListener("focus", touchPresence);
+     document.addEventListener("visibilitychange", handleVisibility);
+@@ -842,21 +914,15 @@
+ 
+   if (loading) {
+     return (
+-      <main className={`flex min-h-screen items-center justify-center px-6 ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
+-        <div className="text-center">
+-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-2 border-white/15 border-t-[#f6b800]" />
+-          <p className="mt-6 text-xs font-black uppercase tracking-[.22em] text-[#f6b800]">
+-            LoadLink messages
+-          </p>
+-          <h1 className="mt-3 text-3xl font-black">Opening your inbox</h1>
+-        </div>
++      <main className={`min-h-[100svh] ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
++        <MessageVisualScene mode="loading" darkMode={darkMode} />
+       </main>
+     );
+   }
+ 
+   return (
+-    <main data-theme={darkMode ? "dark" : "light"} style={viewportHeight ? { height: `${viewportHeight}px` } : undefined} className={`loadlink-messages flex h-[100dvh] flex-col overflow-hidden ${darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"}`}>
+-      <header className={`grid h-[72px] grid-cols-[56px_1fr_92px] items-center border-b px-3 md:h-20 md:grid-cols-[120px_1fr_140px] md:px-5 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"}`}>
++    <main data-theme={darkMode ? "dark" : "light"} className={`loadlink-messages flex min-h-[100svh] h-[100dvh] flex-col overflow-hidden ${darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"}`}>
++      <header className={`grid h-[72px] grid-cols-[52px_minmax(0,1fr)_56px] items-center gap-3 border-b px-3 md:h-20 md:grid-cols-[120px_1fr_140px] md:px-5 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"}`}>
+         <div className="flex items-center gap-1">
+           <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
+           <Link
+@@ -1087,15 +1154,14 @@
+ 
+               {showDetails ? (
+                 <div className="border-b border-black/10 bg-white p-4 xl:hidden">
+-                  <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} onToggleBlock={toggleBlock} />
++                  <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} reportBusy={reportBusy} onToggleBlock={toggleBlock} onReport={reportConversation} />
+                 </div>
+               ) : null}
+ 
+-              <div ref={messageViewportRef} className="loadlink-message-viewport min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8">
++              <div ref={messageViewportRef} className="loadlink-message-viewport relative min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8">
++                <MessageVisualScene mode="background" darkMode={darkMode} />
+                 {messagesLoading && messages.length === 0 ? (
+-                  <div className="flex h-full items-center justify-center">
+-                    <div className="h-9 w-9 animate-spin rounded-full border-2 border-black/10 border-t-[#f6b800]" />
+-                  </div>
++                  <MessageVisualScene mode="inline" darkMode={darkMode} />
+                 ) : messages.length ? (
+                   <div className="mx-auto max-w-3xl space-y-3">
+                     {messages.map((message, index) => {
+@@ -1317,7 +1392,7 @@
+ 
+         <aside className="loadlink-details-panel hidden min-h-0 overflow-y-auto border-l border-black/10 bg-white p-5 xl:block">
+           {selectedConversation ? (
+-            <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} onToggleBlock={toggleBlock} />
++            <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} reportBusy={reportBusy} onToggleBlock={toggleBlock} onReport={reportConversation} />
+           ) : null}
+         </aside>
+       </div>
+@@ -1359,13 +1446,75 @@
+     }
+   }
+ 
++  async function togglePlayback() {
++    if (!url) {
++      await loadVoiceNote();
++      return;
++    }
++    const audio = audioRef.current;
++    if (!audio) return;
++    if (audio.paused) {
++      await audio.play().catch(() => onError("Voice note could not be played."));
++    } else {
++      audio.pause();
++    }
++  }
++
++  function formatAudioTime(value: number) {
++    if (!Number.isFinite(value) || value <= 0) return "0:00";
++    const minutes = Math.floor(value / 60);
++    const seconds = Math.floor(value % 60);
++    return `${minutes}:${String(seconds).padStart(2, "0")}`;
++  }
++
++  const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
++
+   return (
+-    <div className={`mb-2 w-full rounded-xl border p-3 ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}>
++    <div className={`mb-2 w-full rounded-2xl border p-3 ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}>
+       <div className="flex items-center gap-3">
+-        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${mine ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><MicrophoneIcon /></span>
+-        <span className="min-w-0 flex-1"><strong className="block text-xs font-black">Voice note</strong><span className={`mt-0.5 block text-[10px] font-semibold ${mine ? "text-white/55" : "text-black/45"}`}>{fileSizeLabel(message.file_size)}</span></span>
++        <button
++          type="button"
++          onClick={() => void togglePlayback()}
++          disabled={loading}
++          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition active:scale-95 ${mine ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"} disabled:opacity-50`}
++          aria-label={playing ? "Pause voice note" : "Play voice note"}
++        >
++          {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" /> : playing ? <span className="text-base font-black">Ⅱ</span> : <span className="ml-0.5 text-base font-black">▶</span>}
++        </button>
++
++        <div className="min-w-0 flex-1">
++          <div className="flex h-9 items-center gap-[2px]" aria-hidden="true">
++            {waveform.map((height, index) => {
++              const active = index / waveform.length <= progress;
++              return (
++                <span
++                  key={`${message.id}-wave-${index}`}
++                  className={`w-[3px] rounded-full transition ${active ? "bg-[#f6b800]" : mine ? "bg-white/35" : "bg-black/25"}`}
++                  style={{ height: `${height}%` }}
++                />
++              );
++            })}
++          </div>
++          <div className={`mt-1 flex items-center justify-between text-[9px] font-black ${mine ? "text-white/55" : "text-black/45"}`}>
++            <span>{formatAudioTime(currentTime)} / {formatAudioTime(duration)}</span>
++            <span>{fileSizeLabel(message.file_size)}</span>
++          </div>
++        </div>
+       </div>
+-      {url ? <audio controls preload="metadata" src={url} className="mt-3 h-9 w-full max-w-full" /> : <button type="button" onClick={() => void loadVoiceNote()} disabled={loading} className={`mt-3 h-9 w-full rounded-lg border text-[10px] font-black uppercase ${mine ? "border-white/20 text-white" : "border-black/15 text-black"}`}>{loading ? "Loading…" : "Play voice note"}</button>}
++
++      {url ? (
++        <audio
++          ref={audioRef}
++          preload="metadata"
++          src={url}
++          className="hidden"
++          onLoadedMetadata={(event) => setDuration(event.currentTarget.duration || 0)}
++          onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime || 0)}
++          onPlay={() => setPlaying(true)}
++          onPause={() => setPlaying(false)}
++          onEnded={() => { setPlaying(false); setCurrentTime(0); }}
++        />
++      ) : null}
+     </div>
+   );
+ }
+@@ -1393,13 +1542,13 @@
+ 
+   return (
+     <span
+-      className={`relative flex ${size} shrink-0 items-center justify-center overflow-visible rounded-full bg-black text-xs font-black text-[#f6b800]`}
++      className={`relative flex ${size} shrink-0 items-center justify-center aspect-square overflow-visible rounded-full bg-black text-xs font-black text-[#f6b800]`}
+     >
+       {photo && !imageFailed ? (
+         <img
+           src={photo}
+           alt={`${name} profile`}
+-          className="h-full w-full rounded-full object-cover"
++          className="aspect-square h-full w-full rounded-full object-cover"
+           onError={() => setImageFailed(true)}
+         />
+       ) : (
+@@ -1408,14 +1557,14 @@
+       {online ? (
+         <span
+           className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-[#25b85a]"
+-          aria-label="Active now"
++          aria-label="Active in messages"
+         />
+       ) : null}
+     </span>
+   );
+ }
+ 
+-function ConversationDetails({ conversation, blockState, blockBusy, onToggleBlock }: { conversation: Conversation; blockState: BlockState; blockBusy: boolean; onToggleBlock: () => Promise<void> }) {
++function ConversationDetails({ conversation, blockState, blockBusy, reportBusy, onToggleBlock, onReport }: { conversation: Conversation; blockState: BlockState; blockBusy: boolean; reportBusy: boolean; onToggleBlock: () => Promise<void>; onReport: () => Promise<void> }) {
+   return (
+     <div>
+       <p className="text-[10px] font-black uppercase tracking-[.22em] text-[#b88900]">

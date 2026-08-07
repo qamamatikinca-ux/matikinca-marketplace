@@ -1,0 +1,620 @@
+diff --git a/app/account/settings/page.tsx b/app/account/settings/page.tsx
+index d4b35e2..636cd2c 100644
+--- a/app/account/settings/page.tsx
++++ b/app/account/settings/page.tsx
+@@ -15,8 +15,17 @@ import { refreshLoadLinkAccount } from "@/lib/loadLinkAccountStore";
+ import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+ import { SOUTH_AFRICAN_PROVINCES } from "@/lib/southAfricaLocations";
+ import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
++import { profileRowToMessagePrivacy, writeMessagePrivacy } from "@/lib/messagePrivacy";
+ 
+-type PreferenceKey = "email_notifications" | "chat_notifications" | "listing_notifications" | "marketing_notifications";
++type PreferenceKey =
++  | "email_notifications"
++  | "chat_notifications"
++  | "listing_notifications"
++  | "marketing_notifications"
++  | "message_activity_visible"
++  | "message_typing_indicators"
++  | "message_requests_enabled"
++  | "message_notification_previews";
+ type ProfileForm = {
+   full_name: string;
+   phone: string;
+@@ -31,6 +40,10 @@ type ProfileForm = {
+   chat_notifications: boolean;
+   listing_notifications: boolean;
+   marketing_notifications: boolean;
++  message_activity_visible: boolean;
++  message_typing_indicators: boolean;
++  message_requests_enabled: boolean;
++  message_notification_previews: boolean;
+   verification_status: string;
+   subscription_plan: string;
+ };
+@@ -38,6 +51,7 @@ type ProfileForm = {
+ const EMPTY: ProfileForm = {
+   full_name: "", phone: "", whatsapp_number: "", company_name: "", job_title: "", city: "", province: "", bio: "", avatar_url: "",
+   email_notifications: true, chat_notifications: true, listing_notifications: true, marketing_notifications: false,
++  message_activity_visible: true, message_typing_indicators: true, message_requests_enabled: true, message_notification_previews: false,
+   verification_status: "not_started", subscription_plan: "standard",
+ };
+ 
+@@ -73,7 +87,7 @@ export default function AccountSettingsPage() {
+     const { data: { user: currentUser } } = await supabase.auth.getUser();
+     if (!isAuthenticatedUser(currentUser)) { window.location.href = loginHref("/account/settings"); return; }
+     setUser(currentUser);
+-    const columns = "full_name,phone,whatsapp_number,company_name,job_title,city,province,bio,avatar_url,email_notifications,chat_notifications,listing_notifications,marketing_notifications,verification_status,subscription_plan";
++    const columns = "*";
+     const [{ data, error }, { data: driverProfile }] = await Promise.all([
+       supabase.from("profiles").select(columns).eq("id", currentUser.id).maybeSingle(),
+       supabase.from("driver_profiles").select("id").eq("user_id", currentUser.id).maybeSingle(),
+@@ -87,9 +101,15 @@ export default function AccountSettingsPage() {
+       phone: String(data?.phone || ""), whatsapp_number: String(data?.whatsapp_number || ""), company_name: String(data?.company_name || ""), job_title: String(data?.job_title || ""),
+       city: String(data?.city || ""), province: String(data?.province || ""), bio: String(data?.bio || ""), avatar_url: String(data?.avatar_url || metadata.avatar_url || metadata.picture || ""),
+       email_notifications: data?.email_notifications ?? true, chat_notifications: data?.chat_notifications ?? true, listing_notifications: data?.listing_notifications ?? true, marketing_notifications: data?.marketing_notifications ?? false,
++      message_activity_visible: data?.message_activity_visible ?? true,
++      message_typing_indicators: data?.message_typing_indicators ?? true,
++      message_requests_enabled: data?.message_requests_enabled ?? true,
++      message_notification_previews: data?.message_notification_previews ?? false,
+       verification_status: String(data?.verification_status || "not_started"), subscription_plan: String(data?.subscription_plan || "standard"),
+     };
+-    setForm(next); setSavedForm(next); setLoading(false);
++    setForm(next); setSavedForm(next);
++    writeMessagePrivacy(profileRowToMessagePrivacy(next as unknown as Record<string, unknown>));
++    setLoading(false);
+   }
+ 
+   function field<K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) { setForm((current) => ({ ...current, [key]: value })); }
+@@ -99,6 +119,10 @@ export default function AccountSettingsPage() {
+       id: userId, full_name: source.full_name.trim(), phone: source.phone.trim(), whatsapp_number: source.whatsapp_number.trim(), company_name: source.company_name.trim(), job_title: source.job_title.trim(),
+       city: source.city.trim(), province: source.province, bio: source.bio.trim(), avatar_url: source.avatar_url,
+       email_notifications: source.email_notifications, chat_notifications: source.chat_notifications, listing_notifications: source.listing_notifications, marketing_notifications: source.marketing_notifications,
++      message_activity_visible: source.message_activity_visible,
++      message_typing_indicators: source.message_typing_indicators,
++      message_requests_enabled: source.message_requests_enabled,
++      message_notification_previews: source.message_notification_previews,
+       updated_at: new Date().toISOString(),
+     };
+   }
+@@ -113,6 +137,14 @@ export default function AccountSettingsPage() {
+       const { error } = await supabase.rpc("loadlink_update_my_profile", { p_payload: rpcPayload(nextSaved, user.id) });
+       if (error) throw error;
+       setSavedForm(nextSaved);
++      if (key.startsWith("message_")) {
++        writeMessagePrivacy({
++          activityVisible: nextSaved.message_activity_visible,
++          typingIndicators: nextSaved.message_typing_indicators,
++          allowNewRequests: nextSaved.message_requests_enabled,
++          notificationPreviews: nextSaved.message_notification_previews,
++        });
++      }
+       setMessage("Preference saved.");
+     } catch (error) {
+       setForm((current) => ({ ...current, [key]: previous }));
+@@ -243,6 +275,26 @@ export default function AccountSettingsPage() {
+               <button type="submit" disabled={saving || !dirty} className="mt-6 h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase tracking-[.12em] text-black disabled:opacity-50">{saving ? "Saving…" : dirty ? "Save profile settings" : "Profile saved"}</button>
+             </form>
+ 
++            <section id="message-privacy" className={`scroll-mt-24 border p-5 shadow-[0_14px_40px_rgba(0,0,0,.05)] md:p-7 ${surface}`}>
++              <div className="flex flex-wrap items-start justify-between gap-4">
++                <div>
++                  <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#b88900]">Privacy</p>
++                  <h2 className="mt-1 text-2xl font-black">Message privacy</h2>
++                  <p className={`mt-2 max-w-2xl text-sm leading-6 ${muted}`}>Control what other users can see and whether new listing visitors may start a conversation. Existing chats and blocked-user rules remain unchanged.</p>
++                </div>
++                <Link href="/messages" className="flex h-10 items-center justify-center rounded-xl border border-[#f6b800] px-4 text-[10px] font-black uppercase tracking-[.12em] text-[#b88900]">Open messages</Link>
++              </div>
++              <div className="mt-5 grid gap-3 sm:grid-cols-2">
++                <Toggle label="Share activity status" description="Show Active in messages and last active time." checked={form.message_activity_visible} busy={preferenceSaving === "message_activity_visible"} onChange={(value) => void savePreference("message_activity_visible", value)} darkMode={darkMode} />
++                <Toggle label="Share typing indicators" description="Let the other person see when you are typing." checked={form.message_typing_indicators} busy={preferenceSaving === "message_typing_indicators"} onChange={(value) => void savePreference("message_typing_indicators", value)} darkMode={darkMode} />
++                <Toggle label="Allow new message requests" description="Allow people viewing your listings to start a new chat." checked={form.message_requests_enabled} busy={preferenceSaving === "message_requests_enabled"} onChange={(value) => void savePreference("message_requests_enabled", value)} darkMode={darkMode} />
++                <Toggle label="Show notification previews" description="Show sender and message text in supported notifications." checked={form.message_notification_previews} busy={preferenceSaving === "message_notification_previews"} onChange={(value) => void savePreference("message_notification_previews", value)} darkMode={darkMode} />
++              </div>
++              <div className={`mt-5 border-l-2 border-[#f6b800] px-4 py-3 text-xs font-semibold leading-5 ${darkMode ? "bg-white/[.035] text-white/60" : "bg-black/[.025] text-black/60"}`}>
++                Strict safety stays active for every account: blocks stop both users from sending, attachments remain private to the conversation, and message limits cannot be bypassed from the browser.
++              </div>
++            </section>
++
+             <section className={`border p-5 shadow-[0_14px_40px_rgba(0,0,0,.05)] md:p-7 ${surface}`}><h2 className="text-2xl font-black">Security</h2><p className={`mt-2 text-sm ${muted}`}>{googleOnly ? "Set a LoadLink password while keeping Google sign-in connected." : "Change your LoadLink password. Connected sign-in methods remain available."}</p><div className="mt-5 grid gap-4 md:grid-cols-2"><Field label={googleOnly ? "Set a LoadLink password" : "New password"}><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" className={input} /></Field><Field label="Confirm new password"><input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" className={input} /></Field></div><button type="button" onClick={() => void updatePassword()} disabled={saving || !password} className="mt-5 h-11 rounded-xl border border-[#f6b800] px-5 text-xs font-black uppercase text-[#b88900] disabled:opacity-40">{googleOnly ? "Set password" : "Update password"}</button></section>
+ 
+             <section className={`border border-red-500/35 p-5 shadow-[0_14px_40px_rgba(0,0,0,.05)] md:p-7 ${surface}`}><h2 className="text-2xl font-black">Account access</h2><p className={`mt-2 text-sm ${muted}`}>Signing out keeps your account data safe. Account deletion requires confirmation so listings and conversations are not removed accidentally.</p><div className="mt-5 flex flex-wrap gap-3"><button type="button" onClick={() => void signOut()} className="h-11 rounded-xl border border-red-500 px-5 text-xs font-black uppercase text-red-500">Sign out of LoadLink</button><button type="button" onClick={requestDeletion} className="h-11 rounded-xl border border-current/20 px-5 text-xs font-black uppercase">Request account deletion</button></div></section>
+@@ -254,7 +306,7 @@ export default function AccountSettingsPage() {
+ }
+ 
+ function Field({ label, children }: { label: string; children: ReactNode }) { return <label className="block text-xs font-black uppercase tracking-[.11em]">{label}{children}</label>; }
+-function Toggle({ label, checked, busy, onChange, darkMode }: { label: string; checked: boolean; busy?: boolean; onChange: (value: boolean) => void; darkMode: boolean }) { return <div className={`flex min-h-14 items-center justify-between gap-4 rounded-xl border px-4 ${darkMode ? "border-white/10 bg-white/[.02]" : "border-black/10 bg-black/[.015]"}`}><span className="text-sm font-bold normal-case tracking-normal">{label}</span><button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)} disabled={busy} className={`relative h-7 w-12 shrink-0 rounded-full border transition disabled:opacity-55 ${checked ? "border-[#f6b800] bg-[#f6b800]" : darkMode ? "border-white/20 bg-white/10" : "border-black/20 bg-black/10"}`}><span className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} /></button></div>; }
++function Toggle({ label, description, checked, busy, onChange, darkMode }: { label: string; description?: string; checked: boolean; busy?: boolean; onChange: (value: boolean) => void; darkMode: boolean }) { return <div className={`flex min-h-14 items-center justify-between gap-4 rounded-xl border px-4 py-3 ${darkMode ? "border-white/10 bg-white/[.02]" : "border-black/10 bg-black/[.015]"}`}><span className="min-w-0"><strong className="block text-sm font-bold normal-case tracking-normal">{label}</strong>{description ? <span className={`mt-1 block text-xs font-semibold leading-5 ${darkMode ? "text-white/45" : "text-black/45"}`}>{description}</span> : null}</span><button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)} disabled={busy} className={`relative h-7 w-12 shrink-0 rounded-full border transition disabled:opacity-55 ${checked ? "border-[#f6b800] bg-[#f6b800]" : darkMode ? "border-white/20 bg-white/10" : "border-black/20 bg-black/10"}`}><span className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} /></button></div>; }
+ function Info({ label, value }: { label: string; value: string }) { return <div className="mb-4 last:mb-0"><p className="text-[10px] font-black uppercase tracking-[.12em] opacity-50">{label}</p><p className="mt-1 break-words text-sm font-bold capitalize">{value}</p></div>; }
+ 
+ function isMissingSchemaError(message: string) { return /column|schema cache|does not exist|relation/i.test(message); }
+diff --git a/app/globals.css b/app/globals.css
+index e7ba2e2..57b83d3 100644
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -396,3 +396,64 @@ html[data-loadlink-theme] img.loadlink-logo-img {
+     forced-color-adjust: none;
+   }
+ }
++
++/* LOADLINK RECOVERY: reference scale, stable cards and modern messages */
++html { font-size: 16px !important; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
++body { min-width: 0; overflow-x: hidden; }
++.loadlink-logo-wrap { width: clamp(128px, 31vw, 184px); max-width: 100%; }
++.loadlink-logo-img { display:block; width:100%; height:auto; object-fit:contain; }
++
++/* Keep the menu at the original reference proportions. */
++[data-loadlink-menu-panel] { width:min(88vw,390px) !important; }
++[data-loadlink-menu-panel] [class*="min-h-[118px]"] { min-height:104px !important; }
++[data-loadlink-menu-panel] h2 { text-wrap:balance; }
++
++/* Eliminate stretched listing media/black filler. */
++[id^="job-"] > [role="button"] { height:auto !important; min-height:0 !important; align-self:start; }
++[id^="job-"] > [role="button"] > div:first-child { aspect-ratio:16/10; height:auto !important; min-height:0 !important; }
++[id^="job-"] > [role="button"] img { display:block; width:100%; height:100%; object-fit:cover; }
++
++/* Mobile chat must occupy exactly the current viewport, not a stale visualViewport height. */
++.loadlink-messages { position:relative !important; inset:auto !important; min-height:100svh !important; height:100dvh !important; max-height:100dvh; }
++.loadlink-messages .loadlink-chat-panel { min-height:0; height:100%; overflow:hidden; }
++.loadlink-message-viewport { position:relative; isolation:isolate; background:transparent; }
++.loadlink-message-viewport > *:not(.loadlink-message-sketch) { position:relative; z-index:1; }
++.loadlink-messages img.rounded-full,
++.loadlink-messages [class*="rounded-full"] > img { aspect-ratio:1/1 !important; border-radius:9999px !important; object-fit:cover !important; }
++
++/* Remove Safari/Chromium's blue native datalist indicator without removing suggestions. */
++input[list]::-webkit-calendar-picker-indicator { opacity:0 !important; display:none !important; }
++
++.loadlink-message-sketch { position:absolute; inset:0; z-index:0; overflow:hidden; color:currentColor; opacity:.055; pointer-events:none; }
++html[data-loadlink-theme="light"] .loadlink-message-sketch { opacity:.045; }
++.loadlink-message-sketch .loadlink-truck-sketch { position:absolute; width:min(520px,82vw); right:-8%; bottom:8%; transform:rotate(-4deg); }
++.loadlink-message-sketch[data-scene="1"] .loadlink-truck-sketch,
++.loadlink-message-sketch[data-scene="6"] .loadlink-truck-sketch { left:-8%; right:auto; transform:rotate(3deg) scaleX(-1); }
++.loadlink-message-route { position:absolute; display:block; width:38%; height:28%; border:2px dashed currentColor; border-left:0; border-bottom:0; border-radius:0 100% 0 0; }
++.loadlink-message-route.route-one { left:8%; top:14%; transform:rotate(9deg); }
++.loadlink-message-route.route-two { right:8%; top:42%; transform:rotate(190deg); }
++
++.loadlink-message-loader { min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 20px; text-align:center; overflow:hidden; }
++.loadlink-message-loader.is-full { min-height:100svh; }
++.loadlink-message-loader.is-inline { min-height:260px; }
++.loadlink-message-loader-art { position:relative; width:min(620px,92vw); height:230px; border:1px solid rgba(246,184,0,.38); background:linear-gradient(180deg,rgba(246,184,0,.08),transparent 60%); overflow:hidden; }
++.loadlink-message-loader.is-inline .loadlink-message-loader-art { width:min(420px,88vw); height:150px; }
++.loadlink-loader-skyline { position:absolute; inset:auto 0 24% 0; height:35%; opacity:.16; background:linear-gradient(90deg,transparent 2%,currentColor 2% 9%,transparent 9% 12%,currentColor 12% 20%,transparent 20% 24%,currentColor 24% 30%,transparent 30% 36%,currentColor 36% 48%,transparent 48% 54%,currentColor 54% 65%,transparent 65% 72%,currentColor 72% 82%,transparent 82%); clip-path:polygon(0 100%,0 45%,8% 45%,8% 15%,17% 15%,17% 58%,28% 58%,28% 25%,42% 25%,42% 66%,56% 66%,56% 8%,70% 8%,70% 50%,83% 50%,83% 30%,94% 30%,94% 100%); }
++.loadlink-truck-sketch { color:#f6b800; width:72%; height:auto; }
++.loadlink-message-loader-art .loadlink-truck-sketch { position:absolute; left:14%; bottom:18%; animation:loadlink-truck-drive 2.8s cubic-bezier(.45,0,.3,1) infinite; filter:drop-shadow(0 10px 18px rgba(0,0,0,.22)); }
++.loadlink-message-loader.is-inline .loadlink-truck-sketch { width:66%; }
++.loadlink-truck-label { fill:currentColor; stroke:none; font-size:7px; font-weight:900; letter-spacing:1.2px; }
++.loadlink-loader-road { position:absolute; left:0; right:0; bottom:16%; height:2px; background:rgba(246,184,0,.42); }
++.loadlink-loader-road span { position:absolute; top:8px; width:54px; height:3px; background:#f6b800; animation:loadlink-road-move 1.2s linear infinite; }
++.loadlink-loader-road span:nth-child(1){left:8%;}.loadlink-loader-road span:nth-child(2){left:42%;animation-delay:-.4s}.loadlink-loader-road span:nth-child(3){left:76%;animation-delay:-.8s}
++.loadlink-message-loader-copy { margin-top:24px; max-width:520px; }
++.loadlink-message-loader-copy p { color:#b88900; font-size:10px; font-weight:950; letter-spacing:.22em; }
++.loadlink-message-loader-copy h1 { margin-top:8px; font-size:clamp(1.5rem,6vw,2.6rem); line-height:1; font-weight:950; letter-spacing:-.045em; }
++.loadlink-message-loader-copy span { display:block; margin-top:10px; font-size:13px; font-weight:650; opacity:.58; }
++.loadlink-loader-dots { display:flex; gap:7px; margin-top:20px; }
++.loadlink-loader-dots i { width:7px; height:7px; border-radius:999px; background:#f6b800; animation:loadlink-loader-dot 1.15s ease-in-out infinite; }
++.loadlink-loader-dots i:nth-child(2){animation-delay:.14s}.loadlink-loader-dots i:nth-child(3){animation-delay:.28s}
++@keyframes loadlink-truck-drive { 0%{transform:translateX(-12%) translateY(0)} 45%{transform:translateX(8%) translateY(-2px)} 100%{transform:translateX(-12%) translateY(0)} }
++@keyframes loadlink-road-move { from{transform:translateX(120px);opacity:0} 20%{opacity:1} to{transform:translateX(-120px);opacity:0} }
++@keyframes loadlink-loader-dot { 0%,100%{transform:translateY(0);opacity:.3} 50%{transform:translateY(-5px);opacity:1} }
++@media (prefers-reduced-motion: reduce) { .loadlink-message-loader-art .loadlink-truck-sketch,.loadlink-loader-road span,.loadlink-loader-dots i{animation:none!important} }
+diff --git a/app/jobs/page.tsx b/app/jobs/page.tsx
+index 6a5f429..f905ef7 100644
+--- a/app/jobs/page.tsx
++++ b/app/jobs/page.tsx
+@@ -756,7 +756,7 @@ function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onRe
+   return (
+     <article id={`job-${job.id}`} className={`scroll-mt-24 overflow-hidden border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+       <div role="button" tabIndex={0} onClick={onOpenGallery} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" ")onOpenGallery()}} className="group relative block w-full cursor-pointer overflow-hidden bg-black text-left">
+-        <div className="aspect-[4/3] w-full overflow-hidden md:aspect-[16/9]"><img src={coverPhoto} alt={job.title} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" /></div>
++        <div className="aspect-[16/10] w-full overflow-hidden md:aspect-[16/9]"><img loading="lazy" decoding="async" src={coverPhoto} alt={job.title} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" /></div>
+         <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/45" />
+         <span className="absolute right-3 bottom-3 rounded-full bg-black/75 px-3 py-1.5 text-xs font-black text-white">{photoCount} photos</span>
+         {job.sponsored ? <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.15em] text-black">Promoted</span> : null}
+diff --git a/app/messages/page.tsx b/app/messages/page.tsx
+index b9ba8fc..b83aecd 100644
+--- a/app/messages/page.tsx
++++ b/app/messages/page.tsx
+@@ -17,12 +17,18 @@ import {
+ import HomeLogoLink from "@/components/HomeLogoLink";
+ import SiteMenu from "@/components/SiteMenu";
+ import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
++import MessageVisualScene from "@/components/MessageVisualScene";
++import LogisticsMessageTools from "@/components/LogisticsMessageTools";
++import MessageVisualScene from "@/components/MessageVisualScene";
++import LogisticsMessageTools from "@/components/LogisticsMessageTools";
+ import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
+ import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+ import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
+ import { getBuyerKey, getBuyerKeys, getOwnerKeys } from "@/lib/chatKeys";
+ import { recordUserActivity, syncAccountState } from "@/lib/accountState";
+ import { errorMessage, getFreshAuthenticatedUser } from "@/lib/reliableSupabase";
++import { DEFAULT_MESSAGE_PRIVACY, profileRowToMessagePrivacy, readMessagePrivacy, type MessagePrivacyPreferences, writeMessagePrivacy } from "@/lib/messagePrivacy";
++import { DEFAULT_MESSAGE_PRIVACY, profileRowToMessagePrivacy, readMessagePrivacy, type MessagePrivacyPreferences, writeMessagePrivacy } from "@/lib/messagePrivacy";
+ import styles from "./messages.module.css";
+ 
+ type Role = "buyer" | "owner";
+@@ -316,13 +322,13 @@ export default function MessagesPage() {
+   const [messagesLoading, setMessagesLoading] = useState(false);
+   const [sending, setSending] = useState(false);
+   const [uploading, setUploading] = useState(false);
++    const requestId = ++conversationRequestRef.current;
+   const [error, setError] = useState("");
+   const [showDetails, setShowDetails] = useState(false);
+   const [recording, setRecording] = useState(false);
+   const [recordingSeconds, setRecordingSeconds] = useState(0);
+   const [blockState, setBlockState] = useState<BlockState>({ blocked_by_me: false, blocked_by_other: false });
+   const [blockBusy, setBlockBusy] = useState(false);
+-  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+   const [presenceNow, setPresenceNow] = useState(() => Date.now());
+ 
+   const messageViewportRef = useRef<HTMLDivElement>(null);
+@@ -340,6 +346,19 @@ export default function MessagesPage() {
+   const recordingChunksRef = useRef<Blob[]>([]);
+   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+   const recordingCancelledRef = useRef(false);
++  const conversationRequestRef = useRef(0);
++  const messageRequestRef = useRef(0);
++
++  useEffect(() => {
++    const syncPrivacy = () => setMessagePrivacy(readMessagePrivacy());
++    syncPrivacy();
++    window.addEventListener("storage", syncPrivacy);
++    window.addEventListener("loadlink-message-privacy-updated", syncPrivacy as EventListener);
++    return () => {
++      window.removeEventListener("storage", syncPrivacy);
++      window.removeEventListener("loadlink-message-privacy-updated", syncPrivacy as EventListener);
++    };
++  }, []);
+ 
+   useEffect(() => {
+     if (!loading) return;
+@@ -349,6 +368,8 @@ export default function MessagesPage() {
+     }, 8000);
+     return () => window.clearTimeout(safety);
+   }, [loading]);
++    if (requestId !== conversationRequestRef.current) return;
++
+ 
+   useEffect(() => {
+     const timer = window.setInterval(() => setPresenceNow(Date.now()), 10_000);
+@@ -364,20 +385,7 @@ export default function MessagesPage() {
+     window.sessionStorage.setItem(key, String(next));
+     setWallpaperIndex(next);
+   }, []);
+-
+-  useEffect(() => {
+-    const updateViewportHeight = () => {
+-      const height = Math.round(window.visualViewport?.height || window.innerHeight);
+-      setViewportHeight(height);
+-    };
+-    updateViewportHeight();
+-    window.addEventListener("resize", updateViewportHeight);
+-    window.visualViewport?.addEventListener("resize", updateViewportHeight);
+-    return () => {
+-      window.removeEventListener("resize", updateViewportHeight);
+-      window.visualViewport?.removeEventListener("resize", updateViewportHeight);
+-    };
+-  }, []);
++      const requestId = ++messageRequestRef.current;
+ 
+   const selectedConversation = useMemo(
+     () =>
+@@ -386,9 +394,31 @@ export default function MessagesPage() {
+     [conversations, selectedId],
+   );
+ 
++        if (requestId !== messageRequestRef.current) return;
++  useEffect(() => {
++    if (!selectedId) return;
++    try {
++      setText(window.localStorage.getItem(`loadlink-message-draft:${selectedId}`) || "");
++    } catch {
++      setText("");
++    }
++  }, [selectedId]);
++
++  useEffect(() => {
++    if (!selectedId) return;
++    try {
++      const key = `loadlink-message-draft:${selectedId}`;
++      if (text.trim()) window.localStorage.setItem(key, text);
++      else window.localStorage.removeItem(key);
++    } catch {
++      // Draft persistence must never block messaging.
++    }
++  }, [selectedId, text]);
++
+   const messagesUsedToday = selectedConversation
+     ? toCount(selectedConversation.messages_used_today)
+     : 0;
++    const requestId = ++conversationRequestRef.current;
+   const dailyMessageLimit = selectedConversation
+     ? Math.max(1, toCount(selectedConversation.daily_message_limit) || 50)
+     : 50;
+@@ -434,6 +464,8 @@ export default function MessagesPage() {
+           unreadCount: toCount(row.unread_count),
+         })),
+       );
++    if (requestId !== conversationRequestRef.current) return;
++
+     }
+ 
+     const ownerRows: Conversation[] = [];
+@@ -449,6 +481,7 @@ export default function MessagesPage() {
+           role: "owner" as const,
+           unreadCount: toCount(row.unread_count),
+         })),
++      const requestId = ++messageRequestRef.current;
+       );
+     }
+ 
+@@ -457,6 +490,7 @@ export default function MessagesPage() {
+     [...buyerRows, ...ownerRows].forEach((row) => {
+       const hasNewMessage = row.unreadCount > 0;
+       if (hasNewMessage) locallyArchived.delete(row.id);
++        if (requestId !== messageRequestRef.current) return;
+       merged.set(row.id, {
+         ...row,
+         archived: hasNewMessage ? false : Boolean(row.archived) || locallyArchived.has(row.id),
+@@ -543,6 +577,22 @@ export default function MessagesPage() {
+           return;
+         }
+ 
++        const { data: privacyRow } = await supabase
++          .from("profiles")
++          .select("message_activity_visible,message_typing_indicators,message_requests_enabled,message_notification_previews")
++          .eq("id", user.id)
++          .maybeSingle();
++        await Promise.allSettled(
++          Array.from(new Set([getBuyerKey(), ...getOwnerKeys()])).map((accessKey) =>
++            supabase.rpc("loadlink_register_chat_access_key", { p_access_key: accessKey }),
++          ),
++        );
++        if (privacyRow) {
++          const nextPrivacy = profileRowToMessagePrivacy(privacyRow as Record<string, unknown>);
++          writeMessagePrivacy(nextPrivacy);
++          setMessagePrivacy(nextPrivacy);
++        }
++
+         await syncAccountState().catch(() => undefined);
+         const params = new URLSearchParams(window.location.search);
+         const listingId = params.get("listing");
+@@ -593,7 +643,7 @@ export default function MessagesPage() {
+         await loadConversations(openedId);
+         refreshTimer = setInterval(
+           () => loadConversations().catch(() => undefined),
+-          5000,
++          10000,
+         );
+       } catch (initialiseError) {
+         if (active)
+@@ -662,7 +712,7 @@ export default function MessagesPage() {
+         })
+         .then(() => undefined);
+     };
+-  }, [loadMessages, selectedId]);
++  }, [loadMessages, messagePrivacy.activityVisible, messagePrivacy.typingIndicators, selectedId]);
+ 
+   useEffect(() => {
+     if (!forceScrollRef.current) return;
+@@ -688,6 +738,10 @@ export default function MessagesPage() {
+       );
+       return;
+     }
++    if (/\b(?:otp|one[- ]time pin|password|banking pin|card pin|cvv)\b/i.test(text) &&
++        !window.confirm("LoadLink will never ask for your password, OTP, PIN or CVV. Send this message only if it does not expose private security information.")) {
++      return;
++    }
+ 
+     setSending(true);
+     setError("");
+@@ -719,8 +773,9 @@ export default function MessagesPage() {
+ 
+   function updateTyping(nextText: string) {
+     setText(nextText);
+-    typingActiveRef.current = Boolean(nextText.trim());
++    typingActiveRef.current = messagePrivacy.typingIndicators && Boolean(nextText.trim());
+     if (!selectedConversation) return;
++    if (!messagePrivacy.typingIndicators) return;
+ 
+     const now = Date.now();
+     if (!nextText.trim() || now - lastTypingPingRef.current > 2500) {
+@@ -728,7 +783,7 @@ export default function MessagesPage() {
+       supabase.rpc("touch_listing_guest_presence", {
+         p_thread_id: selectedConversation.id,
+         p_access_key: selectedConversation.accessKey,
+-        p_is_typing: Boolean(nextText.trim()),
++        p_is_typing: messagePrivacy.typingIndicators && Boolean(nextText.trim()),
+       }).then(() => undefined);
+     }
+ 
+@@ -818,6 +873,7 @@ export default function MessagesPage() {
+       return;
+     }
+     setError("");
++          <Link href="/account/settings#message-privacy" className="hidden text-[10px] font-black uppercase tracking-[.1em] text-[#b88900] lg:block">Privacy</Link>
+     try {
+       const stream = await navigator.mediaDevices.getUserMedia({
+         audio: {
+@@ -914,6 +970,7 @@ export default function MessagesPage() {
+       if (result.error && !/function|schema cache|does not exist/i.test(result.error.message)) {
+         throw result.error;
+       }
++          <Link href="/account/settings#message-privacy" className="hidden text-[10px] font-black uppercase tracking-[.1em] text-[#b88900] lg:block">Privacy</Link>
+       setError(willArchive ? "Conversation archived." : "Conversation restored to the inbox.");
+       if (willArchive && !showArchived) returnToInbox();
+       if (!willArchive && showArchived) returnToInbox();
+@@ -951,6 +1008,31 @@ export default function MessagesPage() {
+     }
+   }
+ 
++  async function reportConversation() {
++    if (!selectedConversation || reportBusy) return;
++    const reason = window.prompt("Briefly explain what is unsafe, misleading or inappropriate about this conversation.");
++    if (!reason?.trim()) return;
++    if (reason.trim().length < 5) {
++      setError("Add a little more detail before submitting the report.");
++      return;
++    }
++    setReportBusy(true);
++    setError("");
++    try {
++      const result = await supabase.rpc("report_listing_guest_conversation", {
++        p_thread_id: selectedConversation.id,
++        p_access_key: selectedConversation.accessKey,
++        p_reason: reason.trim(),
++      });
++      if (result.error) throw result.error;
++      setError("Report submitted privately to LoadLink for review.");
++    } catch (reportError) {
++      setError(cleanError(reportError, "The conversation report could not be submitted."));
++    } finally {
++      setReportBusy(false);
++    }
++  }
++
+   async function downloadAttachment(message: ChatMessage) {
+     if (!selectedConversation || !message.attachment_id) return;
+     setError("");
+@@ -1155,11 +1237,11 @@ export default function MessagesPage() {
+                         <span
+                           className={`truncate text-xs ${conversation.unreadCount ? "font-black text-black" : "font-medium text-black/50"}`}
+                         >
+-                          {conversation.last_message_has_attachment
+-                            ? "Attachment · "
+-                            : ""}
+-                          {conversation.last_message ||
+-                            "Start the conversation"}
++                          {messagePrivacy.notificationPreviews
++                            ? `${conversation.last_message_has_attachment ? "Attachment · " : ""}${conversation.last_message || "Start the conversation"}`
++                            : conversation.unreadCount
++                              ? "New message"
++                              : "Message preview hidden"}
+                         </span>
+                         {conversation.unreadCount ? (
+                           <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#f6b800] px-1 text-[10px] font-black text-black">
+@@ -1249,6 +1331,18 @@ export default function MessagesPage() {
+                       <PhoneIcon />
+                       <span className="ml-2 hidden text-xs font-black uppercase md:inline">
+                         Call
++  const [playing, setPlaying] = useState(false);
++  const [duration, setDuration] = useState(0);
++  const [currentTime, setCurrentTime] = useState(0);
++  const audioRef = useRef<HTMLAudioElement | null>(null);
++
++  const waveform = useMemo(() => {
++    const seed = String(message.id || message.attachment_id || "loadlink");
++    return Array.from({ length: 34 }, (_, index) => {
++      const code = seed.charCodeAt(index % seed.length) || 76;
++      return 22 + ((code * (index + 5) * 13) % 70);
++    });
++  }, [message.attachment_id, message.id]);
+                       </span>
+                     </a>
+                   ) : null}
+@@ -1346,6 +1440,18 @@ export default function MessagesPage() {
+                                 ) : (
+                                   <button
+                                     type="button"
++  const [playing, setPlaying] = useState(false);
++  const [duration, setDuration] = useState(0);
++  const [currentTime, setCurrentTime] = useState(0);
++  const audioRef = useRef<HTMLAudioElement | null>(null);
++
++  const waveform = useMemo(() => {
++    const seed = String(message.id || message.attachment_id || "loadlink");
++    return Array.from({ length: 34 }, (_, index) => {
++      const code = seed.charCodeAt(index % seed.length) || 76;
++      return 22 + ((code * (index + 5) * 13) % 70);
++    });
++  }, [message.attachment_id, message.id]);
+                                     onClick={() => downloadAttachment(message)}
+                                     className={`mb-2 flex w-full items-center gap-3 rounded-xl border p-3 text-left ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}
+                                   >
+@@ -1410,6 +1516,15 @@ export default function MessagesPage() {
+                 </div>
+               ) : null}
+ 
++              <LogisticsMessageTools
++                threadId={selectedConversation.id}
++                listingTitle={selectedConversation.listing_title}
++                role={selectedConversation.role}
++                darkMode={darkMode}
++                disabled={sending || uploading || dailyLimitReached || conversationBlocked}
++                onInsert={(message) => updateTyping(text.trim() ? `${text.trim()}\n\n${message}` : message)}
++              />
++
+               <form
+                 onSubmit={send}
+                 className="loadlink-chat-composer border-t border-black/10 bg-white p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:p-4"
+@@ -1787,9 +1902,14 @@ function ConversationDetails({
+         ) : null}
+       </div>
+ 
+-      <button type="button" onClick={() => void onToggleBlock()} disabled={blockBusy || blockState.blocked_by_other} className={`mt-5 flex h-11 w-full items-center justify-center border text-xs font-black uppercase ${blockState.blocked_by_me ? "border-red-500 bg-red-50 text-red-600" : "border-black/15 text-black"} disabled:opacity-45`}>
+-        {blockBusy ? "Saving…" : blockState.blocked_by_me ? "Unblock user" : blockState.blocked_by_other ? "This user blocked the chat" : "Block user"}
+-      </button>
++      <div className="mt-5 grid grid-cols-2 gap-2">
++        <button type="button" onClick={() => void onToggleBlock()} disabled={blockBusy || blockState.blocked_by_other} className={`flex h-11 items-center justify-center border text-[10px] font-black uppercase ${blockState.blocked_by_me ? "border-red-500 bg-red-50 text-red-600" : "border-black/15 text-black"} disabled:opacity-45`}>
++          {blockBusy ? "Saving…" : blockState.blocked_by_me ? "Unblock" : blockState.blocked_by_other ? "Blocked" : "Block user"}
++        </button>
++        <button type="button" onClick={() => void onReport()} disabled={reportBusy} className="flex h-11 items-center justify-center border border-red-500/45 text-[10px] font-black uppercase text-red-600 disabled:opacity-45">
++          {reportBusy ? "Sending…" : "Report chat"}
++        </button>
++      </div>
+ 
+       <div className="mt-6 rounded-xl border border-[#e5c34c]/35 bg-[#fff8de] p-4">
+         <p className="text-xs font-black">Stay safe</p>
+diff --git a/app/page.tsx b/app/page.tsx
+index f955a62..53b731d 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -111,7 +111,7 @@ function HomeExperience() {
+       darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"
+     }`}
+   >
+-    <div className="grid h-20 w-full grid-cols-[92px_1fr_52px] items-center px-4">
++    <div className="grid h-20 w-full grid-cols-[92px_minmax(0,1fr)_60px] items-center gap-3 px-4">
+       <div className="flex items-center gap-2">
+         <LoadLinkBoundary name="site menu">
+           <Suspense fallback={<span className="h-10 w-10" aria-hidden="true" />}>
+diff --git a/components/SiteMenu.tsx b/components/SiteMenu.tsx
+index 870971a..bb54296 100644
+--- a/components/SiteMenu.tsx
++++ b/components/SiteMenu.tsx
+@@ -11,7 +11,7 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+ import LoadLinkGearIcon from "@/components/LoadLinkGearIcon";
+ import LoadLinkLogo from "@/components/LoadLinkLogo";
+ 
+-type IconName = "home" | "briefcase" | "contract" | "drivers" | "help" | "messages" | "notifications" | "posts" | "settings" | "driver" | "dealer" | "packages";
++type IconName = "home" | "briefcase" | "contract" | "drivers" | "help" | "messages" | "notifications" | "posts" | "settings" | "privacy" | "driver" | "dealer" | "packages";
+ type MenuLink = { label: string; href: string; description: string; icon: IconName };
+ 
+ const marketplaceLinks: MenuLink[] = [
+@@ -105,6 +105,7 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
+       { label: "Notifications", href: "/notifications", description: "Reviews, messages and account updates", icon: "notifications" },
+       { label: "My posts", href: "/my-posts", description: "Manage your listings", icon: "posts" },
+       { label: "Profile settings", href: "/account/settings", description: "Profile, account and alerts", icon: "settings" },
++      { label: "Privacy & messaging", href: "/account/settings#message-privacy", description: "Activity, typing and message requests", icon: "privacy" },
+       ...(account.driverProfile ? [{ label: "Driver profile", href: "/driver-profile", description: "Manage your driver profile", icon: "driver" as const }] : []),
+       dealerLink,
+       { label: "Packages", href: "/packages", description: "Manual, Pro and Dealer plans", icon: "packages" },
+@@ -164,7 +165,8 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
+ 
+ function MenuSection({ title, links, pathname, darkMode, border, muted, unreadNotifications = null, unreadMessages = 0 }: { title: string; links: MenuLink[]; pathname: string; darkMode: boolean; border: string; muted: string; unreadNotifications?: number | null; unreadMessages?: number }) {
+   return <section className="mb-7"><h2 className={`mb-3 px-1 text-[11px] font-black uppercase tracking-[.18em] ${muted}`}>{title}</h2><div className="grid grid-cols-2 gap-2">{links.map((item, index) => {
+-    const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
++    const cleanHref = item.href.split("#")[0];
++    const active = pathname === cleanHref || (cleanHref !== "/" && pathname.startsWith(`${cleanHref}/`));
+     const badge = item.icon === "notifications" ? unreadNotifications : item.icon === "messages" ? unreadMessages : 0;
+     const unpaired = links.length % 2 === 1 && index === links.length - 1;
+     return <Link key={`${item.href}-${item.label}`} href={item.href} className={`relative min-h-[118px] rounded-2xl border p-4 transition ${unpaired ? "col-span-2" : ""} ${active ? "border-[#f6b800] bg-[#f6b800] text-black" : `${border} ${darkMode ? "bg-white/[.035]" : "bg-white"}`}`}><span className={`relative mb-3 flex h-9 w-9 items-center justify-center rounded-xl ${active ? "bg-black text-[#f6b800]" : darkMode ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><MenuItemIcon name={item.icon} />{typeof badge === "number" && badge > 0 ? <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full border border-black bg-[#f6b800] px-1 text-[9px] font-black text-black">{badge > 99 ? "99+" : badge}</span> : null}</span><span className="block text-sm font-black leading-4">{item.label}</span><span className={`mt-2 block text-[10px] font-semibold leading-4 ${active ? "text-black/60" : muted}`}>{item.description}</span></Link>;
+@@ -201,6 +203,8 @@ function MenuItemIcon({ name }: { name: IconName }) {
+       return <svg {...common}><path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 6 2.5 6.5 2.5 6.5H4s2.5-.5 2.5-6.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9.5 19a2.8 2.8 0 0 0 5 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
+     case "posts":
+       return <svg {...common}><path d="M4 4h16v16H4V4Zm4 5h8M8 13h8M8 17h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
++    case "privacy":
++      return <svg {...common}><path d="M12 3 4.5 6v5.2c0 4.7 3.1 8 7.5 9.8 4.4-1.8 7.5-5.1 7.5-9.8V6L12 3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9.5 12.2 11.2 14l3.6-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+     case "settings":
+       return <LoadLinkGearIcon />;
+     case "driver":
