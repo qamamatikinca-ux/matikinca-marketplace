@@ -15,8 +15,17 @@ import { refreshLoadLinkAccount } from "@/lib/loadLinkAccountStore";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { SOUTH_AFRICAN_PROVINCES } from "@/lib/southAfricaLocations";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
+import { profileRowToMessagePrivacy, writeMessagePrivacy } from "@/lib/messagePrivacy";
 
-type PreferenceKey = "email_notifications" | "chat_notifications" | "listing_notifications" | "marketing_notifications";
+type PreferenceKey =
+  | "email_notifications"
+  | "chat_notifications"
+  | "listing_notifications"
+  | "marketing_notifications"
+  | "message_activity_visible"
+  | "message_typing_indicators"
+  | "message_requests_enabled"
+  | "message_notification_previews";
 type ProfileForm = {
   full_name: string;
   phone: string;
@@ -31,6 +40,10 @@ type ProfileForm = {
   chat_notifications: boolean;
   listing_notifications: boolean;
   marketing_notifications: boolean;
+  message_activity_visible: boolean;
+  message_typing_indicators: boolean;
+  message_requests_enabled: boolean;
+  message_notification_previews: boolean;
   verification_status: string;
   subscription_plan: string;
 };
@@ -38,6 +51,7 @@ type ProfileForm = {
 const EMPTY: ProfileForm = {
   full_name: "", phone: "", whatsapp_number: "", company_name: "", job_title: "", city: "", province: "", bio: "", avatar_url: "",
   email_notifications: true, chat_notifications: true, listing_notifications: true, marketing_notifications: false,
+  message_activity_visible: true, message_typing_indicators: true, message_requests_enabled: true, message_notification_previews: false,
   verification_status: "not_started", subscription_plan: "standard",
 };
 
@@ -73,7 +87,7 @@ export default function AccountSettingsPage() {
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (!isAuthenticatedUser(currentUser)) { window.location.href = loginHref("/account/settings"); return; }
     setUser(currentUser);
-    const columns = "full_name,phone,whatsapp_number,company_name,job_title,city,province,bio,avatar_url,email_notifications,chat_notifications,listing_notifications,marketing_notifications,verification_status,subscription_plan";
+    const columns = "*";
     const [{ data, error }, { data: driverProfile }] = await Promise.all([
       supabase.from("profiles").select(columns).eq("id", currentUser.id).maybeSingle(),
       supabase.from("driver_profiles").select("id").eq("user_id", currentUser.id).maybeSingle(),
@@ -87,9 +101,15 @@ export default function AccountSettingsPage() {
       phone: String(data?.phone || ""), whatsapp_number: String(data?.whatsapp_number || ""), company_name: String(data?.company_name || ""), job_title: String(data?.job_title || ""),
       city: String(data?.city || ""), province: String(data?.province || ""), bio: String(data?.bio || ""), avatar_url: String(data?.avatar_url || metadata.avatar_url || metadata.picture || ""),
       email_notifications: data?.email_notifications ?? true, chat_notifications: data?.chat_notifications ?? true, listing_notifications: data?.listing_notifications ?? true, marketing_notifications: data?.marketing_notifications ?? false,
+      message_activity_visible: data?.message_activity_visible ?? true,
+      message_typing_indicators: data?.message_typing_indicators ?? true,
+      message_requests_enabled: data?.message_requests_enabled ?? true,
+      message_notification_previews: data?.message_notification_previews ?? false,
       verification_status: String(data?.verification_status || "not_started"), subscription_plan: String(data?.subscription_plan || "standard"),
     };
-    setForm(next); setSavedForm(next); setLoading(false);
+    setForm(next); setSavedForm(next);
+    writeMessagePrivacy(profileRowToMessagePrivacy(next as unknown as Record<string, unknown>));
+    setLoading(false);
   }
 
   function field<K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) { setForm((current) => ({ ...current, [key]: value })); }
@@ -99,6 +119,10 @@ export default function AccountSettingsPage() {
       id: userId, full_name: source.full_name.trim(), phone: source.phone.trim(), whatsapp_number: source.whatsapp_number.trim(), company_name: source.company_name.trim(), job_title: source.job_title.trim(),
       city: source.city.trim(), province: source.province, bio: source.bio.trim(), avatar_url: source.avatar_url,
       email_notifications: source.email_notifications, chat_notifications: source.chat_notifications, listing_notifications: source.listing_notifications, marketing_notifications: source.marketing_notifications,
+      message_activity_visible: source.message_activity_visible,
+      message_typing_indicators: source.message_typing_indicators,
+      message_requests_enabled: source.message_requests_enabled,
+      message_notification_previews: source.message_notification_previews,
       updated_at: new Date().toISOString(),
     };
   }
@@ -113,6 +137,14 @@ export default function AccountSettingsPage() {
       const { error } = await supabase.rpc("loadlink_update_my_profile", { p_payload: rpcPayload(nextSaved, user.id) });
       if (error) throw error;
       setSavedForm(nextSaved);
+      if (key.startsWith("message_")) {
+        writeMessagePrivacy({
+          activityVisible: nextSaved.message_activity_visible,
+          typingIndicators: nextSaved.message_typing_indicators,
+          allowNewRequests: nextSaved.message_requests_enabled,
+          notificationPreviews: nextSaved.message_notification_previews,
+        });
+      }
       setMessage("Preference saved.");
     } catch (error) {
       setForm((current) => ({ ...current, [key]: previous }));
@@ -243,6 +275,26 @@ export default function AccountSettingsPage() {
               <button type="submit" disabled={saving || !dirty} className="mt-6 h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase tracking-[.12em] text-black disabled:opacity-50">{saving ? "Saving…" : dirty ? "Save profile settings" : "Profile saved"}</button>
             </form>
 
+            <section id="message-privacy" className={`scroll-mt-24 border p-5 shadow-[0_14px_40px_rgba(0,0,0,.05)] md:p-7 ${surface}`}>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#b88900]">Privacy</p>
+                  <h2 className="mt-1 text-2xl font-black">Message privacy</h2>
+                  <p className={`mt-2 max-w-2xl text-sm leading-6 ${muted}`}>Control what other users can see and whether new listing visitors may start a conversation. Existing chats and blocked-user rules remain unchanged.</p>
+                </div>
+                <Link href="/messages" className="flex h-10 items-center justify-center rounded-xl border border-[#f6b800] px-4 text-[10px] font-black uppercase tracking-[.12em] text-[#b88900]">Open messages</Link>
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <Toggle label="Share activity status" description="Show Active in messages and last active time." checked={form.message_activity_visible} busy={preferenceSaving === "message_activity_visible"} onChange={(value) => void savePreference("message_activity_visible", value)} darkMode={darkMode} />
+                <Toggle label="Share typing indicators" description="Let the other person see when you are typing." checked={form.message_typing_indicators} busy={preferenceSaving === "message_typing_indicators"} onChange={(value) => void savePreference("message_typing_indicators", value)} darkMode={darkMode} />
+                <Toggle label="Allow new message requests" description="Allow people viewing your listings to start a new chat." checked={form.message_requests_enabled} busy={preferenceSaving === "message_requests_enabled"} onChange={(value) => void savePreference("message_requests_enabled", value)} darkMode={darkMode} />
+                <Toggle label="Show notification previews" description="Show sender and message text in supported notifications." checked={form.message_notification_previews} busy={preferenceSaving === "message_notification_previews"} onChange={(value) => void savePreference("message_notification_previews", value)} darkMode={darkMode} />
+              </div>
+              <div className={`mt-5 border-l-2 border-[#f6b800] px-4 py-3 text-xs font-semibold leading-5 ${darkMode ? "bg-white/[.035] text-white/60" : "bg-black/[.025] text-black/60"}`}>
+                Strict safety stays active for every account: blocks stop both users from sending, attachments remain private to the conversation, and message limits cannot be bypassed from the browser.
+              </div>
+            </section>
+
             <section className={`border p-5 shadow-[0_14px_40px_rgba(0,0,0,.05)] md:p-7 ${surface}`}><h2 className="text-2xl font-black">Security</h2><p className={`mt-2 text-sm ${muted}`}>{googleOnly ? "Set a LoadLink password while keeping Google sign-in connected." : "Change your LoadLink password. Connected sign-in methods remain available."}</p><div className="mt-5 grid gap-4 md:grid-cols-2"><Field label={googleOnly ? "Set a LoadLink password" : "New password"}><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" className={input} /></Field><Field label="Confirm new password"><input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" className={input} /></Field></div><button type="button" onClick={() => void updatePassword()} disabled={saving || !password} className="mt-5 h-11 rounded-xl border border-[#f6b800] px-5 text-xs font-black uppercase text-[#b88900] disabled:opacity-40">{googleOnly ? "Set password" : "Update password"}</button></section>
 
             <section className={`border border-red-500/35 p-5 shadow-[0_14px_40px_rgba(0,0,0,.05)] md:p-7 ${surface}`}><h2 className="text-2xl font-black">Account access</h2><p className={`mt-2 text-sm ${muted}`}>Signing out keeps your account data safe. Account deletion requires confirmation so listings and conversations are not removed accidentally.</p><div className="mt-5 flex flex-wrap gap-3"><button type="button" onClick={() => void signOut()} className="h-11 rounded-xl border border-red-500 px-5 text-xs font-black uppercase text-red-500">Sign out of LoadLink</button><button type="button" onClick={requestDeletion} className="h-11 rounded-xl border border-current/20 px-5 text-xs font-black uppercase">Request account deletion</button></div></section>
@@ -254,7 +306,7 @@ export default function AccountSettingsPage() {
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) { return <label className="block text-xs font-black uppercase tracking-[.11em]">{label}{children}</label>; }
-function Toggle({ label, checked, busy, onChange, darkMode }: { label: string; checked: boolean; busy?: boolean; onChange: (value: boolean) => void; darkMode: boolean }) { return <div className={`flex min-h-14 items-center justify-between gap-4 rounded-xl border px-4 ${darkMode ? "border-white/10 bg-white/[.02]" : "border-black/10 bg-black/[.015]"}`}><span className="text-sm font-bold normal-case tracking-normal">{label}</span><button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)} disabled={busy} className={`relative h-7 w-12 shrink-0 rounded-full border transition disabled:opacity-55 ${checked ? "border-[#f6b800] bg-[#f6b800]" : darkMode ? "border-white/20 bg-white/10" : "border-black/20 bg-black/10"}`}><span className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} /></button></div>; }
+function Toggle({ label, description, checked, busy, onChange, darkMode }: { label: string; description?: string; checked: boolean; busy?: boolean; onChange: (value: boolean) => void; darkMode: boolean }) { return <div className={`flex min-h-14 items-center justify-between gap-4 rounded-xl border px-4 py-3 ${darkMode ? "border-white/10 bg-white/[.02]" : "border-black/10 bg-black/[.015]"}`}><span className="min-w-0"><strong className="block text-sm font-bold normal-case tracking-normal">{label}</strong>{description ? <span className={`mt-1 block text-xs font-semibold leading-5 ${darkMode ? "text-white/45" : "text-black/45"}`}>{description}</span> : null}</span><button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)} disabled={busy} className={`relative h-7 w-12 shrink-0 rounded-full border transition disabled:opacity-55 ${checked ? "border-[#f6b800] bg-[#f6b800]" : darkMode ? "border-white/20 bg-white/10" : "border-black/20 bg-black/10"}`}><span className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} /></button></div>; }
 function Info({ label, value }: { label: string; value: string }) { return <div className="mb-4 last:mb-0"><p className="text-[10px] font-black uppercase tracking-[.12em] opacity-50">{label}</p><p className="mt-1 break-words text-sm font-bold capitalize">{value}</p></div>; }
 
 function isMissingSchemaError(message: string) { return /column|schema cache|does not exist|relation/i.test(message); }

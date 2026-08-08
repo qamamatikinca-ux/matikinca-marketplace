@@ -17,12 +17,21 @@ import {
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
+import MessageVisualScene from "@/components/MessageVisualScene";
+import LogisticsMessageTools from "@/components/LogisticsMessageTools";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { getBuyerKey, getBuyerKeys, getOwnerKeys } from "@/lib/chatKeys";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 import { errorMessage, getFreshAuthenticatedUser } from "@/lib/reliableSupabase";
+import {
+  DEFAULT_MESSAGE_PRIVACY,
+  profileRowToMessagePrivacy,
+  readMessagePrivacy,
+  type MessagePrivacyPreferences,
+  writeMessagePrivacy,
+} from "@/lib/messagePrivacy";
 import styles from "./messages.module.css";
 
 type Role = "buyer" | "owner";
@@ -190,11 +199,11 @@ function activityText(conversation: Conversation, now = Date.now()) {
   const timestamp = new Date(conversation.other_last_seen).getTime();
   if (!Number.isFinite(timestamp)) return "Activity status unavailable";
   const difference = Math.max(0, now - timestamp);
-  if (difference < 60_000) return "Active in messages";
+  if (difference < 120_000) return "Active in messages";
   if (difference < 3_600_000)
-    return `Active ${Math.max(1, Math.round(difference / 60_000))} min ago`;
+    return `Active in messages ${Math.max(1, Math.round(difference / 60_000))} min ago`;
   if (difference < 86_400_000)
-    return `Active ${Math.max(1, Math.round(difference / 3_600_000))} hr ago`;
+    return `Active in messages ${Math.max(1, Math.round(difference / 3_600_000))} hr ago`;
 
   return `Last active ${new Intl.DateTimeFormat("en-ZA", {
     day: "2-digit",
@@ -322,7 +331,10 @@ export default function MessagesPage() {
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [blockState, setBlockState] = useState<BlockState>({ blocked_by_me: false, blocked_by_other: false });
   const [blockBusy, setBlockBusy] = useState(false);
-  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const [reportBusy, setReportBusy] = useState(false);
+  const [messagePrivacy, setMessagePrivacy] = useState<MessagePrivacyPreferences>(
+    () => DEFAULT_MESSAGE_PRIVACY,
+  );
   const [presenceNow, setPresenceNow] = useState(() => Date.now());
 
   const messageViewportRef = useRef<HTMLDivElement>(null);
@@ -340,6 +352,17 @@ export default function MessagesPage() {
   const recordingChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingCancelledRef = useRef(false);
+
+  useEffect(() => {
+    const syncPrivacy = () => setMessagePrivacy(readMessagePrivacy());
+    syncPrivacy();
+    window.addEventListener("storage", syncPrivacy);
+    window.addEventListener("loadlink-message-privacy-updated", syncPrivacy as EventListener);
+    return () => {
+      window.removeEventListener("storage", syncPrivacy);
+      window.removeEventListener("loadlink-message-privacy-updated", syncPrivacy as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
     if (!loading) return;
@@ -365,26 +388,32 @@ export default function MessagesPage() {
     setWallpaperIndex(next);
   }, []);
 
-  useEffect(() => {
-    const updateViewportHeight = () => {
-      const height = Math.round(window.visualViewport?.height || window.innerHeight);
-      setViewportHeight(height);
-    };
-    updateViewportHeight();
-    window.addEventListener("resize", updateViewportHeight);
-    window.visualViewport?.addEventListener("resize", updateViewportHeight);
-    return () => {
-      window.removeEventListener("resize", updateViewportHeight);
-      window.visualViewport?.removeEventListener("resize", updateViewportHeight);
-    };
-  }, []);
-
   const selectedConversation = useMemo(
     () =>
       conversations.find((conversation) => conversation.id === selectedId) ||
       null,
     [conversations, selectedId],
   );
+
+  useEffect(() => {
+    if (!selectedId) return;
+    try {
+      setText(window.localStorage.getItem(`loadlink-message-draft:${selectedId}`) || "");
+    } catch {
+      setText("");
+    }
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    try {
+      const key = `loadlink-message-draft:${selectedId}`;
+      if (text.trim()) window.localStorage.setItem(key, text);
+      else window.localStorage.removeItem(key);
+    } catch {
+      // Draft persistence must never block messaging.
+    }
+  }, [selectedId, text]);
 
   const messagesUsedToday = selectedConversation
     ? toCount(selectedConversation.messages_used_today)
@@ -543,6 +572,26 @@ export default function MessagesPage() {
           return;
         }
 
+        const { data: privacyRow } = await supabase
+          .from("profiles")
+          .select("message_activity_visible,message_typing_indicators,message_requests_enabled,message_notification_previews")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        await Promise.allSettled(
+          Array.from(new Set([getBuyerKey(), ...getOwnerKeys()])).map((accessKey) =>
+            supabase.rpc("loadlink_register_chat_access_key", { p_access_key: accessKey }),
+          ),
+        );
+
+        if (privacyRow) {
+          const nextPrivacy = profileRowToMessagePrivacy(
+            privacyRow as Record<string, unknown>,
+          );
+          writeMessagePrivacy(nextPrivacy);
+          setMessagePrivacy(nextPrivacy);
+        }
+
         await syncAccountState().catch(() => undefined);
         const params = new URLSearchParams(window.location.search);
         const listingId = params.get("listing");
@@ -593,7 +642,7 @@ export default function MessagesPage() {
         await loadConversations(openedId);
         refreshTimer = setInterval(
           () => loadConversations().catch(() => undefined),
-          5000,
+          10000,
         );
       } catch (initialiseError) {
         if (active)
@@ -632,13 +681,15 @@ export default function MessagesPage() {
     });
     const messageTimer = setInterval(() => {
       if (active) loadMessages(selectedConversation).catch(() => undefined);
-    }, 2500);
+    }, 5000);
     const touchPresence = () => {
       if (document.visibilityState === "hidden") return;
+      if (!messagePrivacy.activityVisible) return;
       supabase.rpc("touch_listing_guest_presence", {
         p_thread_id: selectedConversation.id,
         p_access_key: selectedConversation.accessKey,
-        p_is_typing: typingActiveRef.current,
+        p_is_typing:
+          messagePrivacy.typingIndicators && typingActiveRef.current,
       }).then(() => undefined);
     };
     touchPresence();
@@ -662,7 +713,12 @@ export default function MessagesPage() {
         })
         .then(() => undefined);
     };
-  }, [loadMessages, selectedId]);
+  }, [
+    loadMessages,
+    messagePrivacy.activityVisible,
+    messagePrivacy.typingIndicators,
+    selectedId,
+  ]);
 
   useEffect(() => {
     if (!forceScrollRef.current) return;
@@ -686,6 +742,15 @@ export default function MessagesPage() {
       setError(
         "You have used today’s 50 free messages. Upgrade to Pro to keep messaging today.",
       );
+      return;
+    }
+
+    if (
+      /\b(?:otp|one[- ]time pin|password|banking pin|card pin|cvv)\b/i.test(text) &&
+      !window.confirm(
+        "LoadLink will never ask for your password, OTP, PIN or CVV. Send this message only if it does not expose private security information.",
+      )
+    ) {
       return;
     }
 
@@ -719,8 +784,9 @@ export default function MessagesPage() {
 
   function updateTyping(nextText: string) {
     setText(nextText);
-    typingActiveRef.current = Boolean(nextText.trim());
-    if (!selectedConversation) return;
+    typingActiveRef.current =
+      messagePrivacy.typingIndicators && Boolean(nextText.trim());
+    if (!selectedConversation || !messagePrivacy.typingIndicators) return;
 
     const now = Date.now();
     if (!nextText.trim() || now - lastTypingPingRef.current > 2500) {
@@ -728,7 +794,8 @@ export default function MessagesPage() {
       supabase.rpc("touch_listing_guest_presence", {
         p_thread_id: selectedConversation.id,
         p_access_key: selectedConversation.accessKey,
-        p_is_typing: Boolean(nextText.trim()),
+        p_is_typing:
+          messagePrivacy.typingIndicators && Boolean(nextText.trim()),
       }).then(() => undefined);
     }
 
@@ -951,6 +1018,39 @@ export default function MessagesPage() {
     }
   }
 
+  async function reportConversation() {
+    if (!selectedConversation || reportBusy) return;
+    const reason = window.prompt(
+      "Briefly explain what is unsafe, misleading or inappropriate about this conversation.",
+    );
+    if (!reason?.trim()) return;
+    if (reason.trim().length < 5) {
+      setError("Add a little more detail before submitting the report.");
+      return;
+    }
+
+    setReportBusy(true);
+    setError("");
+    try {
+      const result = await supabase.rpc("report_listing_guest_conversation", {
+        p_thread_id: selectedConversation.id,
+        p_access_key: selectedConversation.accessKey,
+        p_reason: reason.trim(),
+      });
+      if (result.error) throw result.error;
+      setError("Report submitted privately to LoadLink for review.");
+    } catch (reportError) {
+      setError(
+        cleanError(
+          reportError,
+          "The conversation report could not be submitted.",
+        ),
+      );
+    } finally {
+      setReportBusy(false);
+    }
+  }
+
   async function downloadAttachment(message: ChatMessage) {
     if (!selectedConversation || !message.attachment_id) return;
     setError("");
@@ -993,52 +1093,25 @@ export default function MessagesPage() {
   }
 
   if (loading) {
-    const loadingSurface = darkMode ? "border-white/10 bg-white/[.04]" : "border-black/10 bg-white";
     return (
-      <main className={`min-h-[100dvh] overflow-hidden ${darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"}`}>
-        <header className={`grid h-[72px] grid-cols-[56px_1fr_56px] items-center border-b px-3 ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
-          <div className={`h-10 w-10 animate-pulse rounded-full ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
-          <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-          <div className={`ml-auto h-10 w-10 animate-pulse rounded-full ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
-        </header>
-        <div className="mx-auto grid min-h-[calc(100dvh-72px)] w-full max-w-[1500px] md:grid-cols-[340px_minmax(0,1fr)]">
-          <aside className={`hidden border-r p-5 md:block ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
-            <div className={`h-8 w-36 animate-pulse rounded ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
-            <div className={`mt-5 h-12 animate-pulse rounded-xl ${darkMode ? "bg-white/10" : "bg-black/5"}`} />
-            <div className="mt-5 space-y-4">
-              {[0, 1, 2, 3].map((item) => (
-                <div key={item} className="flex items-center gap-3">
-                  <div className={`h-12 w-12 animate-pulse rounded-full ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
-                  <div className="flex-1 space-y-2">
-                    <div className={`h-3 w-2/3 animate-pulse rounded ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
-                    <div className={`h-3 w-full animate-pulse rounded ${darkMode ? "bg-white/5" : "bg-black/5"}`} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </aside>
-          <section className="relative flex min-h-0 items-center justify-center overflow-hidden px-6">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(246,184,0,.14),transparent_42%)]" />
-            <div className={`relative w-full max-w-sm rounded-3xl border p-7 text-center shadow-2xl ${loadingSurface}`}>
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#f6b800]/55 bg-black text-[#f6b800] shadow-[0_0_35px_rgba(246,184,0,.16)]">
-                <MessageIcon />
-              </div>
-              <p className="mt-6 text-[10px] font-black uppercase tracking-[.24em] text-[#b88900]">LoadLink messages</p>
-              <h1 className="mt-2 text-2xl font-black">Connecting your inbox</h1>
-              <p className={`mx-auto mt-3 max-w-xs text-sm leading-6 ${darkMode ? "text-white/55" : "text-black/55"}`}>Loading conversations securely. Your messages will appear here without moving the page.</p>
-              <div className="mt-6 flex justify-center gap-2" aria-label="Loading messages">
-                {[0, 1, 2].map((item) => <span key={item} className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#f6b800]" style={{ animationDelay: `${item * 120}ms` }} />)}
-              </div>
-            </div>
-          </section>
-        </div>
+      <main
+        className={`min-h-[100svh] ${
+          darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"
+        }`}
+      >
+        <MessageVisualScene mode="loading" darkMode={darkMode} />
       </main>
     );
   }
 
   return (
-    <main data-theme={darkMode ? "dark" : "light"} style={viewportHeight ? { height: `${viewportHeight}px` } : undefined} className={`${styles.messageApp} loadlink-messages flex h-[100dvh] flex-col overflow-hidden ${darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"}`}>
-      <header className={`relative grid h-[72px] grid-cols-[56px_1fr_56px] items-center border-b px-3 md:h-20 md:grid-cols-[120px_1fr_120px] md:px-5 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"}`}>
+    <main
+      data-theme={darkMode ? "dark" : "light"}
+      className={`${styles.messageApp} loadlink-messages flex min-h-[100svh] h-[100dvh] flex-col overflow-hidden ${
+        darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"
+      }`}
+    >
+      <header className={`relative grid h-[72px] grid-cols-[52px_minmax(0,1fr)_56px] items-center gap-3 border-b px-3 md:h-20 md:grid-cols-[120px_1fr_120px] md:px-5 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"}`}>
         <div className="relative z-10 flex items-center gap-1">
           <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
           <Link
@@ -1056,6 +1129,12 @@ export default function MessagesPage() {
           logoClassName="loadlink-messages-header-logo"
         />
         <div className="relative z-10 flex items-center justify-end gap-2">
+          <Link
+            href="/account/settings#message-privacy"
+            className="hidden text-[10px] font-black uppercase tracking-[.1em] text-[#b88900] lg:block"
+          >
+            Privacy
+          </Link>
           <button
             type="button"
             onClick={() => loadConversations(selectedIdRef.current).catch((refreshError) => setError(cleanError(refreshError, "Could not refresh.")))}
@@ -1155,11 +1234,11 @@ export default function MessagesPage() {
                         <span
                           className={`truncate text-xs ${conversation.unreadCount ? "font-black text-black" : "font-medium text-black/50"}`}
                         >
-                          {conversation.last_message_has_attachment
-                            ? "Attachment · "
-                            : ""}
-                          {conversation.last_message ||
-                            "Start the conversation"}
+                          {messagePrivacy.notificationPreviews
+                            ? `${conversation.last_message_has_attachment ? "Attachment · " : ""}${conversation.last_message || "Start the conversation"}`
+                            : conversation.unreadCount
+                              ? "New message"
+                              : "Message preview hidden"}
                         </span>
                         {conversation.unreadCount ? (
                           <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#f6b800] px-1 text-[10px] font-black text-black">
@@ -1286,19 +1365,18 @@ export default function MessagesPage() {
 
               {showDetails ? (
                 <div className="border-b border-black/10 bg-white p-4 xl:hidden">
-                  <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} />
+                  <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} reportBusy={reportBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} onReport={reportConversation} />
                 </div>
               ) : null}
 
               <div
                 ref={messageViewportRef}
-                className="loadlink-message-viewport loadlink-chat-wallpaper min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8"
+                className="loadlink-message-viewport loadlink-chat-wallpaper relative min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8"
                 style={{ backgroundImage: `url(/images/chat-wallpapers/chat-${String(wallpaperIndex).padStart(2, "0")}.svg)` }}
               >
+                <MessageVisualScene mode="background" darkMode={darkMode} />
                 {messagesLoading && messages.length === 0 ? (
-                  <div className="flex h-full items-center justify-center">
-                    <div className="h-9 w-9 animate-spin rounded-full border-2 border-black/10 border-t-[#f6b800]" />
-                  </div>
+                  <MessageVisualScene mode="inline" darkMode={darkMode} />
                 ) : messages.length ? (
                   <div className="mx-auto max-w-3xl space-y-3">
                     {messages.map((message, index) => {
@@ -1409,6 +1487,24 @@ export default function MessagesPage() {
                   {error}
                 </div>
               ) : null}
+
+              <LogisticsMessageTools
+                threadId={selectedConversation.id}
+                listingTitle={selectedConversation.listing_title}
+                role={selectedConversation.role}
+                darkMode={darkMode}
+                disabled={
+                  sending ||
+                  uploading ||
+                  dailyLimitReached ||
+                  conversationBlocked
+                }
+                onInsert={(message) =>
+                  updateTyping(
+                    text.trim() ? `${text.trim()}\n\n${message}` : message,
+                  )
+                }
+              />
 
               <form
                 onSubmit={send}
@@ -1529,7 +1625,7 @@ export default function MessagesPage() {
 
         <aside className="loadlink-details-panel hidden min-h-0 overflow-y-auto border-l border-black/10 bg-white p-5 xl:block">
           {selectedConversation ? (
-            <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} />
+            <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} reportBusy={reportBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} onReport={reportConversation} />
           ) : null}
         </aside>
       </div>
@@ -1711,16 +1807,20 @@ function ConversationDetails({
   conversation,
   blockState,
   blockBusy,
+  reportBusy,
   archiveBusy,
   onToggleArchive,
   onToggleBlock,
+  onReport,
 }: {
   conversation: Conversation;
   blockState: BlockState;
   blockBusy: boolean;
+  reportBusy: boolean;
   archiveBusy: boolean;
   onToggleArchive: () => Promise<void>;
   onToggleBlock: () => Promise<void>;
+  onReport: () => Promise<void>;
 }) {
   return (
     <div>
@@ -1787,9 +1887,34 @@ function ConversationDetails({
         ) : null}
       </div>
 
-      <button type="button" onClick={() => void onToggleBlock()} disabled={blockBusy || blockState.blocked_by_other} className={`mt-5 flex h-11 w-full items-center justify-center border text-xs font-black uppercase ${blockState.blocked_by_me ? "border-red-500 bg-red-50 text-red-600" : "border-black/15 text-black"} disabled:opacity-45`}>
-        {blockBusy ? "Saving…" : blockState.blocked_by_me ? "Unblock user" : blockState.blocked_by_other ? "This user blocked the chat" : "Block user"}
-      </button>
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => void onToggleBlock()}
+          disabled={blockBusy || blockState.blocked_by_other}
+          className={`flex h-11 items-center justify-center border text-[10px] font-black uppercase ${
+            blockState.blocked_by_me
+              ? "border-red-500 bg-red-50 text-red-600"
+              : "border-black/15 text-black"
+          } disabled:opacity-45`}
+        >
+          {blockBusy
+            ? "Saving…"
+            : blockState.blocked_by_me
+              ? "Unblock"
+              : blockState.blocked_by_other
+                ? "Blocked"
+                : "Block user"}
+        </button>
+        <button
+          type="button"
+          onClick={() => void onReport()}
+          disabled={reportBusy}
+          className="flex h-11 items-center justify-center border border-red-500/45 text-[10px] font-black uppercase text-red-600 disabled:opacity-45"
+        >
+          {reportBusy ? "Sending…" : "Report chat"}
+        </button>
+      </div>
 
       <div className="mt-6 rounded-xl border border-[#e5c34c]/35 bg-[#fff8de] p-4">
         <p className="text-xs font-black">Stay safe</p>

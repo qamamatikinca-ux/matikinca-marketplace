@@ -756,7 +756,7 @@ function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onRe
   return (
     <article id={`job-${job.id}`} className={`scroll-mt-24 overflow-hidden border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
       <div role="button" tabIndex={0} onClick={onOpenGallery} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" ")onOpenGallery()}} className="group relative block w-full cursor-pointer overflow-hidden bg-black text-left">
-        <div className="aspect-[4/3] w-full overflow-hidden md:aspect-[16/9]"><img src={coverPhoto} alt={job.title} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" /></div>
+        <div className="aspect-[16/10] w-full overflow-hidden md:aspect-[16/9]"><img loading="lazy" decoding="async" src={coverPhoto} alt={job.title} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" /></div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/45" />
         <span className="absolute right-3 bottom-3 rounded-full bg-black/75 px-3 py-1.5 text-xs font-black text-white">{photoCount} photos</span>
         {job.sponsored ? <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.15em] text-black">Promoted</span> : null}

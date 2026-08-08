@@ -111,7 +111,7 @@ function HomeExperience() {
       darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"
     }`}
   >
-    <div className="grid h-20 w-full grid-cols-[92px_1fr_52px] items-center px-4">
+    <div className="grid h-20 w-full grid-cols-[92px_minmax(0,1fr)_60px] items-center gap-3 px-4">
       <div className="flex items-center gap-2">
         <LoadLinkBoundary name="site menu">
           <Suspense fallback={<span className="h-10 w-10" aria-hidden="true" />}>

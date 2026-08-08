@@ -11,7 +11,7 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import LoadLinkGearIcon from "@/components/LoadLinkGearIcon";
 import LoadLinkLogo from "@/components/LoadLinkLogo";
 
-type IconName = "home" | "briefcase" | "contract" | "drivers" | "help" | "messages" | "notifications" | "posts" | "settings" | "driver" | "dealer" | "packages";
+type IconName = "home" | "briefcase" | "contract" | "drivers" | "help" | "messages" | "notifications" | "posts" | "settings" | "privacy" | "driver" | "dealer" | "packages";
 type MenuLink = { label: string; href: string; description: string; icon: IconName };
 
 const marketplaceLinks: MenuLink[] = [
@@ -105,6 +105,7 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
       { label: "Notifications", href: "/notifications", description: "Reviews, messages and account updates", icon: "notifications" },
       { label: "My posts", href: "/my-posts", description: "Manage your listings", icon: "posts" },
       { label: "Profile settings", href: "/account/settings", description: "Profile, account and alerts", icon: "settings" },
+      { label: "Privacy & messaging", href: "/account/settings#message-privacy", description: "Activity, typing and message requests", icon: "privacy" },
       ...(account.driverProfile ? [{ label: "Driver profile", href: "/driver-profile", description: "Manage your driver profile", icon: "driver" as const }] : []),
       dealerLink,
       { label: "Packages", href: "/packages", description: "Manual, Pro and Dealer plans", icon: "packages" },
@@ -164,7 +165,8 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
 
 function MenuSection({ title, links, pathname, darkMode, border, muted, unreadNotifications = null, unreadMessages = 0 }: { title: string; links: MenuLink[]; pathname: string; darkMode: boolean; border: string; muted: string; unreadNotifications?: number | null; unreadMessages?: number }) {
   return <section className="mb-7"><h2 className={`mb-3 px-1 text-[11px] font-black uppercase tracking-[.18em] ${muted}`}>{title}</h2><div className="grid grid-cols-2 gap-2">{links.map((item, index) => {
-    const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
+    const cleanHref = item.href.split("#")[0];
+    const active = pathname === cleanHref || (cleanHref !== "/" && pathname.startsWith(`${cleanHref}/`));
     const badge = item.icon === "notifications" ? unreadNotifications : item.icon === "messages" ? unreadMessages : 0;
     const unpaired = links.length % 2 === 1 && index === links.length - 1;
     return <Link key={`${item.href}-${item.label}`} href={item.href} className={`relative min-h-[118px] rounded-2xl border p-4 transition ${unpaired ? "col-span-2" : ""} ${active ? "border-[#f6b800] bg-[#f6b800] text-black" : `${border} ${darkMode ? "bg-white/[.035]" : "bg-white"}`}`}><span className={`relative mb-3 flex h-9 w-9 items-center justify-center rounded-xl ${active ? "bg-black text-[#f6b800]" : darkMode ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><MenuItemIcon name={item.icon} />{typeof badge === "number" && badge > 0 ? <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full border border-black bg-[#f6b800] px-1 text-[9px] font-black text-black">{badge > 99 ? "99+" : badge}</span> : null}</span><span className="block text-sm font-black leading-4">{item.label}</span><span className={`mt-2 block text-[10px] font-semibold leading-4 ${active ? "text-black/60" : muted}`}>{item.description}</span></Link>;
@@ -201,6 +203,8 @@ function MenuItemIcon({ name }: { name: IconName }) {
       return <svg {...common}><path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 6 2.5 6.5 2.5 6.5H4s2.5-.5 2.5-6.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9.5 19a2.8 2.8 0 0 0 5 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
     case "posts":
       return <svg {...common}><path d="M4 4h16v16H4V4Zm4 5h8M8 13h8M8 17h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
+    case "privacy":
+      return <svg {...common}><path d="M12 3 4.5 6v5.2c0 4.7 3.1 8 7.5 9.8 4.4-1.8 7.5-5.1 7.5-9.8V6L12 3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9.5 12.2 11.2 14l3.6-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
     case "settings":
       return <LoadLinkGearIcon />;
     case "driver":
