@@ -327,6 +327,32 @@ function cleanError(error: unknown, fallback: string) {
 }
 
 export default function MessagesPage() {
+  // LOADLINK V2.5.3 SESSION WALLPAPER
+  useEffect(() => {
+    const count = 10;
+    const lastKey = "loadlink-chat-wallpaper-last-v253";
+    const last = Number(window.localStorage.getItem(lastKey));
+    const random = window.crypto?.getRandomValues
+      ? window.crypto.getRandomValues(new Uint32Array(1))[0]
+      : Math.floor(Math.random() * 0xffffffff);
+
+    let next = (random % count) + 1;
+    if (Number.isInteger(last) && last >= 1 && last <= count && next === last) {
+      next = (next % count) + 1;
+    }
+
+    const file = String(next).padStart(2, "0");
+    document.documentElement.style.setProperty(
+      "--loadlink-chat-wallpaper-v253",
+      `url("/images/chat-wallpapers/chat-${file}.svg")`,
+    );
+    window.localStorage.setItem(lastKey, String(next));
+
+    return () => {
+      document.documentElement.style.removeProperty("--loadlink-chat-wallpaper-v253");
+    };
+  }, []);
+
   const router = useRouter();
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -1660,7 +1686,7 @@ export default function MessagesPage() {
 
               <div
                 ref={messageViewportRef}
-                className={`loadlink-message-viewport relative min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8 ${darkMode ? "bg-[#090909]" : "bg-[#f6f3eb]"}`}
+                className={`loadlink-message-viewport loadlink-chat-wallpaper relative min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8 ${darkMode ? "bg-[#090909]" : "bg-[#f6f3eb]"}`}
               >
                 {messagesLoading && messages.length === 0 ? (
                   <div className="flex h-full min-h-[180px] items-center justify-center"><div className="flex items-center gap-3 rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-bold text-black/55"><span className="h-4 w-4 animate-spin rounded-full border-2 border-black/20 border-t-black" />Loading conversation…</div></div>

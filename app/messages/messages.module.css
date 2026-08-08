@@ -80,7 +80,6 @@
   }
 }
 
-/* V2.2: active conversations stay visually quiet; logistics artwork is reserved for loading states. */
 .messageApp :global(.loadlink-official-header-logo),
 .messageApp :global(.loadlink-official-header-logo .loadlink-logo-wrap),
 .messageApp :global(.loadlink-messages-header-logo) {
@@ -92,3 +91,34 @@
   background-image: none !important;
   background-blend-mode: normal !important;
 }
+
+/* LOADLINK V2.5.3 SESSION SKETCH WALLPAPER START */
+.messageApp :global(.loadlink-chat-wallpaper) {
+  position: relative;
+  isolation: isolate;
+  background-image: var(--loadlink-chat-wallpaper-v253) !important;
+  background-repeat: repeat !important;
+  background-position: center top !important;
+  background-size: min(680px, 125vw) auto !important;
+  background-color: #f4f0e6;
+  background-blend-mode: multiply;
+}
+
+.messageApp :global(.loadlink-chat-wallpaper)::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.40), rgba(255,255,255,.70));
+}
+
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-wallpaper) {
+  background-color: #0d0c09 !important;
+  background-blend-mode: screen;
+}
+
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-wallpaper)::before {
+  background: linear-gradient(180deg, rgba(6,6,6,.48), rgba(6,6,6,.74));
+}
+/* LOADLINK V2.5.3 SESSION SKETCH WALLPAPER END */

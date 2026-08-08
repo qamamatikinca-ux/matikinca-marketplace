@@ -40,7 +40,6 @@ export default function DriverProfilePage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [form, setForm] = useState<FormState>(EMPTY);
   const [docs, setDocs] = useState<Doc[]>([]);
-  const [token, setToken] = useState("");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error" | "info">("info");
   const [busy, setBusy] = useState(false);
@@ -54,8 +53,18 @@ export default function DriverProfilePage() {
   const textarea = `${input} h-auto min-h-28 py-3`;
 
   async function authToken() {
-    const { data } = await browserSupabase().auth.getSession();
-    return data.session?.access_token ?? "";
+    const client = browserSupabase();
+    const { data, error } = await client.auth.getSession();
+    if (error) return "";
+
+    let session = data.session;
+    const expiresSoon = !session?.expires_at || session.expires_at * 1000 <= Date.now() + 30_000;
+    if (session && expiresSoon) {
+      const refreshed = await client.auth.refreshSession();
+      if (refreshed.error || !refreshed.data.session) return "";
+      session = refreshed.data.session;
+    }
+    return session?.access_token ?? "";
   }
 
   async function load() {
@@ -66,7 +75,6 @@ export default function DriverProfilePage() {
         window.location.href = `/login?next=${encodeURIComponent("/driver-profile")}`;
         return;
       }
-      setToken(nextToken);
       const response = await fetch("/api/phase2/me", { headers: { Authorization: `Bearer ${nextToken}` } });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "The profile could not be loaded.");
@@ -107,7 +115,7 @@ export default function DriverProfilePage() {
   }
 
   async function saveProfile(showConfirmation = true) {
-    const activeToken = token || await authToken();
+    const activeToken = await authToken();
     if (!activeToken) throw new Error("Sign in is required.");
     const response = await fetch("/api/phase2/me", {
       method: "PUT",
@@ -142,7 +150,7 @@ export default function DriverProfilePage() {
     setBusy(true);
     setMessage("");
     try {
-      const activeToken = token || await authToken();
+      const activeToken = await authToken();
       if (!activeToken) throw new Error("Sign in is required.");
       const data = new FormData();
       data.append("documentType", type);
@@ -162,20 +170,32 @@ export default function DriverProfilePage() {
   }
 
   async function submit() {
+    if (busy) return;
     setBusy(true);
     setMessage("");
     try {
-      await saveProfile(false);
-      const activeToken = token || await authToken();
-      const response = await fetch("/api/phase2/submit", { method: "POST", headers: { Authorization: `Bearer ${activeToken}` } });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Submission failed.");
+      const activeToken = await authToken();
+      if (!activeToken) throw new Error("Your sign-in session expired. Sign in again and retry.");
+
+      const response = await fetch("/api/phase2/submit", {
+        method: "POST",
+        cache: "no-store",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${activeToken}`,
+        },
+        body: JSON.stringify({ payload: payload() }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "The driver profile could not be submitted.");
+
+      setForm((current) => ({ ...current, status: "pending", review_reason: "", missing_document_type: "" }));
       setMessageType("success");
-      setMessage("Your driver profile was submitted for review.");
+      setMessage("Submitted successfully. Your driver profile is now with LoadLink for review.");
       await load();
     } catch (error) {
       setMessageType("error");
-      setMessage(error instanceof Error ? error.message : "Submission failed.");
+      setMessage(error instanceof Error ? error.message : "The driver profile could not be submitted.");
     } finally {
       setBusy(false);
     }
@@ -211,6 +231,7 @@ export default function DriverProfilePage() {
           <section className={`loadlink-rejection-panel rounded-[24px] border p-5 ${darkMode ? "border-red-500/45 bg-red-950/25" : "border-red-400 bg-red-50"}`}>
             <h2 className="text-xl font-black">Review feedback</h2>
             <p className="mt-2 text-sm font-semibold leading-6">{form.review_reason}</p>
+            <p className={`mt-3 text-xs font-semibold leading-5 ${darkMode ? "text-red-100/65" : "text-red-900/65"}`}>Update the requested information or document below, save it, then submit the profile again for review.</p>
             {form.missing_document_type ? <p className="mt-3 text-xs font-black uppercase tracking-[.1em]">Requested document: {LABELS[form.missing_document_type]}</p> : null}
           </section>
         ) : null}
@@ -252,14 +273,18 @@ export default function DriverProfilePage() {
 
         <section className="rounded-[28px] border border-[#f6b800]/35 bg-black p-5 text-white md:p-7">
           <div className="grid gap-5 md:grid-cols-[1fr_auto] md:items-center">
-            <div><h2 className="text-2xl font-black">Ready for LoadLink review?</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-white/58">Save your latest details, upload the required documents and submit once. Your profile appears publicly only after approval.</p></div>
-            <button className="h-13 rounded-xl bg-[#f6b800] px-7 text-xs font-black uppercase tracking-[.12em] text-black disabled:opacity-50" disabled={busy || loading || form.status === "pending"} type="button" onClick={() => void submit()}>{form.status === "pending" ? "Review in progress" : busy ? "Submitting…" : "Submit profile for review"}</button>
+            <div>
+              <h2 className="text-2xl font-black">Ready for LoadLink review?</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/58">Complete your current details, upload the required documents and submit once. LoadLink saves and submits the profile together, then publishes it only after approval.</p>
+            </div>
+            <button className="h-13 rounded-xl bg-[#f6b800] px-7 text-xs font-black uppercase tracking-[.12em] text-black disabled:opacity-50" disabled={busy || loading || form.status === "pending"} type="button" onClick={() => void submit()}>{form.status === "pending" ? "Review in progress" : busy ? "Submitting…" : form.status === "rejected" ? "Fix & resubmit profile" : "Submit profile for review"}</button>
           </div>
         </section>
       </div>
     </main>
   );
 }
+
 
 function SectionHeading({ title, copy, darkMode }: { title: string; copy: string; darkMode: boolean }) {
   return <div className={`border-b px-5 py-5 md:px-7 ${darkMode ? "border-white/10" : "border-black/10"}`}><h2 className="text-3xl font-black tracking-[-.04em]">{title}</h2><p className={`mt-2 max-w-3xl text-sm leading-6 ${darkMode ? "text-white/55" : "text-black/55"}`}>{copy}</p></div>;
