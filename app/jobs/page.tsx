@@ -170,7 +170,7 @@ function saveViewedJob(job: JobListing) {
     const nextItem = {
       id: job.id,
       title: job.title,
-      href: `/jobs#job-${job.id}`,
+      href: `/listing/${job.id}`,
       category: "Job",
       type: job.group,
       image: job.photos[0] || "/images/jobs/job-card-1.jpg",
@@ -196,7 +196,7 @@ function saveViewedJob(job: JobListing) {
 function saveLikedJob(job: JobListing) {
   try {
     const current = JSON.parse(localStorage.getItem("loadlink-liked-listings") || "[]");
-    const item = { id: job.id, title: job.title, href: `/jobs#job-${job.id}`, category: "Job", type: job.group, image: job.photos[0] || "/images/jobs/job-card-1.jpg", meta: `${job.city} - ${formatListingRate(job.rate)}`, savedAt: Date.now() };
+    const item = { id: job.id, title: job.title, href: `/listing/${job.id}`, category: "Job", type: job.group, image: job.photos[0] || "/images/jobs/job-card-1.jpg", meta: `${job.city} - ${formatListingRate(job.rate)}`, savedAt: Date.now() };
     const exists = Array.isArray(current) && current.some((entry) => entry?.id === job.id);
     const next = exists ? current.filter((entry) => entry?.id !== job.id) : [item, ...(Array.isArray(current) ? current : [])].slice(0, 30);
     localStorage.setItem("loadlink-liked-listings", JSON.stringify(next));
@@ -225,7 +225,7 @@ function getLikedJobIds() {
 }
 
 async function shareListing(job: JobListing) {
-  const url = `${window.location.origin}/jobs#job-${job.id}`;
+  const url = `${window.location.origin}/listing/${job.id}`;
   const data = { title: job.title, text: `${job.title} in ${job.city} on LoadLink`, url };
   try {
     if (navigator.share) await navigator.share(data);
@@ -466,10 +466,20 @@ export default function JobsPortalPage() {
   useEffect(() => {
     if (!loadingJobs && window.location.hash) {
       setTimeout(() => {
-        document.querySelector(window.location.hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        const hash = window.location.hash;
+        const target = document.querySelector(hash);
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        }
+        const match = hash.match(/^#job-([0-9a-f-]{36})$/i);
+        if (!match) return;
+        const listingId = match[1];
+        const stillPublic = sharedJobs.some((job) => job.id === listingId);
+        if (!stillPublic) window.location.replace(`/listing/${listingId}`);
       }, 400);
     }
-  }, [loadingJobs, sharedJobs.length]);
+  }, [loadingJobs, sharedJobs]);
 
 
   function toggleDarkMode() {
@@ -855,7 +865,7 @@ function ContactSellerStack({ job, darkMode }: { job: JobListing; darkMode: bool
       </div>
       <div className="grid grid-cols-3 border-t border-black/10">
         <a href={`tel:${job.contactNumber.replace(/\s/g, "")}`} className="flex min-h-16 flex-col items-center justify-center gap-1.5 border-r border-black/10 bg-[#168eea] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><PhoneIcon /> Call</a>
-        <RequireAuthLink href={`/messages?listing=${encodeURIComponent(job.id)}`} className="flex min-h-16 flex-col items-center justify-center gap-1.5 border-r border-black/10 bg-[#168eea] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><MessageIcon /> Message</RequireAuthLink>
+        <RequireAuthLink href={`/messages?listing=${encodeURIComponent(job.id)}&suggest=1`} className="flex min-h-16 flex-col items-center justify-center gap-1.5 border-r border-black/10 bg-[#168eea] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><MessageIcon /> Message</RequireAuthLink>
         <a href={whatsappPhone ? `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}` : "#"} onClick={(e) => { if (!whatsappPhone) { e.preventDefault(); greetPoster(job); } }} target="_blank" rel="noreferrer" className="flex min-h-16 flex-col items-center justify-center gap-1.5 bg-[#0d442b] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><WhatsAppIcon /> WhatsApp</a>
       </div>
     </div>

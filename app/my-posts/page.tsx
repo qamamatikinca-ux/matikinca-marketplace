@@ -51,14 +51,6 @@ type MyListing = {
 
 
 
-type DeletedListing = {
-  id: string;
-  listing_id: string | null;
-  title: string;
-  event_type: "deleted";
-  note: string | null;
-  created_at: string;
-};
 
 type VerificationMap = Record<string, string>;
 type Filter = "all" | "active" | "review" | "closed";
@@ -80,7 +72,6 @@ export default function MyPostsPage() {
   const [authReady, setAuthReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [listings, setListings] = useState<MyListing[]>([]);
-  const [deletedListings, setDeletedListings] = useState<DeletedListing[]>([]);
   const [verificationStatuses, setVerificationStatuses] = useState<VerificationMap>({});
   const [filter, setFilter] = useState<Filter>("all");
   const [sortMode, setSortMode] = useState<MyPostsSort>("newest");
@@ -161,24 +152,16 @@ export default function MyPostsPage() {
         throw byUser.error;
       }
 
-      results.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
-      setListings(results);
+      const currentResults = results
+        .filter((item) => !["deleted", "removed"].includes(String(item.status || "").toLowerCase()))
+        .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+      setListings(currentResults);
 
-      const history = await supabase
-        .from("loadlink_listing_history")
-        .select("id,listing_id,title,event_type,note,created_at")
-        .eq("user_id", currentUserId)
-        .eq("event_type", "deleted")
-        .order("created_at", { ascending: false })
-        .limit(30);
-      if (!history.error) setDeletedListings((history.data || []) as DeletedListing[]);
-      else if (/relation|does not exist|schema cache/i.test(history.error.message)) setDeletedListings([]);
-
-      if (results.length) {
+      if (currentResults.length) {
         const verification = await supabase
           .from("vehicle_verifications")
           .select("listing_id,status")
-          .in("listing_id", results.map((item) => item.id));
+          .in("listing_id", currentResults.map((item) => item.id));
         if (!verification.error) {
           const next: VerificationMap = {};
           (verification.data || []).forEach((row) => { next[row.listing_id] = row.status; });
@@ -382,9 +365,9 @@ export default function MyPostsPage() {
 
                         {isManualVehicle && listing.expires_at ? <div className={`mt-3 rounded-xl border px-3 py-2.5 ${expired ? "border-red-500/35 bg-red-500/10" : "border-[#f6b800]/25 bg-[#f6b800]/8"}`}><p className="text-[10px] font-black">{expired ? "Listing expired" : `Expires ${formatDate(listing.expires_at)}`}</p>{!expired ? <button type="button" onClick={() => void renewListing(listing)} className="mt-1.5 text-[10px] font-black text-[#b88900] underline underline-offset-4">Renew</button> : null}</div> : null}
 
-                        <div className="mt-3 flex items-center gap-2">
-                          <Link href={`/jobs#job-${listing.id}`} className={`flex h-9 items-center justify-center rounded-xl border px-3 text-[10px] font-black ${darkMode ? "border-white/15" : "border-black/10"}`}>View</Link>
-                          <button type="button" onClick={() => setEditing(listing)} className="h-9 min-w-0 flex-1 rounded-xl bg-[#f6b800] px-3 text-[10px] font-black text-black">{moderationStatus === "rejected" ? "Edit & resubmit" : "Edit post"}</button>
+                        <div className="mt-3 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
+                          <Link href={`/listing/${listing.id}`} className={`flex h-9 min-w-[54px] items-center justify-center whitespace-nowrap rounded-xl border px-2.5 text-[11px] font-black ${darkMode ? "border-white/15" : "border-black/10"}`}>View</Link>
+                          <button type="button" onClick={() => setEditing(listing)} className="h-9 min-w-0 whitespace-nowrap rounded-xl bg-[#f6b800] px-2 text-[11px] font-black leading-none text-black sm:px-3">{moderationStatus === "rejected" ? "Edit & resubmit" : "Edit post"}</button>
                           <details className="relative shrink-0">
                             <summary aria-label="More post actions" className={`flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-xl border text-base font-black ${darkMode ? "border-white/15" : "border-black/10"}`}>•••</summary>
                             <div className={`absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-xl border shadow-xl ${surface}`}>
@@ -401,16 +384,14 @@ export default function MyPostsPage() {
               })}
             </div>
             {totalPages > 1 ? <LoadLinkPagination current={currentPage} total={totalPages} onChange={setCurrentPage} darkMode={darkMode} label="My post pages" /> : null}
-            {filter === "all" && deletedListings.length ? <RemovedPostsHistory items={deletedListings} darkMode={darkMode} muted={muted} /> : null}
           </>
         ) : (
           <>
             <div className={`rounded-[22px] border p-9 text-center ${surface}`}>
               <h2 className="text-2xl font-black">Nothing in this view</h2>
-              <p className={`mx-auto mt-2 max-w-md text-sm leading-6 ${muted}`}>{filter === "all" && deletedListings.length ? "You have no current posts. Deleted posts are kept below so their status remains clear." : "Change the filter or create a new LoadLink opportunity."}</p>
+              <p className={`mx-auto mt-2 max-w-md text-sm leading-6 ${muted}`}>Change the filter or create a new LoadLink opportunity.</p>
               <div className="mt-5 flex justify-center gap-2"><Link href="/jobs/list" className="rounded-xl bg-[#f6b800] px-5 py-3 text-xs font-black text-black">Post opportunity</Link><Link href="/list-your-vehicle" className={`rounded-xl border px-5 py-3 text-xs font-black ${darkMode ? "border-white/15" : "border-black/15"}`}>List vehicle</Link></div>
             </div>
-            {filter === "all" && deletedListings.length ? <RemovedPostsHistory items={deletedListings} darkMode={darkMode} muted={muted} /> : null}
           </>
         )}
       </section>
@@ -431,29 +412,6 @@ function formatDate(value: string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "recently";
   return date.toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" });
-}
-
-function RemovedPostsHistory({ items, darkMode, muted }: { items: DeletedListing[]; darkMode: boolean; muted: string }) {
-  return (
-    <section className="mt-7">
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <div><p className={`text-[9px] font-black uppercase tracking-[.14em] ${muted}`}>Post history</p><h2 className="mt-1 text-lg font-black">Removed posts</h2></div>
-        <span className={`text-[10px] font-bold ${muted}`}>Status history</span>
-      </div>
-      <div className="grid gap-2">
-        {items.map((item) => (
-          <div key={item.id} className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-white"}`}>
-            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-sm font-black ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-[#f4efe3]"}`}>×</span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-black">{item.title}</p>
-              <p className={`mt-0.5 text-[10px] leading-4 ${muted}`}>{item.note || "Deleted by you. This post is no longer active or visible on LoadLink."}</p>
-            </div>
-            <span className={`shrink-0 text-[9px] font-bold ${muted}`}>{shortDate(item.created_at)}</span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
 }
 
 function Header({ darkMode, toggleTheme }: { darkMode: boolean; toggleTheme: () => void }) {

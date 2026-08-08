@@ -18,7 +18,7 @@ import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import MessageVisualScene from "@/components/MessageVisualScene";
-import LogisticsMessageTools, { type StructuredQuote } from "@/components/LogisticsMessageTools";
+import LogisticsMessageTools, { type QuoteAutofillDefaults, type QuoteVehicleOption, type StructuredQuote } from "@/components/LogisticsMessageTools";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
@@ -326,30 +326,84 @@ function cleanError(error: unknown, fallback: string) {
   return message || fallback;
 }
 
+
+type QuoteReuseListingRow = {
+  id?: string | null;
+  title?: string | null;
+  city?: string | null;
+  vehicle_group?: string | null;
+  rate?: string | null;
+  description?: string | null;
+  listing_kind?: string | null;
+  status?: string | null;
+  moderation_status?: string | null;
+};
+
+function parseQuoteRate(value: string | null | undefined): Pick<StructuredQuote, "amount" | "unit"> {
+  const compact = String(value || "").replace(/\s+/g, "");
+  const amountMatch = compact.match(/(?:R|ZAR)?([0-9]+(?:\.[0-9]+)?)/i);
+  const unit: StructuredQuote["unit"] = /\/?km|perkm/i.test(compact)
+    ? "km"
+    : /\/?ton|perton/i.test(compact)
+      ? "ton"
+      : /\/?day|perday/i.test(compact)
+        ? "day"
+        : "total";
+  return { amount: amountMatch?.[1] || "", unit };
+}
+
+function listingVehicleNeed(description: string | null | undefined, fallback: string) {
+  const match = String(description || "").match(/^Vehicle needed:\s*([^\n]+)/im);
+  return String(match?.[1] || fallback || "").trim();
+}
+
+function postedVehicleSummary(description: string | null | undefined, fallback: string) {
+  const value = String(description || "");
+  const read = (label: string) => value.match(new RegExp(`^${label}:\\s*([^\\n]+)`, "im"))?.[1]?.trim() || "";
+  const parts = [read("Year"), read("Make"), read("Model"), read("Vehicle subtype")].filter(Boolean);
+  const payload = read("Payload");
+  const main = parts.join(" ").replace(/\s+/g, " ").trim() || fallback;
+  return payload ? `${main} · Payload ${payload}` : main;
+}
+
+function starterMessages(conversation: Conversation) {
+  const title = conversation.listing_title || "this listing";
+  if (conversation.role === "owner") {
+    return [
+      `Thanks for your interest in ${title}. Please confirm the vehicle you have available and your earliest collection time.`,
+      `Please send your proposed rate, vehicle details and availability for ${title}.`,
+      "Before we proceed, please confirm the collection area, delivery requirements and the documents you can provide.",
+    ];
+  }
+  return [
+    `Hi, I’m interested in ${title}. Is it still available?`,
+    `Please confirm the rate, collection details, delivery requirements and availability for ${title}.`,
+    "I may have a suitable vehicle available. Please share the route, cargo details, loading time and payment terms.",
+  ];
+}
+
 export default function MessagesPage() {
-  // LOADLINK V2.5.3 SESSION WALLPAPER
+  // LOADLINK V2.5.4 SESSION WALLPAPER
   useEffect(() => {
     const count = 10;
-    const lastKey = "loadlink-chat-wallpaper-last-v253";
+    const lastKey = "loadlink-chat-wallpaper-last-v254";
     const last = Number(window.localStorage.getItem(lastKey));
     const random = window.crypto?.getRandomValues
       ? window.crypto.getRandomValues(new Uint32Array(1))[0]
       : Math.floor(Math.random() * 0xffffffff);
 
     let next = (random % count) + 1;
-    if (Number.isInteger(last) && last >= 1 && last <= count && next === last) {
-      next = (next % count) + 1;
-    }
+    if (Number.isInteger(last) && last >= 1 && last <= count && next === last) next = (next % count) + 1;
 
     const file = String(next).padStart(2, "0");
     document.documentElement.style.setProperty(
-      "--loadlink-chat-wallpaper-v253",
+      "--loadlink-chat-wallpaper-v254",
       `url("/images/chat-wallpapers/chat-${file}.svg")`,
     );
     window.localStorage.setItem(lastKey, String(next));
 
     return () => {
-      document.documentElement.style.removeProperty("--loadlink-chat-wallpaper-v253");
+      document.documentElement.style.removeProperty("--loadlink-chat-wallpaper-v254");
     };
   }, []);
 
@@ -383,6 +437,9 @@ export default function MessagesPage() {
   const [composerActionsOpen, setComposerActionsOpen] = useState(false);
   const [potentialDealReviewOpen, setPotentialDealReviewOpen] = useState(false);
   const [quoteBranding, setQuoteBranding] = useState<QuoteBranding>({ name: "", logo: null });
+  const [quoteDefaults, setQuoteDefaults] = useState<QuoteAutofillDefaults | null>(null);
+  const [quoteVehicles, setQuoteVehicles] = useState<QuoteVehicleOption[]>([]);
+  const [showStarterSuggestions, setShowStarterSuggestions] = useState(false);
   const [messagePrivacy, setMessagePrivacy] = useState<MessagePrivacyPreferences>(
     () => DEFAULT_MESSAGE_PRIVACY,
   );
@@ -455,6 +512,90 @@ export default function MessagesPage() {
       null,
     [conversations, selectedId],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    setQuoteDefaults(null);
+    setQuoteVehicles([]);
+    if (!selectedConversation?.listing_id) return;
+
+    (async () => {
+      try {
+        let listingData: QuoteReuseListingRow | null = null;
+        const listingResult = await supabase
+          .from("job_listings")
+          .select("title,city,vehicle_group,rate,description,listing_kind")
+          .eq("id", selectedConversation.listing_id)
+          .maybeSingle();
+
+        if (!listingResult.error && listingResult.data) listingData = listingResult.data as QuoteReuseListingRow;
+        if (cancelled || !listingData) return;
+
+        const parsedRate = parseQuoteRate(String(listingData.rate || ""));
+        const vehicleNeed = listingVehicleNeed(String(listingData.description || ""), String(listingData.vehicle_group || ""));
+        setQuoteDefaults({
+          sourceLabel: "post details",
+          ...(parsedRate.amount ? parsedRate : {}),
+          ...(vehicleNeed ? { vehicle: vehicleNeed } : {}),
+          ...(listingData.city ? { availability: String(listingData.city) } : {}),
+        });
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!isAuthenticatedUser(user)) return;
+
+        let vehicleRows: QuoteReuseListingRow[] = [];
+        const vehicleResult = await supabase
+          .from("job_listings")
+          .select("id,title,city,vehicle_group,rate,description,listing_kind,status,moderation_status")
+          .eq("user_id", user.id)
+          .eq("listing_kind", "vehicle")
+          .neq("id", selectedConversation.listing_id)
+          .order("created_at", { ascending: false })
+          .limit(12);
+
+        if (!vehicleResult.error) {
+          vehicleRows = (vehicleResult.data || []) as QuoteReuseListingRow[];
+        } else if (/listing_kind|moderation_status|schema cache|column/i.test(vehicleResult.error.message)) {
+          const fallback = await supabase
+            .from("job_listings")
+            .select("id,title,city,vehicle_group,rate,description")
+            .eq("user_id", user.id)
+            .neq("id", selectedConversation.listing_id)
+            .order("created_at", { ascending: false })
+            .limit(12);
+          if (!fallback.error) {
+            vehicleRows = ((fallback.data || []) as QuoteReuseListingRow[]).filter((row) => !/^Listing type:\s*(Job|Contract)/im.test(String(row.description || "")));
+          }
+        }
+
+        if (cancelled) return;
+        setQuoteVehicles(vehicleRows
+          .filter((row) => {
+            const status = String(row.status || "active").toLowerCase();
+            const moderation = String(row.moderation_status || "approved").toLowerCase();
+            return !["deleted", "closed", "filled"].includes(status) && moderation !== "rejected";
+          })
+          .map((row) => {
+            const rate = parseQuoteRate(String(row.rate || ""));
+            const title = String(row.title || row.vehicle_group || "My vehicle").trim();
+            return {
+              id: String(row.id),
+              label: title,
+              meta: [String(row.city || "").trim(), String(row.vehicle_group || "").trim()].filter(Boolean).join(" · "),
+              vehicle: postedVehicleSummary(String(row.description || ""), title),
+              availability: String(row.city || "").trim(),
+              ...(rate.amount ? rate : {}),
+            };
+          })
+        );
+      } catch {
+        // Optional autofill must never block messaging.
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [selectedConversation?.listing_id]);
+
 
   useEffect(() => {
     if (!selectedId) return;
@@ -722,7 +863,21 @@ export default function MessagesPage() {
 
         await syncAccountState().catch(() => undefined);
         const params = new URLSearchParams(window.location.search);
-        const listingId = params.get("listing");
+        let listingId = params.get("listing");
+        const dealershipId = params.get("dealership");
+        if (!listingId && dealershipId) {
+          const dealerListing = await supabase
+            .from("job_listings")
+            .select("id")
+            .eq("dealership_id", dealershipId)
+            .eq("status", "active")
+            .eq("moderation_status", "approved")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (!dealerListing.error && dealerListing.data?.id) listingId = String(dealerListing.data.id);
+        }
+        setShowStarterSuggestions(params.get("suggest") === "1" || Boolean(listingId));
         const metadata = user.user_metadata || {};
         const buyerName =
           params.get("name") ||
@@ -750,7 +905,7 @@ export default function MessagesPage() {
             });
           }
           if (openResult.error) throw openResult.error;
-          openedId = String(openResult.data || "");
+          openedId = String((openResult.data && typeof openResult.data === "object" && "id" in openResult.data ? openResult.data.id : openResult.data) || "");
           await recordUserActivity("conversation_opened", {
             entityType: "listing",
             entityId: listingId,
@@ -1629,7 +1784,7 @@ export default function MessagesPage() {
               <div className={`loadlink-listing-context flex min-h-[40px] items-center gap-2 border-b px-3 py-1.5 md:px-5 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black text-[#f6b800]"><BriefcaseIcon /></span>
                 <p className="min-w-0 flex-1 truncate text-[11px] font-semibold">{selectedConversation.listing_title}</p>
-                <Link href={`/jobs#job-${selectedConversation.listing_id}`} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[9px] font-semibold uppercase ${darkMode ? "border-white/15 text-white/75" : "border-black/10 text-black/70"}`}>View</Link>
+                <Link href={`/listing/${selectedConversation.listing_id}`} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[9px] font-semibold uppercase ${darkMode ? "border-white/15 text-white/75" : "border-black/10 text-black/70"}`}>View</Link>
               </div>
 
               {potentialDealPending ? (
@@ -1789,6 +1944,20 @@ export default function MessagesPage() {
                 </div>
               ) : null}
 
+              {showStarterSuggestions && selectedConversation && !conversationBlocked && !potentialDealDeclined ? (
+                <div className={`border-t px-3 py-2.5 ${darkMode ? "border-white/10 bg-[#0c0c0c]" : "border-black/10 bg-[#fbfaf7]"}`}>
+                  <div className="mx-auto flex max-w-3xl items-center gap-2">
+                    <span className={`shrink-0 text-[9px] font-semibold uppercase tracking-[.12em] ${darkMode ? "text-white/40" : "text-black/40"}`}>Suggested</span>
+                    <div className="no-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto">
+                      {starterMessages(selectedConversation).map((suggestion) => (
+                        <button key={suggestion} type="button" onClick={() => { updateTyping(suggestion); setShowStarterSuggestions(false); }} className={`shrink-0 rounded-full border px-3 py-2 text-[10px] font-semibold ${darkMode ? "border-white/12 bg-white/[.04] text-white/80" : "border-black/10 bg-white text-black/75"}`}>{suggestion.length > 58 ? `${suggestion.slice(0, 58)}…` : suggestion}</button>
+                      ))}
+                    </div>
+                    <button type="button" onClick={() => setShowStarterSuggestions(false)} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm ${darkMode ? "text-white/45" : "text-black/40"}`} aria-label="Hide suggested messages">×</button>
+                  </div>
+                </div>
+              ) : null}
+
               <form
                 onSubmit={send}
                 className="loadlink-chat-composer border-t border-black/10 bg-white p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:p-4"
@@ -1827,6 +1996,8 @@ export default function MessagesPage() {
                           trigger="menu"
                           onClose={() => setComposerActionsOpen(false)}
                           onSendQuote={sendStructuredQuote}
+                          quoteDefaults={quoteDefaults}
+                          savedVehicles={quoteVehicles}
                           onInsert={(message) => updateTyping(text.trim() ? `${text.trim()}
 
 ${message}` : message)}
@@ -2179,7 +2350,7 @@ function ConversationDetails({
 
       <div className="mt-4 grid grid-cols-2 gap-2">
         <Link
-          href={`/jobs#job-${conversation.listing_id}`}
+          href={`/listing/${conversation.listing_id}`}
           className="flex h-10 items-center justify-center rounded-xl bg-[#f6b800] px-3 text-center text-[10px] font-bold text-black"
         >
           View listing

@@ -92,33 +92,32 @@
   background-blend-mode: normal !important;
 }
 
-/* LOADLINK V2.5.3 SESSION SKETCH WALLPAPER START */
+/* LOADLINK V2.5.4 CLEAN SESSION SKETCH WALLPAPER START */
 .messageApp :global(.loadlink-chat-wallpaper) {
   position: relative;
   isolation: isolate;
-  background-image: var(--loadlink-chat-wallpaper-v253) !important;
+  background-image: var(--loadlink-chat-wallpaper-v254) !important;
   background-repeat: repeat !important;
   background-position: center top !important;
   background-size: min(680px, 125vw) auto !important;
-  background-color: #f4f0e6;
-  background-blend-mode: multiply;
+  background-color: #fbfaf7 !important;
+  background-blend-mode: normal !important;
 }
 
+/* The SVG artwork is already drawn at low opacity. Do not place a translucent
+   layer over the conversation; that was what made the whole chat look dim. */
 .messageApp :global(.loadlink-chat-wallpaper)::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(255,255,255,.40), rgba(255,255,255,.70));
+  content: none !important;
+  display: none !important;
 }
 
 :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-wallpaper) {
-  background-color: #0d0c09 !important;
-  background-blend-mode: screen;
+  background-color: #0b0b0b !important;
+  background-blend-mode: normal !important;
 }
 
 :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-wallpaper)::before {
-  background: linear-gradient(180deg, rgba(6,6,6,.48), rgba(6,6,6,.74));
+  content: none !important;
+  display: none !important;
 }
-/* LOADLINK V2.5.3 SESSION SKETCH WALLPAPER END */
+/* LOADLINK V2.5.4 CLEAN SESSION SKETCH WALLPAPER END */

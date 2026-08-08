@@ -22,6 +22,16 @@ export type StructuredQuote = {
   terms: string;
 };
 
+export type QuoteAutofillDefaults = Partial<StructuredQuote> & {
+  sourceLabel?: string;
+};
+
+export type QuoteVehicleOption = Partial<StructuredQuote> & {
+  id: string;
+  label: string;
+  meta?: string;
+};
+
 type WorkflowTool = {
   id: string;
   label: string;
@@ -40,6 +50,8 @@ type Props = {
   trigger?: "bar" | "menu";
   onOpen?: () => void;
   onClose?: () => void;
+  quoteDefaults?: QuoteAutofillDefaults | null;
+  savedVehicles?: QuoteVehicleOption[];
 };
 
 const STAGES: DealStage[] = [
@@ -83,6 +95,8 @@ export default function LogisticsMessageTools({
   trigger = "bar",
   onOpen,
   onClose,
+  quoteDefaults = null,
+  savedVehicles = [],
 }: Props) {
   const [open, setOpen] = useState(false);
   const [stage, setStage] = useState<DealStage>("Enquiry");
@@ -190,6 +204,22 @@ export default function LogisticsMessageTools({
     }
   }
 
+  function applyQuoteValues(values: Partial<StructuredQuote>) {
+    if (values.amount) setAmount(values.amount);
+    if (values.unit) setUnit(values.unit);
+    if (values.vehicle) setVehicle(values.vehicle);
+    if (values.route) setRoute(values.route);
+    if (values.availability) setAvailability(values.availability);
+    if (values.vat) setVat(values.vat);
+    if (values.terms) setTerms(values.terms);
+  }
+
+  function applySavedVehicle(id: string) {
+    const selected = savedVehicles.find((item) => item.id === id);
+    if (!selected) return;
+    applyQuoteValues(selected);
+  }
+
   async function submitQuote() {
     if (!amount.trim() || disabled || quoteBusy) return;
     setQuoteBusy(true);
@@ -292,6 +322,22 @@ export default function LogisticsMessageTools({
             {quoteOpen ? (
               <div className={`mt-4 grid gap-3 rounded-2xl border p-4 sm:grid-cols-2 ${control}`}>
                 <div className="sm:col-span-2"><div className="flex items-center justify-between gap-3"><div><h3 className="text-sm font-bold">Structured rate quote</h3><p className={`mt-0.5 text-[10px] font-medium ${muted}`}>Build the quote here, then send it as a branded quote card.</p></div><button type="button" onClick={() => setQuoteOpen(false)} className={`h-8 rounded-lg border px-2.5 text-[9px] font-bold ${control}`}>Close</button></div></div>
+                {(quoteDefaults || savedVehicles.length > 0) ? (
+                  <div className={`sm:col-span-2 rounded-xl border p-3 ${darkMode ? "border-white/10 bg-black/20" : "border-black/8 bg-black/[.025]"}`}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`mr-auto text-[9px] font-semibold ${muted}`}>Reuse information already on LoadLink</span>
+                      {quoteDefaults ? <button type="button" onClick={() => applyQuoteValues(quoteDefaults)} className="h-8 rounded-lg bg-[#f6b800] px-3 text-[9px] font-bold text-black">Use {quoteDefaults.sourceLabel || "listing details"}</button> : null}
+                    </div>
+                    {savedVehicles.length > 0 ? (
+                      <label className="mt-2 block text-[9px] font-semibold">Use vehicle information from my posts
+                        <select defaultValue="" onChange={(event) => { applySavedVehicle(event.target.value); event.currentTarget.value = ""; }} className={`mt-1 h-10 w-full rounded-lg border px-2.5 text-[11px] font-medium outline-none focus:border-[#f6b800] ${control}`}>
+                          <option value="">Choose one of my posted vehicles…</option>
+                          {savedVehicles.map((item) => <option key={item.id} value={item.id}>{item.label}{item.meta ? ` · ${item.meta}` : ""}</option>)}
+                        </select>
+                      </label>
+                    ) : null}
+                  </div>
+                ) : null}
                 <label className="text-[10px] font-semibold">Rate (R)<input value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^0-9.]/g, ""))} inputMode="decimal" placeholder="18500" className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-[#f6b800] ${control}`} /></label>
                 <label className="text-[10px] font-semibold">Rate unit<select value={unit} onChange={(event) => setUnit(event.target.value as StructuredQuote["unit"])} className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-[#f6b800] ${control}`}><option value="total">Total trip</option><option value="km">Per km</option><option value="ton">Per ton</option><option value="day">Per day</option></select></label>
                 <label className="text-[10px] font-semibold">Vehicle<input value={vehicle} onChange={(event) => setVehicle(event.target.value)} placeholder="34-ton side tipper" className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-[#f6b800] ${control}`} /></label>
