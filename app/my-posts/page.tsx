@@ -589,7 +589,7 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
           });
           if (fallback.error || fallback.data !== true) throw fallback.error || new Error("The post could not be updated.");
         } else if (/function|schema cache|does not exist/i.test(raw)) {
-          throw new Error("Run LOADLINK-MARKETPLACE-V2.5.txt in Supabase once to enable rejected-photo replacement.");
+          throw new Error("Run the latest LoadLink Marketplace SQL once to enable rejected-photo replacement.");
         } else {
           throw result.error || new Error("The post could not be updated.");
         }
@@ -602,43 +602,129 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
     }
   }
 
-  const photosToShow = replacementPreviews.length ? replacementPreviews : (listing.photos || []).slice(0, 5);
+  const photosToShow = replacementPreviews.length ? replacementPreviews : (listing.photos || []).slice(0, photoLimit);
+  const feedback = rejected ? (listing.moderation_notes || "Update the requested details and send the post back to LoadLink for review.") : "Changes to an active post are reviewed before they return to the marketplace.";
+  const inputClass = "mt-2 h-12 w-full rounded-2xl border border-white/10 bg-white/[.06] px-4 text-sm font-semibold text-white outline-none transition placeholder:text-white/[.28] focus:border-[#f6b800]/70 focus:bg-white/[.08]";
 
   return (
-    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/90 p-4 backdrop-blur-sm">
-      <section className="mx-auto my-6 w-full max-w-xl overflow-hidden rounded-[26px] border border-[#f6b800]/55 bg-[#080808] text-white">
-        <div className="flex items-start justify-between border-b border-white/10 p-5">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f6b800]">My posts</p>
-            <h2 className="mt-1 text-2xl font-black">{rejected ? "Fix & resubmit" : "Edit post"}</h2>
-            <p className="mt-1 text-xs leading-5 text-white/50">{rejected ? "Change the rejected details or replace the photos, then send it back to LoadLink review." : "Any saved edit is sent back through LoadLink review."}</p>
-          </div>
-          <button type="button" onClick={onClose} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/15 text-lg" aria-label="Close edit post">×</button>
-        </div>
-
-        <div className="grid gap-3 p-5">
-          <div>
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <span className="text-[10px] font-black uppercase tracking-[.12em] text-white/55">Listing photos</span>
-              <span className="text-[9px] font-bold text-white/35">Up to {photoLimit}</span>
+    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/[.72] px-0 py-0 backdrop-blur-md sm:px-4 sm:py-6">
+      <section className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col bg-[#090909] text-white shadow-2xl sm:min-h-0 sm:max-h-[92dvh] sm:overflow-hidden sm:rounded-[30px] sm:border sm:border-white/10">
+        <header className="sticky top-0 z-20 border-b border-white/10 bg-[#090909]/95 px-5 pb-4 pt-[max(18px,env(safe-area-inset-top))] backdrop-blur-xl sm:px-6 sm:pt-5">
+          <div className="flex items-start gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[.12em] ${rejected ? "bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-400/25" : "bg-[#f6b800]/12 text-[#ffd45a] ring-1 ring-inset ring-[#f6b800]/20"}`}>
+                  {rejected ? "Needs changes" : "Editing post"}
+                </span>
+                <span className="truncate text-[10px] font-bold uppercase tracking-[.11em] text-white/[.35]">{listing.vehicle_group || listing.listing_kind || "LoadLink listing"}</span>
+              </div>
+              <h2 className="mt-3 text-[28px] font-black leading-[1.02] tracking-[-.045em] sm:text-3xl">{rejected ? "Review & resubmit" : "Edit your post"}</h2>
+              <p className="mt-2 max-w-xl text-xs font-medium leading-5 text-white/[.48]">Make the required changes below. Your post keeps its existing details until you submit the update.</p>
             </div>
-            {photosToShow.length ? <div className="grid grid-cols-5 gap-1.5">{photosToShow.map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt={`Listing photo ${index + 1}`} className="aspect-square w-full rounded-lg object-cover" />)}</div> : <div className="rounded-xl border border-dashed border-white/15 px-4 py-5 text-center text-xs text-white/40">No listing photo</div>}
-            <label className="mt-2 flex min-h-11 cursor-pointer items-center justify-center rounded-xl border border-white/15 px-4 text-xs font-black transition hover:border-[#f6b800]">
-              {preparingPhotos ? "Preparing photos…" : replacementFiles.length ? "Choose different photos" : "Replace listing photos"}
-              <input disabled={saving || preparingPhotos} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => void choosePhotos(event)} className="hidden" />
-            </label>
-            {replacementFiles.length ? <p className="mt-2 text-[10px] font-bold text-[#f6b800]">{replacementFiles.length} replacement photo{replacementFiles.length === 1 ? "" : "s"} ready. These will replace the current listing photos.</p> : null}
+            <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[.04] text-xl text-white/[.75] transition hover:border-white/25 hover:text-white" aria-label="Close edit post">×</button>
           </div>
+        </header>
 
-          <input aria-label="Listing title" value={title} onChange={(event) => setTitle(event.target.value)} className="h-12 rounded-xl bg-white px-4 text-sm font-bold text-black" />
-          <SouthAfricaLocationInput value={city} onChange={setCity} darkMode={false} allowAllSouthAfrica={false} placeholder="City, town or province" ariaLabel="Listing location" className="h-12 w-full rounded-xl bg-white px-4 text-sm font-bold text-black" />
-          <input aria-label="Rate" value={rate} onChange={(event) => setRate(event.target.value)} className="h-12 rounded-xl bg-white px-4 text-sm font-bold text-black" />
-          <input aria-label="Contact number" value={contact} onChange={(event) => setContact(event.target.value)} className="h-12 rounded-xl bg-white px-4 text-sm font-bold text-black" />
-          <textarea aria-label="Listing description" value={description} onChange={(event) => setDescription(event.target.value)} className="min-h-32 rounded-xl bg-white px-4 py-3 text-sm font-bold text-black" />
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+          <div className="grid gap-4">
+            <section className={`rounded-[22px] border p-4 ${rejected ? "border-red-400/25 bg-red-500/[.075]" : "border-[#f6b800]/20 bg-[#f6b800]/[.055]"}`}>
+              <div className="flex items-start gap-3">
+                <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black ${rejected ? "bg-red-500/15 text-red-300" : "bg-[#f6b800]/15 text-[#ffd45a]"}`}>!</span>
+                <div className="min-w-0">
+                  <p className={`text-[10px] font-black uppercase tracking-[.14em] ${rejected ? "text-red-300" : "text-[#ffd45a]"}`}>{rejected ? "LoadLink review feedback" : "Review notice"}</p>
+                  <p className="mt-1.5 text-sm font-semibold leading-6 text-white/[.72]">{feedback}</p>
+                </div>
+              </div>
+            </section>
 
-          {error ? <p className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2.5 text-xs font-bold leading-5 text-red-300">{error}</p> : null}
-          <button type="button" disabled={saving || preparingPhotos} onClick={() => void save()} className="h-12 rounded-xl bg-[#f6b800] text-xs font-black uppercase tracking-[.08em] text-black disabled:opacity-50">{saving ? "Submitting…" : rejected ? "Resubmit for review" : "Save & send for review"}</button>
+            <section className="rounded-[24px] border border-white/10 bg-white/[.035] p-4 sm:p-5">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[.14em] text-white/[.38]">Listing media</p>
+                  <h3 className="mt-1 text-lg font-black">Photos</h3>
+                </div>
+                <span className="text-[10px] font-bold text-white/[.35]">{photosToShow.length}/{photoLimit}</span>
+              </div>
+
+              {photosToShow.length ? (
+                <div className="mt-4 grid grid-cols-4 gap-2">
+                  {photosToShow.slice(0, photoLimit).map((photo, index) => (
+                    <div key={`${photo}-${index}`} className={`relative overflow-hidden rounded-xl border border-white/[.08] bg-black ${index === 0 ? "col-span-2 row-span-2" : ""}`}>
+                      <img src={photo} alt={`Listing photo ${index + 1}`} className="aspect-square h-full w-full object-cover" />
+                      {index === 0 ? <span className="absolute bottom-2 left-2 rounded-full bg-black/68 px-2 py-1 text-[8px] font-black uppercase tracking-[.1em] text-white">Cover</span> : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-4 rounded-2xl border border-dashed border-white/12 bg-black/20 px-4 py-8 text-center text-xs font-semibold text-white/[.38]">No listing photos uploaded</div>
+              )}
+
+              <label className="mt-4 flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-2xl border border-white/12 bg-black/25 px-4 transition hover:border-[#f6b800]/55">
+                <span>
+                  <strong className="block text-xs font-black">{replacementFiles.length ? "Change selected photos" : "Replace listing photos"}</strong>
+                  <span className="mt-0.5 block text-[10px] font-semibold text-white/[.38]">JPG, PNG or WEBP · up to {photoLimit} photos</span>
+                </span>
+                <span className="shrink-0 rounded-full bg-[#f6b800] px-3 py-1.5 text-[9px] font-black uppercase tracking-[.08em] text-black">{preparingPhotos ? "Preparing…" : "Choose"}</span>
+                <input disabled={saving || preparingPhotos} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => void choosePhotos(event)} className="hidden" />
+              </label>
+              {replacementFiles.length ? <p className="mt-2.5 text-[10px] font-bold leading-5 text-[#ffd45a]">{replacementFiles.length} replacement photo{replacementFiles.length === 1 ? "" : "s"} ready. They will replace the current listing photos after resubmission.</p> : null}
+            </section>
+
+            <section className="rounded-[24px] border border-white/10 bg-white/[.035] p-4 sm:p-5">
+              <div className="mb-4">
+                <p className="text-[10px] font-black uppercase tracking-[.14em] text-white/[.38]">Post information</p>
+                <h3 className="mt-1 text-lg font-black">Update the listing</h3>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block sm:col-span-2">
+                  <span className="text-[11px] font-black text-white/[.68]">Title</span>
+                  <input aria-label="Listing title" value={title} onChange={(event) => setTitle(event.target.value)} className={inputClass} />
+                </label>
+
+                <label className="block">
+                  <span className="text-[11px] font-black text-white/[.68]">Location</span>
+                  <SouthAfricaLocationInput value={city} onChange={setCity} darkMode allowAllSouthAfrica={false} placeholder="City, town or province" ariaLabel="Listing location" className={inputClass} />
+                </label>
+
+                <label className="block">
+                  <span className="text-[11px] font-black text-white/[.68]">Rate</span>
+                  <input aria-label="Rate" value={rate} onChange={(event) => setRate(event.target.value)} className={inputClass} />
+                </label>
+
+                <label className="block sm:col-span-2">
+                  <span className="text-[11px] font-black text-white/[.68]">Contact number</span>
+                  <input aria-label="Contact number" inputMode="tel" value={contact} onChange={(event) => setContact(event.target.value)} className={inputClass} />
+                </label>
+
+                <label className="block sm:col-span-2">
+                  <span className="text-[11px] font-black text-white/[.68]">Description</span>
+                  <textarea aria-label="Listing description" value={description} onChange={(event) => setDescription(event.target.value)} rows={5} className="mt-2 min-h-36 w-full resize-y rounded-2xl border border-white/10 bg-white/[.06] px-4 py-3 text-sm font-semibold leading-6 text-white outline-none transition placeholder:text-white/[.28] focus:border-[#f6b800]/70 focus:bg-white/[.08]" />
+                </label>
+              </div>
+            </section>
+
+            {error ? (
+              <div role="alert" className="rounded-[18px] border border-red-400/25 bg-red-500/[.09] px-4 py-3 text-xs font-bold leading-5 text-red-200">
+                {error}
+              </div>
+            ) : null}
+
+            <div className="rounded-[20px] border border-white/[.08] bg-black/25 px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[.12em] text-white/[.36]">After you submit</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-white/[.52]">The updated post returns to LoadLink review. It becomes public again only after approval.</p>
+            </div>
+          </div>
         </div>
+
+        <footer className="sticky bottom-0 z-20 border-t border-white/10 bg-[#090909]/96 px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-6 sm:pb-5">
+          <div className="grid grid-cols-[.72fr_1.28fr] gap-3">
+            <button type="button" disabled={saving || preparingPhotos} onClick={onClose} className="h-12 rounded-2xl border border-white/12 bg-white/[.035] text-xs font-black text-white/[.72] transition hover:border-white/25 disabled:opacity-40">Cancel</button>
+            <button type="button" disabled={saving || preparingPhotos} onClick={() => void save()} className="h-12 rounded-2xl bg-[#f6b800] px-4 text-xs font-black text-black shadow-[0_10px_30px_rgba(246,184,0,.14)] transition hover:brightness-105 disabled:opacity-50">
+              {saving ? "Submitting…" : rejected ? "Resubmit to LoadLink" : "Save & send for review"}
+            </button>
+          </div>
+        </footer>
       </section>
     </div>
   );
