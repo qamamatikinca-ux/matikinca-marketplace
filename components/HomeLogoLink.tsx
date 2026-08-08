@@ -8,10 +8,12 @@ export default function HomeLogoLink({
   className = "flex min-w-0 items-center justify-center overflow-visible",
   logoClassName = "",
   theme = "auto",
+  showGlow = true,
 }: {
   className?: string;
   logoClassName?: string;
   theme?: "auto" | "light" | "dark";
+  showGlow?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -29,7 +31,7 @@ export default function HomeLogoLink({
         }
       }}
     >
-      <LoadLinkLogo className={logoClassName} theme={theme} />
+      <LoadLinkLogo className={logoClassName} theme={theme} showGlow={showGlow} />
     </Link>
   );
 }

@@ -90,8 +90,7 @@ export default function Help() {
 
       <section className="bg-black px-5 py-12 text-white">
         <div className="mx-auto max-w-4xl">
-          <p className="text-xs font-black uppercase tracking-[.25em] text-[#f6b800]">LoadLink support</p>
-          <h1 className="mt-3 text-5xl font-black">How can we help?</h1>
+          <h1 className=" text-5xl font-black">How can we help?</h1>
           <p className="mt-4 max-w-2xl text-white/60">Search common questions or ask LinkBot for guided LoadLink help.</p>
           <input
             id="help-search"

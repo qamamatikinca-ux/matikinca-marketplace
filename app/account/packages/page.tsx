@@ -51,7 +51,7 @@ export default function PackageStatusPage() {
   return <main className={`min-h-screen ${darkMode?"bg-black text-white":"bg-[#f4efe3] text-black"}`}>
     <header className={`border-b px-4 py-3 ${darkMode?"border-white/10 bg-black":"border-black/10 bg-[#f4efe3]"}`}><div className="mx-auto grid max-w-5xl grid-cols-[40px_1fr_40px] items-center"><Link href="/" className="flex h-10 w-10 items-center justify-center rounded-full border border-[#f6b800]">‹</Link><HomeLogoLink theme={darkMode?"dark":"light"}/><span/></div></header>
     <section className="mx-auto max-w-5xl px-5 py-10">
-      <p className="text-xs font-black uppercase tracking-[0.2em] text-[#b88900]">Account package</p><h1 className="mt-2 text-5xl font-black tracking-[-0.06em]">Your LoadLink access</h1>
+      <h1 className=" text-5xl font-black tracking-[-0.06em]">Your LoadLink access</h1>
       {loading?<p className={`mt-7 ${muted}`}>Loading package details…</p>:<>
         <div className="mt-7 grid gap-4 md:grid-cols-3">
           <Card surface={surface} label="Current package" value={currentName}/><Card surface={surface} label="Photo allowance" value={String(photoLimit)}/><Card surface={surface} label="Messages" value={messageLimit}/>

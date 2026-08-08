@@ -13,6 +13,15 @@ import MarketplaceRestrictionGuard from "@/components/phase2/MarketplaceRestrict
 export const metadata: Metadata = {
   title: "LoadLink",
   description: "Logistics marketplace",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "LoadLink",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    apple: "/images/loadlink-app-icon-180.png",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

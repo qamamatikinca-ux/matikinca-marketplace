@@ -24,10 +24,7 @@ export default function RouteError({
   return (
     <main className="grid min-h-screen place-items-center bg-black px-5 py-10 text-white">
       <section className="w-full max-w-lg border border-[#f6b800]/45 bg-[#0d0d0d] p-7 text-center sm:p-10">
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f6b800]">
-          LoadLink recovery
-        </p>
-        <h1 className="mt-4 text-3xl font-black">This page could not finish loading.</h1>
+        <h1 className=" text-3xl font-black">This page could not finish loading.</h1>
         <p className="mt-4 text-sm leading-6 text-white/65">
           Your account and existing information have not been changed. Retry the page or return home.
         </p>

@@ -18,7 +18,7 @@ import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import MessageVisualScene from "@/components/MessageVisualScene";
-import LogisticsMessageTools from "@/components/LogisticsMessageTools";
+import LogisticsMessageTools, { type StructuredQuote } from "@/components/LogisticsMessageTools";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
@@ -54,6 +54,7 @@ type ConversationRow = {
   daily_message_limit: number | string | null;
   is_pro: boolean | null;
   archived?: boolean | null;
+  request_status?: "pending" | "accepted" | "declined" | null;
 };
 
 type Conversation = ConversationRow & {
@@ -61,6 +62,8 @@ type Conversation = ConversationRow & {
   role: Role;
   unreadCount: number;
 };
+
+type QuotePayload = StructuredQuote & { status?: "pending" | "accepted" | "declined"; listing_title?: string };
 
 type ChatMessage = {
   id: string;
@@ -71,6 +74,11 @@ type ChatMessage = {
   file_name: string | null;
   file_type: string | null;
   file_size: number | null;
+  edited_at?: string | null;
+  deleted_at?: string | null;
+  message_kind?: "text" | "quote" | "system" | null;
+  structured_payload?: QuotePayload | Record<string, unknown> | null;
+  starred_by_me?: boolean | null;
 };
 
 type AttachmentPayload = {
@@ -242,12 +250,15 @@ function recordingTime(seconds: number) {
   return `${minutes}:${remainder}`;
 }
 
-function fileToBase64(file: File) {
+function fileToBase64(file: File, onProgress?: (progress: number) => void) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () =>
-      reject(new Error("The selected file could not be read."));
+    reader.onerror = () => reject(new Error("The selected file could not be read."));
+    reader.onprogress = (event) => {
+      if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 68));
+    };
     reader.onload = () => {
+      onProgress?.(72);
       const result = String(reader.result || "");
       resolve(result.includes(",") ? result.split(",")[1] : result);
     };
@@ -318,7 +329,13 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
   const [query, setQuery] = useState("");
-  const [showArchived, setShowArchived] = useState(false);
+  const [folder, setFolder] = useState<"inbox" | "potential" | "archived">("inbox");
+  const [chatSearch, setChatSearch] = useState("");
+  const [chatSearchOpen, setChatSearchOpen] = useState(false);
+  const [starredOnly, setStarredOnly] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [failedUpload, setFailedUpload] = useState<{ file: File; caption?: string } | null>(null);
   const [archiveBusy, setArchiveBusy] = useState(false);
   const [wallpaperIndex, setWallpaperIndex] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -379,6 +396,26 @@ export default function MessagesPage() {
   }, []);
 
   useEffect(() => {
+    const viewport = window.visualViewport;
+    const syncHeight = () => {
+      const height = Math.max(320, Math.round(viewport?.height || window.innerHeight));
+      document.documentElement.style.setProperty("--loadlink-message-vh", `${height}px`);
+    };
+    syncHeight();
+    viewport?.addEventListener("resize", syncHeight);
+    viewport?.addEventListener("scroll", syncHeight);
+    window.addEventListener("resize", syncHeight);
+    window.addEventListener("orientationchange", syncHeight);
+    return () => {
+      viewport?.removeEventListener("resize", syncHeight);
+      viewport?.removeEventListener("scroll", syncHeight);
+      window.removeEventListener("resize", syncHeight);
+      window.removeEventListener("orientationchange", syncHeight);
+      document.documentElement.style.removeProperty("--loadlink-message-vh");
+    };
+  }, []);
+
+  useEffect(() => {
     const key = "loadlink-chat-wallpaper-session-v1";
     const stored = Number(window.sessionStorage.getItem(key));
     const next = Number.isInteger(stored) && stored >= 1 && stored <= CHAT_WALLPAPER_COUNT
@@ -426,22 +463,40 @@ export default function MessagesPage() {
     selectedConversation && !isPro && messagesUsedToday >= dailyMessageLimit,
   );
   const conversationBlocked = blockState.blocked_by_me || blockState.blocked_by_other;
+  const potentialDealPending = Boolean(selectedConversation?.role === "owner" && selectedConversation.request_status === "pending");
+  const potentialDealDeclined = Boolean(selectedConversation?.request_status === "declined");
 
   const visibleConversations = useMemo(() => {
     const search = query.trim().toLowerCase();
     return conversations.filter((conversation) => {
-      if (Boolean(conversation.archived) !== showArchived) return false;
+      const pendingDeal = conversation.role === "owner" && conversation.request_status === "pending";
+      if (folder === "archived" && !conversation.archived) return false;
+      if (folder === "potential" && (!pendingDeal || conversation.archived)) return false;
+      if (folder === "inbox" && (conversation.archived || pendingDeal || (conversation.role === "owner" && conversation.request_status === "declined"))) return false;
       if (!search) return true;
       return `${conversation.other_name} ${conversation.listing_title} ${conversation.last_message || ""}`
         .toLowerCase()
         .includes(search);
     });
-  }, [conversations, query, showArchived]);
+  }, [conversations, folder, query]);
 
   const archivedCount = useMemo(
     () => conversations.filter((conversation) => Boolean(conversation.archived)).length,
     [conversations],
   );
+  const potentialDealCount = useMemo(
+    () => conversations.filter((conversation) => conversation.role === "owner" && conversation.request_status === "pending" && !conversation.archived).length,
+    [conversations],
+  );
+  const searchedMessages = useMemo(() => {
+    const needle = chatSearch.trim().toLowerCase();
+    return messages.filter((message) => {
+      if (starredOnly && !message.starred_by_me) return false;
+      if (!needle) return true;
+      const structured = message.structured_payload ? JSON.stringify(message.structured_payload) : "";
+      return `${message.body || ""} ${message.file_name || ""} ${structured}`.toLowerCase().includes(needle);
+    });
+  }, [chatSearch, messages, starredOnly]);
 
   const loadConversations = useCallback(async (preferredId?: string) => {
     const requestSequence = ++conversationLoadSequenceRef.current;
@@ -526,7 +581,7 @@ export default function MessagesPage() {
         if (result.error) throw result.error;
         const rows = (result.data || []) as ChatMessage[];
         if (requestSequence !== messageLoadSequenceRef.current) return;
-        const signature = rows.map((row) => `${row.id}:${row.created_at}:${row.body}:${row.attachment_id || ""}`).join("|");
+        const signature = rows.map((row) => `${row.id}:${row.created_at}:${row.body}:${row.attachment_id || ""}:${row.edited_at || ""}:${row.deleted_at || ""}:${row.starred_by_me ? 1 : 0}:${row.message_kind || ""}:${JSON.stringify(row.structured_payload || {})}`).join("|");
         const changed = signature !== messageSignatureRef.current;
         if (changed) {
           const viewport = messageViewportRef.current;
@@ -734,6 +789,18 @@ export default function MessagesPage() {
   async function send(event?: FormEvent) {
     event?.preventDefault();
     if (!selectedConversation || !text.trim() || sending || uploading) return;
+    if (editingMessageId) {
+      await saveEditedMessage();
+      return;
+    }
+    if (potentialDealDeclined) {
+      setError("This potential deal was declined and can no longer receive messages.");
+      return;
+    }
+    if (potentialDealPending) {
+      setError("Accept this potential deal before replying.");
+      return;
+    }
     if (conversationBlocked) {
       setError(blockState.blocked_by_me ? "Unblock this user before sending a message." : "This user has blocked this conversation.");
       return;
@@ -765,6 +832,7 @@ export default function MessagesPage() {
         p_body: text.trim(),
       });
       if (result.error) throw result.error;
+      void sendPushNotification(selectedConversation, text.trim());
       forceScrollRef.current = true;
       typingActiveRef.current = false;
       setText("");
@@ -779,6 +847,149 @@ export default function MessagesPage() {
       setError(cleanError(sendError, "Message could not be sent."));
     } finally {
       setSending(false);
+    }
+  }
+
+  async function sendPushNotification(conversation: Conversation, preview: string) {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) return;
+      await fetch("/api/push/message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          threadId: conversation.id,
+          preview: preview.slice(0, 180),
+        }),
+      });
+    } catch {
+      // Push delivery is best-effort and must never block messaging.
+    }
+  }
+
+  async function sendStructuredQuote(quote: StructuredQuote) {
+    if (!selectedConversation || sending || uploading || conversationBlocked || dailyLimitReached || potentialDealPending || potentialDealDeclined) return;
+    setSending(true);
+    setError("");
+    try {
+      const result = await supabase.rpc("send_listing_guest_structured_message", {
+        p_thread_id: selectedConversation.id,
+        p_access_key: selectedConversation.accessKey,
+        p_kind: "quote",
+        p_payload: { ...quote, listing_title: selectedConversation.listing_title, status: "pending" },
+      });
+      if (result.error) throw result.error;
+      void sendPushNotification(selectedConversation, `New rate quote · R${quote.amount}`);
+      forceScrollRef.current = true;
+      await loadMessages(selectedConversation);
+      await loadConversations(selectedConversation.id);
+    } catch (quoteError) {
+      setError(cleanError(quoteError, "The structured quote could not be sent. Run LOADLINK-MESSAGES-V2.sql if the message upgrade is not installed yet."));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function beginEdit(message: ChatMessage) {
+    if (!selectedConversation || message.sender_role !== selectedConversation.role || message.deleted_at) return;
+    const age = Date.now() - new Date(message.created_at).getTime();
+    if (!Number.isFinite(age) || age > 15 * 60_000) {
+      setError("Messages can be edited for 15 minutes after sending.");
+      return;
+    }
+    setEditingMessageId(message.id);
+    updateTyping(message.body);
+    window.requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>('[data-loadlink-message-composer="true"]')?.focus());
+  }
+
+  async function saveEditedMessage() {
+    if (!selectedConversation || !editingMessageId || !text.trim() || sending) return;
+    setSending(true);
+    setError("");
+    try {
+      const result = await supabase.rpc("edit_listing_guest_message", {
+        p_message_id: editingMessageId,
+        p_access_key: selectedConversation.accessKey,
+        p_body: text.trim(),
+      });
+      if (result.error) throw result.error;
+      setEditingMessageId("");
+      setText("");
+      await loadMessages(selectedConversation);
+      await loadConversations(selectedConversation.id);
+    } catch (editError) {
+      setError(cleanError(editError, "The message could not be edited."));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function deleteMessage(message: ChatMessage) {
+    if (!selectedConversation || message.sender_role !== selectedConversation.role || message.deleted_at) return;
+    if (!window.confirm("Delete this message for everyone? This is available for 15 minutes after sending.")) return;
+    setError("");
+    try {
+      const result = await supabase.rpc("delete_listing_guest_message", {
+        p_message_id: message.id,
+        p_access_key: selectedConversation.accessKey,
+      });
+      if (result.error) throw result.error;
+      if (editingMessageId === message.id) { setEditingMessageId(""); setText(""); }
+      await loadMessages(selectedConversation);
+      await loadConversations(selectedConversation.id);
+    } catch (deleteError) {
+      setError(cleanError(deleteError, "The message could not be deleted."));
+    }
+  }
+
+  async function toggleStar(message: ChatMessage) {
+    if (!selectedConversation) return;
+    const next = !Boolean(message.starred_by_me);
+    setMessages((current) => current.map((item) => item.id === message.id ? { ...item, starred_by_me: next } : item));
+    const result = await supabase.rpc("set_listing_guest_message_star", {
+      p_message_id: message.id,
+      p_access_key: selectedConversation.accessKey,
+      p_starred: next,
+    });
+    if (result.error) {
+      setMessages((current) => current.map((item) => item.id === message.id ? { ...item, starred_by_me: !next } : item));
+      setError(cleanError(result.error, "The starred-message setting could not be saved."));
+    }
+  }
+
+  async function respondToQuote(message: ChatMessage, status: "accepted" | "declined") {
+    if (!selectedConversation || message.sender_role === selectedConversation.role) return;
+    setError("");
+    try {
+      const result = await supabase.rpc("respond_listing_guest_quote", {
+        p_message_id: message.id,
+        p_access_key: selectedConversation.accessKey,
+        p_status: status,
+      });
+      if (result.error) throw result.error;
+      void sendPushNotification(selectedConversation, status === "accepted" ? "Your LoadLink quote was accepted" : "Your LoadLink quote was declined");
+      await loadMessages(selectedConversation);
+    } catch (quoteError) {
+      setError(cleanError(quoteError, "The quote response could not be saved."));
+    }
+  }
+
+  async function updatePotentialDeal(status: "accepted" | "declined") {
+    if (!selectedConversation || selectedConversation.role !== "owner") return;
+    setError("");
+    try {
+      const result = await supabase.rpc("set_listing_guest_request_status", {
+        p_thread_id: selectedConversation.id,
+        p_access_key: selectedConversation.accessKey,
+        p_status: status,
+      });
+      if (result.error) throw result.error;
+      await loadConversations(selectedConversation.id);
+      if (status === "accepted") setFolder("inbox");
+      else returnToInbox();
+    } catch (requestError) {
+      setError(cleanError(requestError, "The potential-deal request could not be updated."));
     }
   }
 
@@ -821,6 +1032,14 @@ export default function MessagesPage() {
 
   async function sendAttachment(file: File, caption?: string) {
     if (!selectedConversation || uploading || sending) return;
+    if (potentialDealDeclined) {
+      setError("This potential deal was declined and can no longer receive attachments.");
+      return;
+    }
+    if (potentialDealPending) {
+      setError("Accept this potential deal before sending an attachment.");
+      return;
+    }
     if (conversationBlocked) {
       setError(blockState.blocked_by_me ? "Unblock this user before sending an attachment." : "This user has blocked this conversation.");
       return;
@@ -840,11 +1059,14 @@ export default function MessagesPage() {
     }
 
     setUploading(true);
+    setUploadProgress(1);
+    setFailedUpload(null);
     setError("");
     try {
       const user = await getFreshAuthenticatedUser();
       if (!user) throw new Error("Your sign-in session expired.");
-      const base64 = await fileToBase64(file);
+      const base64 = await fileToBase64(file, setUploadProgress);
+      setUploadProgress(78);
       const result = await supabase.rpc("send_listing_guest_attachment", {
         p_thread_id: selectedConversation.id,
         p_access_key: selectedConversation.accessKey,
@@ -854,6 +1076,8 @@ export default function MessagesPage() {
         p_caption: caption ?? (text.trim() || null),
       });
       if (result.error) throw result.error;
+      setUploadProgress(100);
+      void sendPushNotification(selectedConversation, fileType.startsWith("audio/") ? "Voice note" : file.name);
       forceScrollRef.current = true;
       typingActiveRef.current = false;
       setText("");
@@ -865,9 +1089,11 @@ export default function MessagesPage() {
       await loadMessages(selectedConversation);
       await loadConversations(selectedConversation.id);
     } catch (uploadError) {
-      setError(cleanError(uploadError, fileType.startsWith("audio/") ? "The voice note could not be sent." : "The file could not be sent."));
+      setFailedUpload({ file, caption });
+      setError(cleanError(uploadError, fileType.startsWith("audio/") ? "The voice note could not be sent. You can retry it below." : "The file could not be sent. You can retry it below."));
     } finally {
       setUploading(false);
+      window.setTimeout(() => setUploadProgress(0), 350);
     }
   }
 
@@ -879,7 +1105,7 @@ export default function MessagesPage() {
   }
 
   async function startRecording() {
-    if (!selectedConversation || recording || uploading || sending || conversationBlocked || dailyLimitReached) return;
+    if (!selectedConversation || recording || uploading || sending || conversationBlocked || dailyLimitReached || potentialDealPending || potentialDealDeclined) return;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
       setError("Voice notes are not supported by this browser. You can attach an audio file instead.");
       return;
@@ -982,8 +1208,8 @@ export default function MessagesPage() {
         throw result.error;
       }
       setError(willArchive ? "Conversation archived." : "Conversation restored to the inbox.");
-      if (willArchive && !showArchived) returnToInbox();
-      if (!willArchive && showArchived) returnToInbox();
+      if (willArchive && folder !== "archived") returnToInbox();
+      if (!willArchive && folder === "archived") returnToInbox();
     } catch (archiveError) {
       setError(cleanError(archiveError, "The archive setting could not be saved."));
     } finally {
@@ -1081,6 +1307,10 @@ export default function MessagesPage() {
     selectedIdRef.current = conversation.id;
     setSelectedId(conversation.id);
     setShowDetails(false);
+    setChatSearch("");
+    setChatSearchOpen(false);
+    setStarredOnly(false);
+    setEditingMessageId("");
     window.history.replaceState({}, "", `/messages?thread=${conversation.id}`);
   }
 
@@ -1089,6 +1319,10 @@ export default function MessagesPage() {
     setSelectedId("");
     setMessages([]);
     setShowDetails(false);
+    setChatSearch("");
+    setChatSearchOpen(false);
+    setStarredOnly(false);
+    setEditingMessageId("");
     window.history.replaceState({}, "", "/messages");
   }
 
@@ -1111,35 +1345,17 @@ export default function MessagesPage() {
         darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"
       }`}
     >
-      <header className={`relative grid h-[72px] grid-cols-[52px_minmax(0,1fr)_56px] items-center gap-3 border-b px-3 md:h-20 md:grid-cols-[120px_1fr_120px] md:px-5 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"}`}>
-        <div className="relative z-10 flex items-center gap-1">
+      <header className={`relative h-[72px] shrink-0 border-b md:h-20 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"}`}>
+        <div className="absolute left-3 top-1/2 z-10 -translate-y-1/2 md:left-5">
           <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
-          <Link
-            href="/"
-            className="hidden items-center gap-2 text-sm font-black md:inline-flex"
-            aria-label="Back to LoadLink home"
-          >
-            <span className="text-2xl">←</span>
-            <span>Home</span>
-          </Link>
         </div>
         <HomeLogoLink
-          theme={darkMode ? "dark" : "light"}
-          className="pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+          theme="light"
+          showGlow={false}
+          className="loadlink-official-header-logo pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md bg-white px-2 py-1"
           logoClassName="loadlink-messages-header-logo"
         />
-        <div className="relative z-10 flex items-center justify-end gap-2">
-          <Link
-            href="/account/settings#message-privacy"
-            className="hidden text-[10px] font-black uppercase tracking-[.1em] text-[#b88900] lg:block"
-          >
-            Privacy
-          </Link>
-          <button
-            type="button"
-            onClick={() => loadConversations(selectedIdRef.current).catch((refreshError) => setError(cleanError(refreshError, "Could not refresh.")))}
-            className="hidden text-[11px] font-black uppercase tracking-wide text-[#b88900] sm:block"
-          >Refresh</button>
+        <div className="absolute right-3 top-1/2 z-10 -translate-y-1/2 md:right-5">
           <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} />
         </div>
       </header>
@@ -1151,12 +1367,7 @@ export default function MessagesPage() {
           <div className="border-b border-black/10 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[.22em] text-[#b88900]">
-                  LoadLink
-                </p>
-                <h1 className="mt-1 text-3xl font-black tracking-[-.04em]">
-                  Messages
-                </h1>
+                <h1 className="text-3xl font-black tracking-[-.04em]">Messages</h1>
               </div>
               <span className="rounded-full bg-black px-3 py-1.5 text-xs font-black text-[#f6b800]">
                 {conversations.reduce(
@@ -1175,25 +1386,10 @@ export default function MessagesPage() {
                 className="h-12 w-full rounded-xl border border-black/10 bg-[#f5f3ed] px-4 text-sm font-semibold outline-none transition focus:border-[#f6b800] focus:bg-white"
               />
             </label>
-            <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-black/[.04] p-1" role="tablist" aria-label="Conversation folders">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={!showArchived}
-                onClick={() => { setShowArchived(false); setQuery(""); }}
-                className={`rounded-lg px-3 py-2 text-[11px] font-black uppercase tracking-wide transition ${!showArchived ? "bg-black text-[#f6b800] shadow-sm" : "text-black/45"}`}
-              >
-                Inbox
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={showArchived}
-                onClick={() => { setShowArchived(true); setQuery(""); }}
-                className={`rounded-lg px-3 py-2 text-[11px] font-black uppercase tracking-wide transition ${showArchived ? "bg-black text-[#f6b800] shadow-sm" : "text-black/45"}`}
-              >
-                Archived{archivedCount ? ` (${archivedCount})` : ""}
-              </button>
+            <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl bg-black/[.04] p-1" role="tablist" aria-label="Conversation folders">
+              <button type="button" role="tab" aria-selected={folder === "inbox"} onClick={() => { setFolder("inbox"); setQuery(""); }} className={`rounded-lg px-2 py-2 text-[10px] font-black uppercase tracking-wide transition ${folder === "inbox" ? "bg-black text-white shadow-sm" : "text-black/45"}`}>Inbox</button>
+              <button type="button" role="tab" aria-selected={folder === "potential"} onClick={() => { setFolder("potential"); setQuery(""); }} className={`rounded-lg px-2 py-2 text-[10px] font-black uppercase tracking-wide transition ${folder === "potential" ? "bg-black text-white shadow-sm" : "text-black/45"}`}>Potential Deals{potentialDealCount ? ` (${potentialDealCount})` : ""}</button>
+              <button type="button" role="tab" aria-selected={folder === "archived"} onClick={() => { setFolder("archived"); setQuery(""); }} className={`rounded-lg px-2 py-2 text-[10px] font-black uppercase tracking-wide transition ${folder === "archived" ? "bg-black text-white shadow-sm" : "text-black/45"}`}>Archived{archivedCount ? ` (${archivedCount})` : ""}</button>
             </div>
           </div>
 
@@ -1258,12 +1454,14 @@ export default function MessagesPage() {
                   <MessageIcon />
                 </div>
                 <h2 className="mt-5 text-xl font-black">
-                  {showArchived ? "No archived conversations" : "No conversations yet"}
+                  {folder === "archived" ? "No archived conversations" : folder === "potential" ? "No potential deals yet" : "No conversations yet"}
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-black/55">
-                  {showArchived
+                  {folder === "archived"
                     ? "Archived conversations stay available here until you restore them."
-                    : "Open a listing and tap Message to start a private conversation."}
+                    : folder === "potential"
+                      ? "New enquiries from people you have not accepted yet will appear here."
+                      : "Open a listing and tap Message to start a private conversation."}
                 </p>
                 <Link
                   href="/jobs"
@@ -1307,7 +1505,7 @@ export default function MessagesPage() {
                   >
                     {activityText(selectedConversation, presenceNow)}
                   </p>
-                  <p className="hidden truncate text-[11px] font-semibold text-[#8a6700] sm:block">
+                  <p className="hidden truncate text-[11px] font-semibold text-black/40 sm:block">
                     {replyText(selectedConversation.average_reply_minutes)}
                   </p>
                   <p
@@ -1339,6 +1537,7 @@ export default function MessagesPage() {
                   >
                     {blockBusy ? "Saving…" : blockState.blocked_by_me ? "Unblock" : "Block"}
                   </button>
+                  <button type="button" onClick={() => setChatSearchOpen((value) => !value)} className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black" aria-label="Search this conversation" aria-expanded={chatSearchOpen}><SearchIcon /></button>
                   <button
                     type="button"
                     onClick={() => setShowDetails((value) => !value)}
@@ -1351,10 +1550,27 @@ export default function MessagesPage() {
                 </div>
               </header>
 
-              <div className="loadlink-chat-privacy border-b border-[#d7b33b]/35 bg-[#fff7dc] px-4 py-2.5 text-[11px] font-semibold leading-5 text-black/60">
-                Messages and attachments are protected in transit and stored
-                privately. Only people in this conversation can access them.
+              <div className="loadlink-listing-context flex items-center gap-3 border-b border-black/10 bg-white px-3 py-2.5 md:px-5">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black text-[#f6b800]"><BriefcaseIcon /></span>
+                <div className="min-w-0 flex-1"><p className="text-[10px] font-semibold text-black/45">Discussing</p><p className="truncate text-sm font-black">{selectedConversation.listing_title}</p></div>
+                <Link href={`/jobs#job-${selectedConversation.listing_id}`} className="shrink-0 rounded-xl border border-black/10 px-3 py-2 text-[10px] font-black uppercase">View listing</Link>
               </div>
+              <div className="loadlink-chat-privacy border-b border-black/10 bg-[#f7f4ed] px-4 py-2 text-[10px] font-semibold text-black/50">Private conversation · attachments are visible only to participants.</div>
+
+              {potentialDealPending ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#f6b800]/35 bg-[#fff8de] px-4 py-3 text-xs font-semibold text-black">
+                  <span><strong>Potential deal:</strong> this is a new enquiry. Accept it to continue the conversation.</span>
+                  <div className="flex flex-wrap gap-2"><button type="button" onClick={() => void updatePotentialDeal("accepted")} className="rounded-xl bg-black px-3 py-2 text-[10px] font-black uppercase text-white">Accept deal</button><button type="button" onClick={() => void updatePotentialDeal("declined")} className="rounded-xl border border-black/15 px-3 py-2 text-[10px] font-black uppercase">Decline</button><button type="button" onClick={() => void toggleBlock()} disabled={blockBusy} className="rounded-xl border border-black/15 px-3 py-2 text-[10px] font-black uppercase disabled:opacity-50">{blockState.blocked_by_me ? "Unblock" : "Block"}</button><button type="button" onClick={() => void reportConversation()} disabled={reportBusy} className="rounded-xl border border-black/15 px-3 py-2 text-[10px] font-black uppercase disabled:opacity-50">Report</button></div>
+                </div>
+              ) : null}
+
+              {potentialDealDeclined ? (
+                <div className="border-b border-black/10 bg-[#f5f3ed] px-4 py-3 text-xs font-bold text-black/55 md:px-5">This potential deal was declined. The conversation is read-only.</div>
+              ) : null}
+
+              {chatSearchOpen ? (
+                <div className="flex items-center gap-2 border-b border-black/10 bg-white px-3 py-2 md:px-5"><SearchIcon /><input autoFocus value={chatSearch} onChange={(event) => setChatSearch(event.target.value)} placeholder="Search messages, rates or files" className="h-10 min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none" /><button type="button" onClick={() => setStarredOnly((value) => !value)} className={`h-9 shrink-0 rounded-xl border px-2 text-[9px] font-black ${starredOnly ? "border-black bg-black text-white" : "border-black/10 text-black/50"}`}>{starredOnly ? "★ Starred" : "☆ Starred"}</button><span className="hidden text-[10px] font-bold text-black/40 sm:inline">{chatSearch.trim() || starredOnly ? `${searchedMessages.length} found` : ""}</span><button type="button" onClick={() => { setChatSearch(""); setStarredOnly(false); setChatSearchOpen(false); }} className="h-9 w-9 rounded-full border border-black/10 text-sm font-black">×</button></div>
+              ) : null}
 
               {conversationBlocked ? (
                 <div className="flex items-center justify-between gap-3 border-b border-red-300 bg-red-50 px-4 py-3 text-xs font-bold text-red-700">
@@ -1374,15 +1590,13 @@ export default function MessagesPage() {
                 className="loadlink-message-viewport loadlink-chat-wallpaper relative min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8"
                 style={{ backgroundImage: `url(/images/chat-wallpapers/chat-${String(wallpaperIndex).padStart(2, "0")}.svg)` }}
               >
-                <MessageVisualScene mode="background" darkMode={darkMode} />
                 {messagesLoading && messages.length === 0 ? (
-                  <MessageVisualScene mode="inline" darkMode={darkMode} />
-                ) : messages.length ? (
+                  <div className="flex h-full min-h-[180px] items-center justify-center"><div className="flex items-center gap-3 rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-bold text-black/55"><span className="h-4 w-4 animate-spin rounded-full border-2 border-black/20 border-t-black" />Loading conversation…</div></div>
+                ) : searchedMessages.length ? (
                   <div className="mx-auto max-w-3xl space-y-3">
-                    {messages.map((message, index) => {
-                      const mine =
-                        message.sender_role === selectedConversation.role;
-                      const previous = messages[index - 1];
+                    {searchedMessages.map((message, index) => {
+                      const mine = message.sender_role === selectedConversation.role;
+                      const previous = searchedMessages[index - 1];
                       const showDay =
                         !previous ||
                         new Date(previous.created_at).toDateString() !==
@@ -1418,36 +1632,29 @@ export default function MessagesPage() {
                                   : "rounded-bl-sm border border-black/5 bg-white text-black"
                               }`}
                             >
-                              {message.attachment_id ? (
+                              {message.deleted_at ? (
+                                <p className={`text-sm italic ${mine ? "text-white/55" : "text-black/45"}`}>Message deleted</p>
+                              ) : message.message_kind === "quote" && message.structured_payload ? (
+                                <QuoteMessageCard message={message} mine={mine} canRespond={!mine} onRespond={(status) => void respondToQuote(message, status)} />
+                              ) : message.attachment_id ? (
                                 message.file_type?.startsWith("audio/") ? (
                                   <VoiceAttachment message={message} accessKey={selectedConversation.accessKey} mine={mine} onError={setError} />
                                 ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => downloadAttachment(message)}
-                                    className={`mb-2 flex w-full items-center gap-3 rounded-xl border p-3 text-left ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}
-                                  >
-                                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${mine ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><PaperclipIcon /></span>
-                                    <span className="min-w-0 flex-1">
-                                      <strong className="block truncate text-xs font-black">{message.file_name || "Attachment"}</strong>
-                                      <span className={`mt-0.5 block text-[10px] font-semibold ${mine ? "text-white/55" : "text-black/45"}`}>{fileSizeLabel(message.file_size)} · Tap to open</span>
-                                    </span>
-                                  </button>
+                                  <DocumentAttachmentCard message={message} mine={mine} onOpen={() => void downloadAttachment(message)} />
                                 )
                               ) : null}
-                              {message.body &&
-                              (!message.attachment_id ||
-                                message.body !== "Shared an attachment") ? (
-                                <p className="whitespace-pre-wrap break-words text-sm font-medium leading-6">
-                                  {message.body}
-                                </p>
+                              {!message.deleted_at && message.message_kind !== "quote" && message.body && (!message.attachment_id || message.body !== "Shared an attachment") ? (
+                                <p className="whitespace-pre-wrap break-words text-sm font-medium leading-6">{message.body}</p>
                               ) : null}
-                              <div
-                                className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] font-bold ${mine ? "text-white/45" : "text-black/35"}`}
-                              >
-                                <span>{formatClock(message.created_at)}</span>
-                                {mine ? <span aria-label="Sent">✓</span> : null}
+                              <div className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] font-bold ${mine ? "text-white/45" : "text-black/35"}`}>
+                                {message.edited_at && !message.deleted_at ? <span>edited ·</span> : null}<span>{formatClock(message.created_at)}</span>{mine ? <span aria-label="Sent">✓</span> : null}
                               </div>
+                              {!message.deleted_at ? (
+                                <div className={`mt-2 flex items-center gap-2 border-t pt-2 text-[9px] font-black ${mine ? "border-white/10" : "border-black/5"}`}>
+                                  <button type="button" onClick={() => void toggleStar(message)} className={message.starred_by_me ? "text-[#f6b800]" : mine ? "text-white/45" : "text-black/40"}>{message.starred_by_me ? "★ Starred" : "☆ Star"}</button>
+                                  {mine && message.message_kind !== "quote" && Date.now() - new Date(message.created_at).getTime() <= 15 * 60_000 ? <><button type="button" onClick={() => beginEdit(message)} className={mine ? "text-white/55" : "text-black/45"}>Edit</button><button type="button" onClick={() => void deleteMessage(message)} className={mine ? "text-red-300" : "text-red-600"}>Delete</button></> : null}
+                                </div>
+                              ) : null}
                             </div>
                           </div>
                         </div>
@@ -1470,13 +1677,8 @@ export default function MessagesPage() {
                       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-black text-[#f6b800]">
                         <MessageIcon />
                       </div>
-                      <h3 className="mt-5 text-2xl font-black">
-                        Start the conversation
-                      </h3>
-                      <p className="mt-2 text-sm leading-6 text-black/50">
-                        Ask about availability, location, timing, price or the
-                        requirements for this listing.
-                      </p>
+                      <h3 className="mt-5 text-2xl font-black">{chatSearch.trim() || starredOnly ? (starredOnly && !chatSearch.trim() ? "No starred messages" : "No matching messages") : "Start the conversation"}</h3>
+                      <p className="mt-2 text-sm leading-6 text-black/50">{chatSearch.trim() || starredOnly ? "Try a different search or turn off the Starred filter." : "Ask about availability, location, timing, price or the requirements for this listing."}</p>
                     </div>
                   </div>
                 )}
@@ -1497,8 +1699,11 @@ export default function MessagesPage() {
                   sending ||
                   uploading ||
                   dailyLimitReached ||
-                  conversationBlocked
+                  conversationBlocked ||
+                  potentialDealPending ||
+                  potentialDealDeclined
                 }
+                onSendQuote={sendStructuredQuote}
                 onInsert={(message) =>
                   updateTyping(
                     text.trim() ? `${text.trim()}\n\n${message}` : message,
@@ -1517,11 +1722,14 @@ export default function MessagesPage() {
                   onChange={uploadFile}
                   className="hidden"
                 />
+                {editingMessageId ? <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 rounded-xl border border-black/10 bg-[#f7f4ed] px-3 py-2 text-[10px] font-bold"><span>Editing message · changes are allowed for 15 minutes after sending.</span><button type="button" onClick={() => { setEditingMessageId(""); setText(""); }} className="font-black uppercase">Cancel</button></div> : null}
+                {uploading && uploadProgress ? <div className="mx-auto mb-2 max-w-3xl"><div className="h-1.5 overflow-hidden rounded-full bg-black/10"><div className="h-full rounded-full bg-[#f6b800] transition-[width]" style={{ width: `${uploadProgress}%` }} /></div><p className="mt-1 text-right text-[9px] font-bold text-black/40">Uploading {uploadProgress}%</p></div> : null}
+                {failedUpload && !uploading ? <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[10px] font-bold text-red-700"><span className="min-w-0 truncate">{failedUpload.file.type.startsWith("audio/") ? "Voice note" : failedUpload.file.name} failed to send.</span><span className="flex shrink-0 gap-2"><button type="button" onClick={() => void sendAttachment(failedUpload.file, failedUpload.caption)} className="rounded-lg bg-red-600 px-3 py-1.5 font-black text-white">Retry</button><button type="button" onClick={() => setFailedUpload(null)} className="rounded-lg border border-red-300 px-2 py-1.5 font-black">Dismiss</button></span></div> : null}
                 <div className="mx-auto flex max-w-3xl items-end gap-2">
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={sending || uploading || dailyLimitReached || conversationBlocked}
+                    disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
                     className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-black/10 bg-[#f3f0e8] text-black disabled:opacity-40"
                     aria-label="Attach a file"
                   >
@@ -1530,7 +1738,7 @@ export default function MessagesPage() {
                   <button
                     type="button"
                     onClick={() => recording ? stopRecording(false) : void startRecording()}
-                    disabled={sending || uploading || dailyLimitReached || conversationBlocked}
+                    disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
                     className={`flex h-12 shrink-0 items-center justify-center rounded-full border px-3 text-xs font-black ${recording ? "min-w-[82px] border-red-500 bg-red-500 text-white" : "w-12 border-black/10 bg-[#f3f0e8] text-black"} disabled:opacity-40`}
                     aria-label={recording ? "Stop and send voice note" : "Record voice note"}
                   >
@@ -1541,8 +1749,13 @@ export default function MessagesPage() {
                       value={text}
                       onChange={(event) => updateTyping(event.target.value)}
                       onKeyDown={handleComposerKeyDown}
+                      data-loadlink-message-composer="true"
                       placeholder={
-                        conversationBlocked
+                        potentialDealDeclined
+                          ? "Potential deal declined"
+                          : potentialDealPending
+                            ? "Accept this potential deal to reply"
+                            : conversationBlocked
                           ? "Messaging is blocked"
                           : dailyLimitReached
                             ? "Daily free message limit reached"
@@ -1554,14 +1767,14 @@ export default function MessagesPage() {
                       }
                       rows={1}
                       maxLength={4000}
-                      disabled={sending || uploading || dailyLimitReached || conversationBlocked}
+                      disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
                       className="max-h-32 min-h-8 w-full resize-none bg-transparent py-1 text-sm font-medium outline-none placeholder:text-black/35 disabled:opacity-50"
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={
-                      !text.trim() || sending || uploading || dailyLimitReached || conversationBlocked
+                      !text.trim() || sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined
                     }
                     className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f6b800] text-black shadow-sm transition active:scale-95 disabled:bg-black/10 disabled:text-black/25"
                     aria-label="Send message"
@@ -1608,10 +1821,7 @@ export default function MessagesPage() {
                 <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-black text-[#f6b800]">
                   <MessageIcon large />
                 </div>
-                <p className="mt-6 text-xs font-black uppercase tracking-[.22em] text-[#b88900]">
-                  LoadLink chat
-                </p>
-                <h2 className="mt-2 text-4xl font-black tracking-[-.05em]">
+                <h2 className="mt-6 text-4xl font-black tracking-[-.05em]">
                   Your logistics conversations in one place
                 </h2>
                 <p className="mt-4 text-sm font-medium leading-7 text-black/50">
@@ -1640,6 +1850,8 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [waveform, setWaveform] = useState<WaveformBar[]>(() => defaultWaveformBars());
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState<1 | 1.5 | 2>(1);
   const audioRef = useRef<HTMLAudioElement>(null);
   const autoplayRef = useRef(false);
 
@@ -1661,6 +1873,7 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
       return;
     }
     setLoading(true);
+    setLoadFailed(false);
     try {
       const result = await supabase.rpc("get_listing_guest_attachment", {
         p_attachment_id: message.attachment_id,
@@ -1674,7 +1887,8 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
       autoplayRef.current = playAfterLoad;
       setUrl(URL.createObjectURL(blob));
     } catch (error) {
-      onError(cleanError(error, "Voice note could not be opened."));
+      setLoadFailed(true);
+      onError(cleanError(error, "Voice note could not be opened. Tap Retry on the voice note."));
     } finally {
       setLoading(false);
     }
@@ -1687,7 +1901,7 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
     }
     const audio = audioRef.current;
     if (!audio) return;
-    if (audio.paused) await audio.play().catch(() => undefined);
+    if (audio.paused) { audio.playbackRate = playbackRate; await audio.play().catch(() => undefined); }
     else audio.pause();
   }
 
@@ -1749,10 +1963,46 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
           </button>
           <div className={`mt-0.5 flex items-center justify-between gap-3 text-[10px] font-bold ${mine ? "text-white/58" : "text-black/48"}`}>
             <span>{url ? timeLabel(currentTime) : "Voice note"}</span>
-            <span>{duration ? timeLabel(duration) : fileSizeLabel(message.file_size)}</span>
+            <span className="flex items-center gap-2">{loadFailed ? <button type="button" onClick={() => void loadVoiceNote(false)} className="font-black underline">Retry</button> : null}<button type="button" onClick={() => { const next = playbackRate === 1 ? 1.5 : playbackRate === 1.5 ? 2 : 1; setPlaybackRate(next); if (audioRef.current) audioRef.current.playbackRate = next; }} className="rounded-full border border-current/20 px-2 py-0.5 font-black">{playbackRate}×</button><span>{duration ? timeLabel(duration) : fileSizeLabel(message.file_size)}</span></span>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function documentKind(message: ChatMessage) {
+  const name = (message.file_name || "").toLowerCase();
+  if (/\bpod\b|proof[- _]?of[- _]?delivery/.test(name)) return "Proof of delivery";
+  if (/invoice|tax[- _]?invoice/.test(name)) return "Invoice";
+  if (/quote|quotation/.test(name)) return "Quotation";
+  if (message.file_type?.startsWith("image/")) return "Photo";
+  return "Document";
+}
+
+function DocumentAttachmentCard({ message, mine, onOpen }: { message: ChatMessage; mine: boolean; onOpen: () => void }) {
+  const kind = documentKind(message);
+  return (
+    <button type="button" onClick={onOpen} className={`mb-2 w-full rounded-2xl border p-3 text-left ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}>
+      <div className="flex items-center gap-3">
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${mine ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><PaperclipIcon /></span>
+        <span className="min-w-0 flex-1"><span className={`block text-[9px] font-black uppercase tracking-wide ${mine ? "text-white/50" : "text-black/45"}`}>{kind}</span><strong className="mt-0.5 block truncate text-xs font-black">{message.file_name || kind}</strong><span className={`mt-0.5 block text-[10px] font-semibold ${mine ? "text-white/55" : "text-black/45"}`}>{fileSizeLabel(message.file_size)} · Open</span></span>
+      </div>
+    </button>
+  );
+}
+
+function QuoteMessageCard({ message, mine, canRespond, onRespond }: { message: ChatMessage; mine: boolean; canRespond: boolean; onRespond: (status: "accepted" | "declined") => void }) {
+  const payload = (message.structured_payload || {}) as QuotePayload;
+  const status = payload.status || "pending";
+  const unitText = payload.unit === "km" ? "per km" : payload.unit === "ton" ? "per ton" : payload.unit === "day" ? "per day" : "total trip";
+  const statusClass = status === "accepted" ? "bg-emerald-500/15 text-emerald-500" : status === "declined" ? "bg-red-500/15 text-red-500" : mine ? "bg-white/10 text-white/60" : "bg-black/5 text-black/55";
+  return (
+    <div className={`min-w-[230px] rounded-2xl border p-3 ${mine ? "border-white/15 bg-white/[.06]" : "border-black/10 bg-[#fffaf0]"}`}>
+      <div className="flex items-center justify-between gap-3"><strong className="text-xs font-black uppercase tracking-wide">Rate quote</strong><span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase ${statusClass}`}>{status}</span></div>
+      <p className="mt-3 text-2xl font-black">R{payload.amount || "—"} <span className={`text-[10px] font-bold ${mine ? "text-white/50" : "text-black/45"}`}>{unitText}</span></p>
+      <div className={`mt-3 grid gap-1 text-[10px] font-semibold ${mine ? "text-white/65" : "text-black/60"}`}>{payload.vehicle ? <span><strong>Vehicle:</strong> {payload.vehicle}</span> : null}{payload.route ? <span><strong>Route:</strong> {payload.route}</span> : null}{payload.availability ? <span><strong>Availability:</strong> {payload.availability}</span> : null}<span><strong>VAT:</strong> {(payload.vat || "not_applicable").replace("_", " ")}</span>{payload.terms ? <span><strong>Terms:</strong> {payload.terms}</span> : null}</div>
+      {canRespond && status === "pending" ? <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => onRespond("declined")} className={`h-9 rounded-xl border text-[10px] font-black uppercase ${mine ? "border-white/20" : "border-black/15"}`}>Decline</button><button type="button" onClick={() => onRespond("accepted")} className="h-9 rounded-xl bg-[#f6b800] text-[10px] font-black uppercase text-black">Accept quote</button></div> : null}
     </div>
   );
 }
@@ -1938,6 +2188,9 @@ function PlayPauseIcon({ playing }: { playing: boolean }) {
     </svg>
   );
 }
+
+function SearchIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="2" /><path d="m16 16 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
+function BriefcaseIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16v12H4V7Zm5 0V4h6v3M4 12h16" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>; }
 
 function InfoIcon() {
   return (

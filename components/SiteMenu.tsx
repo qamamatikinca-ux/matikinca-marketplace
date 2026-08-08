@@ -105,7 +105,7 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
       { label: "Notifications", href: "/notifications", description: "Reviews, messages and account updates", icon: "notifications" },
       { label: "My posts", href: "/my-posts", description: "Manage your listings", icon: "posts" },
       { label: "Profile settings", href: "/account/settings", description: "Profile, account and alerts", icon: "settings" },
-      { label: "Privacy & messaging", href: "/account/settings#message-privacy", description: "Activity, typing and message requests", icon: "privacy" },
+      { label: "Privacy & messaging", href: "/account/settings#message-privacy", description: "Potential deals, activity and privacy", icon: "privacy" },
       ...(account.driverProfile ? [{ label: "Driver profile", href: "/driver-profile", description: "Manage your driver profile", icon: "driver" as const }] : []),
       dealerLink,
       { label: "Packages", href: "/packages", description: "Manual, Pro and Dealer plans", icon: "packages" },

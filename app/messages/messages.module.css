@@ -1,73 +1,62 @@
 .messageApp {
   --message-gold: #f6b800;
+  height: var(--loadlink-message-vh, 100dvh) !important;
+  min-height: 0 !important;
+  max-height: var(--loadlink-message-vh, 100dvh) !important;
 }
 
 .messageApp :global(.loadlink-logo-wrap) {
-  width: clamp(140px, 34vw, 176px);
+  width: clamp(132px, 32vw, 158px);
 }
 
 .messageApp :global(.loadlink-messages-header-logo) {
   width: 100% !important;
 }
 
+.messageApp :global(.loadlink-official-header-logo) {
+  min-width: 0;
+  max-width: min(46vw, 180px);
+}
+
 .messageApp :global(.loadlink-chat-wallpaper) {
   position: relative;
   isolation: isolate;
-  background-color: #f4f0e6;
+  background-color: #f6f3ec;
   background-repeat: repeat;
   background-position: center top;
   background-size: min(680px, 125vw) auto;
-  background-blend-mode: multiply;
-}
-
-.messageApp :global(.loadlink-chat-wallpaper)::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(255,255,255,.34), rgba(255,255,255,.68));
+  background-blend-mode: normal !important;
 }
 
 :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-wallpaper) {
-  background-color: #0d0c09 !important;
-  background-blend-mode: screen;
-}
-
-:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-wallpaper)::before {
-  background: linear-gradient(180deg, rgba(6,6,6,.42), rgba(6,6,6,.70));
+  background-color: #0d0d0d !important;
+  background-blend-mode: normal !important;
 }
 
 .messageApp :global(.loadlink-chat-privacy) {
-  color: rgba(17,17,17,.66) !important;
+  color: rgba(17,17,17,.58) !important;
 }
 
 .messageApp :global(.loadlink-chat-composer-meta) {
-  color: rgba(17,17,17,.52) !important;
+  color: rgba(17,17,17,.50) !important;
 }
 
 :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-privacy) {
-  border-color: rgba(246,184,0,.24) !important;
-  background: #1a170e !important;
-  color: rgba(255,255,255,.76) !important;
-}
-
-:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-composer-meta) {
+  border-color: rgba(255,255,255,.08) !important;
+  background: #101010 !important;
   color: rgba(255,255,255,.62) !important;
 }
 
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-composer-meta) {
+  color: rgba(255,255,255,.56) !important;
+}
+
 :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-composer-meta) a {
-  color: #f6b800 !important;
+  color: #d9a400 !important;
 }
 
 :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-voice-note) {
   color: #fff;
-}
-
-:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-details-panel) button[class*="bg-[#fff8de]"] {
-  background: #1c180d !important;
-  border-color: rgba(246,184,0,.4) !important;
-  color: #f6b800 !important;
 }
 
 .messageApp img[alt$=" profile"] {
@@ -83,10 +72,10 @@
 
 @media (max-width: 420px) {
   .messageApp :global(.loadlink-logo-wrap) {
-    width: clamp(136px, 38vw, 164px);
+    width: clamp(124px, 31vw, 148px);
   }
 
   .messageApp :global(.loadlink-chat-header) {
-    gap: .55rem;
+    gap: .5rem;
   }
 }

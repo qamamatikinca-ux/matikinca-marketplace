@@ -1,0 +1,28 @@
+LOADLINK PUSH NOTIFICATIONS — ONE-TIME SETUP
+
+The Messages V2 website code includes real Web Push support. Push remains safely disabled until the required Vercel environment variables are added.
+
+1) After the update installer succeeds, open the Codespace terminal and generate VAPID keys:
+
+   npx web-push generate-vapid-keys
+
+2) In Vercel > LoadLink project > Settings > Environment Variables, add:
+
+   NEXT_PUBLIC_VAPID_PUBLIC_KEY=<Public Key from the command above>
+   VAPID_PRIVATE_KEY=<Private Key from the command above>
+   VAPID_SUBJECT=mailto:loadlinksouthafrica@gmail.com
+   SUPABASE_SERVICE_ROLE_KEY=<your Supabase service_role key>
+
+IMPORTANT: SUPABASE_SERVICE_ROLE_KEY and VAPID_PRIVATE_KEY must NEVER be prefixed with NEXT_PUBLIC_ and must never be pasted into browser code.
+
+3) Redeploy once after saving those environment variables.
+
+4) Run LOADLINK-MESSAGES-V2.sql in Supabase if you have not already done so.
+
+5) In LoadLink: Settings > Messages > Push notifications > Enable.
+
+IPHONE / IOS:
+For notifications while LoadLink is fully closed, open LoadLink in Safari, use Share > Add to Home Screen, open the installed LoadLink web app, then enable Push notifications in Settings > Messages. iOS Web Push is provided to Home Screen web apps.
+
+Privacy:
+The server checks the recipient's "Show notification previews" preference. If it is off, the push notification contains only a generic new-message notice and not message text.

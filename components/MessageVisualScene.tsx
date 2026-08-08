@@ -55,7 +55,6 @@ export default function MessageVisualScene({ mode, darkMode }: { mode: Mode; dar
         <div className="loadlink-loader-road"><span /><span /><span /></div>
       </div>
       <div className="loadlink-message-loader-copy">
-        <p>LOADLINK MESSAGES</p>
         <h1>{inline ? "Loading conversation" : scene.name}</h1>
         <span>{scene.note}</span>
       </div>

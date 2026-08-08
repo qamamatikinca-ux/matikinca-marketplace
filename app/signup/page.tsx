@@ -92,8 +92,7 @@ export default function SignUpPage() {
 
       <section className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-xl items-center px-5 py-10">
         <div className={`w-full border p-6 md:p-8 ${surface}`}>
-          <p className="text-xs font-black uppercase tracking-[.2em] text-[#b88900]">LoadLink account</p>
-          <h1 className="mt-2 text-4xl font-black tracking-[-.05em]">Create your account</h1>
+          <h1 className=" text-4xl font-black tracking-[-.05em]">Create your account</h1>
           <p className={`mt-3 text-sm leading-6 ${muted}`}>Sign in is required before posting, messaging or managing a dealership or driver profile.</p>
 
           <button type="button" onClick={() => void continueWithGoogle()} disabled={busy} className="mt-6 flex h-12 w-full items-center justify-center border border-black/15 bg-white text-sm font-black text-black disabled:opacity-50">Continue with Google</button>

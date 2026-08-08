@@ -151,8 +151,7 @@ export default function NotificationCenter() {
         <section className="fixed bottom-20 left-4 z-[90] w-[calc(100vw-2rem)] max-w-sm overflow-hidden rounded-[24px] border border-[#f6b800]/50 bg-[#090909] text-white shadow-[0_24px_70px_rgba(0,0,0,.45)]">
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f6b800]">LoadLink updates</p>
-              <h2 className="mt-1 text-xl font-black">Notifications</h2>
+              <h2 className=" text-xl font-black">Notifications</h2>
             </div>
             <button type="button" onClick={() => setOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-xl" aria-label="Close notifications">×</button>
           </div>

@@ -301,7 +301,7 @@ export default function HomepageMarketplaceSections({ darkMode }: { darkMode: bo
                       <div className="flex justify-between gap-3"><dt>Experience</dt><dd className="text-right font-black">{driver.years_experience || 0} years</dd></div>
                       <div className="flex justify-between gap-3"><dt>Licence</dt><dd className="text-right font-black">{driver.licence_code || "On request"}</dd></div>
                     </dl>
-                    <p className="mt-5 text-[10px] font-black uppercase tracking-[.12em] text-[#b88900]">View driver profiles</p>
+                    <p className={`mt-5 text-[10px] font-black uppercase tracking-[.12em] ${muted}`}>View driver profiles</p>
                   </Link>
                 );
               })}
@@ -337,7 +337,7 @@ export default function HomepageMarketplaceSections({ darkMode }: { darkMode: bo
                     <h3 className="mt-5 text-xl font-black">{dealer.name}</h3>
                     <p className={`mt-2 text-xs font-semibold ${muted}`}>{dealer.physical_location || "South Africa"}</p>
                     {dealer.short_bio ? <p className={`mt-4 line-clamp-3 text-sm leading-6 ${muted}`}>{dealer.short_bio}</p> : null}
-                    <p className="mt-5 text-[10px] font-black uppercase tracking-[.12em] text-[#b88900]">View dealership</p>
+                    <p className={`mt-5 text-[10px] font-black uppercase tracking-[.12em] ${muted}`}>View dealership</p>
                   </Link>
                 );
               })}
@@ -347,8 +347,7 @@ export default function HomepageMarketplaceSections({ darkMode }: { darkMode: bo
 
         <div className="grid gap-4 lg:grid-cols-3">
           <section className={`border p-6 ${surface}`}>
-            <p className="text-[10px] font-black uppercase tracking-[.16em] text-[#b88900]">Post on LoadLink</p>
-            <h2 className="mt-3 text-2xl font-black">Choose what you want to publish</h2>
+            <h2 className=" text-2xl font-black">Choose what you want to publish</h2>
             <div className="mt-5 grid gap-2">
               <RequireAuthLink href="/jobs/list" className="flex h-12 items-center justify-between border border-[#f6b800] px-4 text-xs font-black uppercase tracking-[.1em] text-[#b88900]"><span>Post a logistics job</span><span>→</span></RequireAuthLink>
               <RequireAuthLink href="/jobs/list?mode=contract" className="flex h-12 items-center justify-between border border-[#f6b800] px-4 text-xs font-black uppercase tracking-[.1em] text-[#b88900]"><span>Post a contract</span><span>→</span></RequireAuthLink>
@@ -357,8 +356,7 @@ export default function HomepageMarketplaceSections({ darkMode }: { darkMode: bo
           </section>
 
           <section className={`border p-6 ${surface}`}>
-            <p className="text-[10px] font-black uppercase tracking-[.16em] text-[#b88900]">Why LoadLink</p>
-            <h2 className="mt-3 text-2xl font-black">Built around trusted logistics activity</h2>
+            <h2 className=" text-2xl font-black">Built around trusted logistics activity</h2>
             <div className={`mt-5 space-y-4 text-sm font-semibold ${muted}`}>
               <TrustLine title="Reviewed listings" copy="Public homepage results are limited to active, approved posts." />
               <TrustLine title="Approved profiles" copy="Driver and dealership previews use approved public profiles only." />
@@ -367,8 +365,7 @@ export default function HomepageMarketplaceSections({ darkMode }: { darkMode: bo
           </section>
 
           <section className={`border p-6 ${surface}`}>
-            <p className="text-[10px] font-black uppercase tracking-[.16em] text-[#b88900]">Your activity</p>
-            <h2 className="mt-3 text-2xl font-black">Saved and recently viewed</h2>
+            <h2 className=" text-2xl font-black">Saved and recently viewed</h2>
             {signedIn ? (
               <div className="mt-5 grid grid-cols-3 gap-2">
                 <SummaryMetric label="Saved" value={saved.listings} muted={muted} />
@@ -448,8 +445,7 @@ function OpportunityColumn({
 function SectionHeading({ eyebrow, title, description, muted }: { eyebrow: string; title: string; description: string; muted: string }) {
   return (
     <div className="max-w-3xl">
-      <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#b88900]">{eyebrow}</p>
-      <h2 className="mt-2 text-3xl font-black tracking-[-.05em] md:text-5xl">{title}</h2>
+      <h2 className=" text-3xl font-black tracking-[-.05em] md:text-5xl">{title}</h2>
       <p className={`mt-3 text-sm font-semibold leading-6 ${muted}`}>{description}</p>
     </div>
   );
