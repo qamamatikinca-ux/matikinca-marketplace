@@ -134,10 +134,10 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
       : "Nothing has been viewed yet. Open a job, contract or vehicle listing and it will appear here.";
 
   return (
-    <section className={`${darkMode ? "bg-black text-white" : "bg-white text-black"} px-5 py-12`}>
+    <section className={`${darkMode ? "bg-black text-white" : "bg-white text-black"} px-4 py-9 sm:px-5 md:py-10`}>
       <div className="mx-auto max-w-5xl">
         <div className="flex items-end justify-between gap-4">
-          <h2 className="text-3xl font-black tracking-[-0.05em] md:text-5xl">Continue where you left off</h2>
+          <h2 className="text-2xl font-bold tracking-[-0.03em] md:text-4xl">Continue where you left off</h2>
           {items.length > 1 ? (
             <div className="hidden shrink-0 gap-2 sm:flex">
               <button type="button" onClick={() => moveSlider(-1)} className={`flex h-10 w-10 items-center justify-center border outline-none ${darkMode ? "border-white/20" : "border-black/15"}`} aria-label="Previous recent item">←</button>
@@ -146,7 +146,7 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
           ) : null}
         </div>
 
-        <div data-loadlink-no-swipe-dots="true" className="mt-6 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 no-scrollbar">
+        <div data-loadlink-no-swipe-dots="true" className="mt-4 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 no-scrollbar">
           {([[
             "posted",
             "Recently Posted",
@@ -161,7 +161,7 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
               key={value}
               type="button"
               onClick={() => setTab(value)}
-              className={`shrink-0 snap-start border px-5 py-3 text-xs font-black uppercase tracking-wide ${
+              className={`shrink-0 snap-start rounded-xl border px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[.04em] ${
                 tab === value
                   ? "border-[#f6b800] bg-[#f6b800] text-black"
                   : darkMode

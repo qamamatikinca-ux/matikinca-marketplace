@@ -79,3 +79,16 @@
     gap: .5rem;
   }
 }
+
+/* V2.2: active conversations stay visually quiet; logistics artwork is reserved for loading states. */
+.messageApp :global(.loadlink-official-header-logo),
+.messageApp :global(.loadlink-official-header-logo .loadlink-logo-wrap),
+.messageApp :global(.loadlink-messages-header-logo) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.messageApp :global(.loadlink-message-viewport) {
+  background-image: none !important;
+  background-blend-mode: normal !important;
+}

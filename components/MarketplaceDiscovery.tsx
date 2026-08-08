@@ -126,7 +126,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
 
   return (
     <>
-      <section className={`px-5 py-6 md:px-12 md:py-8 ${darkMode ? "bg-[#050505] text-white" : "bg-white text-black"}`}>
+      <section className={`px-4 py-5 sm:px-5 md:px-10 md:py-7 ${darkMode ? "bg-[#050505] text-white" : "bg-white text-black"}`}>
         <div className="mx-auto max-w-7xl">
           <div className="flex snap-x gap-2 overflow-x-auto pb-2 no-scrollbar" aria-label="Search category">
             {searchScopes.map((item) => (
@@ -135,7 +135,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                 type="button"
                 onClick={() => chooseScope(item.value)}
                 aria-pressed={scope === item.value}
-                className={`shrink-0 rounded-full border px-4 py-2.5 text-xs font-black uppercase tracking-wide ${
+                className={`shrink-0 rounded-full border px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[.04em] ${
                   scope === item.value
                     ? "border-[#f6b800] bg-[#f6b800] text-black"
                     : darkMode
@@ -151,8 +151,8 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
           <div className="mt-2 grid gap-2 md:grid-cols-[1fr_260px]">
             <div ref={searchWrapperRef} className="relative">
               <label htmlFor="loadlink-marketplace-search" className="sr-only">Search everything on LoadLink</label>
-              <div className={`flex min-h-14 items-center overflow-hidden rounded-2xl border shadow-sm ${darkMode ? "border-white/15 bg-black" : "border-black/15 bg-white"}`}>
-                <span className={`flex h-14 w-12 shrink-0 items-center justify-center ${darkMode ? "text-white/55" : "text-black/55"}`}><SearchIcon /></span>
+              <div className={`flex min-h-12 items-center overflow-hidden rounded-xl border shadow-sm ${darkMode ? "border-white/15 bg-black" : "border-black/15 bg-white"}`}>
+                <span className={`flex h-12 w-11 shrink-0 items-center justify-center ${darkMode ? "text-white/55" : "text-black/55"}`}><SearchIcon /></span>
                 <input
                   id="loadlink-marketplace-search"
                   value={query}
@@ -174,13 +174,13 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                   }}
                   autoComplete="off"
                   placeholder={placeholderForScope(scope)}
-                  className={`h-14 min-w-0 flex-1 bg-transparent pr-2 text-sm font-bold outline-none ${darkMode ? "placeholder:text-white/35" : "placeholder:text-black/40"}`}
+                  className={`h-12 min-w-0 flex-1 bg-transparent pr-2 text-sm font-medium outline-none ${darkMode ? "placeholder:text-white/35" : "placeholder:text-black/40"}`}
                 />
-                <button type="button" onClick={() => launchSearch()} className="mr-1.5 h-11 rounded-xl bg-[#f6b800] px-4 text-xs font-black uppercase tracking-wide text-black">Search</button>
+                <button type="button" onClick={() => launchSearch()} className="mr-1.5 h-9 rounded-lg bg-[#f6b800] px-3.5 text-[10px] font-semibold uppercase tracking-[.04em] text-black">Search</button>
               </div>
 
               {showSuggestions && activeSearchField === "query" ? (
-                <div className={`absolute inset-x-0 top-[60px] z-40 max-h-[430px] overflow-y-auto rounded-2xl border shadow-2xl ${darkMode ? "border-white/15 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+                <div className={`absolute inset-x-0 top-[52px] z-40 max-h-[430px] overflow-y-auto rounded-2xl border shadow-2xl ${darkMode ? "border-white/15 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
                   {suggestions.length ? suggestions.map((item) => (
                     <button
                       key={item.id}

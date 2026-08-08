@@ -123,7 +123,6 @@ const ACCEPTED_FILE_TYPES = [
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-const CHAT_WALLPAPER_COUNT = 10;
 const CHAT_ARCHIVE_STORAGE_KEY = "loadlink-archived-conversations-v1";
 
 function readLocalArchivedIds() {
@@ -344,7 +343,6 @@ export default function MessagesPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [failedUpload, setFailedUpload] = useState<{ file: File; caption?: string } | null>(null);
   const [archiveBusy, setArchiveBusy] = useState(false);
-  const [wallpaperIndex, setWallpaperIndex] = useState(1);
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -423,16 +421,6 @@ export default function MessagesPage() {
       window.removeEventListener("orientationchange", syncHeight);
       document.documentElement.style.removeProperty("--loadlink-message-vh");
     };
-  }, []);
-
-  useEffect(() => {
-    const key = "loadlink-chat-wallpaper-session-v1";
-    const stored = Number(window.sessionStorage.getItem(key));
-    const next = Number.isInteger(stored) && stored >= 1 && stored <= CHAT_WALLPAPER_COUNT
-      ? stored
-      : Math.floor(Math.random() * CHAT_WALLPAPER_COUNT) + 1;
-    window.sessionStorage.setItem(key, String(next));
-    setWallpaperIndex(next);
   }, []);
 
   const selectedConversation = useMemo(
@@ -1408,7 +1396,8 @@ export default function MessagesPage() {
   return (
     <main
       data-theme={darkMode ? "dark" : "light"}
-      className={`${styles.messageApp} loadlink-messages flex min-h-[100svh] h-[100dvh] flex-col overflow-hidden ${
+      style={{ height: "var(--loadlink-message-vh, 100dvh)", minHeight: "var(--loadlink-message-vh, 100svh)" }}
+      className={`${styles.messageApp} loadlink-messages flex flex-col overflow-hidden ${
         darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"
       }`}
     >
@@ -1417,7 +1406,7 @@ export default function MessagesPage() {
           <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
         </div>
         <HomeLogoLink
-          theme={darkMode ? "dark" : "light"}
+          theme="auto"
           showGlow={false}
           className="loadlink-official-header-logo pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
           logoClassName="loadlink-messages-header-logo"
@@ -1434,7 +1423,7 @@ export default function MessagesPage() {
           <div className="border-b border-black/10 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h1 className="text-3xl font-black tracking-[-.04em]">Messages</h1>
+                <h1 className="text-2xl font-bold tracking-[-.025em]">Messages</h1>
               </div>
               <span className="rounded-full bg-black px-3 py-1.5 text-xs font-black text-[#f6b800]">
                 {conversations.reduce(
@@ -1454,9 +1443,9 @@ export default function MessagesPage() {
               />
             </label>
             <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl bg-black/[.04] p-1" role="tablist" aria-label="Conversation folders">
-              <button type="button" role="tab" aria-selected={folder === "inbox"} onClick={() => { setFolder("inbox"); setQuery(""); }} className={`rounded-lg px-2 py-2 text-[10px] font-black uppercase tracking-wide transition ${folder === "inbox" ? "bg-black text-white shadow-sm" : "text-black/45"}`}>Inbox</button>
-              <button type="button" role="tab" aria-selected={folder === "potential"} onClick={() => { setFolder("potential"); setQuery(""); }} className={`rounded-lg px-2 py-2 text-[10px] font-black uppercase tracking-wide transition ${folder === "potential" ? "bg-black text-white shadow-sm" : "text-black/45"}`}>Potential Deals{potentialDealCount ? ` (${potentialDealCount})` : ""}</button>
-              <button type="button" role="tab" aria-selected={folder === "archived"} onClick={() => { setFolder("archived"); setQuery(""); }} className={`rounded-lg px-2 py-2 text-[10px] font-black uppercase tracking-wide transition ${folder === "archived" ? "bg-black text-white shadow-sm" : "text-black/45"}`}>Archived{archivedCount ? ` (${archivedCount})` : ""}</button>
+              <button type="button" role="tab" aria-selected={folder === "inbox"} onClick={() => { setFolder("inbox"); setQuery(""); }} className={`rounded-lg px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[.04em] transition ${folder === "inbox" ? "bg-black text-white shadow-sm" : "text-black/45"}`}>Inbox</button>
+              <button type="button" role="tab" aria-selected={folder === "potential"} onClick={() => { setFolder("potential"); setQuery(""); }} className={`rounded-lg px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[.04em] transition ${folder === "potential" ? "bg-black text-white shadow-sm" : "text-black/45"}`}>Potential Deals{potentialDealCount ? ` (${potentialDealCount})` : ""}</button>
+              <button type="button" role="tab" aria-selected={folder === "archived"} onClick={() => { setFolder("archived"); setQuery(""); }} className={`rounded-lg px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[.04em] transition ${folder === "archived" ? "bg-black text-white shadow-sm" : "text-black/45"}`}>Archived{archivedCount ? ` (${archivedCount})` : ""}</button>
             </div>
           </div>
 
@@ -1611,10 +1600,10 @@ export default function MessagesPage() {
                 </div>
               </header>
 
-              <div className="loadlink-listing-context flex min-h-[42px] items-center gap-2 border-b border-black/10 bg-white px-3 py-1.5 md:px-5">
+              <div className={`loadlink-listing-context flex min-h-[40px] items-center gap-2 border-b px-3 py-1.5 md:px-5 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black text-[#f6b800]"><BriefcaseIcon /></span>
                 <p className="min-w-0 flex-1 truncate text-[11px] font-semibold">{selectedConversation.listing_title}</p>
-                <Link href={`/jobs#job-${selectedConversation.listing_id}`} className="shrink-0 rounded-lg border border-black/10 px-2.5 py-1.5 text-[9px] font-bold uppercase">View</Link>
+                <Link href={`/jobs#job-${selectedConversation.listing_id}`} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[9px] font-semibold uppercase ${darkMode ? "border-white/15 text-white/75" : "border-black/10 text-black/70"}`}>View</Link>
               </div>
 
               {potentialDealPending ? (
@@ -1650,15 +1639,28 @@ export default function MessagesPage() {
               ) : null}
 
               {showDetails ? (
-                <div className="border-b border-black/10 bg-white p-4 xl:hidden">
-                  <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} reportBusy={reportBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} onReport={reportConversation} />
+                <div className="pointer-events-none fixed inset-0 z-[95] xl:hidden" aria-hidden={false}>
+                  <section
+                    role="dialog"
+                    aria-modal="false"
+                    aria-label="Conversation details"
+                    style={{ height: "var(--loadlink-message-vh, 100dvh)" }}
+                    className={`pointer-events-auto absolute right-0 top-0 flex w-[min(92vw,420px)] flex-col border-l shadow-[-18px_0_45px_rgba(0,0,0,.18)] ${darkMode ? "border-white/10 bg-[#0b0b0b] text-white" : "border-black/10 bg-white text-black"}`}
+                  >
+                    <div className={`sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between border-b px-4 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+                      <div><strong className="text-sm font-bold">Conversation info</strong><p className={`mt-0.5 text-[9px] font-medium ${darkMode ? "text-white/45" : "text-black/45"}`}>Details and account actions</p></div>
+                      <button type="button" onClick={() => setShowDetails(false)} className={`flex h-9 w-9 items-center justify-center rounded-full border text-lg ${darkMode ? "border-white/15 text-white" : "border-black/10 text-black"}`} aria-label="Close conversation info">×</button>
+                    </div>
+                    <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                      <ConversationDetails darkMode={darkMode} conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} reportBusy={reportBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} onReport={reportConversation} />
+                    </div>
+                  </section>
                 </div>
               ) : null}
 
               <div
                 ref={messageViewportRef}
-                className="loadlink-message-viewport loadlink-chat-wallpaper relative min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8"
-                style={{ backgroundImage: `url(/images/chat-wallpapers/chat-${String(wallpaperIndex).padStart(2, "0")}.svg)` }}
+                className={`loadlink-message-viewport relative min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8 ${darkMode ? "bg-[#090909]" : "bg-[#f6f3eb]"}`}
               >
                 {messagesLoading && messages.length === 0 ? (
                   <div className="flex h-full min-h-[180px] items-center justify-center"><div className="flex items-center gap-3 rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-bold text-black/55"><span className="h-4 w-4 animate-spin rounded-full border-2 border-black/20 border-t-black" />Loading conversation…</div></div>
@@ -1881,7 +1883,7 @@ ${message}` : message)}
 
         <aside className="loadlink-details-panel hidden min-h-0 overflow-y-auto border-l border-black/10 bg-white p-5 xl:block">
           {selectedConversation ? (
-            <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} reportBusy={reportBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} onReport={reportConversation} />
+            <ConversationDetails darkMode={darkMode} conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} reportBusy={reportBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} onReport={reportConversation} />
           ) : null}
         </aside>
       </div>
@@ -2109,6 +2111,7 @@ function Avatar({
 }
 
 function ConversationDetails({
+  darkMode,
   conversation,
   blockState,
   blockBusy,
@@ -2118,6 +2121,7 @@ function ConversationDetails({
   onToggleBlock,
   onReport,
 }: {
+  darkMode: boolean;
   conversation: Conversation;
   blockState: BlockState;
   blockBusy: boolean;
@@ -2127,111 +2131,89 @@ function ConversationDetails({
   onToggleBlock: () => Promise<void>;
   onReport: () => Promise<void>;
 }) {
+  const muted = darkMode ? "text-white/48" : "text-black/45";
+  const faint = darkMode ? "text-white/35" : "text-black/35";
+  const line = darkMode ? "border-white/10" : "border-black/10";
+  const soft = darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-black/[.02]";
+
   return (
-    <div>
-      <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-black/40">
-        Conversation details
-      </p>
-      <div className="mt-5 flex items-center gap-3">
+    <div className={darkMode ? "text-white" : "text-black"}>
+      <div className="flex items-center gap-3">
         <Avatar
           name={conversation.other_name}
           photo={conversation.other_photo}
           size="h-12 w-12"
           online={isRecentlyActive(conversation.other_last_seen)}
         />
-        <div className="min-w-0">
-          <h3 className="truncate font-bold">{conversation.other_name}</h3>
-          <p className="mt-0.5 text-xs font-semibold text-black/45">
-            {activityText(conversation)}
-          </p>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-base font-bold">{conversation.other_name}</h3>
+          <p className={`mt-0.5 truncate text-xs font-medium ${muted}`}>{activityText(conversation)}</p>
         </div>
       </div>
 
-      <div className="mt-6 space-y-3 border-y border-black/10 py-5">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-black/35">Listing</p>
-          <p className="mt-1 text-sm font-semibold leading-5">{conversation.listing_title}</p>
-        </div>
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-black/35">Response pattern</p>
-          <p className="mt-1 text-sm font-semibold leading-5">{replyText(conversation.average_reply_minutes)}</p>
-        </div>
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-black/35">Privacy</p>
-          <p className="mt-1 text-sm font-semibold leading-5">Private conversation</p>
-          <p className="mt-1 text-xs font-medium leading-5 text-black/45">Messages and attachments are visible only to participants in this conversation.</p>
-        </div>
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-black/35">Messaging plan</p>
-          <p className="mt-1 text-sm font-semibold leading-5">
-            {conversation.is_pro
-              ? "Pro · unlimited daily messaging"
-              : `${toCount(conversation.messages_used_today)}/${Math.max(1, toCount(conversation.daily_message_limit) || 50)} messages used today`}
-          </p>
-          {!conversation.is_pro ? <Link href="/account/packages" className="mt-2 inline-flex rounded-lg bg-[#f6b800] px-2.5 py-1.5 text-[9px] font-bold text-black">View messaging plans</Link> : null}
-        </div>
-      </div>
-
-      <div className="mt-5 grid gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <Link
+          href={`/jobs#job-${conversation.listing_id}`}
+          className="flex h-10 items-center justify-center rounded-xl bg-[#f6b800] px-3 text-center text-[10px] font-bold text-black"
+        >
+          View listing
+        </Link>
         <button
           type="button"
           onClick={() => void onToggleArchive()}
           disabled={archiveBusy}
-          className="flex items-center justify-center gap-2 rounded-xl border border-[#b88900]/45 bg-[#fff8de] px-4 py-3 text-xs font-black uppercase tracking-wide text-[#705300] disabled:opacity-45"
+          className={`flex h-10 items-center justify-center gap-1.5 rounded-xl border px-3 text-[10px] font-semibold ${darkMode ? "border-white/15 text-white" : "border-black/12 text-black"} disabled:opacity-45`}
         >
           <ArchiveIcon />
-          {archiveBusy ? "Saving…" : conversation.archived ? "Restore to inbox" : "Archive conversation"}
+          {archiveBusy ? "Saving…" : conversation.archived ? "Restore" : "Archive"}
         </button>
-        <Link
-          href={`/jobs#job-${conversation.listing_id}`}
-          className="flex items-center justify-center rounded-xl border border-black/10 px-4 py-3 text-xs font-black uppercase tracking-wide"
-        >
-          View listing
-        </Link>
-        {conversation.other_phone ? (
-          <a
-            href={`tel:${conversation.other_phone.replace(/\s/g, "")}`}
-            className="flex items-center justify-center rounded-xl bg-black px-4 py-3 text-xs font-black uppercase tracking-wide text-[#f6b800]"
-          >
-            Call contact
-          </a>
-        ) : null}
-      </div>
-
-      <div className="mt-5 grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => void onToggleBlock()}
           disabled={blockBusy || blockState.blocked_by_other}
-          className={`flex h-11 items-center justify-center border text-[10px] font-black uppercase ${
-            blockState.blocked_by_me
-              ? "border-red-500 bg-red-50 text-red-600"
-              : "border-black/15 text-black"
-          } disabled:opacity-45`}
+          className={`flex h-10 items-center justify-center rounded-xl border px-3 text-[10px] font-semibold ${blockState.blocked_by_me ? "border-red-500/50 text-red-500" : darkMode ? "border-white/15 text-white/80" : "border-black/12 text-black/75"} disabled:opacity-45`}
         >
-          {blockBusy
-            ? "Saving…"
-            : blockState.blocked_by_me
-              ? "Unblock"
-              : blockState.blocked_by_other
-                ? "Blocked"
-                : "Block user"}
+          {blockBusy ? "Saving…" : blockState.blocked_by_me ? "Unblock" : blockState.blocked_by_other ? "Blocked" : "Block"}
         </button>
         <button
           type="button"
           onClick={() => void onReport()}
           disabled={reportBusy}
-          className="flex h-11 items-center justify-center border border-red-500/45 text-[10px] font-black uppercase text-red-600 disabled:opacity-45"
+          className="flex h-10 items-center justify-center rounded-xl border border-red-500/40 px-3 text-[10px] font-semibold text-red-500 disabled:opacity-45"
         >
-          {reportBusy ? "Sending…" : "Report chat"}
+          {reportBusy ? "Sending…" : "Report"}
         </button>
       </div>
 
-      <div className="mt-6 rounded-xl border border-[#e5c34c]/35 bg-[#fff8de] p-4">
-        <p className="text-xs font-black">Stay safe</p>
-        <p className="mt-2 text-xs font-medium leading-5 text-black/55">
-          Confirm listing details before paying. Avoid sending passwords, PINs or one-time verification codes.
+      {conversation.other_phone ? (
+        <a href={`tel:${conversation.other_phone.replace(/\s/g, "")}`} className={`mt-2 flex h-10 items-center justify-center rounded-xl border text-[10px] font-semibold ${darkMode ? "border-white/15 text-white/80" : "border-black/12 text-black/75"}`}>
+          Call contact
+        </a>
+      ) : null}
+
+      <div className={`mt-5 rounded-2xl border p-4 ${soft}`}>
+        <p className={`text-[9px] font-semibold uppercase tracking-[.12em] ${faint}`}>Listing</p>
+        <p className="mt-1 text-sm font-semibold leading-5">{conversation.listing_title}</p>
+        <div className={`my-4 border-t ${line}`} />
+        <p className={`text-[9px] font-semibold uppercase tracking-[.12em] ${faint}`}>Response pattern</p>
+        <p className="mt-1 text-sm font-medium leading-5">{replyText(conversation.average_reply_minutes)}</p>
+        <div className={`my-4 border-t ${line}`} />
+        <p className={`text-[9px] font-semibold uppercase tracking-[.12em] ${faint}`}>Privacy</p>
+        <p className="mt-1 text-sm font-semibold">Private conversation</p>
+        <p className={`mt-1 text-xs font-medium leading-5 ${muted}`}>Messages and attachments are visible only to participants in this conversation.</p>
+        <div className={`my-4 border-t ${line}`} />
+        <p className={`text-[9px] font-semibold uppercase tracking-[.12em] ${faint}`}>Messaging plan</p>
+        <p className="mt-1 text-sm font-medium leading-5">
+          {conversation.is_pro
+            ? "Pro · unlimited daily messaging"
+            : `${toCount(conversation.messages_used_today)}/${Math.max(1, toCount(conversation.daily_message_limit) || 50)} messages used today`}
         </p>
+        {!conversation.is_pro ? <Link href="/account/packages" className="mt-2 inline-flex rounded-lg bg-[#f6b800] px-2.5 py-1.5 text-[9px] font-semibold text-black">View messaging plans</Link> : null}
+      </div>
+
+      <div className={`mt-4 rounded-xl border p-3 ${soft}`}>
+        <p className="text-xs font-semibold">Safety reminder</p>
+        <p className={`mt-1 text-[11px] font-medium leading-5 ${muted}`}>Confirm listing details before paying. Never send passwords, PINs or one-time verification codes.</p>
       </div>
     </div>
   );

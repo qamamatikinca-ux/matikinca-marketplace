@@ -22,6 +22,13 @@ export type StructuredQuote = {
   terms: string;
 };
 
+type WorkflowTool = {
+  id: string;
+  label: string;
+  summary: string;
+  template: string;
+};
+
 type Props = {
   threadId: string;
   listingTitle: string;
@@ -88,6 +95,8 @@ export default function LogisticsMessageTools({
   const [availability, setAvailability] = useState("");
   const [vat, setVat] = useState<StructuredQuote["vat"]>("included");
   const [terms, setTerms] = useState("");
+  const [editorTool, setEditorTool] = useState<WorkflowTool | null>(null);
+  const [editorText, setEditorText] = useState("");
 
   useEffect(() => {
     try {
@@ -98,6 +107,8 @@ export default function LogisticsMessageTools({
     }
     setOpen(false);
     setQuoteOpen(false);
+    setEditorTool(null);
+    setEditorText("");
   }, [threadId]);
 
   const templates = useMemo(() => {
@@ -126,19 +137,38 @@ export default function LogisticsMessageTools({
     ] as const;
   }, [listingTitle, role]);
 
-  const workflowTools = useMemo(() => {
+  const workflowTools = useMemo<WorkflowTool[]>(() => {
     const title = clean(listingTitle) || "this listing";
     return [
-      ["Trip brief", `TRIP BRIEF — ${title}\nCollection: [address + contact + time]\nDelivery: [address + contact + time]\nCargo: [description + weight]\nVehicle: [type / registration]\nReferences: [collection / delivery]\nSpecial instructions: [PPE, access, loading/offloading]`],
-      ["Load checklist", "LOAD CHECKLIST\n• Vehicle and driver confirmed\n• Cargo description and weight confirmed\n• Collection contact and reference confirmed\n• Delivery contact and reference confirmed\n• Load restraints / equipment confirmed\n• PPE / induction / site access confirmed\n• POD requirements confirmed"],
-      ["Document request", "DOCUMENT REQUEST\nPlease send the documents required for this load, such as vehicle details, permit/insurance where applicable, invoice details and POD requirements. Do not send passwords, PINs, OTPs or banking login information."],
-      ["Driver handover", "DRIVER HANDOVER\nDriver: [name]\nCell: [number]\nVehicle registration: [registration]\nTrailer registration: [registration]\nCollection ETA: [time]\nDelivery ETA: [time]"],
-      ["Cost breakdown", "COST BREAKDOWN REQUEST\nPlease confirm the base transport rate, VAT position, tolls, fuel surcharge if applicable, waiting/detention rate, loading/offloading charges and any other cost before booking."],
-      ["Payment terms", "PAYMENT TERMS\nPlease confirm the payment period, invoice requirements, POD requirements, payment reference and the contact responsible for payment queries."],
-      ["POD request", "POD REQUEST\nPlease send the signed proof of delivery and confirm the invoice submission address/reference once delivery is complete."],
-      ["Incident update", "INCIDENT UPDATE\nIssue: [breakdown / delay / site problem]\nLocation: [location]\nCurrent status: [status]\nRevised ETA: [time]\nRecovery / replacement plan: [details]"],
-    ] as const;
+      { id: "trip-brief", label: "Trip brief", summary: "Collection, delivery, cargo and instructions", template: `TRIP BRIEF — ${title}\n\nCollection\nAddress: [address]\nContact: [name + number]\nTime: [date / time]\n\nDelivery\nAddress: [address]\nContact: [name + number]\nTime: [date / time]\n\nCargo\nDescription: [cargo]\nWeight / quantity: [weight or quantity]\n\nVehicle\nType / registration: [vehicle details]\n\nReferences\nCollection: [reference]\nDelivery: [reference]\n\nSpecial instructions\n[PPE, access, temperature, loading/offloading or other instructions]` },
+      { id: "load-checklist", label: "Load checklist", summary: "Review and edit pre-dispatch checks", template: "LOAD CHECKLIST\n\n☐ Vehicle and driver confirmed\n☐ Cargo description and weight confirmed\n☐ Collection contact and reference confirmed\n☐ Delivery contact and reference confirmed\n☐ Load restraints / equipment confirmed\n☐ PPE / induction / site access confirmed\n☐ POD requirements confirmed\n\nNotes: [add anything specific to this load]" },
+      { id: "document-request", label: "Document request", summary: "Choose the documents needed for this load", template: "DOCUMENT REQUEST\n\nPlease send the following documents/details required for this load:\n• [vehicle details / permit / insurance]\n• [invoice details]\n• [POD requirements]\n• [other required document]\n\nDo not send passwords, PINs, OTPs or banking login information." },
+      { id: "driver-handover", label: "Driver handover", summary: "Driver, vehicle and ETA details", template: "DRIVER HANDOVER\n\nDriver: [name]\nCell: [number]\nVehicle registration: [registration]\nTrailer registration: [registration / N/A]\nCollection ETA: [time]\nDelivery ETA: [time]\nNotes: [site or handover instructions]" },
+      { id: "cost-breakdown", label: "Cost breakdown", summary: "Clarify all charges before booking", template: "COST BREAKDOWN REQUEST\n\nBase transport rate: [amount]\nVAT: [included / excluded / N/A]\nTolls: [included / excluded / amount]\nFuel surcharge: [included / excluded / amount]\nWaiting / detention: [free time + rate]\nLoading / offloading: [included / excluded / amount]\nOther charges: [details]\n\nPlease confirm the final total before booking." },
+      { id: "payment-terms", label: "Payment terms", summary: "Invoice, POD and payment process", template: "PAYMENT TERMS\n\nPayment period: [e.g. 7 / 14 / 30 days]\nInvoice requirements: [details]\nPOD requirements: [details]\nPayment reference: [reference / process]\nPayment contact: [name / department]\nOther terms: [details]" },
+      { id: "pod-request", label: "POD request", summary: "Proof-of-delivery follow-up", template: "POD REQUEST\n\nDelivery reference: [reference]\nDelivery date: [date]\nPlease send the signed proof of delivery and confirm the invoice submission address/reference.\nAdditional requirement: [optional]" },
+      { id: "incident-update", label: "Incident update", summary: "Delay, breakdown or site issue", template: "INCIDENT UPDATE\n\nIssue: [breakdown / delay / site problem]\nLocation: [location]\nCurrent status: [status]\nRevised ETA: [time]\nRecovery / replacement plan: [details]\nContact / reference: [optional]" },
+      { id: "collection-confirmation", label: "Collection brief", summary: "Confirm pickup details before dispatch", template: "COLLECTION BRIEF\n\nAddress: [collection address]\nDate / time: [slot]\nContact: [name + number]\nCargo / quantity: [details]\nLoading method: [details]\nReference: [reference]\nSite requirements: [PPE / induction / access]" },
+      { id: "delivery-confirmation", label: "Delivery brief", summary: "Confirm receiving and offloading details", template: "DELIVERY BRIEF\n\nAddress: [delivery address]\nDate / time: [slot]\nReceiving contact: [name + number]\nOffloading method: [details]\nPOD requirement: [details]\nReference: [reference]\nSite requirements: [PPE / induction / access]" },
+      { id: "eta-update", label: "ETA update", summary: "Send a clear revised arrival estimate", template: "ETA UPDATE\n\nCurrent location: [location]\nCurrent ETA: [time]\nReason for change: [traffic / loading / breakdown / weather / other]\nNext update: [time / milestone]" },
+    ];
   }, [listingTitle]);
+
+  function openToolEditor(tool: WorkflowTool) {
+    setQuoteOpen(false);
+    setEditorTool(tool);
+    setEditorText(tool.template);
+  }
+
+  function useEditedTool() {
+    const value = editorText.trim();
+    if (!value || disabled) return;
+    onInsert(value);
+    setEditorTool(null);
+    setEditorText("");
+    closePanel();
+  }
+
 
   function openPanel() {
     if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) document.activeElement.blur();
@@ -233,10 +263,31 @@ export default function LogisticsMessageTools({
             <div className="mt-5">
               <div className="mb-2 flex items-end justify-between gap-3"><p className={`text-[9px] font-bold uppercase tracking-[0.14em] ${muted}`}>Tools</p><span className={`text-[9px] font-medium ${muted}`}>Everything stays here, off the chat screen</span></div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                <button type="button" disabled={disabled} onClick={() => setQuoteOpen((current) => !current)} className="min-h-[58px] rounded-xl border border-[#f6b800]/55 bg-[#f6b800] px-3 py-2.5 text-left text-black disabled:opacity-40"><span className="block text-[11px] font-bold">Rate quote</span><span className="mt-0.5 block text-[9px] font-medium text-black/60">Structured quote builder</span></button>
-                {workflowTools.map(([label, message]) => <button key={label} type="button" disabled={disabled} onClick={() => { onInsert(message); closePanel(); }} className={`min-h-[58px] rounded-xl border px-3 py-2.5 text-left disabled:opacity-40 ${control}`}><span className="block text-[11px] font-bold">{label}</span><span className={`mt-0.5 block text-[9px] font-medium ${muted}`}>{label === "Trip brief" ? "Collection, delivery and cargo" : label === "Load checklist" ? "Pre-dispatch checks" : label === "Document request" ? "Request required documents" : label === "Driver handover" ? "Driver and vehicle details" : label === "Cost breakdown" ? "Clarify all charges" : label === "Payment terms" ? "Invoice and payment process" : label === "POD request" ? "Proof-of-delivery follow-up" : "Delay / breakdown template"}</span></button>)}
+                <button type="button" disabled={disabled} onClick={() => { setEditorTool(null); setEditorText(""); setQuoteOpen((current) => !current); }} className="min-h-[56px] rounded-xl border border-[#f6b800]/55 bg-[#f6b800] px-3 py-2.5 text-left text-black disabled:opacity-40"><span className="block text-[11px] font-bold">Rate quote</span><span className="mt-0.5 block text-[9px] font-medium text-black/60">Structured quote builder</span></button>
+                {workflowTools.map((tool) => <button key={tool.id} type="button" disabled={disabled} onClick={() => openToolEditor(tool)} className={`min-h-[56px] rounded-xl border px-3 py-2.5 text-left disabled:opacity-40 ${control}`}><span className="block text-[11px] font-bold">{tool.label}</span><span className={`mt-0.5 block text-[9px] font-medium leading-4 ${muted}`}>{tool.summary}</span></button>)}
               </div>
             </div>
+
+            {editorTool ? (
+              <div className={`mt-4 rounded-2xl border p-4 ${control}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div><h3 className="text-sm font-bold">{editorTool.label}</h3><p className={`mt-1 text-[10px] font-medium leading-4 ${muted}`}>Edit the details comfortably here. Nothing is sent automatically.</p></div>
+                  <button type="button" onClick={() => { setEditorTool(null); setEditorText(""); }} className={`h-8 shrink-0 rounded-lg border px-2.5 text-[9px] font-bold ${control}`}>Back</button>
+                </div>
+                <textarea
+                  autoFocus
+                  value={editorText}
+                  onChange={(event) => setEditorText(event.target.value)}
+                  rows={12}
+                  maxLength={4000}
+                  className={`mt-3 min-h-[250px] w-full resize-y rounded-xl border p-3 text-[12px] font-medium leading-5 outline-none focus:border-[#f6b800] ${control}`}
+                />
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <p className={`text-[9px] font-medium ${muted}`}>When done, LoadLink compacts this into your normal message composer so you can review it once more before sending.</p>
+                  <button type="button" disabled={!editorText.trim() || disabled} onClick={useEditedTool} className="h-10 shrink-0 rounded-xl bg-[#f6b800] px-4 text-[10px] font-bold text-black disabled:opacity-40">Use in chat</button>
+                </div>
+              </div>
+            ) : null}
 
             {quoteOpen ? (
               <div className={`mt-4 grid gap-3 rounded-2xl border p-4 sm:grid-cols-2 ${control}`}>
