@@ -32,6 +32,17 @@ export type QuoteVehicleOption = Partial<StructuredQuote> & {
   meta?: string;
 };
 
+type QuoteReuseField = "rate" | "vehicle" | "route" | "availability" | "vat" | "terms";
+
+const QUOTE_REUSE_FIELDS: Array<{ id: QuoteReuseField; label: string }> = [
+  { id: "rate", label: "Rate" },
+  { id: "vehicle", label: "Vehicle" },
+  { id: "route", label: "Route" },
+  { id: "availability", label: "Availability" },
+  { id: "vat", label: "VAT" },
+  { id: "terms", label: "Terms" },
+];
+
 type WorkflowTool = {
   id: string;
   label: string;
@@ -111,6 +122,8 @@ export default function LogisticsMessageTools({
   const [terms, setTerms] = useState("");
   const [editorTool, setEditorTool] = useState<WorkflowTool | null>(null);
   const [editorText, setEditorText] = useState("");
+  const [reuseSourceId, setReuseSourceId] = useState("");
+  const [reuseFields, setReuseFields] = useState<QuoteReuseField[]>([]);
 
   useEffect(() => {
     try {
@@ -123,6 +136,8 @@ export default function LogisticsMessageTools({
     setQuoteOpen(false);
     setEditorTool(null);
     setEditorText("");
+    setReuseSourceId("");
+    setReuseFields([]);
   }, [threadId]);
 
   const templates = useMemo(() => {
@@ -168,6 +183,84 @@ export default function LogisticsMessageTools({
     ];
   }, [listingTitle]);
 
+  const toolGroups = useMemo(() => {
+    const findTools = (ids: string[]) => ids.map((id) => workflowTools.find((tool) => tool.id === id)).filter((tool): tool is WorkflowTool => Boolean(tool));
+    return [
+      {
+        id: "planning",
+        title: "Planning & dispatch",
+        summary: "Prepare the load before the vehicle moves.",
+        tools: findTools(["load-checklist", "collection-confirmation", "delivery-confirmation", "driver-handover"]),
+      },
+      {
+        id: "documents",
+        title: "Documents & payment",
+        summary: "Requests, charges, POD and payment terms.",
+        tools: findTools(["document-request", "cost-breakdown", "payment-terms", "pod-request"]),
+      },
+      {
+        id: "operations",
+        title: "Live operations",
+        summary: "Keep the other party updated while the trip is running.",
+        tools: findTools(["eta-update"]),
+      },
+    ];
+  }, [workflowTools]);
+
+  const reuseSources = useMemo<QuoteVehicleOption[]>(() => {
+    const current: QuoteVehicleOption[] = quoteDefaults
+      ? [{
+          id: "__current_post__",
+          label: quoteDefaults.sourceLabel || "Current post",
+          meta: "Current conversation",
+          ...quoteDefaults,
+        }]
+      : [];
+    return [...current, ...savedVehicles];
+  }, [quoteDefaults, savedVehicles]);
+
+  const selectedReuseSource = useMemo(
+    () => reuseSources.find((source) => source.id === reuseSourceId) || null,
+    [reuseSourceId, reuseSources],
+  );
+
+  function availableReuseFields(source: QuoteVehicleOption | null): QuoteReuseField[] {
+    if (!source) return [];
+    const fields: QuoteReuseField[] = [];
+    if (source.amount || source.unit) fields.push("rate");
+    if (source.vehicle) fields.push("vehicle");
+    if (source.route) fields.push("route");
+    if (source.availability) fields.push("availability");
+    if (source.vat) fields.push("vat");
+    if (source.terms) fields.push("terms");
+    return fields;
+  }
+
+  function chooseReuseSource(id: string) {
+    setReuseSourceId(id);
+    const source = reuseSources.find((item) => item.id === id) || null;
+    setReuseFields(availableReuseFields(source));
+  }
+
+  function toggleReuseField(field: QuoteReuseField) {
+    setReuseFields((current) => current.includes(field) ? current.filter((item) => item !== field) : [...current, field]);
+  }
+
+  function useSelectedSourceFields() {
+    const source = selectedReuseSource;
+    if (!source || reuseFields.length === 0) return;
+
+    if (reuseFields.includes("rate")) {
+      if (source.amount) setAmount(source.amount);
+      if (source.unit) setUnit(source.unit);
+    }
+    if (reuseFields.includes("vehicle") && source.vehicle) setVehicle(source.vehicle);
+    if (reuseFields.includes("route") && source.route) setRoute(source.route);
+    if (reuseFields.includes("availability") && source.availability) setAvailability(source.availability);
+    if (reuseFields.includes("vat") && source.vat) setVat(source.vat);
+    if (reuseFields.includes("terms") && source.terms) setTerms(source.terms);
+  }
+
   function openToolEditor(tool: WorkflowTool) {
     setQuoteOpen(false);
     setEditorTool(tool);
@@ -204,21 +297,6 @@ export default function LogisticsMessageTools({
     }
   }
 
-  function applyQuoteValues(values: Partial<StructuredQuote>) {
-    if (values.amount) setAmount(values.amount);
-    if (values.unit) setUnit(values.unit);
-    if (values.vehicle) setVehicle(values.vehicle);
-    if (values.route) setRoute(values.route);
-    if (values.availability) setAvailability(values.availability);
-    if (values.vat) setVat(values.vat);
-    if (values.terms) setTerms(values.terms);
-  }
-
-  function applySavedVehicle(id: string) {
-    const selected = savedVehicles.find((item) => item.id === id);
-    if (!selected) return;
-    applyQuoteValues(selected);
-  }
 
   async function submitQuote() {
     if (!amount.trim() || disabled || quoteBusy) return;
@@ -278,7 +356,7 @@ export default function LogisticsMessageTools({
       )}
 
       {open ? (
-        <section className={`loadlink-logistics-sheet fixed inset-x-0 bottom-0 z-[90] max-h-[68dvh] overflow-y-auto border-t shadow-[0_-18px_50px_rgba(0,0,0,.24)] ${panel}`} aria-label="Logistics actions panel">
+        <section className={`loadlink-logistics-sheet fixed inset-x-0 bottom-0 z-[90] max-h-[78dvh] overflow-y-auto rounded-t-[28px] border-t shadow-[0_-18px_50px_rgba(0,0,0,.24)] ${panel}`} aria-label="Logistics actions panel">
           <div className="mx-auto max-w-3xl p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <div className="flex items-start justify-between gap-4">
               <div><h2 className="text-lg font-bold">Logistics actions</h2><p className={`mt-1 text-xs font-medium ${muted}`}>Tools, stages and updates in one place.</p></div>
@@ -291,10 +369,47 @@ export default function LogisticsMessageTools({
             </div>
 
             <div className="mt-5">
-              <div className="mb-2 flex items-end justify-between gap-3"><p className={`text-[9px] font-bold uppercase tracking-[0.14em] ${muted}`}>Tools</p><span className={`text-[9px] font-medium ${muted}`}>Everything stays here, off the chat screen</span></div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                <button type="button" disabled={disabled} onClick={() => { setEditorTool(null); setEditorText(""); setQuoteOpen((current) => !current); }} className="min-h-[56px] rounded-xl border border-[#f6b800]/55 bg-[#f6b800] px-3 py-2.5 text-left text-black disabled:opacity-40"><span className="block text-[11px] font-bold">Rate quote</span><span className="mt-0.5 block text-[9px] font-medium text-black/60">Structured quote builder</span></button>
-                {workflowTools.map((tool) => <button key={tool.id} type="button" disabled={disabled} onClick={() => openToolEditor(tool)} className={`min-h-[56px] rounded-xl border px-3 py-2.5 text-left disabled:opacity-40 ${control}`}><span className="block text-[11px] font-bold">{tool.label}</span><span className={`mt-0.5 block text-[9px] font-medium leading-4 ${muted}`}>{tool.summary}</span></button>)}
+              <div className="mb-2 flex items-end justify-between gap-3">
+                <div>
+                  <p className={`text-[9px] font-bold uppercase tracking-[0.14em] ${muted}`}>Logistics tools</p>
+                  <p className={`mt-1 text-[10px] font-medium ${muted}`}>Start with a common action or open a grouped toolkit.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <button type="button" disabled={disabled} onClick={() => { setEditorTool(null); setEditorText(""); setQuoteOpen((current) => !current); }} className="min-h-[64px] rounded-2xl border border-[#f6b800]/55 bg-[#f6b800] px-3 py-3 text-left text-black shadow-[0_8px_24px_rgba(246,184,0,.12)] disabled:opacity-40">
+                  <span className="block text-[11px] font-black">Rate quote</span>
+                  <span className="mt-1 block text-[9px] font-medium leading-4 text-black/60">Price & terms</span>
+                </button>
+                {workflowTools.filter((tool) => ["trip-brief", "incident-update"].includes(tool.id)).map((tool) => (
+                  <button key={tool.id} type="button" disabled={disabled} onClick={() => openToolEditor(tool)} className={`min-h-[64px] rounded-2xl border px-3 py-3 text-left disabled:opacity-40 ${control}`}>
+                    <span className="block text-[11px] font-black">{tool.label}</span>
+                    <span className={`mt-1 block text-[9px] font-medium leading-4 ${muted}`}>{tool.id === "trip-brief" ? "Plan the load" : "Report an issue"}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-3 grid gap-2">
+                {toolGroups.map((group) => (
+                  <details key={group.id} className={`group overflow-hidden rounded-2xl border ${control}`}>
+                    <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5">
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[11px] font-black">{group.title}</span>
+                        <span className={`mt-0.5 block text-[9px] font-medium leading-4 ${muted}`}>{group.summary}</span>
+                      </span>
+                      <span className={`rounded-full px-2 py-1 text-[8px] font-bold ${darkMode ? "bg-white/[.06] text-white/55" : "bg-black/[.05] text-black/50"}`}>{group.tools.length}</span>
+                      <span className={`text-sm transition-transform group-open:rotate-180 ${muted}`}>⌄</span>
+                    </summary>
+                    <div className={`grid grid-cols-2 gap-2 border-t p-3 ${darkMode ? "border-white/8" : "border-black/8"}`}>
+                      {group.tools.map((tool) => (
+                        <button key={tool.id} type="button" disabled={disabled} onClick={() => openToolEditor(tool)} className={`min-h-[58px] rounded-xl border px-3 py-2.5 text-left disabled:opacity-40 ${control}`}>
+                          <span className="block text-[10px] font-black">{tool.label}</span>
+                          <span className={`mt-0.5 block text-[8px] font-medium leading-4 ${muted}`}>{tool.summary}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </details>
+                ))}
               </div>
             </div>
 
@@ -322,19 +437,46 @@ export default function LogisticsMessageTools({
             {quoteOpen ? (
               <div className={`mt-4 grid gap-3 rounded-2xl border p-4 sm:grid-cols-2 ${control}`}>
                 <div className="sm:col-span-2"><div className="flex items-center justify-between gap-3"><div><h3 className="text-sm font-bold">Structured rate quote</h3><p className={`mt-0.5 text-[10px] font-medium ${muted}`}>Build the quote here, then send it as a branded quote card.</p></div><button type="button" onClick={() => setQuoteOpen(false)} className={`h-8 rounded-lg border px-2.5 text-[9px] font-bold ${control}`}>Close</button></div></div>
-                {(quoteDefaults || savedVehicles.length > 0) ? (
-                  <div className={`sm:col-span-2 rounded-xl border p-3 ${darkMode ? "border-white/10 bg-black/20" : "border-black/8 bg-black/[.025]"}`}>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`mr-auto text-[9px] font-semibold ${muted}`}>Reuse information already on LoadLink</span>
-                      {quoteDefaults ? <button type="button" onClick={() => applyQuoteValues(quoteDefaults)} className="h-8 rounded-lg bg-[#f6b800] px-3 text-[9px] font-bold text-black">Use {quoteDefaults.sourceLabel || "listing details"}</button> : null}
+                {reuseSources.length > 0 ? (
+                  <div className={`sm:col-span-2 rounded-2xl border p-3.5 ${darkMode ? "border-white/10 bg-black/20" : "border-black/8 bg-black/[.025]"}`}>
+                    <div>
+                      <p className="text-[10px] font-black">Reuse information from LoadLink</p>
+                      <p className={`mt-1 text-[9px] font-medium leading-4 ${muted}`}>Choose a post first, then choose exactly which information should be copied into this quote.</p>
                     </div>
-                    {savedVehicles.length > 0 ? (
-                      <label className="mt-2 block text-[9px] font-semibold">Use vehicle information from my posts
-                        <select defaultValue="" onChange={(event) => { applySavedVehicle(event.target.value); event.currentTarget.value = ""; }} className={`mt-1 h-10 w-full rounded-lg border px-2.5 text-[11px] font-medium outline-none focus:border-[#f6b800] ${control}`}>
-                          <option value="">Choose one of my posted vehicles…</option>
-                          {savedVehicles.map((item) => <option key={item.id} value={item.id}>{item.label}{item.meta ? ` · ${item.meta}` : ""}</option>)}
-                        </select>
-                      </label>
+
+                    <label className="mt-3 block text-[9px] font-semibold">
+                      Source post
+                      <select value={reuseSourceId} onChange={(event) => chooseReuseSource(event.target.value)} className={`mt-1 h-11 w-full rounded-xl border px-3 text-[11px] font-medium outline-none focus:border-[#f6b800] ${control}`}>
+                        <option value="">Choose a LoadLink post…</option>
+                        {reuseSources.map((item) => <option key={item.id} value={item.id}>{item.label}{item.meta ? ` · ${item.meta}` : ""}</option>)}
+                      </select>
+                    </label>
+
+                    {selectedReuseSource ? (
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className={`text-[9px] font-semibold ${muted}`}>Choose what to reuse</p>
+                          <button type="button" onClick={() => setReuseFields(availableReuseFields(selectedReuseSource))} className={`text-[9px] font-bold ${darkMode ? "text-[#ffd45a]" : "text-[#9a7000]"}`}>Select available</button>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {QUOTE_REUSE_FIELDS.map((field) => {
+                            const available = availableReuseFields(selectedReuseSource).includes(field.id);
+                            const active = reuseFields.includes(field.id);
+                            return (
+                              <button
+                                key={field.id}
+                                type="button"
+                                disabled={!available}
+                                onClick={() => toggleReuseField(field.id)}
+                                className={`rounded-full border px-3 py-2 text-[9px] font-bold transition disabled:cursor-not-allowed disabled:opacity-30 ${active ? "border-[#f6b800] bg-[#f6b800] text-black" : control}`}
+                              >
+                                {field.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button type="button" disabled={reuseFields.length === 0} onClick={useSelectedSourceFields} className="mt-3 h-10 w-full rounded-xl bg-[#f6b800] px-4 text-[10px] font-black text-black disabled:opacity-35">Use selected information</button>
+                      </div>
                     ) : null}
                   </div>
                 ) : null}
@@ -349,15 +491,21 @@ export default function LogisticsMessageTools({
               </div>
             ) : null}
 
-            <div className="mt-5">
-              <p className={`mb-2 text-[9px] font-bold uppercase tracking-[0.14em] ${muted}`}>Professional replies</p>
-              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">{templates.map(([label, message]) => <button key={label} type="button" disabled={disabled} onClick={() => { onInsert(message); closePanel(); }} className={`shrink-0 rounded-xl border px-3 py-2.5 text-left text-[10px] font-bold disabled:opacity-40 ${control}`}>{label}</button>)}</div>
-            </div>
-
-            <div className="mt-5">
-              <p className={`mb-2 text-[9px] font-bold uppercase tracking-[0.14em] ${muted}`}>Trip updates</p>
-              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">{STATUS_MESSAGES.map(([label, message]) => <button key={label} type="button" disabled={disabled} onClick={() => { onInsert(`LOAD STATUS — ${label.toUpperCase()}\n${message}`); closePanel(); }} className={`shrink-0 rounded-xl border px-3 py-2.5 text-left text-[10px] font-bold disabled:opacity-40 ${control}`}>{label}</button>)}</div>
-            </div>
+            <details className={`group mt-4 overflow-hidden rounded-2xl border ${control}`}>
+              <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[11px] font-black">Message shortcuts</span>
+                  <span className={`mt-0.5 block text-[9px] font-medium ${muted}`}>Professional replies and live trip updates</span>
+                </span>
+                <span className={`text-sm transition-transform group-open:rotate-180 ${muted}`}>⌄</span>
+              </summary>
+              <div className={`border-t p-3 ${darkMode ? "border-white/8" : "border-black/8"}`}>
+                <p className={`mb-2 text-[8px] font-bold uppercase tracking-[0.14em] ${muted}`}>Professional replies</p>
+                <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">{templates.map(([label, message]) => <button key={label} type="button" disabled={disabled} onClick={() => { onInsert(message); closePanel(); }} className={`shrink-0 rounded-xl border px-3 py-2.5 text-left text-[10px] font-bold disabled:opacity-40 ${control}`}>{label}</button>)}</div>
+                <p className={`mb-2 mt-4 text-[8px] font-bold uppercase tracking-[0.14em] ${muted}`}>Trip updates</p>
+                <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">{STATUS_MESSAGES.map(([label, message]) => <button key={label} type="button" disabled={disabled} onClick={() => { onInsert(`LOAD STATUS — ${label.toUpperCase()}\n${message}`); closePanel(); }} className={`shrink-0 rounded-xl border px-3 py-2.5 text-left text-[10px] font-bold disabled:opacity-40 ${control}`}>{label}</button>)}</div>
+              </div>
+            </details>
           </div>
         </section>
       ) : null}

@@ -382,6 +382,23 @@ function starterMessages(conversation: Conversation) {
   ];
 }
 
+
+function listingRouteSummary(description: string | null | undefined) {
+  const value = String(description || "");
+  const read = (labels: string[]) => {
+    for (const label of labels) {
+      const match = value.match(new RegExp(`^${label}:\\s*([^\\n]+)`, "im"));
+      if (match?.[1]?.trim()) return match[1].trim();
+    }
+    return "";
+  };
+  const explicit = read(["Route"]);
+  if (explicit) return explicit;
+  const from = read(["Pickup location", "Collection", "From", "Origin"]);
+  const to = read(["Delivery location", "Delivery", "To", "Destination"]);
+  return from && to ? `${from} → ${to}` : "";
+}
+
 export default function MessagesPage() {
   // LOADLINK V2.5.4 SESSION WALLPAPER
   useEffect(() => {
@@ -513,6 +530,7 @@ export default function MessagesPage() {
     [conversations, selectedId],
   );
 
+  // LOADLINK V2.5.7 QUOTE SOURCE REUSE
   useEffect(() => {
     let cancelled = false;
     setQuoteDefaults(null);
@@ -521,55 +539,54 @@ export default function MessagesPage() {
 
     (async () => {
       try {
-        let listingData: QuoteReuseListingRow | null = null;
+        let listingData = null;
         const listingResult = await supabase
           .from("job_listings")
           .select("title,city,vehicle_group,rate,description,listing_kind")
           .eq("id", selectedConversation.listing_id)
           .maybeSingle();
 
-        if (!listingResult.error && listingResult.data) listingData = listingResult.data as QuoteReuseListingRow;
+        if (!listingResult.error && listingResult.data) listingData = listingResult.data;
         if (cancelled || !listingData) return;
 
         const parsedRate = parseQuoteRate(String(listingData.rate || ""));
         const vehicleNeed = listingVehicleNeed(String(listingData.description || ""), String(listingData.vehicle_group || ""));
+        const currentRoute = listingRouteSummary(String(listingData.description || ""));
         setQuoteDefaults({
-          sourceLabel: "post details",
+          sourceLabel: `Current post · ${String(listingData.title || "listing").trim()}`,
           ...(parsedRate.amount ? parsedRate : {}),
           ...(vehicleNeed ? { vehicle: vehicleNeed } : {}),
+          ...(currentRoute ? { route: currentRoute } : {}),
           ...(listingData.city ? { availability: String(listingData.city) } : {}),
         });
 
         const { data: { user } } = await supabase.auth.getUser();
         if (!isAuthenticatedUser(user)) return;
 
-        let vehicleRows: QuoteReuseListingRow[] = [];
-        const vehicleResult = await supabase
+        let postRows: any[] = [];
+        const postsResult = await supabase
           .from("job_listings")
           .select("id,title,city,vehicle_group,rate,description,listing_kind,status,moderation_status")
           .eq("user_id", user.id)
-          .eq("listing_kind", "vehicle")
           .neq("id", selectedConversation.listing_id)
           .order("created_at", { ascending: false })
-          .limit(12);
+          .limit(20);
 
-        if (!vehicleResult.error) {
-          vehicleRows = (vehicleResult.data || []) as QuoteReuseListingRow[];
-        } else if (/listing_kind|moderation_status|schema cache|column/i.test(vehicleResult.error.message)) {
+        if (!postsResult.error) {
+          postRows = postsResult.data || [];
+        } else if (/listing_kind|moderation_status|schema cache|column/i.test(postsResult.error.message)) {
           const fallback = await supabase
             .from("job_listings")
             .select("id,title,city,vehicle_group,rate,description")
             .eq("user_id", user.id)
             .neq("id", selectedConversation.listing_id)
             .order("created_at", { ascending: false })
-            .limit(12);
-          if (!fallback.error) {
-            vehicleRows = ((fallback.data || []) as QuoteReuseListingRow[]).filter((row) => !/^Listing type:\s*(Job|Contract)/im.test(String(row.description || "")));
-          }
+            .limit(20);
+          if (!fallback.error) postRows = fallback.data || [];
         }
 
         if (cancelled) return;
-        setQuoteVehicles(vehicleRows
+        setQuoteVehicles(postRows
           .filter((row) => {
             const status = String(row.status || "active").toLowerCase();
             const moderation = String(row.moderation_status || "approved").toLowerCase();
@@ -577,25 +594,32 @@ export default function MessagesPage() {
           })
           .map((row) => {
             const rate = parseQuoteRate(String(row.rate || ""));
-            const title = String(row.title || row.vehicle_group || "My vehicle").trim();
+            const title = String(row.title || row.vehicle_group || "My post").trim();
+            const description = String(row.description || "");
+            const kind = String(row.listing_kind || (/^Listing type:\s*(Job|Contract)/im.test(description) ? "job" : "vehicle")).toLowerCase();
+            const vehicleValue = kind === "vehicle"
+              ? postedVehicleSummary(description, title)
+              : listingVehicleNeed(description, String(row.vehicle_group || ""));
+            const routeValue = listingRouteSummary(description);
+            const kindLabel = kind === "vehicle" ? "Vehicle" : kind === "contract" ? "Contract" : "Post";
             return {
               id: String(row.id),
               label: title,
-              meta: [String(row.city || "").trim(), String(row.vehicle_group || "").trim()].filter(Boolean).join(" · "),
-              vehicle: postedVehicleSummary(String(row.description || ""), title),
-              availability: String(row.city || "").trim(),
+              meta: [kindLabel, String(row.city || "").trim()].filter(Boolean).join(" · "),
+              ...(vehicleValue ? { vehicle: vehicleValue } : {}),
+              ...(routeValue ? { route: routeValue } : {}),
+              ...(row.city ? { availability: String(row.city).trim() } : {}),
               ...(rate.amount ? rate : {}),
             };
           })
         );
       } catch {
-        // Optional autofill must never block messaging.
+        // Quote reuse is optional and must never block messaging.
       }
     })();
 
     return () => { cancelled = true; };
   }, [selectedConversation?.listing_id]);
-
 
   useEffect(() => {
     if (!selectedId) return;

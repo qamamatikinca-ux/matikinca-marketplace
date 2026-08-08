@@ -365,18 +365,38 @@ export default function MyPostsPage() {
 
                         {isManualVehicle && listing.expires_at ? <div className={`mt-3 rounded-xl border px-3 py-2.5 ${expired ? "border-red-500/35 bg-red-500/10" : "border-[#f6b800]/25 bg-[#f6b800]/8"}`}><p className="text-[10px] font-black">{expired ? "Listing expired" : `Expires ${formatDate(listing.expires_at)}`}</p>{!expired ? <button type="button" onClick={() => void renewListing(listing)} className="mt-1.5 text-[10px] font-black text-[#b88900] underline underline-offset-4">Renew</button> : null}</div> : null}
 
-                        <div className="mt-3 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
-                          <Link href={`/listing/${listing.id}`} className={`flex h-9 min-w-[54px] items-center justify-center whitespace-nowrap rounded-xl border px-2.5 text-[11px] font-black ${darkMode ? "border-white/15" : "border-black/10"}`}>View</Link>
-                          <button type="button" onClick={() => setEditing(listing)} className="h-9 min-w-0 whitespace-nowrap rounded-xl bg-[#f6b800] px-2 text-[11px] font-black leading-none text-black sm:px-3">{moderationStatus === "rejected" ? "Edit & resubmit" : "Edit post"}</button>
-                          <details className="relative shrink-0">
-                            <summary aria-label="More post actions" className={`flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-xl border text-base font-black ${darkMode ? "border-white/15" : "border-black/10"}`}>•••</summary>
-                            <div className={`absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-xl border shadow-xl ${surface}`}>
-                              <button type="button" onClick={() => void openAnalytics(listing)} className="block w-full px-4 py-3 text-left text-xs font-black">{isPro ? "View analytics" : "Analytics options"}</button>
-                              {moderationStatus === "approved" ? status === "active" ? <button type="button" onClick={() => void setStatus(listing, "filled")} className="block w-full border-t border-current/10 px-4 py-3 text-left text-xs font-black">Mark as filled</button> : <button type="button" onClick={() => void setStatus(listing, "active")} className="block w-full border-t border-current/10 px-4 py-3 text-left text-xs font-black">Reopen post</button> : null}
-                              <button type="button" onClick={() => void deleteListing(listing)} className="block w-full border-t border-red-500/20 px-4 py-3 text-left text-xs font-black text-red-500">Delete post</button>
-                            </div>
-                          </details>
-                        </div>
+                        {moderationStatus === "rejected" ? (
+                          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setEditing(listing)}
+                              className="col-span-2 flex h-10 w-full items-center justify-center rounded-xl bg-[#f6b800] px-4 text-[11px] font-black text-black shadow-[0_8px_22px_rgba(246,184,0,.12)]"
+                            >
+                              Edit & resubmit
+                            </button>
+                            <Link href={`/listing/${listing.id}`} className={`flex h-9 min-w-0 items-center justify-center rounded-xl border px-3 text-[11px] font-black ${darkMode ? "border-white/15" : "border-black/10"}`}>View post</Link>
+                            <details className="relative shrink-0">
+                              <summary aria-label="More post actions" className={`flex h-9 w-10 cursor-pointer list-none items-center justify-center rounded-xl border text-base font-black ${darkMode ? "border-white/15" : "border-black/10"}`}>•••</summary>
+                              <div className={`absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-xl border shadow-xl ${surface}`}>
+                                <button type="button" onClick={() => void openAnalytics(listing)} className="block w-full px-4 py-3 text-left text-xs font-black">{isPro ? "View analytics" : "Analytics options"}</button>
+                                <button type="button" onClick={() => void deleteListing(listing)} className="block w-full border-t border-red-500/20 px-4 py-3 text-left text-xs font-black text-red-500">Delete post</button>
+                              </div>
+                            </details>
+                          </div>
+                        ) : (
+                          <div className="mt-3 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
+                            <Link href={`/listing/${listing.id}`} className={`flex h-9 min-w-[54px] items-center justify-center whitespace-nowrap rounded-xl border px-2.5 text-[11px] font-black ${darkMode ? "border-white/15" : "border-black/10"}`}>View</Link>
+                            <button type="button" onClick={() => setEditing(listing)} className="h-9 min-w-0 truncate rounded-xl bg-[#f6b800] px-2 text-[11px] font-black leading-none text-black sm:px-3">Edit post</button>
+                            <details className="relative shrink-0">
+                              <summary aria-label="More post actions" className={`flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-xl border text-base font-black ${darkMode ? "border-white/15" : "border-black/10"}`}>•••</summary>
+                              <div className={`absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-xl border shadow-xl ${surface}`}>
+                                <button type="button" onClick={() => void openAnalytics(listing)} className="block w-full px-4 py-3 text-left text-xs font-black">{isPro ? "View analytics" : "Analytics options"}</button>
+                                {moderationStatus === "approved" ? status === "active" ? <button type="button" onClick={() => void setStatus(listing, "filled")} className="block w-full border-t border-current/10 px-4 py-3 text-left text-xs font-black">Mark as filled</button> : <button type="button" onClick={() => void setStatus(listing, "active")} className="block w-full border-t border-current/10 px-4 py-3 text-left text-xs font-black">Reopen post</button> : null}
+                                <button type="button" onClick={() => void deleteListing(listing)} className="block w-full border-t border-red-500/20 px-4 py-3 text-left text-xs font-black text-red-500">Delete post</button>
+                              </div>
+                            </details>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </article>
