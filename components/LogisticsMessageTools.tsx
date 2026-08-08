@@ -30,6 +30,9 @@ type Props = {
   disabled?: boolean;
   onInsert: (message: string) => void;
   onSendQuote?: (quote: StructuredQuote) => Promise<void> | void;
+  trigger?: "bar" | "menu";
+  onOpen?: () => void;
+  onClose?: () => void;
 };
 
 const STAGES: DealStage[] = [
@@ -70,6 +73,9 @@ export default function LogisticsMessageTools({
   disabled = false,
   onInsert,
   onSendQuote,
+  trigger = "bar",
+  onOpen,
+  onClose,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [stage, setStage] = useState<DealStage>("Enquiry");
@@ -120,10 +126,29 @@ export default function LogisticsMessageTools({
     ] as const;
   }, [listingTitle, role]);
 
+  const workflowTools = useMemo(() => {
+    const title = clean(listingTitle) || "this listing";
+    return [
+      ["Trip brief", `TRIP BRIEF — ${title}\nCollection: [address + contact + time]\nDelivery: [address + contact + time]\nCargo: [description + weight]\nVehicle: [type / registration]\nReferences: [collection / delivery]\nSpecial instructions: [PPE, access, loading/offloading]`],
+      ["Load checklist", "LOAD CHECKLIST\n• Vehicle and driver confirmed\n• Cargo description and weight confirmed\n• Collection contact and reference confirmed\n• Delivery contact and reference confirmed\n• Load restraints / equipment confirmed\n• PPE / induction / site access confirmed\n• POD requirements confirmed"],
+      ["Document request", "DOCUMENT REQUEST\nPlease send the documents required for this load, such as vehicle details, permit/insurance where applicable, invoice details and POD requirements. Do not send passwords, PINs, OTPs or banking login information."],
+      ["Driver handover", "DRIVER HANDOVER\nDriver: [name]\nCell: [number]\nVehicle registration: [registration]\nTrailer registration: [registration]\nCollection ETA: [time]\nDelivery ETA: [time]"],
+      ["Cost breakdown", "COST BREAKDOWN REQUEST\nPlease confirm the base transport rate, VAT position, tolls, fuel surcharge if applicable, waiting/detention rate, loading/offloading charges and any other cost before booking."],
+      ["Payment terms", "PAYMENT TERMS\nPlease confirm the payment period, invoice requirements, POD requirements, payment reference and the contact responsible for payment queries."],
+      ["POD request", "POD REQUEST\nPlease send the signed proof of delivery and confirm the invoice submission address/reference once delivery is complete."],
+      ["Incident update", "INCIDENT UPDATE\nIssue: [breakdown / delay / site problem]\nLocation: [location]\nCurrent status: [status]\nRevised ETA: [time]\nRecovery / replacement plan: [details]"],
+    ] as const;
+  }, [listingTitle]);
 
   function openPanel() {
     if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    onOpen?.();
     setOpen(true);
+  }
+
+  function closePanel() {
+    setOpen(false);
+    onClose?.();
   }
 
   function selectStage(next: DealStage) {
@@ -164,7 +189,7 @@ export default function LogisticsMessageTools({
       }
       setStage("Quoting");
       setQuoteOpen(false);
-      setOpen(false);
+      closePanel();
     } finally {
       setQuoteBusy(false);
     }
@@ -176,59 +201,66 @@ export default function LogisticsMessageTools({
 
   return (
     <>
-      <section className={`loadlink-logistics-bar border-t ${panel}`} aria-label="Logistics messaging tools">
-        <div className="mx-auto flex min-h-[58px] max-w-3xl items-center justify-between gap-3 px-3 py-2 sm:px-4">
-          <button type="button" onClick={openPanel} className="flex min-w-0 items-center gap-2 text-left" aria-expanded={open}>
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f6b800] text-black" aria-hidden="true">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 7h11v9H3V7Zm11 3h3.4L21 13.6V16h-7v-6Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /><circle cx="7" cy="17.5" r="1.7" stroke="currentColor" strokeWidth="1.8" /><circle cx="17.5" cy="17.5" r="1.7" stroke="currentColor" strokeWidth="1.8" /></svg>
-            </span>
-            <span className="min-w-0">
-              <strong className="block truncate text-xs font-black uppercase tracking-[0.12em]">Logistics actions</strong>
-              <span className={`block truncate text-[10px] font-semibold ${muted}`}>Replies, trip stages and structured quotes</span>
-            </span>
-          </button>
-          <div className="flex shrink-0 items-center gap-2">
-            <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wide ${darkMode ? "border-white/15 text-white/65" : "border-black/15 text-black/60"}`}>{stage}</span>
-            <button type="button" onClick={openPanel} className={`flex h-8 w-8 items-center justify-center rounded-full border text-lg ${control}`} aria-label="Open logistics tools">+</button>
-          </div>
-        </div>
-      </section>
+      {trigger === "menu" ? (
+        <button type="button" onClick={openPanel} disabled={disabled} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-bold hover:bg-black/[.04] disabled:opacity-40" aria-expanded={open}>
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f6b800] text-black" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 7h11v9H3V7Zm11 3h3.4L21 13.6V16h-7v-6Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /><circle cx="7" cy="17.5" r="1.7" stroke="currentColor" strokeWidth="1.8" /><circle cx="17.5" cy="17.5" r="1.7" stroke="currentColor" strokeWidth="1.8" /></svg>
+          </span>
+          <span className="min-w-0 flex-1"><span className="block">Logistics tools</span><span className={`mt-0.5 block truncate text-[9px] font-semibold ${muted}`}>{stage} · tools and updates</span></span>
+        </button>
+      ) : (
+        <button type="button" onClick={openPanel} disabled={disabled} className={`flex h-10 items-center gap-2 rounded-xl border px-3 text-xs font-black disabled:opacity-40 ${control}`} aria-expanded={open}>
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#f6b800] text-black" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 7h11v9H3V7Zm11 3h3.4L21 13.6V16h-7v-6Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /><circle cx="7" cy="17.5" r="1.7" stroke="currentColor" strokeWidth="1.8" /><circle cx="17.5" cy="17.5" r="1.7" stroke="currentColor" strokeWidth="1.8" /></svg>
+          </span>
+          Logistics
+        </button>
+      )}
 
       {open ? (
-        <section className={`loadlink-logistics-sheet fixed inset-x-0 bottom-0 z-[90] max-h-[72dvh] overflow-y-auto border-t shadow-[0_-18px_50px_rgba(0,0,0,.24)] ${panel}`} aria-label="Logistics actions panel">
+        <section className={`loadlink-logistics-sheet fixed inset-x-0 bottom-0 z-[90] max-h-[68dvh] overflow-y-auto border-t shadow-[0_-18px_50px_rgba(0,0,0,.24)] ${panel}`} aria-label="Logistics actions panel">
           <div className="mx-auto max-w-3xl p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <div className="flex items-start justify-between gap-4">
-              <div><h2 className="text-lg font-black">Logistics actions</h2><p className={`mt-1 text-xs font-semibold ${muted}`}>Choose a stage, insert a professional reply or send a quote.</p></div>
-              <button type="button" onClick={() => setOpen(false)} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-xl ${control}`} aria-label="Close logistics actions">×</button>
+              <div><h2 className="text-lg font-bold">Logistics actions</h2><p className={`mt-1 text-xs font-medium ${muted}`}>Tools, stages and updates in one place.</p></div>
+              <button type="button" onClick={closePanel} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-xl ${control}`} aria-label="Close logistics actions">×</button>
             </div>
 
             <div className="mt-5">
-              <p className={`mb-2 text-[9px] font-black uppercase tracking-[0.16em] ${muted}`}>Deal stage</p>
-              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">{STAGES.map((item) => <button key={item} type="button" onClick={() => selectStage(item)} className={`shrink-0 rounded-full border px-3 py-2 text-[10px] font-black ${stage === item ? "border-[#f6b800] bg-[#f6b800] text-black" : control}`}>{item}</button>)}</div>
+              <p className={`mb-2 text-[9px] font-bold uppercase tracking-[0.14em] ${muted}`}>Deal stage</p>
+              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">{STAGES.map((item) => <button key={item} type="button" onClick={() => selectStage(item)} className={`shrink-0 rounded-full border px-3 py-2 text-[10px] font-bold ${stage === item ? "border-[#f6b800] bg-[#f6b800] text-black" : control}`}>{item}</button>)}</div>
             </div>
 
             <div className="mt-5">
-              <p className={`mb-2 text-[9px] font-black uppercase tracking-[0.16em] ${muted}`}>Professional replies</p>
-              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">{templates.map(([label, message]) => <button key={label} type="button" disabled={disabled} onClick={() => { onInsert(message); setOpen(false); }} className={`shrink-0 rounded-xl border px-3 py-2.5 text-left text-[10px] font-black disabled:opacity-40 ${control}`}>{label}</button>)}</div>
-            </div>
-
-            <div className="mt-5">
-              <p className={`mb-2 text-[9px] font-black uppercase tracking-[0.16em] ${muted}`}>Trip updates</p>
-              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">{STATUS_MESSAGES.map(([label, message]) => <button key={label} type="button" disabled={disabled} onClick={() => { onInsert(`LOAD STATUS — ${label.toUpperCase()}\n${message}`); setOpen(false); }} className={`shrink-0 rounded-xl border px-3 py-2.5 text-left text-[10px] font-black disabled:opacity-40 ${control}`}>{label}</button>)}<button type="button" disabled={disabled} onClick={() => setQuoteOpen((current) => !current)} className="shrink-0 rounded-xl bg-[#f6b800] px-4 py-2.5 text-[10px] font-black text-black disabled:opacity-40">Structured quote</button></div>
+              <div className="mb-2 flex items-end justify-between gap-3"><p className={`text-[9px] font-bold uppercase tracking-[0.14em] ${muted}`}>Tools</p><span className={`text-[9px] font-medium ${muted}`}>Everything stays here, off the chat screen</span></div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <button type="button" disabled={disabled} onClick={() => setQuoteOpen((current) => !current)} className="min-h-[58px] rounded-xl border border-[#f6b800]/55 bg-[#f6b800] px-3 py-2.5 text-left text-black disabled:opacity-40"><span className="block text-[11px] font-bold">Rate quote</span><span className="mt-0.5 block text-[9px] font-medium text-black/60">Structured quote builder</span></button>
+                {workflowTools.map(([label, message]) => <button key={label} type="button" disabled={disabled} onClick={() => { onInsert(message); closePanel(); }} className={`min-h-[58px] rounded-xl border px-3 py-2.5 text-left disabled:opacity-40 ${control}`}><span className="block text-[11px] font-bold">{label}</span><span className={`mt-0.5 block text-[9px] font-medium ${muted}`}>{label === "Trip brief" ? "Collection, delivery and cargo" : label === "Load checklist" ? "Pre-dispatch checks" : label === "Document request" ? "Request required documents" : label === "Driver handover" ? "Driver and vehicle details" : label === "Cost breakdown" ? "Clarify all charges" : label === "Payment terms" ? "Invoice and payment process" : label === "POD request" ? "Proof-of-delivery follow-up" : "Delay / breakdown template"}</span></button>)}
+              </div>
             </div>
 
             {quoteOpen ? (
-              <div className={`mt-5 grid gap-3 rounded-2xl border p-4 sm:grid-cols-2 ${control}`}>
-                <label className="text-[10px] font-black">Rate (R)<input value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^0-9.]/g, ""))} inputMode="decimal" placeholder="18500" className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none focus:border-[#f6b800] ${control}`} /></label>
-                <label className="text-[10px] font-black">Rate unit<select value={unit} onChange={(event) => setUnit(event.target.value as StructuredQuote["unit"])} className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none focus:border-[#f6b800] ${control}`}><option value="total">Total trip</option><option value="km">Per km</option><option value="ton">Per ton</option><option value="day">Per day</option></select></label>
-                <label className="text-[10px] font-black">Vehicle<input value={vehicle} onChange={(event) => setVehicle(event.target.value)} placeholder="34-ton side tipper" className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none focus:border-[#f6b800] ${control}`} /></label>
-                <label className="text-[10px] font-black">Route<input value={route} onChange={(event) => setRoute(event.target.value)} placeholder="Pretoria → Durban" className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none focus:border-[#f6b800] ${control}`} /></label>
-                <label className="text-[10px] font-black">Availability<input value={availability} onChange={(event) => setAvailability(event.target.value)} placeholder="Monday, Gauteng" className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none focus:border-[#f6b800] ${control}`} /></label>
-                <label className="text-[10px] font-black">VAT<select value={vat} onChange={(event) => setVat(event.target.value as StructuredQuote["vat"])} className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none focus:border-[#f6b800] ${control}`}><option value="included">Included</option><option value="excluded">Excluded</option><option value="not_applicable">Not applicable</option></select></label>
-                <label className="text-[10px] font-black sm:col-span-2">Terms<input value={terms} onChange={(event) => setTerms(event.target.value)} placeholder="Payment within 7 days of signed POD" className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none focus:border-[#f6b800] ${control}`} /></label>
-                <button type="button" disabled={!amount.trim() || disabled || quoteBusy} onClick={() => void submitQuote()} className="h-11 rounded-xl bg-[#f6b800] text-[10px] font-black uppercase tracking-wide text-black disabled:opacity-40 sm:col-span-2">{quoteBusy ? "Sending quote…" : "Send structured quote"}</button>
+              <div className={`mt-4 grid gap-3 rounded-2xl border p-4 sm:grid-cols-2 ${control}`}>
+                <div className="sm:col-span-2"><div className="flex items-center justify-between gap-3"><div><h3 className="text-sm font-bold">Structured rate quote</h3><p className={`mt-0.5 text-[10px] font-medium ${muted}`}>Build the quote here, then send it as a branded quote card.</p></div><button type="button" onClick={() => setQuoteOpen(false)} className={`h-8 rounded-lg border px-2.5 text-[9px] font-bold ${control}`}>Close</button></div></div>
+                <label className="text-[10px] font-semibold">Rate (R)<input value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^0-9.]/g, ""))} inputMode="decimal" placeholder="18500" className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-[#f6b800] ${control}`} /></label>
+                <label className="text-[10px] font-semibold">Rate unit<select value={unit} onChange={(event) => setUnit(event.target.value as StructuredQuote["unit"])} className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-[#f6b800] ${control}`}><option value="total">Total trip</option><option value="km">Per km</option><option value="ton">Per ton</option><option value="day">Per day</option></select></label>
+                <label className="text-[10px] font-semibold">Vehicle<input value={vehicle} onChange={(event) => setVehicle(event.target.value)} placeholder="34-ton side tipper" className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-[#f6b800] ${control}`} /></label>
+                <label className="text-[10px] font-semibold">Route<input value={route} onChange={(event) => setRoute(event.target.value)} placeholder="Pretoria → Durban" className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-[#f6b800] ${control}`} /></label>
+                <label className="text-[10px] font-semibold">Availability<input value={availability} onChange={(event) => setAvailability(event.target.value)} placeholder="Monday, Gauteng" className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-[#f6b800] ${control}`} /></label>
+                <label className="text-[10px] font-semibold">VAT<select value={vat} onChange={(event) => setVat(event.target.value as StructuredQuote["vat"])} className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-[#f6b800] ${control}`}><option value="included">Included</option><option value="excluded">Excluded</option><option value="not_applicable">Not applicable</option></select></label>
+                <label className="text-[10px] font-semibold sm:col-span-2">Terms<input value={terms} onChange={(event) => setTerms(event.target.value)} placeholder="Payment within 7 days of signed POD" className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-[#f6b800] ${control}`} /></label>
+                <button type="button" disabled={!amount.trim() || disabled || quoteBusy} onClick={() => void submitQuote()} className="h-11 rounded-xl bg-[#f6b800] text-[10px] font-bold uppercase tracking-wide text-black disabled:opacity-40 sm:col-span-2">{quoteBusy ? "Sending quote…" : "Send structured quote"}</button>
               </div>
             ) : null}
+
+            <div className="mt-5">
+              <p className={`mb-2 text-[9px] font-bold uppercase tracking-[0.14em] ${muted}`}>Professional replies</p>
+              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">{templates.map(([label, message]) => <button key={label} type="button" disabled={disabled} onClick={() => { onInsert(message); closePanel(); }} className={`shrink-0 rounded-xl border px-3 py-2.5 text-left text-[10px] font-bold disabled:opacity-40 ${control}`}>{label}</button>)}</div>
+            </div>
+
+            <div className="mt-5">
+              <p className={`mb-2 text-[9px] font-bold uppercase tracking-[0.14em] ${muted}`}>Trip updates</p>
+              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">{STATUS_MESSAGES.map(([label, message]) => <button key={label} type="button" disabled={disabled} onClick={() => { onInsert(`LOAD STATUS — ${label.toUpperCase()}\n${message}`); closePanel(); }} className={`shrink-0 rounded-xl border px-3 py-2.5 text-left text-[10px] font-bold disabled:opacity-40 ${control}`}>{label}</button>)}</div>
+            </div>
           </div>
         </section>
       ) : null}

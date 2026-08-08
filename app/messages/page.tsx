@@ -63,7 +63,13 @@ type Conversation = ConversationRow & {
   unreadCount: number;
 };
 
-type QuotePayload = StructuredQuote & { status?: "pending" | "accepted" | "declined"; listing_title?: string };
+type QuoteBranding = { name: string; logo: string | null };
+type QuotePayload = StructuredQuote & {
+  status?: "pending" | "accepted" | "declined";
+  listing_title?: string;
+  dealership_name?: string;
+  dealership_logo?: string | null;
+};
 
 type ChatMessage = {
   id: string;
@@ -334,6 +340,7 @@ export default function MessagesPage() {
   const [chatSearchOpen, setChatSearchOpen] = useState(false);
   const [starredOnly, setStarredOnly] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState("");
+  const [messageMenuId, setMessageMenuId] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [failedUpload, setFailedUpload] = useState<{ file: File; caption?: string } | null>(null);
   const [archiveBusy, setArchiveBusy] = useState(false);
@@ -349,6 +356,9 @@ export default function MessagesPage() {
   const [blockState, setBlockState] = useState<BlockState>({ blocked_by_me: false, blocked_by_other: false });
   const [blockBusy, setBlockBusy] = useState(false);
   const [reportBusy, setReportBusy] = useState(false);
+  const [composerActionsOpen, setComposerActionsOpen] = useState(false);
+  const [potentialDealReviewOpen, setPotentialDealReviewOpen] = useState(false);
+  const [quoteBranding, setQuoteBranding] = useState<QuoteBranding>({ name: "", logo: null });
   const [messagePrivacy, setMessagePrivacy] = useState<MessagePrivacyPreferences>(
     () => DEFAULT_MESSAGE_PRIVACY,
   );
@@ -440,6 +450,55 @@ export default function MessagesPage() {
       setText("");
     }
   }, [selectedId]);
+
+  useEffect(() => {
+    setComposerActionsOpen(false);
+    setPotentialDealReviewOpen(false);
+  }, [selectedId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setQuoteBranding({ name: "", logo: null });
+    if (!selectedConversation?.listing_id) return;
+
+    (async () => {
+      try {
+        const listingResult = await supabase
+          .from("job_listings")
+          .select("dealership_id,poster_photo,posted_by")
+          .eq("id", selectedConversation.listing_id)
+          .maybeSingle();
+        if (cancelled || listingResult.error || !listingResult.data) return;
+        const listing = listingResult.data as { dealership_id?: string | null; poster_photo?: string | null; posted_by?: string | null };
+        if (!listing.dealership_id) return;
+
+        const dealerResult = await supabase
+          .from("dealership_profiles")
+          .select("name,profile_image_url")
+          .eq("id", listing.dealership_id)
+          .maybeSingle();
+        if (cancelled) return;
+        if (!dealerResult.error && dealerResult.data) {
+          const dealer = dealerResult.data as { name?: string | null; profile_image_url?: string | null };
+          setQuoteBranding({
+            name: String(dealer.name || listing.posted_by || "Dealership").trim(),
+            logo: String(dealer.profile_image_url || listing.poster_photo || "").trim() || null,
+          });
+        } else {
+          setQuoteBranding({
+            name: String(listing.posted_by || "Dealership").trim(),
+            logo: String(listing.poster_photo || "").trim() || null,
+          });
+        }
+      } catch {
+        // Dealership branding is optional and must never block chat.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedConversation?.listing_id]);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -877,7 +936,13 @@ export default function MessagesPage() {
         p_thread_id: selectedConversation.id,
         p_access_key: selectedConversation.accessKey,
         p_kind: "quote",
-        p_payload: { ...quote, listing_title: selectedConversation.listing_title, status: "pending" },
+        p_payload: {
+          ...quote,
+          listing_title: selectedConversation.listing_title,
+          status: "pending",
+          ...(quoteBranding.name ? { dealership_name: quoteBranding.name } : {}),
+          ...(quoteBranding.logo ? { dealership_logo: quoteBranding.logo } : {}),
+        },
       });
       if (result.error) throw result.error;
       void sendPushNotification(selectedConversation, `New rate quote · R${quote.amount}`);
@@ -1311,6 +1376,7 @@ export default function MessagesPage() {
     setChatSearchOpen(false);
     setStarredOnly(false);
     setEditingMessageId("");
+    setMessageMenuId("");
     window.history.replaceState({}, "", `/messages?thread=${conversation.id}`);
   }
 
@@ -1323,6 +1389,7 @@ export default function MessagesPage() {
     setChatSearchOpen(false);
     setStarredOnly(false);
     setEditingMessageId("");
+    setMessageMenuId("");
     window.history.replaceState({}, "", "/messages");
   }
 
@@ -1350,9 +1417,9 @@ export default function MessagesPage() {
           <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
         </div>
         <HomeLogoLink
-          theme="light"
+          theme={darkMode ? "dark" : "light"}
           showGlow={false}
-          className="loadlink-official-header-logo pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md bg-white px-2 py-1"
+          className="loadlink-official-header-logo pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
           logoClassName="loadlink-messages-header-logo"
         />
         <div className="absolute right-3 top-1/2 z-10 -translate-y-1/2 md:right-5">
@@ -1497,7 +1564,7 @@ export default function MessagesPage() {
                   )}
                 />
                 <div className="min-w-0 flex-1">
-                  <h2 className="truncate text-base font-black md:text-lg">
+                  <h2 className="truncate text-base font-bold md:text-lg">
                     {selectedConversation.other_name}
                   </h2>
                   <p
@@ -1508,13 +1575,7 @@ export default function MessagesPage() {
                   <p className="hidden truncate text-[11px] font-semibold text-black/40 sm:block">
                     {replyText(selectedConversation.average_reply_minutes)}
                   </p>
-                  <p
-                    className={`mt-0.5 text-[10px] font-black ${dailyLimitReached ? "text-red-600" : "text-black/40"}`}
-                  >
-                    {isPro
-                      ? "Pro messaging · no daily limit"
-                      : `${messagesUsedToday}/${dailyMessageLimit} messages used today`}
-                  </p>
+
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {selectedConversation.other_phone ? (
@@ -1550,18 +1611,27 @@ export default function MessagesPage() {
                 </div>
               </header>
 
-              <div className="loadlink-listing-context flex items-center gap-3 border-b border-black/10 bg-white px-3 py-2.5 md:px-5">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black text-[#f6b800]"><BriefcaseIcon /></span>
-                <div className="min-w-0 flex-1"><p className="text-[10px] font-semibold text-black/45">Discussing</p><p className="truncate text-sm font-black">{selectedConversation.listing_title}</p></div>
-                <Link href={`/jobs#job-${selectedConversation.listing_id}`} className="shrink-0 rounded-xl border border-black/10 px-3 py-2 text-[10px] font-black uppercase">View listing</Link>
+              <div className="loadlink-listing-context flex min-h-[42px] items-center gap-2 border-b border-black/10 bg-white px-3 py-1.5 md:px-5">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black text-[#f6b800]"><BriefcaseIcon /></span>
+                <p className="min-w-0 flex-1 truncate text-[11px] font-semibold">{selectedConversation.listing_title}</p>
+                <Link href={`/jobs#job-${selectedConversation.listing_id}`} className="shrink-0 rounded-lg border border-black/10 px-2.5 py-1.5 text-[9px] font-bold uppercase">View</Link>
               </div>
-              <div className="loadlink-chat-privacy border-b border-black/10 bg-[#f7f4ed] px-4 py-2 text-[10px] font-semibold text-black/50">Private conversation · attachments are visible only to participants.</div>
 
               {potentialDealPending ? (
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#f6b800]/35 bg-[#fff8de] px-4 py-3 text-xs font-semibold text-black">
-                  <span><strong>Potential deal:</strong> this is a new enquiry. Accept it to continue the conversation.</span>
-                  <div className="flex flex-wrap gap-2"><button type="button" onClick={() => void updatePotentialDeal("accepted")} className="rounded-xl bg-black px-3 py-2 text-[10px] font-black uppercase text-white">Accept deal</button><button type="button" onClick={() => void updatePotentialDeal("declined")} className="rounded-xl border border-black/15 px-3 py-2 text-[10px] font-black uppercase">Decline</button><button type="button" onClick={() => void toggleBlock()} disabled={blockBusy} className="rounded-xl border border-black/15 px-3 py-2 text-[10px] font-black uppercase disabled:opacity-50">{blockState.blocked_by_me ? "Unblock" : "Block"}</button><button type="button" onClick={() => void reportConversation()} disabled={reportBusy} className="rounded-xl border border-black/15 px-3 py-2 text-[10px] font-black uppercase disabled:opacity-50">Report</button></div>
-                </div>
+                <>
+                  <div className="flex min-h-[44px] items-center justify-between gap-3 border-b border-[#f6b800]/25 bg-[#fff9e8] px-3 py-2 text-[10px] font-semibold text-black md:px-5">
+                    <span className="min-w-0 truncate"><strong>Potential deal</strong><span className="text-black/50"> · new listing enquiry</span></span>
+                    <button type="button" onClick={() => setPotentialDealReviewOpen((value) => !value)} className="shrink-0 rounded-lg border border-black/10 bg-white px-2.5 py-1.5 text-[9px] font-black uppercase">{potentialDealReviewOpen ? "Close" : "Review"}</button>
+                  </div>
+                  {potentialDealReviewOpen ? (
+                    <div className="flex flex-wrap gap-2 border-b border-black/10 bg-white px-3 py-2.5 md:px-5">
+                      <button type="button" onClick={() => void updatePotentialDeal("accepted")} className="rounded-lg bg-black px-3 py-2 text-[9px] font-black uppercase text-white">Accept deal</button>
+                      <button type="button" onClick={() => void updatePotentialDeal("declined")} className="rounded-lg border border-black/15 px-3 py-2 text-[9px] font-black uppercase">Decline</button>
+                      <button type="button" onClick={() => void toggleBlock()} disabled={blockBusy} className="rounded-lg border border-black/15 px-3 py-2 text-[9px] font-black uppercase disabled:opacity-50">{blockState.blocked_by_me ? "Unblock" : "Block"}</button>
+                      <button type="button" onClick={() => void reportConversation()} disabled={reportBusy} className="rounded-lg border border-black/15 px-3 py-2 text-[9px] font-black uppercase disabled:opacity-50">Report</button>
+                    </div>
+                  ) : null}
+                </>
               ) : null}
 
               {potentialDealDeclined ? (
@@ -1626,7 +1696,7 @@ export default function MessagesPage() {
                               />
                             ) : null}
                             <div
-                              className={`max-w-[82%] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[72%] ${
+                              className={`relative max-w-[82%] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[72%] ${
                                 mine
                                   ? "rounded-br-sm bg-black text-white"
                                   : "rounded-bl-sm border border-black/5 bg-white text-black"
@@ -1635,7 +1705,7 @@ export default function MessagesPage() {
                               {message.deleted_at ? (
                                 <p className={`text-sm italic ${mine ? "text-white/55" : "text-black/45"}`}>Message deleted</p>
                               ) : message.message_kind === "quote" && message.structured_payload ? (
-                                <QuoteMessageCard message={message} mine={mine} canRespond={!mine} onRespond={(status) => void respondToQuote(message, status)} />
+                                <QuoteMessageCard message={message} mine={mine} canRespond={!mine} branding={quoteBranding} onRespond={(status) => void respondToQuote(message, status)} />
                               ) : message.attachment_id ? (
                                 message.file_type?.startsWith("audio/") ? (
                                   <VoiceAttachment message={message} accessKey={selectedConversation.accessKey} mine={mine} onError={setError} />
@@ -1646,13 +1716,14 @@ export default function MessagesPage() {
                               {!message.deleted_at && message.message_kind !== "quote" && message.body && (!message.attachment_id || message.body !== "Shared an attachment") ? (
                                 <p className="whitespace-pre-wrap break-words text-sm font-medium leading-6">{message.body}</p>
                               ) : null}
-                              <div className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] font-bold ${mine ? "text-white/45" : "text-black/35"}`}>
+                              <div className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] font-semibold ${mine ? "text-white/45" : "text-black/35"}`}>
                                 {message.edited_at && !message.deleted_at ? <span>edited ·</span> : null}<span>{formatClock(message.created_at)}</span>{mine ? <span aria-label="Sent">✓</span> : null}
+                                {!message.deleted_at ? <button type="button" onClick={() => setMessageMenuId((current) => current === message.id ? "" : message.id)} className={`ml-1 flex h-5 w-6 items-center justify-center rounded-md text-[13px] leading-none ${mine ? "text-white/55 hover:bg-white/10" : "text-black/40 hover:bg-black/5"}`} aria-label="Message options" aria-expanded={messageMenuId === message.id}>•••</button> : null}
                               </div>
-                              {!message.deleted_at ? (
-                                <div className={`mt-2 flex items-center gap-2 border-t pt-2 text-[9px] font-black ${mine ? "border-white/10" : "border-black/5"}`}>
-                                  <button type="button" onClick={() => void toggleStar(message)} className={message.starred_by_me ? "text-[#f6b800]" : mine ? "text-white/45" : "text-black/40"}>{message.starred_by_me ? "★ Starred" : "☆ Star"}</button>
-                                  {mine && message.message_kind !== "quote" && Date.now() - new Date(message.created_at).getTime() <= 15 * 60_000 ? <><button type="button" onClick={() => beginEdit(message)} className={mine ? "text-white/55" : "text-black/45"}>Edit</button><button type="button" onClick={() => void deleteMessage(message)} className={mine ? "text-red-300" : "text-red-600"}>Delete</button></> : null}
+                              {!message.deleted_at && messageMenuId === message.id ? (
+                                <div className={`absolute bottom-7 right-2 z-20 min-w-[126px] overflow-hidden rounded-xl border p-1 shadow-xl ${mine ? "border-white/15 bg-[#171717] text-white" : "border-black/10 bg-white text-black"}`}>
+                                  <button type="button" onClick={() => { void toggleStar(message); setMessageMenuId(""); }} className={`block w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold ${mine ? "hover:bg-white/10" : "hover:bg-black/[.04]"}`}>{message.starred_by_me ? "★ Unstar" : "☆ Star"}</button>
+                                  {mine && message.message_kind !== "quote" && Date.now() - new Date(message.created_at).getTime() <= 15 * 60_000 ? <><button type="button" onClick={() => { beginEdit(message); setMessageMenuId(""); }} className={`block w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold ${mine ? "hover:bg-white/10" : "hover:bg-black/[.04]"}`}>Edit</button><button type="button" onClick={() => { setMessageMenuId(""); void deleteMessage(message); }} className="block w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold text-red-500 hover:bg-red-500/10">Delete</button></> : null}
                                 </div>
                               ) : null}
                             </div>
@@ -1690,27 +1761,6 @@ export default function MessagesPage() {
                 </div>
               ) : null}
 
-              <LogisticsMessageTools
-                threadId={selectedConversation.id}
-                listingTitle={selectedConversation.listing_title}
-                role={selectedConversation.role}
-                darkMode={darkMode}
-                disabled={
-                  sending ||
-                  uploading ||
-                  dailyLimitReached ||
-                  conversationBlocked ||
-                  potentialDealPending ||
-                  potentialDealDeclined
-                }
-                onSendQuote={sendStructuredQuote}
-                onInsert={(message) =>
-                  updateTyping(
-                    text.trim() ? `${text.trim()}\n\n${message}` : message,
-                  )
-                }
-              />
-
               <form
                 onSubmit={send}
                 className="loadlink-chat-composer border-t border-black/10 bg-white p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:p-4"
@@ -1726,25 +1776,37 @@ export default function MessagesPage() {
                 {uploading && uploadProgress ? <div className="mx-auto mb-2 max-w-3xl"><div className="h-1.5 overflow-hidden rounded-full bg-black/10"><div className="h-full rounded-full bg-[#f6b800] transition-[width]" style={{ width: `${uploadProgress}%` }} /></div><p className="mt-1 text-right text-[9px] font-bold text-black/40">Uploading {uploadProgress}%</p></div> : null}
                 {failedUpload && !uploading ? <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[10px] font-bold text-red-700"><span className="min-w-0 truncate">{failedUpload.file.type.startsWith("audio/") ? "Voice note" : failedUpload.file.name} failed to send.</span><span className="flex shrink-0 gap-2"><button type="button" onClick={() => void sendAttachment(failedUpload.file, failedUpload.caption)} className="rounded-lg bg-red-600 px-3 py-1.5 font-black text-white">Retry</button><button type="button" onClick={() => setFailedUpload(null)} className="rounded-lg border border-red-300 px-2 py-1.5 font-black">Dismiss</button></span></div> : null}
                 <div className="mx-auto flex max-w-3xl items-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-black/10 bg-[#f3f0e8] text-black disabled:opacity-40"
-                    aria-label="Attach a file"
-                  >
-                    <PaperclipIcon />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => recording ? stopRecording(false) : void startRecording()}
-                    disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
-                    className={`flex h-12 shrink-0 items-center justify-center rounded-full border px-3 text-xs font-black ${recording ? "min-w-[82px] border-red-500 bg-red-500 text-white" : "w-12 border-black/10 bg-[#f3f0e8] text-black"} disabled:opacity-40`}
-                    aria-label={recording ? "Stop and send voice note" : "Record voice note"}
-                  >
-                    {recording ? recordingTime(recordingSeconds) : <MicrophoneIcon />}
-                  </button>
-                  <div className="min-w-0 flex-1 rounded-2xl border border-black/10 bg-[#f6f4ee] px-4 py-2 focus-within:border-[#f6b800] focus-within:bg-white">
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setComposerActionsOpen((value) => !value)}
+                      disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
+                      className={`flex h-11 w-11 items-center justify-center rounded-full border text-xl font-light disabled:opacity-40 ${composerActionsOpen ? "border-black bg-black text-white" : "border-black/10 bg-[#f3f0e8] text-black"}`}
+                      aria-label="Open message actions"
+                      aria-expanded={composerActionsOpen}
+                    >
+                      {composerActionsOpen ? "×" : "+"}
+                    </button>
+                    {composerActionsOpen ? (
+                      <div className="absolute bottom-[calc(100%+.5rem)] left-0 z-30 w-48 overflow-hidden rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl">
+                        <button type="button" onClick={() => { setComposerActionsOpen(false); fileInputRef.current?.click(); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-black/[.04]"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f3f0e8]"><PaperclipIcon /></span><span className="min-w-0"><span className="block text-xs font-semibold">Attach file</span><span className="mt-0.5 block text-[9px] font-medium text-black/40">Photos and documents · 5 MB max</span></span></button>
+                        <LogisticsMessageTools
+                          threadId={selectedConversation.id}
+                          listingTitle={selectedConversation.listing_title}
+                          role={selectedConversation.role}
+                          darkMode={darkMode}
+                          disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
+                          trigger="menu"
+                          onClose={() => setComposerActionsOpen(false)}
+                          onSendQuote={sendStructuredQuote}
+                          onInsert={(message) => updateTyping(text.trim() ? `${text.trim()}
+
+${message}` : message)}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="min-w-0 flex-1 rounded-2xl border border-black/10 bg-[#f6f4ee] px-3.5 py-2 focus-within:border-[#f6b800] focus-within:bg-white">
                     <textarea
                       value={text}
                       onChange={(event) => updateTyping(event.target.value)}
@@ -1763,56 +1825,40 @@ export default function MessagesPage() {
                               ? "Recording voice note…"
                               : uploading
                                 ? "Sending attachment…"
-                                : "Type a message"
+                                : "Message"
                       }
                       rows={1}
                       maxLength={4000}
                       disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
-                      className="max-h-32 min-h-8 w-full resize-none bg-transparent py-1 text-sm font-medium outline-none placeholder:text-black/35 disabled:opacity-50"
+                      className="max-h-28 min-h-7 w-full resize-none bg-transparent py-1 text-sm font-medium outline-none placeholder:text-black/35 disabled:opacity-50"
                     />
                   </div>
-                  <button
-                    type="submit"
-                    disabled={
-                      !text.trim() || sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined
-                    }
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f6b800] text-black shadow-sm transition active:scale-95 disabled:bg-black/10 disabled:text-black/25"
-                    aria-label="Send message"
-                  >
-                    {sending ? (
-                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-black/20 border-t-black" />
-                    ) : (
-                      <SendIcon />
-                    )}
-                  </button>
-                </div>
-                <div className="loadlink-chat-composer-meta mx-auto mt-2 flex max-w-3xl flex-wrap items-center justify-center gap-2 text-center text-[10px] font-semibold text-black/40">
-                  <span>Photos, documents and voice notes up to 5 MB</span>
-                  <span aria-hidden="true">·</span>
-                  {isPro ? (
-                    <span className="font-black text-[#8a6700]">
-                      Pro messaging active
-                    </span>
+                  {text.trim() || editingMessageId ? (
+                    <button
+                      type="submit"
+                      disabled={!text.trim() || sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f6b800] text-black shadow-sm transition active:scale-95 disabled:bg-black/10 disabled:text-black/25"
+                      aria-label={editingMessageId ? "Save edited message" : "Send message"}
+                    >
+                      {sending ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-black/20 border-t-black" /> : <SendIcon />}
+                    </button>
                   ) : (
-                    <>
-                      <span
-                        className={
-                          dailyLimitReached
-                            ? "font-black text-red-600"
-                            : "font-black text-[#8a6700]"
-                        }
-                      >
-                        {messagesUsedToday}/{dailyMessageLimit} messages used today
-                      </span>
-                      <Link
-                        href="/help?topic=pro-messaging"
-                        className="font-black text-black underline decoration-[#f6b800] decoration-2 underline-offset-2"
-                      >
-                        Upgrade
-                      </Link>
-                    </>
+                    <button
+                      type="button"
+                      onClick={() => recording ? stopRecording(false) : void startRecording()}
+                      disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
+                      className={`flex h-11 shrink-0 items-center justify-center rounded-full border text-xs font-black ${recording ? "min-w-[76px] border-red-500 bg-red-500 px-3 text-white" : "w-11 border-black/10 bg-[#f3f0e8] text-black"} disabled:opacity-40`}
+                      aria-label={recording ? "Stop and send voice note" : "Record voice note"}
+                    >
+                      {recording ? recordingTime(recordingSeconds) : <MicrophoneIcon />}
+                    </button>
                   )}
                 </div>
+                {!isPro && messagesUsedToday >= Math.max(40, dailyMessageLimit - 10) ? (
+                  <div className={`mx-auto mt-1.5 max-w-3xl text-center text-[9px] font-semibold ${dailyLimitReached ? "text-red-600" : "text-black/42"}`}>
+                    {messagesUsedToday}/{dailyMessageLimit} messages used today{dailyLimitReached ? " · daily limit reached" : ""}
+                  </div>
+                ) : null}
               </form>
             </>
           ) : (
@@ -1992,17 +2038,26 @@ function DocumentAttachmentCard({ message, mine, onOpen }: { message: ChatMessag
   );
 }
 
-function QuoteMessageCard({ message, mine, canRespond, onRespond }: { message: ChatMessage; mine: boolean; canRespond: boolean; onRespond: (status: "accepted" | "declined") => void }) {
+function QuoteMessageCard({ message, mine, canRespond, branding, onRespond }: { message: ChatMessage; mine: boolean; canRespond: boolean; branding: QuoteBranding; onRespond: (status: "accepted" | "declined") => void }) {
   const payload = (message.structured_payload || {}) as QuotePayload;
   const status = payload.status || "pending";
   const unitText = payload.unit === "km" ? "per km" : payload.unit === "ton" ? "per ton" : payload.unit === "day" ? "per day" : "total trip";
+  const brandName = String(payload.dealership_name || branding.name || "").trim();
+  const brandLogo = String(payload.dealership_logo || branding.logo || "").trim();
   const statusClass = status === "accepted" ? "bg-emerald-500/15 text-emerald-500" : status === "declined" ? "bg-red-500/15 text-red-500" : mine ? "bg-white/10 text-white/60" : "bg-black/5 text-black/55";
   return (
-    <div className={`min-w-[230px] rounded-2xl border p-3 ${mine ? "border-white/15 bg-white/[.06]" : "border-black/10 bg-[#fffaf0]"}`}>
-      <div className="flex items-center justify-between gap-3"><strong className="text-xs font-black uppercase tracking-wide">Rate quote</strong><span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase ${statusClass}`}>{status}</span></div>
-      <p className="mt-3 text-2xl font-black">R{payload.amount || "—"} <span className={`text-[10px] font-bold ${mine ? "text-white/50" : "text-black/45"}`}>{unitText}</span></p>
-      <div className={`mt-3 grid gap-1 text-[10px] font-semibold ${mine ? "text-white/65" : "text-black/60"}`}>{payload.vehicle ? <span><strong>Vehicle:</strong> {payload.vehicle}</span> : null}{payload.route ? <span><strong>Route:</strong> {payload.route}</span> : null}{payload.availability ? <span><strong>Availability:</strong> {payload.availability}</span> : null}<span><strong>VAT:</strong> {(payload.vat || "not_applicable").replace("_", " ")}</span>{payload.terms ? <span><strong>Terms:</strong> {payload.terms}</span> : null}</div>
-      {canRespond && status === "pending" ? <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => onRespond("declined")} className={`h-9 rounded-xl border text-[10px] font-black uppercase ${mine ? "border-white/20" : "border-black/15"}`}>Decline</button><button type="button" onClick={() => onRespond("accepted")} className="h-9 rounded-xl bg-[#f6b800] text-[10px] font-black uppercase text-black">Accept quote</button></div> : null}
+    <div className={`min-w-[236px] overflow-hidden rounded-2xl border ${mine ? "border-white/15 bg-white/[.06]" : "border-black/10 bg-[#fffaf0]"}`}>
+      <div className={`flex items-center gap-2 border-b px-3 py-2 ${mine ? "border-white/10" : "border-black/10"}`}>
+        {brandLogo ? <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1"><img src={brandLogo} alt={brandName ? `${brandName} logo` : "Dealership logo"} className="h-full w-full object-contain" /></span> : null}
+        <div className="min-w-0 flex-1"><strong className="block truncate text-[10px] font-black">{brandName || "Rate quote"}</strong><span className={`block text-[8px] font-semibold ${mine ? "text-white/45" : "text-black/40"}`}>{brandName ? "Dealership quote" : "Structured quote"}</span></div>
+        <span className="flex h-7 w-[76px] shrink-0 items-center justify-center overflow-hidden rounded-md bg-white px-1.5"><img src="/images/loadlink-logo-light.png" alt="LoadLink" className="h-full w-full object-contain" /></span>
+      </div>
+      <div className="p-3">
+        <div className="flex items-center justify-between gap-3"><strong className="text-[10px] font-black uppercase tracking-wide">Quote</strong><span className={`rounded-full px-2 py-1 text-[8px] font-black uppercase ${statusClass}`}>{status}</span></div>
+        <p className="mt-2 text-2xl font-black">R{payload.amount || "—"} <span className={`text-[9px] font-bold ${mine ? "text-white/50" : "text-black/45"}`}>{unitText}</span></p>
+        <div className={`mt-2 grid gap-1 text-[9px] font-semibold ${mine ? "text-white/65" : "text-black/60"}`}>{payload.vehicle ? <span><strong>Vehicle:</strong> {payload.vehicle}</span> : null}{payload.route ? <span><strong>Route:</strong> {payload.route}</span> : null}{payload.availability ? <span><strong>Available:</strong> {payload.availability}</span> : null}<span><strong>VAT:</strong> {(payload.vat || "not_applicable").replace("_", " ")}</span>{payload.terms ? <span><strong>Terms:</strong> {payload.terms}</span> : null}</div>
+        {canRespond && status === "pending" ? <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => onRespond("declined")} className={`h-9 rounded-xl border text-[9px] font-black uppercase ${mine ? "border-white/20" : "border-black/15"}`}>Decline</button><button type="button" onClick={() => onRespond("accepted")} className="h-9 rounded-xl bg-[#f6b800] text-[9px] font-black uppercase text-black">Accept</button></div> : null}
+      </div>
     </div>
   );
 }
@@ -2074,7 +2129,7 @@ function ConversationDetails({
 }) {
   return (
     <div>
-      <p className="text-[10px] font-black uppercase tracking-[.22em] text-[#b88900]">
+      <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-black/40">
         Conversation details
       </p>
       <div className="mt-5 flex items-center gap-3">
@@ -2085,7 +2140,7 @@ function ConversationDetails({
           online={isRecentlyActive(conversation.other_last_seen)}
         />
         <div className="min-w-0">
-          <h3 className="truncate font-black">{conversation.other_name}</h3>
+          <h3 className="truncate font-bold">{conversation.other_name}</h3>
           <p className="mt-0.5 text-xs font-semibold text-black/45">
             {activityText(conversation)}
           </p>
@@ -2094,20 +2149,26 @@ function ConversationDetails({
 
       <div className="mt-6 space-y-3 border-y border-black/10 py-5">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-wide text-black/35">Listing</p>
-          <p className="mt-1 text-sm font-black leading-5">{conversation.listing_title}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-black/35">Listing</p>
+          <p className="mt-1 text-sm font-semibold leading-5">{conversation.listing_title}</p>
         </div>
         <div>
-          <p className="text-[10px] font-black uppercase tracking-wide text-black/35">Response pattern</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-black/35">Response pattern</p>
           <p className="mt-1 text-sm font-semibold leading-5">{replyText(conversation.average_reply_minutes)}</p>
         </div>
         <div>
-          <p className="text-[10px] font-black uppercase tracking-wide text-black/35">Messaging plan</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-black/35">Privacy</p>
+          <p className="mt-1 text-sm font-semibold leading-5">Private conversation</p>
+          <p className="mt-1 text-xs font-medium leading-5 text-black/45">Messages and attachments are visible only to participants in this conversation.</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-black/35">Messaging plan</p>
           <p className="mt-1 text-sm font-semibold leading-5">
             {conversation.is_pro
               ? "Pro · unlimited daily messaging"
               : `${toCount(conversation.messages_used_today)}/${Math.max(1, toCount(conversation.daily_message_limit) || 50)} messages used today`}
           </p>
+          {!conversation.is_pro ? <Link href="/account/packages" className="mt-2 inline-flex rounded-lg bg-[#f6b800] px-2.5 py-1.5 text-[9px] font-bold text-black">View messaging plans</Link> : null}
         </div>
       </div>
 

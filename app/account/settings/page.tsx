@@ -261,24 +261,24 @@ export default function AccountSettingsPage() {
   const textarea = `${input} min-h-28 py-3`;
   const muted = darkMode ? "text-white/55" : "text-black/55";
 
-  if (loading) return <main className={`flex min-h-screen items-center justify-center text-sm font-black uppercase tracking-[.14em] ${darkMode ? "bg-black text-white/55" : "bg-[#f4efe3] text-black/55"}`}>Loading settings…</main>;
+  if (loading) return <main className={`flex min-h-screen items-center justify-center text-sm font-semibold uppercase tracking-[.12em] ${darkMode ? "bg-black text-white/55" : "bg-[#f4efe3] text-black/55"}`}>Loading settings…</main>;
 
-  const tabClass = (view: "profile" | "messages" | "security") => `min-w-0 flex-1 rounded-xl px-3 py-3 text-xs font-black transition ${settingsView === view ? (darkMode ? "bg-white text-black" : "bg-black text-white") : (darkMode ? "text-white/55 hover:bg-white/[.05]" : "text-black/55 hover:bg-black/[.04]")}`;
+  const tabClass = (view: "profile" | "messages" | "security") => `min-w-0 flex-1 rounded-xl px-3 py-3 text-xs font-semibold transition ${settingsView === view ? "bg-[#f6b800] text-black shadow-sm" : (darkMode ? "text-white/55 hover:bg-white/[.05]" : "text-black/55 hover:bg-black/[.04]")}`;
 
   return (
     <main className={`min-h-screen ${page}`}>
       <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
         <div className="relative mx-auto flex h-[76px] max-w-6xl items-center px-4 sm:px-5">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 sm:left-5"><SiteMenu darkMode={darkMode} /></div>
-          <HomeLogoLink theme="light" showGlow={false} className="pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md bg-white px-2 py-1" logoClassName="w-[132px] sm:w-[148px]" />
+          <HomeLogoLink theme={darkMode ? "dark" : "light"} showGlow={false} className="pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center" logoClassName="w-[132px] sm:w-[148px]" />
           <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="absolute right-4 top-1/2 -translate-y-1/2 sm:right-5" />
         </div>
       </header>
 
       <section className="mx-auto max-w-6xl px-4 py-7 sm:px-5 md:px-8 md:py-10">
         <div className="max-w-3xl">
-          <h1 className="text-3xl font-black tracking-[-.045em] md:text-5xl">Settings</h1>
-          <p className={`mt-2 text-sm leading-6 ${muted}`}>Keep your profile, messaging preferences and account security organised in one place.</p>
+          <h1 className="text-2xl font-bold tracking-[-.025em] md:text-3xl">Settings</h1>
+          <p className={`mt-1.5 text-sm leading-6 ${muted}`}>Profile, messages and security.</p>
         </div>
 
         <div className={`mt-5 flex max-w-xl gap-1 rounded-2xl border p-1.5 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-white"}`}>
@@ -287,22 +287,22 @@ export default function AccountSettingsPage() {
           <button type="button" onClick={() => setSettingsView("security")} className={tabClass("security")}>Security</button>
         </div>
 
-        {dirty && settingsView === "profile" ? <p className={`mt-4 text-sm font-bold ${muted}`}>You have unsaved profile changes.</p> : null}
-        {message ? <div role="status" className={`mt-5 max-w-3xl rounded-xl border p-3 text-sm font-bold ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-white"}`}>{message}</div> : null}
+        {dirty && settingsView === "profile" ? <p className={`mt-4 text-sm font-medium ${muted}`}>You have unsaved profile changes.</p> : null}
+        {message ? <div role="status" className={`mt-5 max-w-3xl rounded-xl border p-3 text-sm font-medium ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-white"}`}>{message}</div> : null}
 
         {settingsView === "profile" ? (
           <div className="mt-6 grid gap-5 lg:grid-cols-[250px_1fr]">
             <aside className={`h-fit border p-5 ${surface}`}>
-              <div className="mx-auto flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-current/15 bg-black text-xl font-black text-white">{form.avatar_url ? <img src={form.avatar_url} alt="Profile" className="h-full w-full object-cover" /> : initials}</div>
+              <div className="mx-auto flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-current/15 bg-black text-xl font-bold text-white">{form.avatar_url ? <img src={form.avatar_url} alt="Profile" className="h-full w-full object-cover" /> : initials}</div>
               <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void uploadAvatar(event)} className="hidden" />
-              <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className={`mt-4 h-10 w-full rounded-xl border px-4 text-xs font-black ${darkMode ? "border-white/15 bg-white text-black" : "border-black/15 bg-black text-white"} disabled:opacity-50`}>{uploading ? "Uploading…" : "Change photo"}</button>
-              <div className={`mt-4 rounded-xl border p-3 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-black/[.02]"}`}><p className="text-[10px] font-black uppercase tracking-[.1em] opacity-50">Profile complete</p><p className="mt-1 text-xl font-black">{completion}%</p></div>
+              <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="mt-4 h-10 w-full rounded-xl border border-[#f6b800] bg-[#f6b800] px-4 text-xs font-semibold text-black disabled:opacity-50">{uploading ? "Uploading…" : "Change photo"}</button>
+              <div className={`mt-4 rounded-xl border p-3 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-black/[.02]"}`}><p className="text-[10px] font-semibold uppercase tracking-[.1em] opacity-50">Profile complete</p><p className="mt-1 text-xl font-bold">{completion}%</p></div>
               <div className={`mt-4 border-t pt-4 ${darkMode ? "border-white/10" : "border-black/10"}`}><Info label="Email" value={user?.email || "Not available"} /><Info label="Verification" value={form.verification_status.replaceAll("_", " ")} /><Info label="Package" value={form.subscription_plan} /></div>
-              <div className="mt-4 grid gap-2"><Link href="/verify" className="flex h-10 items-center justify-center rounded-xl border border-current/15 px-3 text-center text-xs font-black">Verification</Link><Link href="/account/packages" className="flex h-10 items-center justify-center rounded-xl border border-current/15 px-3 text-center text-xs font-black">Package</Link>{hasDriverProfile ? <Link href="/driver-profile" className="flex h-10 items-center justify-center rounded-xl border border-current/15 px-3 text-center text-xs font-black">Driver profile</Link> : null}</div>
+              <div className="mt-4 grid gap-2"><Link href="/verify" className="flex h-10 items-center justify-center rounded-xl bg-[#f6b800] px-3 text-center text-xs font-semibold text-black">Verification</Link><Link href="/account/packages" className="flex h-10 items-center justify-center rounded-xl bg-[#f6b800] px-3 text-center text-xs font-semibold text-black">Package</Link>{hasDriverProfile ? <Link href="/driver-profile" className="flex h-10 items-center justify-center rounded-xl bg-[#f6b800] px-3 text-center text-xs font-semibold text-black">Driver profile</Link> : null}</div>
             </aside>
 
             <form onSubmit={saveProfile} className={`border p-5 md:p-7 ${surface}`}>
-              <h2 className="text-2xl font-black">Professional information</h2>
+              <h2 className="text-xl font-bold">Professional information</h2>
               <p className={`mt-2 text-sm ${muted}`}>Details other LoadLink users need when dealing with you.</p>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <Field label="Full name"><input required value={form.full_name} onChange={(event) => field("full_name", event.target.value)} className={input} /></Field>
@@ -314,16 +314,16 @@ export default function AccountSettingsPage() {
                 <Field label="WhatsApp number"><input value={form.whatsapp_number} onChange={(event) => field("whatsapp_number", event.target.value)} inputMode="tel" placeholder="0821234567" className={input} /></Field>
                 <div className="md:col-span-2"><Field label="Professional summary"><textarea value={form.bio} onChange={(event) => field("bio", event.target.value)} maxLength={500} className={textarea} /></Field></div>
               </div>
-              <h3 className="mt-7 text-lg font-black">Notifications</h3>
+              <h3 className="mt-7 text-base font-bold">Notifications</h3>
               <div className="mt-3 grid gap-2 sm:grid-cols-2"><Toggle label="Email account updates" checked={form.email_notifications} busy={preferenceSaving === "email_notifications"} onChange={(value) => void savePreference("email_notifications", value)} darkMode={darkMode} /><Toggle label="New chat messages" checked={form.chat_notifications} busy={preferenceSaving === "chat_notifications"} onChange={(value) => void savePreference("chat_notifications", value)} darkMode={darkMode} /><Toggle label="Listing and review updates" checked={form.listing_notifications} busy={preferenceSaving === "listing_notifications"} onChange={(value) => void savePreference("listing_notifications", value)} darkMode={darkMode} /><Toggle label="Product news" checked={form.marketing_notifications} busy={preferenceSaving === "marketing_notifications"} onChange={(value) => void savePreference("marketing_notifications", value)} darkMode={darkMode} /></div>
-              <button type="submit" disabled={saving || !dirty} className={`mt-6 h-11 rounded-xl px-5 text-xs font-black ${darkMode ? "bg-white text-black" : "bg-black text-white"} disabled:opacity-40`}>{saving ? "Saving…" : dirty ? "Save changes" : "Saved"}</button>
+              <button type="submit" disabled={saving || !dirty} className="mt-6 h-11 rounded-xl bg-[#f6b800] px-5 text-xs font-semibold text-black disabled:opacity-40">{saving ? "Saving…" : dirty ? "Save changes" : "Saved"}</button>
             </form>
           </div>
         ) : null}
 
         {settingsView === "messages" ? (
           <section id="message-privacy" className={`mt-6 max-w-3xl scroll-mt-24 border p-5 md:p-7 ${surface}`}>
-            <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-2xl font-black">Messages</h2><p className={`mt-2 text-sm leading-6 ${muted}`}>Choose what people can see and how new conversations reach you.</p></div><Link href="/messages" className={`flex h-10 items-center justify-center rounded-xl px-4 text-xs font-black ${darkMode ? "bg-white text-black" : "bg-black text-white"}`}>Open messages</Link></div>
+            <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Messages</h2><p className={`mt-2 text-sm leading-6 ${muted}`}>Choose what people can see and how new conversations reach you.</p></div><Link href="/messages" className="flex h-10 items-center justify-center rounded-xl bg-[#f6b800] px-4 text-xs font-semibold text-black">Open messages</Link></div>
             <div className="mt-5 grid gap-2">
               <Toggle label="Share activity status" description="Show when you are active in Messages and your recent activity time." checked={form.message_activity_visible} busy={preferenceSaving === "message_activity_visible"} onChange={(value) => void savePreference("message_activity_visible", value)} darkMode={darkMode} />
               <Toggle label="Share typing indicators" description="Let the other person see when you are typing." checked={form.message_typing_indicators} busy={preferenceSaving === "message_typing_indicators"} onChange={(value) => void savePreference("message_typing_indicators", value)} darkMode={darkMode} />
@@ -332,15 +332,15 @@ export default function AccountSettingsPage() {
             </div>
             <div className={`mt-3 flex items-center justify-between gap-4 rounded-xl border px-4 py-3 ${darkMode ? "border-white/10 bg-white/[.02]" : "border-black/10 bg-black/[.015]"}`}>
               <span className="min-w-0"><strong className="block text-sm font-bold">Push notifications</strong><span className={`mt-1 block text-xs font-semibold ${muted}`}>{pushState === "enabled" ? "Enabled on this device." : pushState === "blocked" ? "Blocked in browser settings." : pushState === "unconfigured" ? "Server setup required once." : pushState === "unsupported" ? "Not supported by this browser." : "Receive new messages when LoadLink is closed."}</span></span>
-              <button type="button" onClick={() => void enablePush()} disabled={pushBusy || pushState === "enabled" || pushState === "unsupported"} className={`h-9 shrink-0 rounded-xl px-3 text-[10px] font-black ${pushState === "enabled" ? (darkMode ? "bg-white/10 text-white/55" : "bg-black/5 text-black/55") : (darkMode ? "bg-white text-black" : "bg-black text-white")} disabled:opacity-60`}>{pushBusy ? "Enabling…" : pushState === "enabled" ? "Enabled" : "Enable"}</button>
+              <button type="button" onClick={() => void enablePush()} disabled={pushBusy || pushState === "enabled" || pushState === "unsupported"} className={`h-9 shrink-0 rounded-xl px-3 text-[10px] font-semibold ${pushState === "enabled" ? (darkMode ? "bg-white/10 text-white/55" : "bg-black/5 text-black/55") : "bg-[#f6b800] text-black"} disabled:opacity-60`}>{pushBusy ? "Enabling…" : pushState === "enabled" ? "Enabled" : "Enable"}</button>
             </div>
           </section>
         ) : null}
 
         {settingsView === "security" ? (
           <div className="mt-6 grid max-w-3xl gap-4">
-            <section className={`border p-5 md:p-7 ${surface}`}><h2 className="text-2xl font-black">Password</h2><p className={`mt-2 text-sm ${muted}`}>{googleOnly ? "Set a LoadLink password while keeping Google sign-in connected." : "Change your password without disconnecting other sign-in methods."}</p><div className="mt-5 grid gap-4 md:grid-cols-2"><Field label={googleOnly ? "Set a password" : "New password"}><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" className={input} /></Field><Field label="Confirm password"><input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" className={input} /></Field></div><button type="button" onClick={() => void updatePassword()} disabled={saving || !password} className={`mt-5 h-11 rounded-xl px-5 text-xs font-black ${darkMode ? "bg-white text-black" : "bg-black text-white"} disabled:opacity-40`}>{googleOnly ? "Set password" : "Update password"}</button></section>
-            <section className={`border p-5 md:p-7 ${surface}`}><h2 className="text-2xl font-black">Account access</h2><p className={`mt-2 text-sm ${muted}`}>Sign out or request account deletion.</p><div className="mt-5 flex flex-wrap gap-3"><button type="button" onClick={() => void signOut()} className="h-11 rounded-xl border border-red-500 px-5 text-xs font-black text-red-500">Sign out</button><button type="button" onClick={requestDeletion} className="h-11 rounded-xl border border-current/20 px-5 text-xs font-black">Request deletion</button></div></section>
+            <section className={`border p-5 md:p-7 ${surface}`}><h2 className="text-xl font-bold">Password</h2><p className={`mt-2 text-sm ${muted}`}>{googleOnly ? "Set a LoadLink password while keeping Google sign-in connected." : "Change your password without disconnecting other sign-in methods."}</p><div className="mt-5 grid gap-4 md:grid-cols-2"><Field label={googleOnly ? "Set a password" : "New password"}><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" className={input} /></Field><Field label="Confirm password"><input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" className={input} /></Field></div><button type="button" onClick={() => void updatePassword()} disabled={saving || !password} className="mt-5 h-11 rounded-xl bg-[#f6b800] px-5 text-xs font-semibold text-black disabled:opacity-40">{googleOnly ? "Set password" : "Update password"}</button></section>
+            <section className={`border p-5 md:p-7 ${surface}`}><h2 className="text-xl font-bold">Account access</h2><p className={`mt-2 text-sm ${muted}`}>Sign out or request account deletion.</p><div className="mt-5 flex flex-wrap gap-3"><button type="button" onClick={() => void signOut()} className="h-11 rounded-xl border border-red-500 px-5 text-xs font-semibold text-red-500">Sign out</button><button type="button" onClick={requestDeletion} className="h-11 rounded-xl border border-current/20 px-5 text-xs font-semibold">Request deletion</button></div></section>
           </div>
         ) : null}
       </section>
@@ -349,9 +349,9 @@ export default function AccountSettingsPage() {
 
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) { return <label className="block text-xs font-black uppercase tracking-[.11em]">{label}{children}</label>; }
-function Toggle({ label, description, checked, busy, onChange, darkMode }: { label: string; description?: string; checked: boolean; busy?: boolean; onChange: (value: boolean) => void; darkMode: boolean }) { return <div className={`flex min-h-14 items-center justify-between gap-4 rounded-xl border px-4 py-3 ${darkMode ? "border-white/10 bg-white/[.02]" : "border-black/10 bg-black/[.015]"}`}><span className="min-w-0"><strong className="block text-sm font-bold normal-case tracking-normal">{label}</strong>{description ? <span className={`mt-1 block text-xs font-semibold leading-5 ${darkMode ? "text-white/45" : "text-black/45"}`}>{description}</span> : null}</span><button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)} disabled={busy} className={`relative h-7 w-12 shrink-0 rounded-full border transition disabled:opacity-55 ${checked ? "border-[#f6b800] bg-[#f6b800]" : darkMode ? "border-white/20 bg-white/10" : "border-black/20 bg-black/10"}`}><span className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} /></button></div>; }
-function Info({ label, value }: { label: string; value: string }) { return <div className="mb-4 last:mb-0"><p className="text-[10px] font-black uppercase tracking-[.12em] opacity-50">{label}</p><p className="mt-1 break-words text-sm font-bold capitalize">{value}</p></div>; }
+function Field({ label, children }: { label: string; children: ReactNode }) { return <label className="block text-xs font-semibold uppercase tracking-[.09em]">{label}{children}</label>; }
+function Toggle({ label, description, checked, busy, onChange, darkMode }: { label: string; description?: string; checked: boolean; busy?: boolean; onChange: (value: boolean) => void; darkMode: boolean }) { return <div className={`flex min-h-14 items-center justify-between gap-4 rounded-xl border px-4 py-3 ${darkMode ? "border-white/10 bg-white/[.02]" : "border-black/10 bg-black/[.015]"}`}><span className="min-w-0"><strong className="block text-sm font-semibold normal-case tracking-normal">{label}</strong>{description ? <span className={`mt-1 block text-xs font-semibold leading-5 ${darkMode ? "text-white/45" : "text-black/45"}`}>{description}</span> : null}</span><button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)} disabled={busy} className={`relative h-7 w-12 shrink-0 rounded-full border transition disabled:opacity-55 ${checked ? "border-[#f6b800] bg-[#f6b800]" : darkMode ? "border-white/20 bg-white/10" : "border-black/20 bg-black/10"}`}><span className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} /></button></div>; }
+function Info({ label, value }: { label: string; value: string }) { return <div className="mb-4 last:mb-0"><p className="text-[10px] font-semibold uppercase tracking-[.1em] opacity-50">{label}</p><p className="mt-1 break-words text-sm font-semibold capitalize">{value}</p></div>; }
 
 function isMissingSchemaError(message: string) { return /column|schema cache|does not exist|relation/i.test(message); }
 function friendlyError(error: unknown, fallback = "That change could not be completed. Please try again or contact LoadLink support.") {
