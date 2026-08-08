@@ -48,7 +48,8 @@ type MyListing = {
 };
 
 type VerificationMap = Record<string, string>;
-type Filter = "all" | "active" | "closed";
+type Filter = "all" | "active" | "review" | "closed";
+type MyPostsSort = "newest" | "views" | "oldest" | "status";
 const POSTS_PER_PAGE = 7;
 
 type AnalyticsPayload = {
@@ -68,6 +69,7 @@ export default function MyPostsPage() {
   const [listings, setListings] = useState<MyListing[]>([]);
   const [verificationStatuses, setVerificationStatuses] = useState<VerificationMap>({});
   const [filter, setFilter] = useState<Filter>("all");
+  const [sortMode, setSortMode] = useState<MyPostsSort>("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const [message, setMessage] = useState("");
   const [editing, setEditing] = useState<MyListing | null>(null);
@@ -102,6 +104,14 @@ export default function MyPostsPage() {
       return;
     }
 
+    const legacyOwnerKeys = getOwnerKeys();
+    for (const ownerKey of legacyOwnerKeys) {
+      try {
+        await supabase.rpc("claim_guest_listings", { p_owner_key: ownerKey });
+      } catch {
+        // Guest-claim failure should not block the user from viewing their posts.
+      }
+    }
     setAuthReady(true);
     await loadListings(user.id);
   }
@@ -137,21 +147,6 @@ export default function MyPostsPage() {
         throw byUser.error;
       }
 
-      const existingIds = new Set(results.map((item) => item.id));
-      const ownerKeys = getOwnerKeys();
-      if (ownerKeys.length) {
-        const byOwner = await supabase
-          .from("job_listings")
-          .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,status,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status")
-          .in("owner_key", ownerKeys)
-          .order("created_at", { ascending: false });
-        if (!byOwner.error) {
-          ((byOwner.data || []) as MyListing[]).forEach((item) => {
-            if (!existingIds.has(item.id)) results.push(item);
-          });
-        }
-      }
-
       results.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
       setListings(results);
 
@@ -176,7 +171,7 @@ export default function MyPostsPage() {
   async function deleteListing(listing: MyListing) {
     if (!confirm(`Delete “${listing.title}” permanently?`)) return;
     setMessage("");
-    const result = await supabase.rpc("delete_my_listing", { p_listing_id: listing.id, p_owner_key: listing.owner_key || "" });
+    const result = await supabase.rpc("delete_my_listing", { p_listing_id: listing.id, p_owner_key: "" });
     if (result.error || result.data !== true) {
       setMessage(result.error?.message || "This post could not be deleted. Run the new LoadLink SQL if this is your first update.");
       return;
@@ -186,7 +181,7 @@ export default function MyPostsPage() {
 
   async function setStatus(listing: MyListing, status: ListingStatus) {
     setMessage("");
-    const result = await supabase.rpc("set_my_listing_status", { p_listing_id: listing.id, p_status: status, p_owner_key: listing.owner_key || "" });
+    const result = await supabase.rpc("set_my_listing_status", { p_listing_id: listing.id, p_status: status, p_owner_key: "" });
     if (result.error || result.data !== true) {
       setMessage(result.error?.message || "The listing status could not be changed.");
       return;
@@ -218,18 +213,29 @@ export default function MyPostsPage() {
     setAnalyticsLoading(true);
     const result = await supabase.rpc("get_pro_job_analytics", {
       p_job_id: listing.id,
-      p_owner_key: listing.owner_key || "",
+      p_owner_key: "",
     });
     if (!result.error) setAnalytics((result.data || {}) as AnalyticsPayload);
     setAnalyticsLoading(false);
   }
 
-  const filteredListings = useMemo(() => listings.filter((listing) => {
-    const status = listing.status || "active";
-    if (filter === "active") return status === "active";
-    if (filter === "closed") return status === "closed" || status === "filled";
-    return true;
-  }), [filter, listings]);
+  const filteredListings = useMemo(() => {
+    const filtered = listings.filter((listing) => {
+      const status = listing.status || "active";
+      const moderation = listing.moderation_status || "pending";
+      if (filter === "active") return status === "active" && moderation === "approved";
+      if (filter === "review") return moderation === "pending" || moderation === "rejected";
+      if (filter === "closed") return status === "closed" || status === "filled";
+      return true;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortMode === "views") return Number(b.view_count || 0) - Number(a.view_count || 0);
+      if (sortMode === "oldest") return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      if (sortMode === "status") return postStateLabel(a).localeCompare(postStateLabel(b));
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    });
+  }, [filter, listings, sortMode]);
 
   const totalPages = Math.max(1, Math.ceil(filteredListings.length / POSTS_PER_PAGE));
   const paginatedListings = useMemo(() => {
@@ -237,128 +243,132 @@ export default function MyPostsPage() {
     return filteredListings.slice(start, start + POSTS_PER_PAGE);
   }, [currentPage, filteredListings]);
 
-  useEffect(() => { setCurrentPage(1); }, [filter]);
+  useEffect(() => { setCurrentPage(1); }, [filter, sortMode]);
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages); }, [currentPage, totalPages]);
 
-  const activeCount = listings.filter((item) => (item.status || "active") === "active").length;
-  const proCount = listings.filter((item) => ["pro", "dealer"].includes(item.package_type || "")).length;
+  const activeCount = listings.filter((item) => (item.status || "active") === "active" && (item.moderation_status || "pending") === "approved").length;
+  const reviewCount = listings.filter((item) => ["pending", "rejected"].includes(item.moderation_status || "pending")).length;
+  const totalViews = listings.reduce((sum, item) => sum + Number(item.view_count || 0), 0);
 
   if (!authReady) return <main className="min-h-screen bg-black text-white"><LoadLinkLoading /></main>;
 
   const surface = darkMode ? "border-white/10 bg-[#0c0c0c] text-white" : "border-black/10 bg-white text-black";
-  const muted = darkMode ? "text-white/55" : "text-black/55";
+  const muted = darkMode ? "text-white/50" : "text-black/50";
 
   return (
     <main className={`min-h-screen ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
       <Header darkMode={darkMode} toggleTheme={toggleTheme} />
 
-      <section className="border-b border-[#f6b800]/30 bg-black px-5 py-10 text-white md:py-14">
+      <section className={`border-b px-4 py-7 md:px-6 md:py-9 ${darkMode ? "border-white/10 bg-[#070707]" : "border-black/10 bg-[#f8f4ea]"}`}>
         <div className="mx-auto max-w-5xl">
-          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
             <div>
-              <h1 className="text-5xl font-black tracking-[-0.06em] md:text-7xl">My posts</h1>
-              <p className="mt-4 max-w-xl text-sm font-semibold leading-7 text-white/60">Edit, close or delete your listings. Detailed analytics is unlocked only for Pro posts.</p>
+              <h1 className="text-4xl font-black tracking-[-0.055em] md:text-5xl">My posts</h1>
+              <p className={`mt-2 max-w-xl text-sm leading-6 ${muted}`}>Manage the listings owned by this signed-in account, follow review status and keep live opportunities up to date.</p>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Link href="/jobs/list" className="rounded-full border border-[#f6b800] px-5 py-3 text-xs font-black uppercase tracking-wide text-[#f6b800]">Post a job</Link>
-              <Link href="/list-your-vehicle" className="rounded-full bg-[#f6b800] px-5 py-3 text-xs font-black uppercase tracking-wide text-black">List your vehicle</Link>
+            <div className="grid grid-cols-2 gap-2 sm:flex">
+              <Link href="/jobs/list" className="flex h-11 items-center justify-center rounded-xl border border-[#f6b800] px-4 text-xs font-black text-[#b88900]">Post opportunity</Link>
+              <Link href="/list-your-vehicle" className="flex h-11 items-center justify-center rounded-xl bg-[#f6b800] px-4 text-xs font-black text-black">List vehicle</Link>
             </div>
           </div>
-          <div className="mt-8 grid grid-cols-3 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-            <Metric label="All posts" value={String(listings.length)} />
-            <Metric label="Active" value={String(activeCount)} />
-            <Metric label="Pro" value={String(proCount)} />
+
+          <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <DashboardMetric label="Total" value={String(listings.length)} darkMode={darkMode} />
+            <DashboardMetric label="Live" value={String(activeCount)} darkMode={darkMode} />
+            <DashboardMetric label="Needs attention" value={String(reviewCount)} darkMode={darkMode} />
+            <DashboardMetric label="Total views" value={String(totalViews)} darkMode={darkMode} />
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-5xl px-4 py-7 md:px-6 md:py-10">
-        <div className="mb-6 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-          <FilterButton active={filter === "all"} onClick={() => setFilter("all")}>All posts</FilterButton>
-          <FilterButton active={filter === "active"} onClick={() => setFilter("active")}>Active</FilterButton>
-          <FilterButton active={filter === "closed"} onClick={() => setFilter("closed")}>Filled / closed</FilterButton>
+      <section className="mx-auto max-w-5xl px-4 py-6 md:px-6 md:py-8">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+            <FilterButton active={filter === "all"} onClick={() => setFilter("all")}>All</FilterButton>
+            <FilterButton active={filter === "active"} onClick={() => setFilter("active")}>Live</FilterButton>
+            <FilterButton active={filter === "review"} onClick={() => setFilter("review")}>Review</FilterButton>
+            <FilterButton active={filter === "closed"} onClick={() => setFilter("closed")}>Completed</FilterButton>
+          </div>
+          <label className={`flex h-11 items-center gap-2 rounded-xl border px-3 ${surface}`}>
+            <span className={`text-[10px] font-black uppercase tracking-[.12em] ${muted}`}>Sort</span>
+            <select value={sortMode} onChange={(event) => setSortMode(event.target.value as MyPostsSort)} className="bg-transparent text-xs font-black outline-none">
+              <option value="newest">Newest first</option>
+              <option value="views">Most viewed</option>
+              <option value="status">Status</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </label>
         </div>
 
-        {message ? <div className="mb-5 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm font-bold text-red-500">{message}</div> : null}
+        {message ? <div className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm font-bold text-red-500">{message}</div> : null}
 
         {loading ? <div className="min-h-64"><LoadLinkLoading /></div> : filteredListings.length ? (
           <>
-          <div className="grid gap-5">
-            {paginatedListings.map((listing) => {
-              const status = listing.status || "active";
-              const isPro = ["pro", "dealer"].includes(listing.package_type || "");
-              const isManualVehicle = listing.listing_kind === "vehicle" && listing.package_type === "manual";
-              const expired = Boolean(listing.expires_at && new Date(listing.expires_at) <= new Date());
-              const verificationStatus = verificationStatuses[listing.id];
-              const moderationStatus = listing.moderation_status || "pending";
-              return (
-                <article key={listing.id} className={`overflow-hidden rounded-[26px] border ${surface}`}>
-                  <div className="grid md:grid-cols-[260px_1fr]">
-                    <div className="relative min-h-[210px] bg-black">
-                      <img src={listing.photos?.[0] || "/images/jobs/job-card-1.jpg"} alt={listing.title} className="h-full min-h-[210px] w-full object-cover" />
-                      <span className={`absolute left-3 top-3 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.13em] ${status === "active" ? "bg-[#2f9f5b] text-white" : "bg-black/80 text-white"}`}>{status}</span>
-                      <span className={`absolute right-3 top-3 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] ${moderationStatus === "approved" ? "bg-[#2f9f5b] text-white" : moderationStatus === "rejected" ? "bg-red-600 text-white" : "bg-[#f6b800] text-black"}`}>{moderationLabel(moderationStatus)}</span>
-                      {verificationStatus ? <span className="absolute bottom-3 left-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] text-black">Verification {verificationStatus.replaceAll("_", " ")}</span> : null}
-                    </div>
-                    <div className="p-5 md:p-6">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <p className={`text-xs font-black uppercase tracking-[0.12em] ${muted}`}>{listing.city} · {listing.vehicle_group}</p>
-                          <h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">{listing.title}</h2>
-                          <p className="mt-2 text-lg font-black text-[#b88900]">{formatListingRate(listing.rate)}</p>
-                        </div>
-                        <span className={`rounded-full px-3 py-2 text-[10px] font-black uppercase ${isPro ? "bg-[#f6b800] text-black" : darkMode ? "bg-white/10 text-white" : "bg-black/5 text-black"}`}>{listing.package_type === "dealer" ? "Dealer" : isPro ? "Pro" : isManualVehicle ? "Manual" : "Job post"}</span>
+            <div className="grid gap-3">
+              {paginatedListings.map((listing) => {
+                const status = listing.status || "active";
+                const moderationStatus = listing.moderation_status || "pending";
+                const isPro = ["pro", "dealer"].includes(listing.package_type || "");
+                const isManualVehicle = listing.listing_kind === "vehicle" && listing.package_type === "manual";
+                const expired = Boolean(listing.expires_at && new Date(listing.expires_at) <= new Date());
+                const verificationStatus = verificationStatuses[listing.id];
+                const state = postStateLabel(listing);
+                const tone = postStateTone(listing, darkMode);
+
+                return (
+                  <article key={listing.id} className={`overflow-hidden rounded-[22px] border ${surface}`}>
+                    <div className="grid md:grid-cols-[210px_1fr]">
+                      <div className="relative aspect-[16/10] overflow-hidden bg-black md:aspect-auto md:min-h-[210px]">
+                        <img src={listing.photos?.[0] || "/images/jobs/job-card-1.jpg"} alt={listing.title} loading="lazy" className="h-full w-full object-cover" />
+                        <span className={`absolute left-3 top-3 rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] ${tone}`}>{state}</span>
+                        {verificationStatus ? <span className="absolute bottom-3 left-3 rounded-full bg-black/75 px-3 py-1.5 text-[9px] font-black text-white">Verification {verificationStatus.replaceAll("_", " ")}</span> : null}
                       </div>
 
-                      <p className={`mt-4 line-clamp-3 text-sm leading-6 ${muted}`}>{cleanDescription(listing.description)}</p>
-                      <p className={`mt-3 text-xs font-semibold ${muted}`}>Posted {formatDate(listing.created_at)}</p>
-                      {isManualVehicle && listing.expires_at ? <div className={`mt-3 border px-4 py-3 ${expired ? "border-red-500/50 bg-red-500/10" : "border-[#f6b800]/40 bg-[#f6b800]/10"}`}><p className={`text-[10px] font-black uppercase ${expired ? "text-red-500" : "text-[#b88900]"}`}>{expired ? "Listing expired" : `${Math.max(0, Math.ceil((new Date(listing.expires_at).getTime() - Date.now()) / 86400000))} paid days remaining`}</p><p className={`mt-1 text-xs font-bold ${muted}`}>Expires {formatDate(listing.expires_at)} · R15 per day</p><button type="button" onClick={() => void renewListing(listing)} className="mt-3 rounded-full bg-[#f6b800] px-4 py-2 text-[10px] font-black uppercase text-black">Renew listing</button></div> : null}
+                      <div className="min-w-0 p-4 md:p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className={`truncate text-[10px] font-black uppercase tracking-[.12em] ${muted}`}>{listing.city} · {listing.vehicle_group}</p>
+                            <h2 className="mt-1 line-clamp-2 text-xl font-black tracking-[-.035em] md:text-2xl">{listing.title}</h2>
+                            <p className="mt-1 text-sm font-black text-[#b88900]">{formatListingRate(listing.rate)}</p>
+                          </div>
+                          <span className={`shrink-0 rounded-full px-2.5 py-1.5 text-[9px] font-black uppercase ${isPro ? "bg-[#f6b800] text-black" : darkMode ? "bg-white/8 text-white/65" : "bg-black/5 text-black/60"}`}>{listing.package_type === "dealer" ? "Dealer" : isPro ? "Pro" : "Standard"}</span>
+                        </div>
 
-                      {moderationStatus === "rejected" ? (
-                        <div className={`loadlink-rejection-panel mt-4 rounded-2xl border px-4 py-4 ${darkMode ? "border-red-500/45 bg-red-950/25 text-red-100" : "border-red-400 bg-red-50 text-red-950"}`}>
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-red-500">Post rejected</p>
-                          <p className="mt-2 text-sm font-black">Why it was rejected</p>
-                          <p className="mt-1 text-sm font-semibold leading-6">{listing.moderation_notes || "The post did not meet LoadLink listing requirements."}</p>
-                          <p className={`mt-2 text-xs font-semibold ${darkMode ? "text-red-100/70" : "text-red-900/70"}`}>Edit the listing and save it to send it back for review.</p>
+                        <div className={`mt-4 grid grid-cols-3 divide-x rounded-xl border ${darkMode ? "divide-white/10 border-white/10" : "divide-black/10 border-black/10"}`}>
+                          <MiniStat label="Views" value={String(listing.view_count || 0)} />
+                          <MiniStat label="Posted" value={shortDate(listing.created_at)} />
+                          <MiniStat label="Status" value={state} />
                         </div>
-                      ) : moderationStatus === "pending" ? (
-                        <div className="mt-4 rounded-2xl border border-[#f6b800]/40 bg-[#f6b800]/10 px-4 py-3">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#b88900]">Waiting for review</p>
-                          <p className={`mt-1 text-xs font-semibold ${muted}`}>Only you can see this post until LoadLink approves it.</p>
-                        </div>
-                      ) : null}
 
-                      {isPro ? (
-                        <div className="mt-4 rounded-2xl border border-[#f6b800]/40 bg-[#f6b800]/10 px-4 py-3">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#b88900]">Pro analytics</p>
-                          <p className="mt-1 text-sm font-black">{listing.view_count || 0} total views</p>
-                        </div>
-                      ) : (
-                        <div className="mt-4 rounded-2xl border border-black/10 px-4 py-3">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#b88900]">Analytics locked</p>
-                          <p className={`mt-1 text-xs font-semibold ${muted}`}>Upgrade this listing to Pro to view performance data.</p>
-                        </div>
-                      )}
+                        {moderationStatus === "rejected" ? <div className="mt-3 rounded-xl border border-red-500/35 bg-red-500/10 p-3"><p className="text-xs font-black text-red-400">Needs changes</p><p className={`mt-1 text-xs leading-5 ${muted}`}>{listing.moderation_notes || "LoadLink requested changes before this post can go live."}</p></div> : null}
+                        {moderationStatus === "pending" ? <div className="mt-3 rounded-xl border border-[#f6b800]/30 bg-[#f6b800]/8 p-3"><p className="text-xs font-black text-[#b88900]">In review</p><p className={`mt-1 text-xs ${muted}`}>Only you can manage this post until review is complete.</p></div> : null}
+                        {isManualVehicle && listing.expires_at ? <div className={`mt-3 rounded-xl border p-3 ${expired ? "border-red-500/35 bg-red-500/10" : "border-[#f6b800]/25 bg-[#f6b800]/8"}`}><p className="text-xs font-black">{expired ? "Listing expired" : `Expires ${formatDate(listing.expires_at)}`}</p>{!expired ? <button type="button" onClick={() => void renewListing(listing)} className="mt-2 text-xs font-black text-[#b88900] underline underline-offset-4">Renew listing</button> : null}</div> : null}
 
-                      <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-4">
-                        <button type="button" onClick={() => setEditing(listing)} className="min-h-12 rounded-xl border border-[#f6b800] px-3 text-xs font-black uppercase text-[#b88900]">{moderationStatus === "rejected" ? "Edit & resubmit" : "Edit"}</button>
-                        <button type="button" onClick={() => openAnalytics(listing)} className="min-h-12 rounded-xl border border-[#f6b800] bg-[#f6b800] px-3 text-xs font-black uppercase text-black">{isPro ? "Analytics" : "Pro analytics"}</button>
-                        {moderationStatus === "approved" ? (status === "active" ? <button type="button" onClick={() => setStatus(listing, "filled")} className="min-h-12 rounded-xl border border-black/15 px-3 text-xs font-black uppercase">Mark filled</button> : <button type="button" onClick={() => setStatus(listing, "active")} className="min-h-12 rounded-xl border border-black/15 px-3 text-xs font-black uppercase">Reopen</button>) : <span className="flex min-h-12 items-center justify-center rounded-xl border border-black/10 px-3 text-center text-[10px] font-black uppercase text-black/40">Not public</span>}
-                        <button type="button" onClick={() => deleteListing(listing)} className="min-h-12 rounded-xl border border-red-500/60 px-3 text-xs font-black uppercase text-red-500">Delete</button>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Link href={`/jobs#job-${listing.id}`} className={`flex h-10 items-center rounded-xl border px-4 text-xs font-black ${darkMode ? "border-white/15" : "border-black/10"}`}>View</Link>
+                          <button type="button" onClick={() => setEditing(listing)} className="h-10 rounded-xl bg-[#f6b800] px-4 text-xs font-black text-black">{moderationStatus === "rejected" ? "Edit & resubmit" : "Edit"}</button>
+                          <details className="relative">
+                            <summary className={`flex h-10 cursor-pointer list-none items-center rounded-xl border px-4 text-xs font-black ${darkMode ? "border-white/15" : "border-black/10"}`}>Manage</summary>
+                            <div className={`absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-xl border shadow-xl ${surface}`}>
+                              <button type="button" onClick={() => void openAnalytics(listing)} className="block w-full px-4 py-3 text-left text-xs font-black">{isPro ? "View analytics" : "Analytics options"}</button>
+                              {moderationStatus === "approved" ? status === "active" ? <button type="button" onClick={() => void setStatus(listing, "filled")} className="block w-full border-t border-current/10 px-4 py-3 text-left text-xs font-black">Mark as filled</button> : <button type="button" onClick={() => void setStatus(listing, "active")} className="block w-full border-t border-current/10 px-4 py-3 text-left text-xs font-black">Reopen post</button> : null}
+                              <button type="button" onClick={() => void deleteListing(listing)} className="block w-full border-t border-red-500/20 px-4 py-3 text-left text-xs font-black text-red-500">Delete permanently</button>
+                            </div>
+                          </details>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-          {totalPages > 1 ? <LoadLinkPagination current={currentPage} total={totalPages} onChange={setCurrentPage} darkMode={darkMode} label="My post pages" /> : null}
+                  </article>
+                );
+              })}
+            </div>
+            {totalPages > 1 ? <LoadLinkPagination current={currentPage} total={totalPages} onChange={setCurrentPage} darkMode={darkMode} label="My post pages" /> : null}
           </>
         ) : (
-          <div className={`rounded-[26px] border p-10 text-center ${surface}`}>
-            <h2 className="text-3xl font-black">No posts here yet</h2>
-            <p className={`mt-3 text-sm ${muted}`}>Create a job post or list a verified vehicle to see it here.</p>
-            <div className="mt-6 flex justify-center gap-3"><Link href="/jobs/list" className="rounded-full border border-[#f6b800] px-5 py-3 text-xs font-black uppercase text-[#b88900]">Post job</Link><Link href="/list-your-vehicle" className="rounded-full bg-[#f6b800] px-5 py-3 text-xs font-black uppercase text-black">List vehicle</Link></div>
+          <div className={`rounded-[22px] border p-9 text-center ${surface}`}>
+            <h2 className="text-2xl font-black">Nothing in this view</h2>
+            <p className={`mx-auto mt-2 max-w-md text-sm leading-6 ${muted}`}>Change the filter or create a new LoadLink opportunity.</p>
+            <div className="mt-5 flex justify-center gap-2"><Link href="/jobs/list" className="rounded-xl bg-[#f6b800] px-5 py-3 text-xs font-black text-black">Post opportunity</Link><Link href="/list-your-vehicle" className={`rounded-xl border px-5 py-3 text-xs font-black ${darkMode ? "border-white/15" : "border-black/15"}`}>List vehicle</Link></div>
           </div>
         )}
       </section>
@@ -392,11 +402,40 @@ function Header({ darkMode, toggleTheme }: { darkMode: boolean; toggleTheme: () 
 }
 
 function FilterButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return <button type="button" onClick={onClick} className={`shrink-0 rounded-full border px-5 py-3 text-xs font-black uppercase tracking-wide ${active ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-black/15"}`}>{children}</button>;
+  return <button type="button" onClick={onClick} className={`shrink-0 rounded-xl border px-4 py-2.5 text-xs font-black ${active ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-black/15"}`}>{children}</button>;
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return <div className="border-r border-white/10 p-4 last:border-r-0"><p className="text-[9px] font-black uppercase tracking-[0.14em] text-white/40">{label}</p><p className="mt-1 text-2xl font-black text-[#f6b800]">{value}</p></div>;
+function DashboardMetric({ label, value, darkMode }: { label: string; value: string; darkMode: boolean }) {
+  return <div className={`rounded-xl border p-3.5 ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-white"}`}><p className={`text-[9px] font-black uppercase tracking-[.12em] ${darkMode ? "text-white/40" : "text-black/40"}`}>{label}</p><p className="mt-1 text-xl font-black">{value}</p></div>;
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return <div className="min-w-0 px-3 py-2.5"><p className="text-[8px] font-black uppercase tracking-[.1em] opacity-40">{label}</p><p className="mt-1 truncate text-[11px] font-black">{value}</p></div>;
+}
+
+function shortDate(value: string | null) {
+  if (!value) return "Recent";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Recent" : date.toLocaleDateString("en-ZA", { day: "numeric", month: "short" });
+}
+
+function postStateLabel(listing: MyListing) {
+  const moderation = listing.moderation_status || "pending";
+  const status = listing.status || "active";
+  if (moderation === "rejected") return "Needs changes";
+  if (moderation === "pending") return "In review";
+  if (status === "filled") return "Filled";
+  if (status === "closed") return "Closed";
+  if (status === "draft") return "Draft";
+  return "Live";
+}
+
+function postStateTone(listing: MyListing, darkMode: boolean) {
+  const label = postStateLabel(listing);
+  if (label === "Live") return "bg-emerald-500 text-white";
+  if (label === "Needs changes") return "bg-red-600 text-white";
+  if (label === "In review") return "bg-[#f6b800] text-black";
+  return darkMode ? "bg-black/80 text-white" : "bg-white/90 text-black";
 }
 
 function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose: () => void; onSaved: () => void }) {
@@ -418,7 +457,7 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
       p_rate: rate.trim(),
       p_contact_number: contact.trim(),
       p_description: description.trim(),
-      p_owner_key: listing.owner_key || "",
+      p_owner_key: "",
     });
     setSaving(false);
     if (result.error || result.data !== true) {
@@ -433,6 +472,10 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
 
 function LockedAnalyticsModal({ onClose }: { onClose: () => void }) {
   return <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"><section className="w-full max-w-md rounded-[26px] border border-[#f6b800]/60 bg-[#080808] p-6 text-white"><p className="text-xs font-black uppercase tracking-[0.18em] text-[#f6b800]">Pro-only analytics</p><h2 className="mt-3 text-3xl font-black tracking-[-0.04em]">Analytics is locked on Manual listings and free job posts.</h2><p className="mt-4 text-sm leading-7 text-white/60">Pro posts can view total and unique views, seven-day performance, traffic sources, devices and recent signed-in viewers.</p><div className="mt-6 grid gap-3"><Link href="/jobs/list?upgrade=pro" className="flex h-13 items-center justify-center rounded-xl bg-[#f6b800] font-black text-black">Upgrade to Pro</Link><button type="button" onClick={onClose} className="h-13 rounded-xl border border-white/15 font-black">Not now</button></div></section></div>;
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return <div className="min-w-0 px-4 py-4"><p className="text-[9px] font-black uppercase tracking-[0.12em] text-white/40">{label}</p><p className="mt-1 break-words text-lg font-black text-white">{value}</p></div>;
 }
 
 function AnalyticsModal({ listing, data, loading, onClose }: { listing: MyListing; data: AnalyticsPayload | null; loading: boolean; onClose: () => void }) {

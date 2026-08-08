@@ -22,6 +22,7 @@ import { matchesSouthAfricanLocation, SOUTH_AFRICA_LOCATIONS } from "@/lib/south
 type VehicleGroup = "Catering / Event" | "Trucks / Trailers" | "Farming / Mining";
 type QuickCategory = "truck" | "event-catering" | "logistics" | "mining-farming" | "";
 type PortalFilter = "job" | "contract" | "asset" | "";
+type SortMode = "newest" | "open" | "views" | "oldest";
 
 type JobListing = {
   id: string;
@@ -45,6 +46,7 @@ type JobListing = {
   listingType?: "job" | "contract" | "asset";
   listingLabel?: string;
   vehicleNeeded?: string;
+  status?: "active" | "filled" | "closed" | "draft";
 };
 
 type JobRow = {
@@ -65,6 +67,7 @@ type JobRow = {
   view_count?: number | null;
   last_viewed_at?: string | null;
   user_id?: string | null;
+  status?: string | null;
 };
 
 
@@ -135,6 +138,7 @@ function mapJobRow(row: JobRow, verifiedUsers: Set<string> = new Set()): JobList
     listingType: details.listingType,
     listingLabel: details.listingLabel,
     vehicleNeeded: details.vehicleNeeded,
+    status: row.status === "filled" ? "filled" : row.status === "closed" ? "closed" : row.status === "draft" ? "draft" : "active",
   };
 }
 
@@ -341,6 +345,8 @@ export default function JobsPortalPage() {
   const [analyticsJob, setAnalyticsJob] = useState<JobListing | null>(null);
   const [loadError, setLoadError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortMode, setSortMode] = useState<SortMode>("newest");
+  const [viewerUserId, setViewerUserId] = useState("");
 
   async function fetchJobs() {
     setLoadError("");
@@ -384,24 +390,29 @@ export default function JobsPortalPage() {
   useEffect(() => {
     const savedTheme = localStorage.getItem("loadlink-theme");
     if (savedTheme === "dark") setDarkMode(true);
-    const deviceKey = getDeviceKey();
     const locallyOwnedJobs = getOwnedJobs();
     setOwnedJobs(locallyOwnedJobs);
     setLikedJobIds(getLikedJobIds());
 
-    if (isSupabaseConfigured && Object.keys(locallyOwnedJobs).length > 0) {
-      const ownerKeys = Array.from(new Set(Object.values(locallyOwnedJobs).filter(Boolean)));
-      supabase.auth.getUser()
-        .then(async ({ data }) => {
-          if (!isAuthenticatedUser(data.user)) return;
-          for (const ownerKey of ownerKeys) {
+    if (isSupabaseConfigured) {
+      supabase.auth.getUser().then(async ({ data }) => {
+        if (!isAuthenticatedUser(data.user)) { setViewerUserId(""); return; }
+        setViewerUserId(data.user.id);
+        const ownerKeys = Array.from(new Set(Object.values(locallyOwnedJobs).filter(Boolean)));
+        for (const ownerKey of ownerKeys) {
+          try {
             await supabase.rpc("claim_guest_listings", { p_owner_key: ownerKey });
+          } catch {
+            // Guest-claim failure should not block the jobs page from loading.
           }
+        }
+        if (ownerKeys.length) {
           await syncAccountState().catch(() => undefined);
           await fetchJobs();
-        })
-        .catch(() => undefined);
+        }
+      }).catch(() => setViewerUserId(""));
     }
+
     const params = new URLSearchParams(window.location.search);
     const querySearch = params.get("search") || "";
     const category = (params.get("category") || "") as QuickCategory;
@@ -479,7 +490,7 @@ export default function JobsPortalPage() {
     const meaningfulTokens = searchTokens(keyword).filter((token) => !regionWords.has(token) && !intentWords.has(token));
     const meaningfulQuery = meaningfulTokens.join(" ");
 
-    return allJobs.filter((job) => {
+    const filtered = allJobs.filter((job) => {
       const searchable = `${job.title} ${job.city} ${job.group} ${job.vehicleNeeded || ""} ${job.rate} ${job.postedBy} ${job.description} ${job.packageType || "standard"} ${job.sponsored ? "premium sponsored pro" : "standard"} ${job.verified ? "verified" : ""}`;
       const keywordMatch = !meaningfulQuery || flexibleMatch(searchable, meaningfulQuery);
       const selectedCityMatch = matchesSouthAfricanLocation(job.city, city);
@@ -495,7 +506,18 @@ export default function JobsPortalPage() {
       const explicitPortalMatch = !portalFilter || job.listingType === portalFilter;
       return keywordMatch && selectedCityMatch && regionMatch && groupMatch && categoryMatch && inferredPortalMatch && explicitPortalMatch;
     });
-  }, [allJobs, keyword, city, group, quickCategory, portalFilter]);
+
+    return [...filtered].sort((a, b) => {
+      if (sortMode === "views") return (b.viewCount || 0) - (a.viewCount || 0);
+      if (sortMode === "oldest") return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+      if (sortMode === "open") {
+        const aOpen = a.status === "active" ? 1 : 0;
+        const bOpen = b.status === "active" ? 1 : 0;
+        if (aOpen !== bOpen) return bOpen - aOpen;
+      }
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+  }, [allJobs, keyword, city, group, quickCategory, portalFilter, sortMode]);
 
   const totalPages = Math.max(1, Math.ceil(matchingJobs.length / LISTINGS_PER_PAGE));
   const paginatedJobs = useMemo(() => {
@@ -505,7 +527,7 @@ export default function JobsPortalPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [keyword, city, group, quickCategory, portalFilter]);
+  }, [keyword, city, group, quickCategory, portalFilter, sortMode]);
 
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
@@ -563,11 +585,11 @@ export default function JobsPortalPage() {
   }
 
   async function deleteJob(job: JobListing) {
-    const ownerKey = ownedJobs[job.id];
-    if (!ownerKey) {
-      alert("Only the device that posted this job can delete it.");
+    if (!viewerUserId || job.userId !== viewerUserId) {
+      alert("Only the signed-in account that owns this post can delete it.");
       return;
     }
+    const ownerKey = ownedJobs[job.id] || "";
 
     const confirmed = confirm("Delete this post from LoadLink?");
     if (!confirmed) return;
@@ -578,7 +600,7 @@ export default function JobsPortalPage() {
     });
 
     if (error || data !== true) {
-      alert("This post can only be deleted from the device that created it.");
+      alert("Only the signed-in account that owns this post can delete it.");
       return;
     }
 
@@ -671,12 +693,24 @@ export default function JobsPortalPage() {
       {portalRailJobs.length ? <FeaturedJobsRail jobs={portalRailJobs} darkMode={darkMode} onOpen={openGallery} /> : null}
 
       <section id="matching-jobs" className="mx-auto max-w-5xl px-5 pb-12 pt-4">
-        <div className="mb-6 flex items-end justify-between gap-4">
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-4xl font-black tracking-[-0.05em]">{hasSearched ? `Matching ${portalCopy.results.toLowerCase()}` : portalCopy.results}</h2>
+            <h2 className="text-3xl font-black tracking-[-0.045em] md:text-4xl">{hasSearched ? `Matching ${portalCopy.results.toLowerCase()}` : portalCopy.results}</h2>
+            <p className={`mt-2 text-xs font-semibold ${darkMode ? "text-white/45" : "text-black/45"}`}>{matchingJobs.length} public opportunit{matchingJobs.length === 1 ? "y" : "ies"}</p>
           </div>
 
-          <RequireAuthLink href={portalCopy.listHref} className={`hidden border px-5 py-3 text-xs font-black uppercase tracking-wide md:inline-flex ${darkMode ? "border-[#f6b800] text-[#f6b800]" : "border-black text-black"}`}>{portalCopy.listLabel}</RequireAuthLink>
+          <div className="flex items-center gap-2">
+            <label className={`flex h-11 items-center gap-2 rounded-xl border px-3 ${darkMode ? "border-white/15 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+              <span className={`text-[10px] font-black uppercase tracking-[.12em] ${darkMode ? "text-white/45" : "text-black/45"}`}>Sort</span>
+              <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)} className={`min-w-0 bg-transparent text-xs font-black outline-none ${darkMode ? "text-white" : "text-black"}`} aria-label="Sort jobs">
+                <option value="newest">Newest opportunities</option>
+                <option value="open">Open opportunities</option>
+                <option value="views">Most viewed</option>
+                <option value="oldest">Oldest first</option>
+              </select>
+            </label>
+            <RequireAuthLink href={portalCopy.listHref} className={`hidden h-11 items-center border px-4 text-xs font-black uppercase tracking-wide md:inline-flex ${darkMode ? "border-[#f6b800] text-[#f6b800]" : "border-black text-black"}`}>{portalCopy.listLabel}</RequireAuthLink>
+          </div>
         </div>
 
         {loadError ? <div className="mb-5 border border-red-500/40 bg-red-500/10 p-4 text-sm font-bold text-red-600">{loadError}</div> : null}
@@ -688,7 +722,7 @@ export default function JobsPortalPage() {
                 key={job.id}
                 job={job}
                 darkMode={darkMode}
-                isOwner={Boolean(ownedJobs[job.id])}
+                isOwner={Boolean(viewerUserId && job.userId === viewerUserId)}
                 isLiked={likedJobIds.has(job.id)}
                 onToggleLiked={() => toggleLiked(job)}
                 onShare={() => shareListing(job)}
@@ -718,7 +752,7 @@ export default function JobsPortalPage() {
 
       {galleryJob ? <PhotoGalleryModal job={galleryJob} onClose={() => setGalleryJob(null)} /> : null}
       {analyticsJob ? <ListingAnalyticsModal job={analyticsJob} ownerKey={ownedJobs[analyticsJob.id] || ""} onClose={() => setAnalyticsJob(null)} /> : null}
-      {editJob ? <EditJobModal job={editJob} ownerKey={ownedJobs[editJob.id]} onClose={() => setEditJob(null)} onUpdated={() => { setEditJob(null); fetchJobs(); }} /> : null}
+      {editJob ? <EditJobModal job={editJob} ownerKey={ownedJobs[editJob.id] || ""} onClose={() => setEditJob(null)} onUpdated={() => { setEditJob(null); fetchJobs(); }} /> : null}
     </main>
   );
 }
@@ -756,7 +790,7 @@ function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onRe
   return (
     <article id={`job-${job.id}`} className={`scroll-mt-24 overflow-hidden border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
       <div role="button" tabIndex={0} onClick={onOpenGallery} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" ")onOpenGallery()}} className="group relative block w-full cursor-pointer overflow-hidden bg-black text-left">
-        <div className="aspect-[16/10] w-full overflow-hidden md:aspect-[16/9]"><img loading="lazy" decoding="async" src={coverPhoto} alt={job.title} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" /></div>
+        <div className="aspect-[4/3] w-full overflow-hidden md:aspect-[16/9]"><img src={coverPhoto} alt={job.title} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" /></div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/45" />
         <span className="absolute right-3 bottom-3 rounded-full bg-black/75 px-3 py-1.5 text-xs font-black text-white">{photoCount} photos</span>
         {job.sponsored ? <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.15em] text-black">Promoted</span> : null}
@@ -1027,7 +1061,7 @@ function EditJobModal({ job, ownerKey, onClose, onUpdated }: { job: JobListing; 
     setSaving(false);
 
     if (error || data !== true) {
-      alert("This post can only be edited from the device that created it.");
+      alert("Only the signed-in account that owns this post can edit it.");
       return;
     }
 

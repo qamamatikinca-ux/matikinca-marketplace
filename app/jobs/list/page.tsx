@@ -93,6 +93,7 @@ export default function ListJobPage() {
   const [message, setMessage] = useState("");
   const [authReady, setAuthReady] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const [submittedListingId, setSubmittedListingId] = useState<string | null>(null);
   const submitLockRef = useRef(false);
   const submissionIdRef = useRef("");
   const previewUrlsRef = useRef<string[]>([]);
@@ -417,8 +418,8 @@ export default function ListJobPage() {
       localStorage.removeItem("loadlink-job-draft-v1");
       localStorage.removeItem("loadlink-job-submission-id");
       submissionIdRef.current = createSafeRandomId();
+      setSubmittedListingId(listingId);
       setSubmissionSuccess(true);
-      window.setTimeout(() => router.push("/jobs?posted=success"), 1400);
     } catch (error) {
       await minimumLoading;
       setMessage(postingErrorMessage(error, readableUploadError(error, "The listing could not be uploaded.")));
@@ -442,7 +443,17 @@ export default function ListJobPage() {
 
   return (
     <main className={`min-h-screen transition-colors duration-500 ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
-      <SubmissionSuccess open={submissionSuccess} />
+      <SubmissionSuccess
+        open={submissionSuccess}
+        title={listingMode === "contract" ? "Contract published" : listingMode === "asset" ? "Listing published" : "Job published"}
+        message="Your post is live on LoadLink. Before you continue, you can rate how the posting process felt."
+        listingId={submittedListingId}
+        listingTitle={title.trim()}
+        surface={listingMode}
+        enableFeedback
+        continueLabel="View jobs"
+        onContinue={() => router.push("/jobs?posted=success")}
+      />
       <Header darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
 
       <section className="relative h-[300px] overflow-hidden border-b border-[#f6b800]/30 md:h-[380px]">

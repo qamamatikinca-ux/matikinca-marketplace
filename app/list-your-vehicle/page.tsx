@@ -69,6 +69,7 @@ export default function ListYourVehiclePage() {
   const [vehiclePhotoProgress, setVehiclePhotoProgress] = useState("");
   const [message, setMessage] = useState("");
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const [submittedListingId, setSubmittedListingId] = useState<string | null>(null);
   const [sellerType, setSellerType] = useState<SellerType>("private");
   const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory | null>(null);
   const [vehicleSubtype, setVehicleSubtype] = useState("");
@@ -440,8 +441,8 @@ export default function ListYourVehiclePage() {
       localStorage.removeItem("loadlink-vehicle-draft-v1");
       localStorage.removeItem("loadlink-vehicle-submission-id");
       submissionIdRef.current = createSafeRandomId();
+      setSubmittedListingId(listingId);
       setSubmissionSuccess(true);
-      window.setTimeout(() => router.push(dealershipId ? "/dealer?posted=vehicle" : "/my-posts?posted=vehicle"), 1500);
     } catch (error) {
       if (createdListingId && createdThisAttempt) {
         try { await supabase.rpc("delete_my_listing", { p_listing_id: createdListingId, p_owner_key: createdOwnerKey }); } catch {}
@@ -464,7 +465,17 @@ export default function ListYourVehiclePage() {
 
   return (
     <main className={`min-h-screen transition-colors ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
-      <SubmissionSuccess open={submissionSuccess} title="Vehicle submission sent" message={dealershipId ? "Your vehicle was added to the dealership inventory and submitted for review." : "Your vehicle and verification documents were submitted securely."} />
+      <SubmissionSuccess
+        open={submissionSuccess}
+        title="Vehicle submission sent"
+        message={dealershipId ? "Your vehicle was added to the dealership inventory and submitted for review." : "Your vehicle and verification documents were submitted securely."}
+        listingId={submittedListingId}
+        listingTitle={title.trim()}
+        surface="vehicle"
+        enableFeedback
+        continueLabel={dealershipId ? "Open dealership" : "View my posts"}
+        onContinue={() => router.push(dealershipId ? "/dealer?posted=vehicle" : "/my-posts?posted=vehicle")}
+      />
       <Header darkMode={darkMode} sellerType={sellerType} dealerPost={dealerPost} onToggleTheme={toggleTheme} onToggleSellerType={() => {
         if (dealerPost) return;
         if (sellerType === "dealership") {
