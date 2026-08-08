@@ -503,6 +503,7 @@ function inactiveReason(listing: MyListing) {
 function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose: () => void; onSaved: () => void }) {
   const [title, setTitle] = useState(listing.title);
   const [city, setCity] = useState(listing.city);
+  const [vehicleGroup, setVehicleGroup] = useState(listing.vehicle_group || "Trucks / Trailers");
   const [rate, setRate] = useState(listing.rate);
   const [contact, setContact] = useState(listing.contact_number);
   const [description, setDescription] = useState(cleanDescription(listing.description));
@@ -511,8 +512,11 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
   const [preparingPhotos, setPreparingPhotos] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [guidedMode, setGuidedMode] = useState(false);
+  const [guideStep, setGuideStep] = useState(0);
   const photoLimit = ["pro", "dealer"].includes(listing.package_type || "") ? 15 : 5;
   const rejected = (listing.moderation_status || "pending") === "rejected";
+  const vehicleGroups = ["Catering / Event", "Trucks / Trailers", "Farming / Mining"] as const;
 
   useEffect(() => () => replacementPreviews.forEach(revokePreviewUrl), [replacementPreviews]);
 
@@ -585,10 +589,11 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
     setError("");
     try {
       const photos = await uploadReplacementPhotos();
-      const result = await supabase.rpc("resubmit_my_listing", {
+      const result = await supabase.rpc("resubmit_my_listing_v2", {
         p_listing_id: listing.id,
         p_title: title.trim(),
         p_city: city.trim(),
+        p_vehicle_group: vehicleGroup,
         p_rate: rate.trim(),
         p_contact_number: contact.trim(),
         p_description: description.trim(),
@@ -597,7 +602,11 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
 
       if (result.error || result.data !== true) {
         const raw = result.error?.message || "";
-        if (/function|schema cache|does not exist/i.test(raw) && replacementFiles.length === 0) {
+        if (/function|schema cache|does not exist/i.test(raw)) {
+          const categoryChanged = vehicleGroup !== (listing.vehicle_group || "Trucks / Trailers");
+          if (replacementFiles.length || categoryChanged) {
+            throw new Error("Run the latest LoadLink Marketplace V2.5.9 SQL once to enable category/photo corrections on rejected posts.");
+          }
           const fallback = await supabase.rpc("update_my_listing", {
             p_listing_id: listing.id,
             p_title: title.trim(),
@@ -608,8 +617,6 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
             p_owner_key: "",
           });
           if (fallback.error || fallback.data !== true) throw fallback.error || new Error("The post could not be updated.");
-        } else if (/function|schema cache|does not exist/i.test(raw)) {
-          throw new Error("Run the latest LoadLink Marketplace SQL once to enable rejected-photo replacement.");
         } else {
           throw result.error || new Error("The post could not be updated.");
         }
@@ -625,6 +632,35 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
   const photosToShow = replacementPreviews.length ? replacementPreviews : (listing.photos || []).slice(0, photoLimit);
   const feedback = rejected ? (listing.moderation_notes || "Update the requested details and send the post back to LoadLink for review.") : "Changes to an active post are reviewed before they return to the marketplace.";
   const inputClass = "mt-2 h-12 w-full rounded-2xl border border-white/10 bg-white/[.06] px-4 text-sm font-semibold text-white outline-none transition placeholder:text-white/[.28] focus:border-[#f6b800]/70 focus:bg-white/[.08]";
+  const feedbackLower = feedback.toLowerCase();
+  const rejectionFocus =
+    /category|vehicle|wrong type|incorrect type/.test(feedbackLower) ? "category"
+    : /photo|image|picture|blur|quality/.test(feedbackLower) ? "photos"
+    : /location|city|rate|price|contact|description|detail/.test(feedbackLower) ? "details"
+    : "general";
+  const guideSteps = [
+    { title: "Review feedback", copy: "Understand exactly why LoadLink sent the post back." },
+    { title: "Choose category", copy: "Confirm the post is filed under the correct vehicle group." },
+    { title: "Check photos", copy: "Use clear, relevant photos that match the post." },
+    { title: "Confirm details", copy: "Check the title, location, rate, contact details and description." },
+    { title: "Final review", copy: "Review the corrected post before sending it back to LoadLink." },
+  ] as const;
+  const currentGuide = guideSteps[guideStep];
+  const showGuideFeedback = guidedMode && guideStep === 0;
+  const showGuideCategory = guidedMode && guideStep === 1;
+  const showGuidePhotos = guidedMode && guideStep === 2;
+  const showGuideDetails = guidedMode && guideStep === 3;
+  const showGuideReview = guidedMode && guideStep === 4;
+
+  function nextGuideStep() {
+    setError("");
+    setGuideStep((current) => Math.min(guideSteps.length - 1, current + 1));
+  }
+
+  function previousGuideStep() {
+    setError("");
+    setGuideStep((current) => Math.max(0, current - 1));
+  }
 
   return (
     <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/[.72] px-0 py-0 backdrop-blur-md sm:px-4 sm:py-6">
@@ -639,14 +675,48 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
                 <span className="truncate text-[10px] font-bold uppercase tracking-[.11em] text-white/[.35]">{listing.vehicle_group || listing.listing_kind || "LoadLink listing"}</span>
               </div>
               <h2 className="mt-3 text-[28px] font-black leading-[1.02] tracking-[-.045em] sm:text-3xl">{rejected ? "Review & resubmit" : "Edit your post"}</h2>
-              <p className="mt-2 max-w-xl text-xs font-medium leading-5 text-white/[.48]">Make the required changes below. Your post keeps its existing details until you submit the update.</p>
+              <p className="mt-2 max-w-xl text-xs font-medium leading-5 text-white/[.48]">{guidedMode ? `${currentGuide.title}: ${currentGuide.copy}` : "Make the required changes below. Your post keeps its existing details until you submit the update."}</p>
             </div>
             <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[.04] text-xl text-white/[.75] transition hover:border-white/25 hover:text-white" aria-label="Close edit post">×</button>
           </div>
         </header>
 
+        {rejected ? (
+          <div className="border-b border-white/10 bg-[#0c0c0c] px-4 py-3 sm:px-6">
+            {!guidedMode ? (
+              <button
+                type="button"
+                onClick={() => { setGuidedMode(true); setGuideStep(0); setError(""); }}
+                className="flex w-full items-center justify-between gap-4 rounded-[18px] border border-[#f6b800]/25 bg-[#f6b800]/[.07] px-4 py-3 text-left transition hover:border-[#f6b800]/45"
+              >
+                <span>
+                  <strong className="block text-xs font-black text-[#ffd45a]">Guide me through fixing this</strong>
+                  <span className="mt-0.5 block text-[10px] font-semibold leading-4 text-white/[.46]">Optional · LoadLink will walk you through the rejection one step at a time.</span>
+                </span>
+                <span className="shrink-0 text-lg text-[#ffd45a]">→</span>
+              </button>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-[.13em] text-[#ffd45a]">Guided correction</p>
+                    <p className="mt-1 text-xs font-black text-white">Step {guideStep + 1} of {guideSteps.length} · {currentGuide.title}</p>
+                  </div>
+                  <button type="button" onClick={() => setGuidedMode(false)} className="shrink-0 rounded-full border border-white/12 px-3 py-1.5 text-[9px] font-black text-white/[.58]">Edit everything</button>
+                </div>
+                <div className="mt-3 grid grid-cols-5 gap-1.5" aria-hidden="true">
+                  {guideSteps.map((step, index) => (
+                    <span key={step.title} className={`h-1.5 rounded-full ${index <= guideStep ? "bg-[#f6b800]" : "bg-white/10"}`} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
+
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           <div className="grid gap-4">
+            {(!guidedMode || showGuideFeedback) ? (
             <section className={`rounded-[22px] border p-4 ${rejected ? "border-red-400/25 bg-red-500/[.075]" : "border-[#f6b800]/20 bg-[#f6b800]/[.055]"}`}>
               <div className="flex items-start gap-3">
                 <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black ${rejected ? "bg-red-500/15 text-red-300" : "bg-[#f6b800]/15 text-[#ffd45a]"}`}>!</span>
@@ -655,8 +725,44 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
                   <p className="mt-1.5 text-sm font-semibold leading-6 text-white/[.72]">{feedback}</p>
                 </div>
               </div>
+                {rejected && guidedMode ? (
+                  <div className="mt-4 rounded-2xl border border-white/[.08] bg-black/25 px-4 py-3">
+                    <p className="text-[9px] font-black uppercase tracking-[.12em] text-white/[.34]">LoadLink suggests starting with</p>
+                    <p className="mt-1 text-xs font-bold leading-5 text-white/[.68]">
+                      {rejectionFocus === "category" ? "The listing category. Make sure the selected vehicle group matches what you are actually posting."
+                        : rejectionFocus === "photos" ? "The listing photos. Replace unclear, unrelated or misleading images with clear photos of the actual vehicle/service."
+                        : rejectionFocus === "details" ? "The listing details. Correct the information mentioned in the review feedback before resubmitting."
+                        : "The review feedback above. Work through each step and confirm every part of the listing before resubmitting."}
+                    </p>
+                  </div>
+                ) : null}
             </section>
+            ) : null}
 
+            {(!guidedMode || showGuideCategory) ? (
+            <section className="rounded-[24px] border border-white/10 bg-white/[.035] p-4 sm:p-5">
+              <div className="mb-4">
+                <p className="text-[10px] font-black uppercase tracking-[.14em] text-white/[.38]">Listing category</p>
+                <h3 className="mt-1 text-lg font-black">Choose the correct vehicle group</h3>
+                <p className="mt-1 text-xs font-semibold leading-5 text-white/[.45]">This controls where the post appears in LoadLink. Choose the group that best matches the vehicle or mobile unit being offered or requested.</p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {vehicleGroups.map((group) => (
+                  <button
+                    key={group}
+                    type="button"
+                    onClick={() => setVehicleGroup(group)}
+                    className={`min-h-16 rounded-2xl border px-3 py-3 text-left text-xs font-black transition ${vehicleGroup === group ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-white/10 bg-black/20 text-white/[.62] hover:border-white/20"}`}
+                  >
+                    {group}
+                  </button>
+                ))}
+              </div>
+              {rejectionFocus === "category" ? <p className="mt-3 text-[10px] font-bold leading-5 text-[#ffd45a]">Your review feedback mentions the category, so check this carefully before continuing.</p> : null}
+            </section>
+            ) : null}
+
+            {(!guidedMode || showGuidePhotos) ? (
             <section className="rounded-[24px] border border-white/10 bg-white/[.035] p-4 sm:p-5">
               <div className="flex items-end justify-between gap-4">
                 <div>
@@ -689,7 +795,9 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
               </label>
               {replacementFiles.length ? <p className="mt-2.5 text-[10px] font-bold leading-5 text-[#ffd45a]">{replacementFiles.length} replacement photo{replacementFiles.length === 1 ? "" : "s"} ready. They will replace the current listing photos after resubmission.</p> : null}
             </section>
+            ) : null}
 
+            {(!guidedMode || showGuideDetails) ? (
             <section className="rounded-[24px] border border-white/10 bg-white/[.035] p-4 sm:p-5">
               <div className="mb-4">
                 <p className="text-[10px] font-black uppercase tracking-[.14em] text-white/[.38]">Post information</p>
@@ -723,6 +831,24 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
                 </label>
               </div>
             </section>
+            ) : null}
+
+            {guidedMode && showGuideReview ? (
+              <section className="rounded-[24px] border border-[#f6b800]/25 bg-[#f6b800]/[.055] p-4 sm:p-5">
+                <p className="text-[10px] font-black uppercase tracking-[.14em] text-[#ffd45a]">Final review</p>
+                <h3 className="mt-1 text-lg font-black">Ready to send back to LoadLink?</h3>
+                <div className="mt-4 grid gap-2 text-xs font-semibold text-white/[.62]">
+                  <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/[.08] bg-black/20 px-4 py-3"><span>Category</span><strong className="text-right text-white">{vehicleGroup}</strong></div>
+                  <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/[.08] bg-black/20 px-4 py-3"><span>Location</span><strong className="text-right text-white">{city || "Not set"}</strong></div>
+                  <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/[.08] bg-black/20 px-4 py-3"><span>Photos</span><strong className="text-right text-white">{photosToShow.length} selected</strong></div>
+                  <div className="rounded-2xl border border-white/[.08] bg-black/20 px-4 py-3">
+                    <span className="block text-white/[.42]">Title</span>
+                    <strong className="mt-1 block text-white">{title || "Not set"}</strong>
+                  </div>
+                </div>
+                <p className="mt-4 text-[10px] font-semibold leading-5 text-white/[.42]">Submitting does not publish the post immediately. LoadLink reviews the corrected version first.</p>
+              </section>
+            ) : null}
 
             {error ? (
               <div role="alert" className="rounded-[18px] border border-red-400/25 bg-red-500/[.09] px-4 py-3 text-xs font-bold leading-5 text-red-200">
@@ -730,20 +856,44 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
               </div>
             ) : null}
 
-            <div className="rounded-[20px] border border-white/[.08] bg-black/25 px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-[.12em] text-white/[.36]">After you submit</p>
-              <p className="mt-1 text-xs font-semibold leading-5 text-white/[.52]">The updated post returns to LoadLink review. It becomes public again only after approval.</p>
-            </div>
+            {(!guidedMode || showGuideReview) ? (
+              <div className="rounded-[20px] border border-white/[.08] bg-black/25 px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[.12em] text-white/[.36]">After you submit</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-white/[.52]">The updated post returns to LoadLink review. It becomes public again only after approval.</p>
+              </div>
+            ) : null}
           </div>
         </div>
 
         <footer className="sticky bottom-0 z-20 border-t border-white/10 bg-[#090909]/96 px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-6 sm:pb-5">
-          <div className="grid grid-cols-[.72fr_1.28fr] gap-3">
-            <button type="button" disabled={saving || preparingPhotos} onClick={onClose} className="h-12 rounded-2xl border border-white/12 bg-white/[.035] text-xs font-black text-white/[.72] transition hover:border-white/25 disabled:opacity-40">Cancel</button>
-            <button type="button" disabled={saving || preparingPhotos} onClick={() => void save()} className="h-12 rounded-2xl bg-[#f6b800] px-4 text-xs font-black text-black shadow-[0_10px_30px_rgba(246,184,0,.14)] transition hover:brightness-105 disabled:opacity-50">
-              {saving ? "Submitting…" : rejected ? "Resubmit to LoadLink" : "Save & send for review"}
-            </button>
-          </div>
+          {guidedMode ? (
+            <div className="grid grid-cols-[.72fr_1.28fr] gap-3">
+              <button
+                type="button"
+                disabled={saving || preparingPhotos}
+                onClick={guideStep === 0 ? () => setGuidedMode(false) : previousGuideStep}
+                className="h-12 rounded-2xl border border-white/12 bg-white/[.035] text-xs font-black text-white/[.72] transition hover:border-white/25 disabled:opacity-40"
+              >
+                {guideStep === 0 ? "Exit guide" : "Back"}
+              </button>
+              {showGuideReview ? (
+                <button type="button" disabled={saving || preparingPhotos} onClick={() => void save()} className="h-12 rounded-2xl bg-[#f6b800] px-4 text-xs font-black text-black shadow-[0_10px_30px_rgba(246,184,0,.14)] transition hover:brightness-105 disabled:opacity-50">
+                  {saving ? "Submitting…" : "Resubmit to LoadLink"}
+                </button>
+              ) : (
+                <button type="button" disabled={saving || preparingPhotos} onClick={nextGuideStep} className="h-12 rounded-2xl bg-[#f6b800] px-4 text-xs font-black text-black shadow-[0_10px_30px_rgba(246,184,0,.14)] transition hover:brightness-105 disabled:opacity-50">
+                  Continue
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-[.72fr_1.28fr] gap-3">
+              <button type="button" disabled={saving || preparingPhotos} onClick={onClose} className="h-12 rounded-2xl border border-white/12 bg-white/[.035] text-xs font-black text-white/[.72] transition hover:border-white/25 disabled:opacity-40">Cancel</button>
+              <button type="button" disabled={saving || preparingPhotos} onClick={() => void save()} className="h-12 rounded-2xl bg-[#f6b800] px-4 text-xs font-black text-black shadow-[0_10px_30px_rgba(246,184,0,.14)] transition hover:brightness-105 disabled:opacity-50">
+                {saving ? "Submitting…" : rejected ? "Resubmit to LoadLink" : "Save & send for review"}
+              </button>
+            </div>
+          )}
         </footer>
       </section>
     </div>

@@ -530,7 +530,7 @@ export default function MessagesPage() {
     [conversations, selectedId],
   );
 
-  // LOADLINK V2.5.7 QUOTE SOURCE REUSE
+  // LOADLINK V2.5.9 QUOTE SOURCE REUSE
   useEffect(() => {
     let cancelled = false;
     setQuoteDefaults(null);
@@ -563,7 +563,17 @@ export default function MessagesPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!isAuthenticatedUser(user)) return;
 
-        let postRows: any[] = [];
+        let postRows: Array<{
+          id?: string | null;
+          title?: string | null;
+          city?: string | null;
+          vehicle_group?: string | null;
+          rate?: string | null;
+          description?: string | null;
+          listing_kind?: string | null;
+          status?: string | null;
+          moderation_status?: string | null;
+        }> = [];
         const postsResult = await supabase
           .from("job_listings")
           .select("id,title,city,vehicle_group,rate,description,listing_kind,status,moderation_status")
@@ -620,6 +630,7 @@ export default function MessagesPage() {
 
     return () => { cancelled = true; };
   }, [selectedConversation?.listing_id]);
+
 
   useEffect(() => {
     if (!selectedId) return;
