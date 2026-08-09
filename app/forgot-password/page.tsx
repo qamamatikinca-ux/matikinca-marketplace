@@ -5,7 +5,8 @@ import { useState, type ChangeEvent, type FormEvent } from "react";
 import AuthShell from "@/components/AuthShell";
 import TurnstileChallenge, { loadLinkTurnstileConfigured } from "@/components/TurnstileChallenge";
 import { friendlyAuthError } from "@/lib/authSecurity";
-import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+import { isSupabaseConfigured } from "@/lib/supabaseClient";
+import { recoverySupabase } from "@/lib/recoverySupabase";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 export default function ForgotPasswordPage() {
@@ -24,7 +25,7 @@ export default function ForgotPasswordPage() {
     if (loadLinkTurnstileConfigured && !captchaToken) { setMessage("Complete the security check before requesting a reset link."); return; }
     setBusy(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+      const { error } = await recoverySupabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
         redirectTo: `${window.location.origin}/reset-password`,
         ...(captchaToken ? { captchaToken } : {}),
       });

@@ -274,15 +274,15 @@ export default function AccountSettingsPage() {
             <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="absolute right-4 top-1/2 -translate-y-1/2 sm:right-5" />
           </div>
         </header>
-        <section className="mx-auto flex min-h-[calc(100vh-76px)] max-w-4xl items-center justify-center px-4 py-10 sm:px-5">
-          <div className="w-full max-w-xl text-center">
-            <h1 className="text-3xl font-black tracking-[-.04em] sm:text-4xl">Loading LoadLink settings</h1>
-            <p className={`mx-auto mt-2 max-w-md text-sm font-semibold leading-6 ${muted}`}>Preparing your profile, messages and security.</p>
-            <div className="mt-7"><TruckGearboxSketch darkMode={darkMode} /></div>
-            <div className={`mx-auto mt-6 h-1.5 w-44 overflow-hidden rounded-full ${darkMode ? "bg-white/10" : "bg-black/10"}`}>
-              <div className="h-full w-1/2 animate-pulse rounded-full bg-[#f6b800]" />
+        <section className="relative mx-auto flex min-h-[calc(100vh-76px)] max-w-5xl items-center justify-center overflow-hidden px-4 py-8 sm:px-5 md:py-10">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(246,184,0,.12),transparent_46%)]" />
+          <div className={`relative w-full max-w-2xl rounded-[30px] border p-4 text-center shadow-2xl sm:p-6 ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-white"}`}>
+            <TruckGearboxSketch darkMode={darkMode} />
+            <h1 className="mt-5 text-2xl font-black tracking-[-.035em] sm:text-3xl">Preparing your settings</h1>
+            <p className={`mx-auto mt-2 max-w-md text-sm font-semibold leading-6 ${muted}`}>Loading your profile, messages and security preferences.</p>
+            <div className="mt-5 flex justify-center gap-2" aria-label="Loading settings">
+              {[0, 1, 2].map((item) => <span key={item} className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#f6b800]" style={{ animationDelay: `${item * 120}ms` }} />)}
             </div>
-            <p className={`mt-3 text-xs font-semibold ${muted}`}>Loading your account preferences…</p>
           </div>
         </section>
       </main>
