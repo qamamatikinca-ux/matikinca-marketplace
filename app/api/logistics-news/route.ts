@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverRateLimit } from "@/lib/serverRateLimit";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -73,7 +74,9 @@ function coverFor(title: string, index: number) {
   return [covers.road, covers.truck, covers.forklift, covers.contract][index % 4];
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const limited = serverRateLimit(request, "logistics-news", 40, 60_000);
+  if (limited) return limited;
   try {
     const rss = "https://news.google.com/rss/search?q=South+Africa+logistics+freight+trucking+ports+rail+when:14d&hl=en-ZA&gl=ZA&ceid=ZA:en";
     const response = await fetch(rss, {
@@ -113,7 +116,7 @@ export async function GET() {
         items: items.length ? items : fallback,
         updatedAt: new Date().toISOString(),
       },
-      { headers: { "Cache-Control": "no-store, max-age=0" } },
+      { headers: { "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=900" } },
     );
   } catch {
     return NextResponse.json(
@@ -122,7 +125,7 @@ export async function GET() {
         updatedAt: new Date().toISOString(),
         fallback: true,
       },
-      { headers: { "Cache-Control": "no-store, max-age=0" } },
+      { headers: { "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=900" } },
     );
   }
 }

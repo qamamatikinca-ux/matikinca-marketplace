@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import AuthShell from "@/components/AuthShell";
+import PasswordStrengthMeter, { passwordStrength } from "@/components/PasswordStrengthMeter";
 import { friendlyAuthError, strongPasswordIssue } from "@/lib/authSecurity";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
@@ -36,7 +37,7 @@ export default function ResetPasswordPage() {
     if (!ready || busy) return;
     setMessage("");
     const issue = strongPasswordIssue(password);
-    if (issue) { setMessage(issue); return; }
+    if (issue || !passwordStrength(password).strong) { setMessage(issue || "Your password is not strong enough yet."); return; }
     if (password !== confirmPassword) { setMessage("The two passwords do not match."); return; }
     setBusy(true);
     try {
@@ -50,12 +51,18 @@ export default function ResetPasswordPage() {
   }
 
   const input = `h-13 w-full rounded-2xl border px-4 text-[15px] font-semibold outline-none transition focus:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.045] text-white" : "border-black/12 bg-[#fffdf8] text-black"}`;
-  const issue = password ? strongPasswordIssue(password) : "";
 
   return (
-    <AuthShell title="Choose a new password" description="A successful reset signs out existing LoadLink sessions so the new password starts clean.">
-      {ready ? <form onSubmit={update} className="grid gap-4"><label className="grid gap-2"><span className="text-sm font-bold">New password</span><input className={input} type="password" autoComplete="new-password" maxLength={128} value={password} onChange={(event) => setPassword(event.target.value)} required /><span className={`text-[11px] font-semibold ${issue ? "text-amber-600" : password ? "text-emerald-500" : darkMode ? "text-white/38" : "text-black/38"}`}>{password ? issue || "Strong password format ✓" : "12+ characters with upper/lowercase, a number and a symbol."}</span></label><label className="grid gap-2"><span className="text-sm font-bold">Confirm new password</span><input className={input} type="password" autoComplete="new-password" maxLength={128} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required /></label><button disabled={busy} className="h-13 rounded-2xl bg-[#f6b800] text-sm font-black text-black disabled:opacity-45">{busy ? "Updating securely…" : "Update password"}</button></form> : null}
-      {message ? <p role="status" className={`rounded-2xl border px-4 py-3 text-sm font-semibold leading-6 ${ready ? "mt-4" : ""} ${darkMode ? "border-white/10 bg-white/[.03] text-white/68" : "border-black/10 bg-black/[.02] text-black/68"}`}>{message}</p> : null}
+    <AuthShell title="Choose a new password" description="Create a strong new password. After the reset, LoadLink returns you to sign in with the new password.">
+      {ready ? (
+        <form onSubmit={update} className="grid gap-4">
+          <label className="grid gap-2"><span className="text-sm font-bold">New password</span><input className={input} type="password" autoComplete="new-password" maxLength={128} value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+          <PasswordStrengthMeter password={password} darkMode={darkMode} />
+          <label className="grid gap-2"><span className="text-sm font-bold">Confirm new password</span><input className={input} type="password" autoComplete="new-password" maxLength={128} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required />{confirmPassword ? <span className={`text-[11px] font-bold ${password === confirmPassword ? "text-emerald-500" : "text-red-500"}`}>{password === confirmPassword ? "✓ Passwords match" : "Passwords do not match"}</span> : null}</label>
+          <button type="submit" disabled={busy} className="h-13 rounded-2xl bg-[#f6b800] px-5 text-sm font-black text-black disabled:opacity-45">{busy ? "Updating securely…" : "Set new password"}</button>
+        </form>
+      ) : <div className="py-8 text-center"><div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-current/10 border-t-[#f6b800]" /><p className="mt-4 text-sm font-semibold opacity-50">{message}</p></div>}
+      {ready && message ? <p role="alert" className={`mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold ${darkMode ? "border-white/10 bg-white/[.03] text-white/68" : "border-black/10 bg-black/[.02] text-black/68"}`}>{message}</p> : null}
     </AuthShell>
   );
 }

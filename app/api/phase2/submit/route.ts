@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { bearer, publicSupabase } from "@/lib/phase2/supabase";
+import { serverRateLimit } from "@/lib/serverRateLimit";
 
 function friendlySubmitError(message: string) {
   const normalized = message.toLowerCase();
@@ -26,6 +27,8 @@ function friendlySubmitError(message: string) {
 }
 
 export async function POST(request: Request) {
+  const limited = serverRateLimit(request, "driver-submit", 10, 10 * 60_000);
+  if (limited) return limited;
   const token = bearer(request);
   if (!token) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
 

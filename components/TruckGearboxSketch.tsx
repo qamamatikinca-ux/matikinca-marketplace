@@ -1,30 +1,29 @@
 export default function TruckGearboxSketch({ darkMode }: { darkMode: boolean }) {
-  const stroke = darkMode ? "currentColor" : "currentColor";
   return (
-    <div className={`relative mx-auto w-full max-w-[320px] overflow-hidden rounded-[28px] border p-6 ${darkMode ? "border-white/10 bg-[#0b0b0b] text-white/70" : "border-black/10 bg-white text-black/65"}`}>
-      <svg viewBox="0 0 320 220" className="mx-auto h-auto w-full" fill="none" aria-hidden="true">
-        <g stroke={stroke} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M65 151h57l14-22h70l18 22h31" />
-          <path d="M84 151v-18h35l17 18" />
-          <path d="M183 129h35" />
-          <circle cx="100" cy="167" r="16" />
-          <circle cx="213" cy="167" r="16" />
-          <circle cx="100" cy="167" r="5" />
-          <circle cx="213" cy="167" r="5" />
-          <path d="M130 103h62" />
-          <path d="M161 103V44" />
-          <circle cx="161" cy="34" r="11" />
-          <path d="M128 59h66" />
-          <path d="M128 59v52M194 59v52" />
-          <path d="M128 111h66" />
-          <path d="M128 59l16 16M194 59l-16 16M128 111l16-16M194 111l-16-16" opacity=".55" />
+    <div className={`mx-auto w-full max-w-[330px] rounded-[26px] border px-5 py-6 ${darkMode ? "border-white/10 bg-[#090909] text-white/72" : "border-black/10 bg-white text-black/70"}`}>
+      <svg viewBox="0 0 360 230" className="h-auto w-full" fill="none" aria-hidden="true">
+        {/* transmission / gearbox housing */}
+        <g stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M40 120 62 95h49l19-16h88l20 16h48l24 25-14 60H54l-14-60Z" />
+          <path d="M82 95V72h34l22 23M226 95l20-23h33v25" opacity=".62" />
+          <path d="M80 180h200" opacity=".35" />
+          <circle cx="92" cy="180" r="11" /><circle cx="271" cy="180" r="11" />
+          <circle cx="92" cy="180" r="3" /><circle cx="271" cy="180" r="3" />
+          <rect x="132" y="101" width="96" height="67" rx="16" />
         </g>
-        <g stroke="#f6b800" strokeWidth="3" strokeLinecap="round">
-          <path d="M235 62c12 7 19 15 22 28" opacity=".9" />
-          <path d="M245 51c16 9 26 22 31 40" opacity=".7" />
-          <path d="M151 34h20" />
-          <path d="M161 24v20" />
+
+        {/* unmistakable truck gear lever + H pattern */}
+        <g stroke="#f6b800" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M180 104V52" />
+          <circle cx="180" cy="39" r="13" />
+          <path d="M149 122h62M149 145h62M180 122v23" />
         </g>
+        <g fill="#f6b800" fontFamily="Arial, Helvetica, sans-serif" fontSize="12" fontWeight="800" textAnchor="middle">
+          <text x="146" y="118">1</text><text x="214" y="118">2</text>
+          <text x="146" y="160">3</text><text x="214" y="160">4</text>
+          <text x="180" y="160">5</text><text x="234" y="160">R</text>
+        </g>
+        <text x="180" y="211" fill="currentColor" opacity=".45" fontFamily="Arial, Helvetica, sans-serif" fontSize="12" fontWeight="800" textAnchor="middle" letterSpacing="1.5">TRUCK GEARBOX</text>
       </svg>
     </div>
   );

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverRateLimit } from "@/lib/serverRateLimit";
 
 const blockedWords = [
   "logo",
@@ -62,6 +63,8 @@ type WikiPage = {
 };
 
 export async function GET(request: Request) {
+  const limited = serverRateLimit(request, "truck-image", 30, 60_000);
+  if (limited) return limited;
   const { searchParams } = new URL(request.url);
   const brand = (searchParams.get("brand") || "").trim().slice(0, 80);
   const model = (searchParams.get("model") || "").trim().slice(0, 100);

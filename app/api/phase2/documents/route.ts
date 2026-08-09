@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { bearer, publicSupabase, safeError } from "@/lib/phase2/supabase";
+import { serverRateLimit } from "@/lib/serverRateLimit";
 
 const TYPES = new Set(["identity", "drivers_licence", "prdp", "cv", "driving_certificate"]);
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -24,6 +25,8 @@ function inspect(bytes: Uint8Array, filename: string) {
 }
 
 export async function POST(request: Request) {
+  const limited = serverRateLimit(request, "driver-documents", 12, 10 * 60_000);
+  if (limited) return limited;
   try {
     const token = bearer(request);
     if (!token) return NextResponse.json({ error: "Sign in required." }, { status: 401 });

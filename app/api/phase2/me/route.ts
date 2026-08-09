@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { bearer, publicSupabase, safeError } from "@/lib/phase2/supabase";
+import { serverRateLimit } from "@/lib/serverRateLimit";
 
 async function authenticated(request: Request) {
   const token = bearer(request);
@@ -11,6 +12,8 @@ async function authenticated(request: Request) {
 }
 
 export async function GET(request: Request) {
+  const limited = serverRateLimit(request, "driver-profile-read", 90, 60_000);
+  if (limited) return limited;
   try {
     const auth = await authenticated(request);
     if (!auth) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
@@ -29,6 +32,8 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
+  const limited = serverRateLimit(request, "driver-profile-write", 20, 60_000);
+  if (limited) return limited;
   try {
     const auth = await authenticated(request);
     if (!auth) return NextResponse.json({ error: "Sign in required." }, { status: 401 });

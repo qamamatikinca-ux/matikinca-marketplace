@@ -9,6 +9,7 @@ import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import TruckGearboxSketch from "@/components/TruckGearboxSketch";
 import MfaSecurityCard from "@/components/MfaSecurityCard";
+import PasswordStrengthMeter from "@/components/PasswordStrengthMeter";
 import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
 import { clearActiveAccountState, syncAccountState } from "@/lib/accountState";
 import { isAuthenticatedUser, loginHref } from "@/lib/auth";
@@ -274,11 +275,14 @@ export default function AccountSettingsPage() {
           </div>
         </header>
         <section className="mx-auto flex min-h-[calc(100vh-76px)] max-w-4xl items-center justify-center px-4 py-10 sm:px-5">
-          <div className={`w-full max-w-2xl rounded-[28px] border px-5 py-8 text-center sm:px-8 sm:py-10 ${surface}`}>
-            <p className={`text-[11px] font-black uppercase tracking-[.16em] ${darkMode ? "text-[#f6b800]" : "text-[#b68500]"}`}>LoadLink settings</p>
-            <h1 className="mt-3 text-4xl font-black tracking-[-.045em] sm:text-5xl">Loading your settings</h1>
-            <p className={`mx-auto mt-3 max-w-xl text-sm font-semibold leading-6 ${muted}`}>Preparing your profile, notifications and security preferences.</p>
-            <div className="mt-8"><TruckGearboxSketch darkMode={darkMode} /></div>
+          <div className="w-full max-w-xl text-center">
+            <h1 className="text-3xl font-black tracking-[-.04em] sm:text-4xl">Loading LoadLink settings</h1>
+            <p className={`mx-auto mt-2 max-w-md text-sm font-semibold leading-6 ${muted}`}>Preparing your profile, messages and security.</p>
+            <div className="mt-7"><TruckGearboxSketch darkMode={darkMode} /></div>
+            <div className={`mx-auto mt-6 h-1.5 w-44 overflow-hidden rounded-full ${darkMode ? "bg-white/10" : "bg-black/10"}`}>
+              <div className="h-full w-1/2 animate-pulse rounded-full bg-[#f6b800]" />
+            </div>
+            <p className={`mt-3 text-xs font-semibold ${muted}`}>Loading your account preferences…</p>
           </div>
         </section>
       </main>
@@ -362,7 +366,7 @@ export default function AccountSettingsPage() {
 
         {settingsView === "security" ? (
           <div className="mt-6 grid max-w-3xl gap-4">
-            <section className={`border p-5 md:p-7 ${surface}`}><h2 className="text-xl font-bold">Password</h2><p className={`mt-2 text-sm ${muted}`}>{googleOnly ? "Set a LoadLink password while keeping Google sign-in connected." : "Change your password without disconnecting other sign-in methods."}</p><div className="mt-5 grid gap-4 md:grid-cols-2"><Field label={googleOnly ? "Set a password" : "New password"}><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" className={input} /></Field><Field label="Confirm password"><input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" className={input} /></Field></div><button type="button" onClick={() => void updatePassword()} disabled={saving || !password} className="mt-5 h-11 rounded-xl bg-[#f6b800] px-5 text-xs font-semibold text-black disabled:opacity-40">{googleOnly ? "Set password" : "Update password"}</button></section>
+            <section className={`border p-5 md:p-7 ${surface}`}><h2 className="text-xl font-bold">Password</h2><p className={`mt-2 text-sm ${muted}`}>{googleOnly ? "Set a LoadLink password while keeping Google sign-in connected." : "Change your password without disconnecting other sign-in methods."}</p><div className="mt-5 grid gap-4 md:grid-cols-2"><Field label={googleOnly ? "Set a password" : "New password"}><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" className={input} /></Field><Field label="Confirm password"><input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" className={input} /></Field></div>{password ? <div className="mt-4"><PasswordStrengthMeter password={password} darkMode={darkMode} /></div> : null}<button type="button" onClick={() => void updatePassword()} disabled={saving || !password} className="mt-5 h-11 rounded-xl bg-[#f6b800] px-5 text-xs font-semibold text-black disabled:opacity-40">{googleOnly ? "Set password" : "Update password"}</button></section>
             <MfaSecurityCard darkMode={darkMode} />
             <section className={`border p-5 md:p-7 ${surface}`}><h2 className="text-xl font-bold">Account access</h2><p className={`mt-2 text-sm ${muted}`}>Sign out or request account deletion.</p><div className="mt-5 flex flex-wrap gap-3"><button type="button" onClick={() => void signOut()} className="h-11 rounded-xl border border-red-500 px-5 text-xs font-semibold text-red-500">Sign out</button><button type="button" onClick={requestDeletion} className="h-11 rounded-xl border border-current/20 px-5 text-xs font-semibold">Request deletion</button></div></section>
           </div>
@@ -380,6 +384,8 @@ function Info({ label, value }: { label: string; value: string }) { return <div 
 function isMissingSchemaError(message: string) { return /column|schema cache|does not exist|relation/i.test(message); }
 function friendlyError(error: unknown, fallback = "That change could not be completed. Please try again or contact LoadLink support.") {
   const text = error instanceof Error ? error.message : typeof error === "object" && error && "message" in error ? String((error as { message?: unknown }).message || "") : "";
+  if (/PHONE_ALREADY_IN_USE/i.test(text)) return "This phone number is already in use on another LoadLink account.";
+  if (/INVALID_SOUTH_AFRICAN_PHONE/i.test(text)) return "Enter a valid South African cellphone number.";
   if (!text || isMissingSchemaError(text) || /row-level|bucket|permission|policy/i.test(text)) return fallback;
   return text;
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { serverRateLimit } from "@/lib/serverRateLimit";
 
 const WEBSITE_CONTEXT = `You are LinkBot, LoadLink's friendly AI help assistant for a South African logistics marketplace. Help users use LoadLink naturally and conversationally. You can explain accounts, login, verification, jobs, contracts, trucks, trailers, mobile toilets, mobile fridges, food trucks, mobile kitchens, search, saving, sharing, reporting, private messaging, the 50-message standard allowance, Pro messaging, analytics, listing photos, rates in rand, safety, missing listings, page navigation and technical troubleshooting. Ask one short clarifying question when needed. Give direct step-by-step help and suggest the correct LoadLink page. Never invent a user's account, listing, payment or verification status. Never provide general unrelated advice. When a user needs a person, say that agent support is being connected and ask them to prepare their account email, listing link and a short problem description.`;
 
@@ -25,6 +26,8 @@ const faq:Faq[]=[
 function fallback(message:string){const words=message.toLowerCase();let best:Faq|undefined;let score=0;for(const item of faq){const current=item.keys.reduce((n,key)=>n+(words.includes(key)?key.length:0),0);if(current>score){score=current;best=item}}return best||{answer:"Tell me what you are trying to do on LoadLink, what page you are on and what you expected to happen. I can guide you through it step by step.",followups:["Find a listing","Post a listing","Fix a problem","Talk to an agent"]};}
 
 export async function POST(request:NextRequest){
+ const limited=serverRateLimit(request,"linkbot",12,60_000); if(limited)return limited;
+ const contentLength=Number(request.headers.get("content-length")||0); if(contentLength>32_000)return NextResponse.json({answer:"That request is too large.",followups:["Ask a shorter question"]},{status:413});
  const body=await request.json().catch(()=>({})); const message=String(body?.message||"").trim().slice(0,1200); const history=Array.isArray(body?.history)?body.history.slice(-8):[];
  if(!message)return NextResponse.json({answer:"Ask me anything about using LoadLink.",followups:["Find a listing","Post a listing","Talk to an agent"]},{status:400});
  const key=process.env.OPENAI_API_KEY;
