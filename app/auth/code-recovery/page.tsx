@@ -11,7 +11,7 @@ import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import type { Session } from "@supabase/supabase-js";
 
 type RecoveryState = "checking" | "ready" | "invalid";
-type CodeStatus = { has_code?: boolean };
+type CodeStatus = { enabled?: boolean };
 
 export default function CodeRecoveryPage() {
   const router = useRouter();
@@ -23,7 +23,7 @@ export default function CodeRecoveryPage() {
   const [code, setCode] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("Verifying your recovery email…");
+  const [message, setMessage] = useState("");
 
   function nextPath() {
     return safeNextPath(new URLSearchParams(window.location.search).get("next"), "/");
@@ -37,27 +37,25 @@ export default function CodeRecoveryPage() {
       const { data, error } = await supabase.rpc("loadlink_security_code_status");
       if (error) {
         setState("invalid");
-        setMessage("Your email was verified, but LoadLink's 4-digit code service is not ready. Run the V2.6.9 SQL and try again.");
+        setMessage("This recovery link could not be completed right now.");
         return;
       }
       const status = (data || {}) as CodeStatus;
       const next = nextPath();
       window.history.replaceState({}, "", `/auth/code-recovery?next=${encodeURIComponent(next)}`);
       setSession(nextSession);
-      setHasCode(Boolean(status.has_code));
-      setChanging(!status.has_code);
+      setHasCode(Boolean(status.enabled));
+      setChanging(false);
       setState("ready");
-      setMessage("");
     }
 
     async function prepare() {
       const url = new URL(window.location.href);
       const query = url.searchParams;
       const hash = new URLSearchParams(url.hash.startsWith("#") ? url.hash.slice(1) : url.hash);
-      const providerError = query.get("error_description") || hash.get("error_description");
-      if (providerError) {
+      if (query.get("error_description") || hash.get("error_description")) {
         setState("invalid");
-        setMessage("This recovery email could not be verified. Request a fresh link from the 4-digit code screen.");
+        setMessage("This recovery link is no longer available.");
         return;
       }
 
@@ -81,18 +79,18 @@ export default function CodeRecoveryPage() {
       }
 
       setState("invalid");
-      setMessage("This recovery link is invalid, expired or has already been used. Request a new one from the 4-digit code screen.");
+      setMessage("This recovery link is invalid, expired or already used.");
     }
 
     void prepare().catch(() => {
       if (!active) return;
       setState("invalid");
-      setMessage("This recovery link could not be verified. Request a fresh one and try again.");
+      setMessage("This recovery link could not be verified.");
     });
     return () => { active = false; };
   }, []);
 
-  async function completeWithCurrentCode() {
+  async function continueWithCurrentCode() {
     if (!session || busy) return;
     setBusy(true);
     markSecurityCodeVerified(session);
@@ -104,8 +102,8 @@ export default function CodeRecoveryPage() {
     event.preventDefault();
     if (!session || busy) return;
     setMessage("");
-    if (!isFourDigitCode(code)) { setMessage("Enter exactly four numbers."); return; }
-    if (code !== confirm) { setMessage("The two 4-digit codes do not match."); return; }
+    if (!isFourDigitCode(code)) { setMessage("Enter four numbers."); return; }
+    if (code !== confirm) { setMessage("The codes do not match."); return; }
     setBusy(true);
     try {
       const { error } = await supabase.rpc("loadlink_recover_security_code", { p_code: code });
@@ -114,44 +112,51 @@ export default function CodeRecoveryPage() {
       await syncAccountState().catch(() => undefined);
       router.replace(nextPath());
     } catch {
-      setMessage("The new code could not be saved. Try again.");
+      setMessage("The new code could not be saved.");
       setBusy(false);
     }
   }
 
-  const input = `h-15 w-full rounded-2xl border px-4 text-center text-3xl font-black tracking-[.38em] outline-none transition focus:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.045] text-white placeholder:text-white/22" : "border-black/12 bg-[#fffdf8] text-black placeholder:text-black/22"}`;
+  const input = `h-14 w-full rounded-xl border px-4 text-center text-2xl font-black tracking-[.34em] outline-none transition focus:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.04] text-white placeholder:text-white/22" : "border-black/12 bg-[#fffdf8] text-black placeholder:text-black/22"}`;
 
   return (
-    <AuthShell title={state === "ready" ? "Recover your 4-digit code" : state === "invalid" ? "Recovery link unavailable" : "Checking your recovery link"} description={state === "ready" ? "Your account email has been verified. Keep the code already on your account or replace it with a new 4-digit code." : "LoadLink is confirming that this secure email belongs to your account."} status="Email-confirmed recovery">
-      {state === "checking" ? <div className="py-8 text-center"><div className="mx-auto h-11 w-11 animate-spin rounded-full border-2 border-current/10 border-t-[#f6b800]" /><p className="mt-4 text-sm font-semibold opacity-50">{message}</p></div> : null}
+    <AuthShell
+      title={state === "ready" ? "4-digit code recovery" : state === "invalid" ? "Recovery link unavailable" : "Checking recovery link"}
+      description={state === "ready" && hasCode ? "Keep your current code or set a new one." : undefined}
+    >
+      {state === "checking" ? <div className="py-8 text-center"><div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-current/10 border-t-[#f6b800]" /></div> : null}
 
-      {state === "ready" ? (
-        <div>
-          <div className={`rounded-2xl border p-4 ${darkMode ? "border-emerald-500/20 bg-emerald-500/[.07]" : "border-emerald-600/20 bg-emerald-500/[.06]"}`}>
-            <div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/12 font-black text-emerald-500">✓</span><div><p className="text-sm font-black">Recovery email confirmed</p><p className={`mt-1 text-xs font-semibold leading-5 ${darkMode ? "text-white/50" : "text-black/50"}`}>{hasCode ? "Your existing 4-digit code is still active. For security, LoadLink does not reveal the actual digits." : "This account does not have a 4-digit code yet. Create one now to continue."}</p></div></div>
-          </div>
-
-          {hasCode && !changing ? (
-            <div className="mt-5 grid gap-3">
-              <button type="button" onClick={() => void completeWithCurrentCode()} disabled={busy} className="h-13 rounded-2xl bg-[#f6b800] px-5 text-sm font-black text-black disabled:opacity-45">{busy ? "Opening securely…" : "Keep current code & enter LoadLink"}</button>
-              <button type="button" onClick={() => { setChanging(true); setMessage(""); }} disabled={busy} className={`h-12 rounded-2xl border text-sm font-black ${darkMode ? "border-white/12 text-white/72" : "border-black/12 text-black/72"}`}>Choose a new code instead</button>
-            </div>
-          ) : null}
-
-          {changing ? (
-            <form onSubmit={changeCode} className="mt-5 grid gap-4">
-              <label className="grid gap-2"><span className="text-sm font-black">New 4-digit code</span><input aria-label="New 4-digit LoadLink code" className={input} inputMode="numeric" autoComplete="off" maxLength={4} value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="••••" /></label>
-              <label className="grid gap-2"><span className="text-sm font-black">Confirm new code</span><input aria-label="Confirm new 4-digit LoadLink code" className={input} inputMode="numeric" autoComplete="off" maxLength={4} value={confirm} onChange={(event) => setConfirm(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="••••" /></label>
-              <button disabled={busy || code.length !== 4 || confirm.length !== 4} className="h-13 rounded-2xl bg-[#f6b800] px-5 text-sm font-black text-black disabled:opacity-45">{busy ? "Saving securely…" : "Save new code & continue"}</button>
-              {hasCode ? <button type="button" onClick={() => { setChanging(false); setCode(""); setConfirm(""); setMessage(""); }} disabled={busy} className={`h-11 rounded-2xl border text-sm font-black ${darkMode ? "border-white/12" : "border-black/12"}`}>Back</button> : null}
-            </form>
-          ) : null}
+      {state === "ready" && hasCode && !changing ? (
+        <div className="grid gap-3">
+          <button type="button" onClick={() => void continueWithCurrentCode()} disabled={busy} className="h-12 rounded-xl bg-[#f6b800] px-5 text-sm font-semibold text-black disabled:opacity-45">{busy ? "Opening…" : "Keep current code"}</button>
+          <button type="button" onClick={() => { setChanging(true); setMessage(""); }} disabled={busy} className={`h-12 rounded-xl border text-sm font-semibold ${darkMode ? "border-white/12" : "border-black/12"}`}>Set a new code</button>
         </div>
       ) : null}
 
-      {state === "invalid" ? <div className="py-3"><div className={`rounded-2xl border p-4 text-sm font-semibold leading-6 ${darkMode ? "border-white/10 bg-white/[.03] text-white/65" : "border-black/10 bg-black/[.02] text-black/65"}`}>{message}</div><button type="button" onClick={() => router.replace(`/auth/mfa?next=${encodeURIComponent(nextPath())}`)} className="mt-4 h-12 w-full rounded-2xl bg-[#f6b800] text-sm font-black text-black">Return to 4-digit code</button></div> : null}
+      {state === "ready" && !hasCode ? (
+        <div className="grid gap-3">
+          <button type="button" onClick={() => void continueWithCurrentCode()} disabled={busy} className="h-12 rounded-xl bg-[#f6b800] px-5 text-sm font-semibold text-black disabled:opacity-45">Continue</button>
+          <button type="button" onClick={() => setChanging(true)} disabled={busy} className={`h-12 rounded-xl border text-sm font-semibold ${darkMode ? "border-white/12" : "border-black/12"}`}>Set up a 4-digit code</button>
+        </div>
+      ) : null}
 
-      {state === "ready" && message ? <p role="status" className={`mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold ${darkMode ? "border-white/10 bg-white/[.03] text-white/68" : "border-black/10 bg-black/[.02] text-black/68"}`}>{message}</p> : null}
+      {state === "ready" && changing ? (
+        <form onSubmit={changeCode} className="grid gap-4">
+          <label className="grid gap-2"><span className="text-sm font-semibold">New code</span><input className={input} inputMode="numeric" autoComplete="off" maxLength={4} value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="••••" /></label>
+          <label className="grid gap-2"><span className="text-sm font-semibold">Confirm code</span><input className={input} inputMode="numeric" autoComplete="off" maxLength={4} value={confirm} onChange={(event) => setConfirm(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="••••" /></label>
+          <button disabled={busy || code.length !== 4 || confirm.length !== 4} className="h-12 rounded-xl bg-[#f6b800] px-5 text-sm font-semibold text-black disabled:opacity-45">{busy ? "Saving…" : "Save and continue"}</button>
+          <button type="button" onClick={() => { setChanging(false); setCode(""); setConfirm(""); setMessage(""); }} disabled={busy} className={`h-11 rounded-xl border text-sm font-semibold ${darkMode ? "border-white/12" : "border-black/12"}`}>Back</button>
+        </form>
+      ) : null}
+
+      {state === "invalid" ? (
+        <div>
+          <p className={`text-sm font-semibold leading-6 ${darkMode ? "text-white/58" : "text-black/58"}`}>{message}</p>
+          <button type="button" onClick={() => router.replace(`/auth/mfa?next=${encodeURIComponent(nextPath())}`)} className="mt-5 h-12 w-full rounded-xl bg-[#f6b800] text-sm font-semibold text-black">Back</button>
+        </div>
+      ) : null}
+
+      {state === "ready" && message ? <p role="status" className="mt-4 text-center text-sm font-semibold text-red-500">{message}</p> : null}
     </AuthShell>
   );
 }

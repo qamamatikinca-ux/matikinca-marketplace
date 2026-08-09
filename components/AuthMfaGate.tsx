@@ -8,6 +8,8 @@ import { supabase } from "@/lib/supabaseClient";
 
 const AUTH_FLOW_PREFIXES = ["/login", "/signup", "/forgot-password", "/reset-password", "/auth/"];
 
+type CodeStatus = { enabled?: boolean };
+
 export default function AuthMfaGate() {
   const pathname = usePathname();
   const router = useRouter();
@@ -20,15 +22,22 @@ export default function AuthMfaGate() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!active || !session || !isAuthenticatedUser(session.user)) return;
       if (securityCodeVerifiedForSession(session)) return;
+
+      const { data, error } = await supabase.rpc("loadlink_security_code_status");
+      if (!active || error) return;
+      const status = (data || {}) as CodeStatus;
+
+      // The 4-digit code is optional. Only accounts that deliberately enabled it are gated.
+      if (!status.enabled) return;
+
       const next = safeNextPath(`${window.location.pathname}${window.location.search}${window.location.hash}`, "/");
       router.replace(`/auth/mfa?next=${encodeURIComponent(next)}`);
     }
 
     void check();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!active || !session || !isAuthenticatedUser(session.user) || securityCodeVerifiedForSession(session)) return;
-      const next = safeNextPath(`${window.location.pathname}${window.location.search}${window.location.hash}`, "/");
-      router.replace(`/auth/mfa?next=${encodeURIComponent(next)}`);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      if (!active) return;
+      void check();
     });
 
     return () => {
