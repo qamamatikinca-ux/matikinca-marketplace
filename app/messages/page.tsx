@@ -15,6 +15,7 @@ import {
 } from "react";
 
 import HomeLogoLink from "@/components/HomeLogoLink";
+import AuthStatusButton from "@/components/AuthStatusButton";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import MessageVisualScene from "@/components/MessageVisualScene";
@@ -1591,8 +1592,9 @@ export default function MessagesPage() {
       }`}
     >
       <header className={`relative h-[72px] shrink-0 border-b md:h-20 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"}`}>
-        <div className="absolute left-3 top-1/2 z-10 -translate-y-1/2 md:left-5">
+        <div data-loadlink-messages-account-cluster="v2619-fixed" className="absolute left-3 top-1/2 z-10 flex -translate-y-1/2 items-center gap-2 md:left-5">
           <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
+          <AuthStatusButton darkMode={darkMode} />
         </div>
         <HomeLogoLink
           theme="auto"
@@ -1631,10 +1633,10 @@ export default function MessagesPage() {
                 className="h-12 w-full rounded-xl border border-black/10 bg-[#f5f3ed] px-4 text-sm font-semibold outline-none transition focus:border-[#f6b800] focus:bg-white"
               />
             </label>
-            <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl bg-black/[.04] p-1" role="tablist" aria-label="Conversation folders">
-              <button type="button" role="tab" aria-selected={folder === "inbox"} onClick={() => { setFolder("inbox"); setQuery(""); }} className={`rounded-lg px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[.04em] transition ${folder === "inbox" ? "bg-black text-white shadow-sm" : "text-black/45"}`}>Inbox</button>
-              <button type="button" role="tab" aria-selected={folder === "potential"} onClick={() => { setFolder("potential"); setQuery(""); }} className={`rounded-lg px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[.04em] transition ${folder === "potential" ? "bg-black text-white shadow-sm" : "text-black/45"}`}>Potential Deals{potentialDealCount ? ` (${potentialDealCount})` : ""}</button>
-              <button type="button" role="tab" aria-selected={folder === "archived"} onClick={() => { setFolder("archived"); setQuery(""); }} className={`rounded-lg px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[.04em] transition ${folder === "archived" ? "bg-black text-white shadow-sm" : "text-black/45"}`}>Archived{archivedCount ? ` (${archivedCount})` : ""}</button>
+            <div data-loadlink-folder-tabs="v2619-fixed" className="loadlink-folder-tabs no-scrollbar mt-3 flex min-w-0 gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Conversation folders">
+              <button type="button" role="tab" aria-selected={folder === "inbox"} onClick={() => { setFolder("inbox"); setQuery(""); }} className={`shrink-0 whitespace-nowrap rounded-xl border px-4 py-2.5 text-[11px] font-black transition ${folder === "inbox" ? "border-[#f6b800] bg-[#f6b800] text-black shadow-sm" : darkMode ? "border-white/12 bg-[#0b0b0b] text-white/62" : "border-black/10 bg-white text-black/62"}`}>Inbox</button>
+              <button type="button" role="tab" aria-selected={folder === "potential"} onClick={() => { setFolder("potential"); setQuery(""); }} className={`shrink-0 whitespace-nowrap rounded-xl border px-4 py-2.5 text-[11px] font-black transition ${folder === "potential" ? "border-[#f6b800] bg-[#f6b800] text-black shadow-sm" : darkMode ? "border-white/12 bg-[#0b0b0b] text-white/62" : "border-black/10 bg-white text-black/62"}`}>Potential Deals{potentialDealCount ? <span className="ml-1.5 opacity-65">{potentialDealCount}</span> : null}</button>
+              <button type="button" role="tab" aria-selected={folder === "archived"} onClick={() => { setFolder("archived"); setQuery(""); }} className={`shrink-0 whitespace-nowrap rounded-xl border px-4 py-2.5 text-[11px] font-black transition ${folder === "archived" ? "border-[#f6b800] bg-[#f6b800] text-black shadow-sm" : darkMode ? "border-white/12 bg-[#0b0b0b] text-white/62" : "border-black/10 bg-white text-black/62"}`}>Archived{archivedCount ? <span className="ml-1.5 opacity-65">{archivedCount}</span> : null}</button>
             </div>
           </div>
 
@@ -2097,7 +2099,7 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
   const [currentTime, setCurrentTime] = useState(0);
   const [waveform, setWaveform] = useState<WaveformBar[]>(() => defaultWaveformBars());
   const [loadFailed, setLoadFailed] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState<1 | 1.5 | 2>(1);
+  const [playbackRate, setPlaybackRate] = useState<0.5 | 1 | 1.5 | 2>(1);
   const audioRef = useRef<HTMLAudioElement>(null);
   const autoplayRef = useRef(false);
 
@@ -2209,7 +2211,19 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
           </button>
           <div className={`mt-0.5 flex items-center justify-between gap-3 text-[10px] font-bold ${mine ? "text-white/58" : "text-black/48"}`}>
             <span>{url ? timeLabel(currentTime) : "Voice note"}</span>
-            <span className="flex items-center gap-2">{loadFailed ? <button type="button" onClick={() => void loadVoiceNote(false)} className="font-black underline">Retry</button> : null}<button type="button" onClick={() => { const next = playbackRate === 1 ? 1.5 : playbackRate === 1.5 ? 2 : 1; setPlaybackRate(next); if (audioRef.current) audioRef.current.playbackRate = next; }} className="rounded-full border border-current/20 px-2 py-0.5 font-black">{playbackRate}×</button><span>{duration ? timeLabel(duration) : ""}</span></span>
+            <span className="flex items-center gap-2">{loadFailed ? <button type="button" onClick={() => void loadVoiceNote(false)} className="font-black underline">Retry</button> : null}<span data-loadlink-voice-speeds="v2619-fixed" className="flex items-center gap-1" aria-label="Voice note playback speed">
+                  {([0.5, 1, 1.5, 2] as const).map((rate) => (
+                    <button
+                      key={rate}
+                      type="button"
+                      onClick={() => { setPlaybackRate(rate); if (audioRef.current) audioRef.current.playbackRate = rate; }}
+                      className={`min-w-[30px] rounded-full border px-1.5 py-0.5 text-[9px] font-black transition ${playbackRate === rate ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-current/20"}`}
+                      aria-label={`Play voice note at ${rate}x speed`}
+                    >
+                      {rate}x
+                    </button>
+                  ))}
+                </span><span>{duration ? timeLabel(duration) : ""}</span></span>
           </div>
         </div>
       </div>
@@ -2246,7 +2260,7 @@ function QuoteMessageCard({ message, mine, canRespond, branding, onRespond }: { 
   const brandLogo = String(payload.dealership_logo || branding.logo || "").trim();
   const statusClass = status === "accepted" ? "bg-emerald-500/15 text-emerald-500" : status === "declined" ? "bg-red-500/15 text-red-500" : mine ? "bg-white/10 text-white/60" : "bg-black/5 text-black/55";
   return (
-    <div className={`w-full min-w-0 max-w-full overflow-hidden rounded-2xl border ${mine ? "border-white/15 bg-white/[.06]" : "border-black/10 bg-[#fffaf0]"}`}>
+    <div className={`loadlink-quote-card w-full min-w-0 max-w-full overflow-hidden rounded-2xl border ${mine ? "border-white/15 bg-white/[.06]" : "border-black/10 bg-[#fffaf0]"}`}>
       <div className={`flex items-center gap-2 border-b px-3 py-2 ${mine ? "border-white/10" : "border-black/10"}`}>
         {brandLogo ? <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1"><img src={brandLogo} alt={brandName ? `${brandName} logo` : "Dealership logo"} className="h-full w-full object-contain" /></span> : null}
         <div className="min-w-0 flex-1"><strong className="block truncate text-[10px] font-black">{brandName || "Rate quote"}</strong><span className={`block text-[8px] font-semibold ${mine ? "text-white/45" : "text-black/40"}`}>{brandName ? "Dealership quote" : "Structured quote"}</span></div>
@@ -2283,8 +2297,8 @@ function DealerUpdateAvatar({ listingId, name, photo, online, darkMode }: { list
     return () => { active = false; };
   }, [listingId]);
 
-  return <div className="relative shrink-0">
-    <button type="button" onClick={() => update && setOpen(true)} disabled={!update} className={`relative rounded-full ${update ? "p-[3px] bg-[#f6b800] shadow-[0_0_0_1px_rgba(246,184,0,.28)]" : "p-0"}`} aria-label={update ? "View latest dealer update" : undefined}>
+  return <div className="relative h-11 w-11 shrink-0">
+    <button type="button" onClick={() => update && setOpen(true)} disabled={!update} className={`relative block h-11 w-11 rounded-full ${update ? "p-[3px] bg-[#f6b800] shadow-[0_0_0_1px_rgba(246,184,0,.28)]" : "p-0"}`} aria-label={update ? "View latest dealer update" : undefined}>
       <span className={`block rounded-full ${darkMode ? "bg-black" : "bg-white"} ${update ? "p-[2px]" : ""}`}><Avatar name={name} photo={photo} size="h-11 w-11" online={online} /></span>
     </button>
     {update && open ? <div className="fixed inset-0 z-[120] flex items-end bg-black/35 p-3 sm:items-center sm:justify-center" onClick={() => setOpen(false)}><section onClick={(event) => event.stopPropagation()} className={`w-full max-w-sm rounded-[26px] border p-5 shadow-2xl ${darkMode ? "border-white/10 bg-[#0b0b0b] text-white" : "border-black/10 bg-white text-black"}`}><div className="flex items-start justify-between gap-4"><div><p className="text-[9px] font-black uppercase tracking-[.16em] text-[#b88900]">Dealer update</p><h3 className="mt-1 text-xl font-black tracking-[-.025em]">{update.title}</h3></div><button type="button" onClick={() => setOpen(false)} className={`flex h-9 w-9 items-center justify-center rounded-full border text-lg ${darkMode ? "border-white/10" : "border-black/10"}`}>×</button></div><p className={`mt-3 text-sm font-semibold leading-6 ${darkMode ? "text-white/58" : "text-black/58"}`}>{update.body}</p><div className="mt-4 flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#f6b800]"/><span className={`text-[10px] font-bold uppercase tracking-[.08em] ${darkMode ? "text-white/40" : "text-black/40"}`}>{String(update.update_type || "dealership update").replaceAll("_", " ")}</span></div></section></div> : null}
@@ -2313,7 +2327,7 @@ function Avatar({
       .toUpperCase() || "LL";
 
   return (
-    <span className={`relative ${size} shrink-0`} style={{ aspectRatio: "1 / 1" }}>
+    <span aria-label={`${name} profile picture`} className={`relative ${size} shrink-0`} style={{ aspectRatio: "1 / 1" }}>
       <span className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-full bg-black text-xs font-black text-[#f6b800] ring-1 ring-[#f6b800]/35">
         {photo && !imageFailed ? (
           <img

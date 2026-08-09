@@ -545,3 +545,43 @@ html, body {
   }
 }
 /* LOADLINK_MOBILE_CHAT_VIEWPORT_V2618_END */
+
+/* LOADLINK_V2619_FIXED_MESSAGE_UI_START */
+.loadlink-messages .loadlink-folder-tabs {
+  max-width: 100%;
+  scrollbar-width: none;
+}
+.loadlink-messages .loadlink-folder-tabs::-webkit-scrollbar { display: none; }
+
+.loadlink-messages [aria-label$=" profile picture"] {
+  visibility: visible !important;
+  opacity: 1 !important;
+  flex: 0 0 auto !important;
+}
+.loadlink-messages .loadlink-chat-header [aria-label$=" profile picture"] {
+  display: inline-block !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+}
+.loadlink-messages img[alt$=" profile"] {
+  visibility: visible !important;
+  opacity: 1 !important;
+  object-fit: cover !important;
+}
+
+html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-quote-card {
+  background: #f7f2e7 !important;
+  border-color: rgba(246,184,0,.42) !important;
+  color: #111 !important;
+}
+html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-quote-card p,
+html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-quote-card span,
+html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-quote-card strong,
+html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-quote-card small {
+  color: #111 !important;
+}
+html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-quote-card button:not(.bg-\[\#f6b800\]) {
+  color: #111 !important;
+  border-color: rgba(17,17,17,.18) !important;
+}
+/* LOADLINK_V2619_FIXED_MESSAGE_UI_END */

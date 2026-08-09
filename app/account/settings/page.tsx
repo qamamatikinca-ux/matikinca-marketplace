@@ -5,6 +5,7 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "re
 import type { ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import HomeLogoLink from "@/components/HomeLogoLink";
+import AuthStatusButton from "@/components/AuthStatusButton";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
@@ -272,7 +273,7 @@ export default function AccountSettingsPage() {
     <main className={`min-h-screen ${page}`}>
       <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
         <div className="relative mx-auto flex h-[76px] max-w-6xl items-center px-4 sm:px-5">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 sm:left-5"><SiteMenu darkMode={darkMode} /></div>
+          <div data-loadlink-settings-account-cluster="v2619-fixed" className="absolute left-4 top-1/2 flex -translate-y-1/2 items-center gap-2 sm:left-5"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div>
           <HomeLogoLink theme="auto" showGlow={false} className="pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center" logoClassName="w-[132px] sm:w-[148px]" />
           <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="absolute right-4 top-1/2 -translate-y-1/2 sm:right-5" />
         </div>
