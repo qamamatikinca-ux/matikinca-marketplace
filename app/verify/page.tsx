@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-
 import HomeLogoLink from "@/components/HomeLogoLink";
+import SiteMenu from "@/components/SiteMenu";
+import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 type Step = "phone" | "otp" | "documents" | "done";
 
 export default function VerifyPage() {
+  const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("+27");
   const [token, setToken] = useState("");
@@ -24,41 +27,34 @@ export default function VerifyPage() {
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) setMessage("Sign in before starting verification.");
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) setMessage("Sign in before starting account verification.");
     });
   }, []);
 
   async function sendOtp() {
-    setBusy(true);
-    setMessage("");
+    if (busy) return;
+    setBusy(true); setMessage("");
     if (!isSupabaseConfigured) {
-      setMessage("Supabase is not connected.");
-      setBusy(false);
-      return;
+      setMessage("Verification is temporarily unavailable. Try again shortly.");
+      setBusy(false); return;
     }
     const clean = phone.replace(/\s/g, "");
     const { error } = await supabase.auth.signInWithOtp({ phone: clean });
     setBusy(false);
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
+    if (error) { setMessage("The SMS code could not be sent. Check the number and try again."); return; }
     setStep("otp");
     setMessage("Verification code sent by SMS.");
   }
 
   async function verifyOtp() {
-    setBusy(true);
-    setMessage("");
+    if (busy) return;
+    setBusy(true); setMessage("");
     const { error } = await supabase.auth.verifyOtp({ phone: phone.replace(/\s/g, ""), token, type: "sms" });
     setBusy(false);
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
+    if (error) { setMessage("That SMS code was not accepted. Check it and try again."); return; }
     setStep("documents");
-    setMessage("Number verified. Complete the identity check below.");
+    setMessage("Cellphone number verified. Complete the identity details below.");
   }
 
   async function upload(file: File, userId: string, label: string) {
@@ -71,24 +67,17 @@ export default function VerifyPage() {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!idFile || !selfie) {
-      setMessage("Add your identity document and a clear selfie.");
-      return;
-    }
-
-    setBusy(true);
-    setMessage("");
+    if (!idFile || !selfie) { setMessage("Add your identity document and a clear selfie."); return; }
+    setBusy(true); setMessage("");
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Sign in before submitting.");
-
+      if (!user) throw new Error("Sign in required");
       const [idPath, selfiePath, companyPath] = await Promise.all([
         upload(idFile, user.id, "identity"),
         upload(selfie, user.id, "selfie"),
         company ? upload(company, user.id, "company") : Promise.resolve(null),
       ]);
-
-      const payload = {
+      const { error } = await supabase.from("verification_requests").upsert({
         user_id: user.id,
         full_name: fullName.trim(),
         phone: phone.replace(/\s/g, ""),
@@ -98,84 +87,69 @@ export default function VerifyPage() {
         selfie_path: selfiePath,
         company_document_path: companyPath,
         status: "pending",
-      };
-
-      const { error } = await supabase.from("verification_requests").upsert(payload, { onConflict: "user_id" });
+      }, { onConflict: "user_id" });
       if (error) throw error;
       setStep("done");
       setSubmissionSuccess(true);
       window.setTimeout(() => setSubmissionSuccess(false), 2100);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Submission failed.");
-    } finally {
-      setBusy(false);
-    }
+    } catch {
+      setMessage("Your verification could not be submitted. Check the files and try again.");
+    } finally { setBusy(false); }
   }
 
-  const input = "mt-2 h-12 w-full border border-black/15 bg-white px-4 text-black outline-none focus:border-[#b88900]";
+  const page = darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black";
+  const surface = darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white";
+  const muted = darkMode ? "text-white/55" : "text-black/55";
+  const input = `mt-2 h-13 w-full rounded-2xl border px-4 text-[15px] font-semibold outline-none transition focus:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.04] text-white" : "border-black/12 bg-[#fffdf8] text-black"}`;
+  const stepNumber = step === "phone" ? 1 : step === "otp" ? 2 : step === "documents" ? 3 : 4;
 
   return (
-    <main className="min-h-screen bg-[#fff6dc] px-5 py-8 text-black">
+    <main className={`min-h-screen ${page}`}>
       <SubmissionSuccess open={submissionSuccess} title="Verification sent" />
-      <div className="mx-auto max-w-xl">
-        <header className="flex items-center justify-between">
-          <HomeLogoLink />
-          <Link href="/verification-status" className="text-sm font-black">Check status</Link>
-        </header>
+      <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black/95" : "border-black/10 bg-white/95"}`}>
+        <div className="relative mx-auto flex h-[76px] max-w-6xl items-center px-4 sm:px-5">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 sm:left-5"><SiteMenu darkMode={darkMode} /></div>
+          <HomeLogoLink theme="auto" showGlow={false} className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center" logoClassName="w-[132px] sm:w-[148px]" />
+          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="absolute right-4 top-1/2 -translate-y-1/2 sm:right-5" />
+        </div>
+      </header>
 
-        <section className="mt-8 border border-black/10 bg-white p-6 shadow-xl">
-          <p className="text-xs font-black uppercase tracking-[.25em] text-[#9a6a00]">Account verification</p>
-          <h1 className="mt-3 text-3xl font-black">Verify your identity</h1>
-          <div className="mt-5 border border-[#d4a532] bg-[#fff6dc] p-4 text-sm font-semibold leading-6">
-            <strong>Verification usually takes a few minutes when a reviewer is available.</strong> You can leave this page after submitting. Your status updates automatically as soon as a decision is made.
+      <section className="mx-auto max-w-3xl px-4 py-7 sm:px-5 md:py-10">
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <div><p className="text-[11px] font-black uppercase tracking-[.18em] text-[#b98300] dark:text-[#f6b800]">Account verification</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">Verify your identity</h1><p className={`mt-2 max-w-xl text-sm font-semibold leading-6 ${muted}`}>A short, private check for trusted LoadLink accounts.</p></div>
+          <Link href="/verification-status" className={`hidden h-11 shrink-0 items-center rounded-xl border px-4 text-xs font-black sm:flex ${darkMode ? "border-white/12" : "border-black/12"}`}>Check status</Link>
+        </div>
+
+        <section className={`overflow-hidden rounded-[28px] border shadow-[0_18px_55px_rgba(0,0,0,.07)] ${surface}`}>
+          <div className="p-5 sm:p-7">
+            <div className={`rounded-2xl border p-4 ${darkMode ? "border-[#f6b800]/25 bg-[#f6b800]/[.06]" : "border-[#d7aa35]/55 bg-[#fff6dc]"}`}>
+              <div className="flex gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#f6b800]/40 text-[#c18d00]">i</span><div><p className="text-sm font-black">Usually only a few minutes</p><p className={`mt-1 text-xs font-semibold leading-5 ${muted}`}>You can leave after submitting. Your status updates automatically as soon as a reviewer makes a decision.</p></div></div>
+            </div>
+
+            <div className="mt-5 grid grid-cols-4 gap-2" aria-label="Verification progress">
+              {[[1,"Phone"],[2,"Code"],[3,"Identity"],[4,"Review"]].map(([number,label]) => {
+                const active = stepNumber >= Number(number);
+                return <div key={String(label)} className="min-w-0 text-center"><div className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full border text-xs font-black ${active ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/12 text-white/35" : "border-black/12 text-black/35"}`}>{number}</div><p className={`mt-2 truncate text-[10px] font-black uppercase tracking-[.08em] ${active ? "opacity-80" : "opacity-35"}`}>{label}</p></div>;
+              })}
+            </div>
+
+            {step === "phone" ? <div className="mt-7"><label className="block text-sm font-black">South African cellphone number<input className={input} value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" autoComplete="tel" /></label><button disabled={busy} onClick={() => void sendOtp()} className="mt-5 h-13 w-full rounded-2xl bg-black font-black text-[#f6b800] disabled:opacity-50 dark:bg-[#f6b800] dark:text-black">{busy ? "Sending securely…" : "Send verification code"}</button></div> : null}
+
+            {step === "otp" ? <div className="mt-7"><label className="block text-sm font-black">SMS verification code<input className={`${input} text-center text-xl font-black tracking-[.28em]`} value={token} onChange={(event) => setToken(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="000000" /></label><button disabled={busy || token.length !== 6} onClick={() => void verifyOtp()} className="mt-5 h-13 w-full rounded-2xl bg-[#f6b800] font-black text-black disabled:opacity-50">{busy ? "Checking securely…" : "Verify number"}</button><button type="button" onClick={() => { setStep("phone"); setToken(""); setMessage(""); }} className={`mt-3 h-11 w-full rounded-xl border text-xs font-black ${darkMode ? "border-white/12" : "border-black/12"}`}>Use a different number</button></div> : null}
+
+            {step === "documents" ? <form onSubmit={submit} className="mt-7 grid gap-5"><div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm font-black">Full legal name<input required className={input} value={fullName} onChange={(event) => setFullName(event.target.value)} /></label><label className="block text-sm font-black">Document type<select className={input} value={idType} onChange={(event) => setIdType(event.target.value)}><option value="south_african_id">South African ID</option><option value="passport">Passport</option></select></label></div><label className="block text-sm font-black">Last four digits of ID or passport<input required className={input} value={last4} onChange={(event) => setLast4(event.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" maxLength={4} /></label><FileField label="Identity document" required onChange={setIdFile} darkMode={darkMode} /><FileField label="Clear selfie showing your face" required onChange={setSelfie} darkMode={darkMode} /><FileField label="Company registration document (optional)" onChange={setCompany} darkMode={darkMode} /><button disabled={busy} className="h-13 w-full rounded-2xl bg-[#f6b800] font-black text-black disabled:opacity-50">{busy ? "Submitting securely…" : "Submit for verification"}</button></form> : null}
+
+            {step === "done" ? <div className="mt-7 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/12 text-xl font-black text-emerald-500">✓</div><h2 className="mt-4 text-2xl font-black">Submission received</h2><p className={`mx-auto mt-2 max-w-md text-sm font-semibold leading-6 ${muted}`}>Your documents remain private. Your application is pending review and the status page will update automatically.</p><Link href="/verification-status" className="mt-6 flex h-13 items-center justify-center rounded-2xl bg-black font-black text-[#f6b800] dark:bg-[#f6b800] dark:text-black">View verification status</Link></div> : null}
+
+            {message ? <p role="status" className={`mt-5 rounded-2xl border p-4 text-sm font-semibold leading-6 ${darkMode ? "border-white/10 bg-white/[.03] text-white/68" : "border-black/10 bg-black/[.02] text-black/68"}`}>{message}</p> : null}
           </div>
-
-          {step === "phone" ? (
-            <div className="mt-6">
-              <label className="text-sm font-black">South African cellphone number<input className={input} value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" /></label>
-              <button disabled={busy} onClick={sendOtp} className="mt-5 h-12 w-full bg-black font-black text-[#f6b800] disabled:opacity-50">{busy ? "Sending code" : "Send verification code"}</button>
-            </div>
-          ) : null}
-
-          {step === "otp" ? (
-            <div className="mt-6">
-              <label className="text-sm font-black">SMS verification code<input className={input} value={token} onChange={(event) => setToken(event.target.value)} inputMode="numeric" maxLength={6} /></label>
-              <button disabled={busy} onClick={verifyOtp} className="mt-5 h-12 w-full bg-black font-black text-[#f6b800] disabled:opacity-50">{busy ? "Checking code" : "Verify number"}</button>
-            </div>
-          ) : null}
-
-          {step === "documents" ? (
-            <form onSubmit={submit} className="mt-6 space-y-5">
-              <label className="block text-sm font-black">Full legal name<input required className={input} value={fullName} onChange={(event) => setFullName(event.target.value)} /></label>
-              <label className="block text-sm font-black">Document type<select className={input} value={idType} onChange={(event) => setIdType(event.target.value)}><option value="south_african_id">South African ID</option><option value="passport">Passport</option></select></label>
-              <label className="block text-sm font-black">Last four digits of ID or passport<input required className={input} value={last4} onChange={(event) => setLast4(event.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" /></label>
-              <FileField label="Identity document" required onChange={setIdFile} />
-              <FileField label="Clear selfie showing your face" required onChange={setSelfie} />
-              <FileField label="Company registration document (optional)" onChange={setCompany} />
-              <button disabled={busy} className="h-12 w-full bg-[#f6b800] font-black text-black disabled:opacity-50">{busy ? "Submitting securely" : "Submit for verification"}</button>
-            </form>
-          ) : null}
-
-          {step === "done" ? (
-            <div className="mt-7">
-              <h2 className="text-2xl font-black">Submission received</h2>
-              <p className="mt-3 leading-7 text-black/65">Your documents are private and your application is now pending review. The status page checks for updates automatically.</p>
-              <Link href="/verification-status" className="mt-6 flex h-12 items-center justify-center bg-black font-black text-[#f6b800]">View verification status</Link>
-            </div>
-          ) : null}
-
-          {message ? <p className="mt-5 border border-black/10 bg-black/5 p-4 text-sm font-semibold">{message}</p> : null}
         </section>
-      </div>
+        <Link href="/verification-status" className={`mt-4 flex h-11 items-center justify-center rounded-xl border text-xs font-black sm:hidden ${darkMode ? "border-white/12" : "border-black/12"}`}>Check verification status</Link>
+      </section>
     </main>
   );
 }
 
-function FileField({ label, required, onChange }: { label: string; required?: boolean; onChange: (file: File | null) => void }) {
-  return (
-    <label className="block text-sm font-black">
-      {label}
-      <input required={required} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => onChange(event.target.files?.[0] || null)} className="mt-2 block w-full border border-black/15 bg-white p-3 text-sm font-semibold file:mr-3 file:border-0 file:bg-black file:px-3 file:py-2 file:font-black file:text-[#f6b800]" />
-    </label>
-  );
+function FileField({ label, required, onChange, darkMode }: { label: string; required?: boolean; onChange: (file: File | null) => void; darkMode: boolean }) {
+  return <label className="block text-sm font-black">{label}<input required={required} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => onChange(event.target.files?.[0] || null)} className={`mt-2 block w-full rounded-2xl border p-3 text-xs font-semibold file:mr-3 file:rounded-xl file:border-0 file:bg-black file:px-3 file:py-2 file:font-black file:text-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.04] text-white file:bg-[#f6b800] file:text-black" : "border-black/12 bg-[#fffdf8] text-black"}`} /></label>;
 }

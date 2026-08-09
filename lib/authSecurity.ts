@@ -1,4 +1,5 @@
 import { safeNextPath } from "@/lib/auth";
+import { securityCodeVerifiedForSession } from "@/lib/securityCode";
 import { supabase } from "@/lib/supabaseClient";
 
 export function strongPasswordIssue(password: string) {
@@ -16,18 +17,18 @@ export function friendlyAuthError(error: unknown, context: "login" | "signup" | 
   if (code === "over_request_rate_limit" || code === "over_email_send_rate_limit" || code === "429") return "Too many attempts. Wait a few minutes and try again.";
   if (code === "captcha_failed") return "The security check expired. Complete it again and retry.";
   if (code === "weak_password") return "That password does not meet LoadLink's security requirements.";
-  if (code === "mfa_verification_failed" || code === "mfa_verification_rejected") return "That verification code was not accepted. Check the current code and try again.";
   if (context === "signup") return "The account could not be created with those details. Check the form or sign in if you already have an account.";
   if (context === "reset") return "The password could not be updated. Request a fresh reset link and try again.";
-  if (context === "mfa") return "Two-step verification could not be completed. Try the current code again.";
+  if (context === "mfa") return "That 4-digit LoadLink code was not accepted. Check the code and try again.";
   return "Email or password is incorrect, or this account is not ready to sign in.";
 }
 
+// Kept under the original exported name so existing login/callback code does not
+// need to be touched. V2.6.9 replaces authenticator MFA with the LoadLink
+// 4-digit access-code checkpoint before account access.
 export async function destinationAfterMfa(nextValue: string) {
   const next = safeNextPath(nextValue, "/");
-  const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (!error && data?.currentLevel === "aal1" && data?.nextLevel === "aal2") {
-    return `/auth/mfa?next=${encodeURIComponent(next)}`;
-  }
-  return next;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (securityCodeVerifiedForSession(session)) return next;
+  return `/auth/mfa?next=${encodeURIComponent(next)}`;
 }

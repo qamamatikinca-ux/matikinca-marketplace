@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { isAuthenticatedUser, safeNextPath } from "@/lib/auth";
+import { securityCodeVerifiedForSession } from "@/lib/securityCode";
 import { supabase } from "@/lib/supabaseClient";
 
 const AUTH_FLOW_PREFIXES = ["/login", "/signup", "/forgot-password", "/reset-password", "/auth/"];
@@ -16,18 +17,24 @@ export default function AuthMfaGate() {
     let active = true;
 
     async function check() {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!active || !isAuthenticatedUser(userData.user)) return;
-      const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (!active || error) return;
-      if (data.currentLevel === "aal1" && data.nextLevel === "aal2") {
-        const next = safeNextPath(`${window.location.pathname}${window.location.search}${window.location.hash}`, "/");
-        router.replace(`/auth/mfa?next=${encodeURIComponent(next)}`);
-      }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!active || !session || !isAuthenticatedUser(session.user)) return;
+      if (securityCodeVerifiedForSession(session)) return;
+      const next = safeNextPath(`${window.location.pathname}${window.location.search}${window.location.hash}`, "/");
+      router.replace(`/auth/mfa?next=${encodeURIComponent(next)}`);
     }
 
     void check();
-    return () => { active = false; };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active || !session || !isAuthenticatedUser(session.user) || securityCodeVerifiedForSession(session)) return;
+      const next = safeNextPath(`${window.location.pathname}${window.location.search}${window.location.hash}`, "/");
+      router.replace(`/auth/mfa?next=${encodeURIComponent(next)}`);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, [pathname, router]);
 
   return null;
