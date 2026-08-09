@@ -124,10 +124,10 @@ export default function MfaSecurityCard({ darkMode }: { darkMode: boolean }) {
   const statusLabel = status === null ? "Checking" : active ? "On" : "Off";
 
   return (
-    <section className={`overflow-hidden rounded-[24px] border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
-      <div className="p-5 md:p-7">
+    <section className={`overflow-hidden rounded-[28px] border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+      <div className="p-5 md:p-6">
         <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-black text-[#f6b800]" aria-hidden="true">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-black text-[#f6b800]" aria-hidden="true">
             <CodeIcon />
           </div>
           <div className="min-w-0 flex-1">
@@ -140,12 +140,12 @@ export default function MfaSecurityCard({ darkMode }: { darkMode: boolean }) {
         </div>
 
         {mode === "closed" ? (
-          <div className={`mt-5 rounded-2xl border p-4 ${soft}`}>
+          <div className={`mt-5 rounded-[20px] border p-3.5 ${soft}`}>
             {active ? (
-              <div className="flex flex-wrap items-center gap-2.5">
-                <button type="button" onClick={() => { setMessage(""); resetEditor(); setMode("change"); }} className="h-10 rounded-xl bg-[#f6b800] px-4 text-xs font-black text-black">Change code</button>
-                <button type="button" onClick={() => { setMessage(""); resetEditor(); setMode("disable"); }} className="h-10 rounded-xl border border-red-500/50 px-4 text-xs font-black text-red-500">Turn off</button>
-                <button type="button" onClick={() => void sendRecovery()} disabled={busy} className={`ml-auto text-xs font-bold underline underline-offset-4 disabled:opacity-45 ${muted}`}>Forgot code?</button>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => { setMessage(""); resetEditor(); setMode("change"); }} className="h-11 rounded-xl bg-[#f6b800] px-4 text-xs font-black text-black">Change code</button>
+                <button type="button" onClick={() => { setMessage(""); resetEditor(); setMode("disable"); }} className={`h-11 rounded-xl border px-4 text-xs font-black ${darkMode ? "border-white/12 text-white/65" : "border-black/10 text-black/65"}`}>Turn off</button>
+                <button type="button" onClick={() => void sendRecovery()} disabled={busy} className={`col-span-2 h-10 rounded-xl text-xs font-bold disabled:opacity-45 ${muted}`}>Forgot code? <span className="underline underline-offset-4">Recover by email</span></button>
               </div>
             ) : (
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -157,7 +157,7 @@ export default function MfaSecurityCard({ darkMode }: { darkMode: boolean }) {
         ) : null}
 
         {editingCode ? (
-          <div className={`mt-5 rounded-2xl border p-4 md:p-5 ${soft}`}>
+          <div className={`mt-5 rounded-[20px] border p-3.5 md:p-5 ${soft}`}>
             <div className="mb-4">
               <h3 className="text-sm font-black">{mode === "setup" ? "Create your code" : "Change your code"}</h3>
               <p className={`mt-1 text-xs font-semibold ${muted}`}>Use four numbers you can remember. Do not reuse a banking PIN.</p>
@@ -186,7 +186,7 @@ export default function MfaSecurityCard({ darkMode }: { darkMode: boolean }) {
         ) : null}
 
         {mode === "disable" ? (
-          <div className={`mt-5 rounded-2xl border p-4 md:p-5 ${soft}`}>
+          <div className={`mt-5 rounded-[20px] border p-3.5 md:p-5 ${soft}`}>
             <h3 className="text-sm font-black">Turn off sign-in code</h3>
             <p className={`mt-1 text-xs font-semibold ${muted}`}>Enter your current code to confirm.</p>
             <label className="mt-4 grid gap-2">

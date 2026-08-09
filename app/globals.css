@@ -465,3 +465,83 @@ button[role="tab"][aria-selected="true"],
   border-color: #f6b800 !important;
   color: #080808 !important;
 }
+
+/* LOADLINK_MOBILE_CHAT_VIEWPORT_V2618_START */
+/* Mobile Safari: keep the active conversation inside the visual viewport. */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.loadlink-messages,
+.loadlink-chat-panel,
+.loadlink-chat-header,
+.loadlink-message-viewport,
+.loadlink-chat-composer {
+  box-sizing: border-box;
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.loadlink-messages,
+.loadlink-chat-panel,
+.loadlink-chat-header,
+.loadlink-chat-composer {
+  overflow-x: hidden !important;
+}
+
+.loadlink-chat-panel {
+  contain: inline-size;
+}
+
+.loadlink-message-viewport {
+  overflow-x: clip !important;
+  overscroll-behavior-x: none;
+}
+
+.loadlink-message-viewport > *,
+.loadlink-chat-composer > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.loadlink-message-viewport img,
+.loadlink-message-viewport video,
+.loadlink-message-viewport canvas,
+.loadlink-message-viewport svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.loadlink-message-viewport [class*="max-w-"],
+.loadlink-message-viewport [class*="min-w-"],
+.loadlink-chat-composer [class*="max-w-"],
+.loadlink-chat-composer [class*="min-w-"] {
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .loadlink-messages {
+    width: 100dvw !important;
+    max-width: 100dvw !important;
+  }
+
+  .loadlink-chat-panel {
+    flex: 1 1 auto;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .loadlink-message-viewport {
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+
+  .loadlink-chat-composer {
+    padding-left: max(0.625rem, env(safe-area-inset-left));
+    padding-right: max(0.625rem, env(safe-area-inset-right));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+/* LOADLINK_MOBILE_CHAT_VIEWPORT_V2618_END */

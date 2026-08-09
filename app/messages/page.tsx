@@ -1721,7 +1721,7 @@ export default function MessagesPage() {
 
         <section
           className={`${selectedId ? "flex" : "hidden md:flex"} loadlink-chat-panel min-h-0 flex-col bg-[#f3f0e8]`}
-        >
+         data-loadlink-mobile-chat-fit="true">
           {selectedConversation ? (
             <>
               <header className="loadlink-chat-header flex min-h-[78px] items-center gap-3 border-b border-black/10 bg-white px-3 py-3 md:px-5">
@@ -1733,13 +1733,12 @@ export default function MessagesPage() {
                 >
                   ←
                 </button>
-                <Avatar
+                <DealerUpdateAvatar
+                  listingId={selectedConversation.listing_id}
                   name={selectedConversation.other_name}
                   photo={selectedConversation.other_photo}
-                  size="h-11 w-11"
-                  online={Boolean(
-                    isRecentlyActive(selectedConversation.other_last_seen, presenceNow),
-                  )}
+                  online={Boolean(isRecentlyActive(selectedConversation.other_last_seen, presenceNow))}
+                  darkMode={darkMode}
                 />
                 <div className="min-w-0 flex-1">
                   <h2 className="truncate text-base font-bold md:text-lg">
@@ -2261,6 +2260,35 @@ function QuoteMessageCard({ message, mine, canRespond, branding, onRespond }: { 
       </div>
     </div>
   );
+}
+
+function DealerUpdateAvatar({ listingId, name, photo, online, darkMode }: { listingId: string; name: string; photo?: string | null; online?: boolean; darkMode: boolean }) {
+  const [update, setUpdate] = useState<{ title: string; body: string; update_type?: string | null; created_at?: string | null } | null>(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setUpdate(null);
+    if (!listingId) return () => { active = false; };
+    (async () => {
+      try {
+        const listing = await supabase.from("job_listings").select("dealership_id").eq("id", listingId).maybeSingle();
+        const dealershipId = listing.data?.dealership_id;
+        if (!active || listing.error || !dealershipId) return;
+        const latest = await supabase.from("dealership_updates").select("title,body,update_type,created_at,status").eq("dealership_id", dealershipId).eq("status", "approved").order("created_at", { ascending: false }).limit(1).maybeSingle();
+        if (!active || latest.error || !latest.data) return;
+        setUpdate(latest.data as { title: string; body: string; update_type?: string | null; created_at?: string | null });
+      } catch { /* dealer updates are optional and must never block chat */ }
+    })();
+    return () => { active = false; };
+  }, [listingId]);
+
+  return <div className="relative shrink-0">
+    <button type="button" onClick={() => update && setOpen(true)} disabled={!update} className={`relative rounded-full ${update ? "p-[3px] bg-[#f6b800] shadow-[0_0_0_1px_rgba(246,184,0,.28)]" : "p-0"}`} aria-label={update ? "View latest dealer update" : undefined}>
+      <span className={`block rounded-full ${darkMode ? "bg-black" : "bg-white"} ${update ? "p-[2px]" : ""}`}><Avatar name={name} photo={photo} size="h-11 w-11" online={online} /></span>
+    </button>
+    {update && open ? <div className="fixed inset-0 z-[120] flex items-end bg-black/35 p-3 sm:items-center sm:justify-center" onClick={() => setOpen(false)}><section onClick={(event) => event.stopPropagation()} className={`w-full max-w-sm rounded-[26px] border p-5 shadow-2xl ${darkMode ? "border-white/10 bg-[#0b0b0b] text-white" : "border-black/10 bg-white text-black"}`}><div className="flex items-start justify-between gap-4"><div><p className="text-[9px] font-black uppercase tracking-[.16em] text-[#b88900]">Dealer update</p><h3 className="mt-1 text-xl font-black tracking-[-.025em]">{update.title}</h3></div><button type="button" onClick={() => setOpen(false)} className={`flex h-9 w-9 items-center justify-center rounded-full border text-lg ${darkMode ? "border-white/10" : "border-black/10"}`}>×</button></div><p className={`mt-3 text-sm font-semibold leading-6 ${darkMode ? "text-white/58" : "text-black/58"}`}>{update.body}</p><div className="mt-4 flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#f6b800]"/><span className={`text-[10px] font-bold uppercase tracking-[.08em] ${darkMode ? "text-white/40" : "text-black/40"}`}>{String(update.update_type || "dealership update").replaceAll("_", " ")}</span></div></section></div> : null}
+  </div>;
 }
 
 function Avatar({

@@ -356,10 +356,10 @@ export default function LogisticsMessageTools({
       )}
 
       {open ? (
-        <section className={`loadlink-logistics-sheet fixed inset-x-0 bottom-0 z-[90] max-h-[78dvh] overflow-y-auto rounded-t-[28px] border-t shadow-[0_-18px_50px_rgba(0,0,0,.24)] ${panel}`} aria-label="Logistics actions panel">
+        <section className={`loadlink-logistics-sheet fixed inset-x-0 bottom-0 z-[90] max-h-[82dvh] overflow-y-auto rounded-t-[30px] border-t shadow-[0_-18px_50px_rgba(0,0,0,.24)] ${panel}`} aria-label="Logistics actions panel">
           <div className="mx-auto max-w-3xl p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <div className="flex items-start justify-between gap-4">
-              <div><h2 className="text-lg font-bold">Logistics actions</h2><p className={`mt-1 text-xs font-medium ${muted}`}>Tools, stages and updates in one place.</p></div>
+              <div><p className={`text-[9px] font-black uppercase tracking-[.18em] ${darkMode ? "text-[#f6b800]" : "text-[#8b6800]"}`}>In conversation</p><h2 className="mt-1 text-xl font-black tracking-[-.025em]">Logistics tools</h2><p className={`mt-1 text-xs font-medium ${muted}`}>Use a tool without leaving this chat.</p></div>
               <button type="button" onClick={closePanel} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-xl ${control}`} aria-label="Close logistics actions">×</button>
             </div>
 
@@ -376,24 +376,22 @@ export default function LogisticsMessageTools({
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                <button type="button" disabled={disabled} onClick={() => { setEditorTool(null); setEditorText(""); setQuoteOpen((current) => !current); }} className="min-h-[64px] rounded-2xl border border-[#f6b800]/55 bg-[#f6b800] px-3 py-3 text-left text-black shadow-[0_8px_24px_rgba(246,184,0,.12)] disabled:opacity-40">
-                  <span className="block text-[11px] font-black">Rate quote</span>
-                  <span className="mt-1 block text-[9px] font-medium leading-4 text-black/60">Price & terms</span>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <button type="button" disabled={disabled} onClick={() => { setEditorTool(null); setEditorText(""); setQuoteOpen((current) => !current); }} className="min-h-[82px] rounded-2xl border border-[#f6b800]/55 bg-[#f6b800] px-4 py-3.5 text-left text-black shadow-[0_8px_24px_rgba(246,184,0,.12)] disabled:opacity-40">
+                  <span className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl bg-black text-[#f6b800]">R</span><span className="block text-[12px] font-black">Rate quote</span><span className="mt-1 block text-[9px] font-medium leading-4 text-black/60">Price, terms & saved vehicle info</span>
                 </button>
                 {workflowTools.filter((tool) => ["trip-brief", "incident-update"].includes(tool.id)).map((tool) => (
-                  <button key={tool.id} type="button" disabled={disabled} onClick={() => openToolEditor(tool)} className={`min-h-[64px] rounded-2xl border px-3 py-3 text-left disabled:opacity-40 ${control}`}>
-                    <span className="block text-[11px] font-black">{tool.label}</span>
-                    <span className={`mt-1 block text-[9px] font-medium leading-4 ${muted}`}>{tool.id === "trip-brief" ? "Plan the load" : "Report an issue"}</span>
+                  <button key={tool.id} type="button" disabled={disabled} onClick={() => openToolEditor(tool)} className={`min-h-[82px] rounded-2xl border px-4 py-3.5 text-left disabled:opacity-40 ${control}`}>
+                    <span className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl bg-black text-[#f6b800]">{tool.id === "trip-brief" ? "↗" : "!"}</span><span className="block text-[12px] font-black">{tool.label}</span><span className={`mt-1 block text-[9px] font-medium leading-4 ${muted}`}>{tool.id === "trip-brief" ? "Collection, delivery & cargo" : "Delay, breakdown or site issue"}</span>
                   </button>
                 ))}
               </div>
 
               <div className="mt-3 grid gap-2">
                 {toolGroups.map((group) => (
-                  <details key={group.id} className={`group overflow-hidden rounded-2xl border ${control}`}>
+                  <details key={group.id} className={`group overflow-hidden rounded-[20px] border ${control}`}>
                     <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5">
-                      <span className="min-w-0 flex-1">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black text-xs font-black text-[#f6b800]">{group.id === "planning" ? "P" : group.id === "documents" ? "D" : "O"}</span><span className="min-w-0 flex-1">
                         <span className="block text-[11px] font-black">{group.title}</span>
                         <span className={`mt-0.5 block text-[9px] font-medium leading-4 ${muted}`}>{group.summary}</span>
                       </span>

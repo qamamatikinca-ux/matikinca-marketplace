@@ -36,45 +36,45 @@ export default function MessageVisualScene({ mode, darkMode }: { mode: Mode; dar
   useEffect(() => setVariant(chooseScene()), []);
   const scene = SCENES[variant];
 
-  if (mode === "background") {
-    const variants = [variant, (variant + 2) % SCENES.length, (variant + 5) % SCENES.length, (variant + 7) % SCENES.length, (variant + 9) % SCENES.length];
-    return (
-      <div className={`loadlink-message-sketch ${darkMode ? "is-dark" : "is-light"}`} aria-hidden="true" data-scene={variant}>
-        {variants.map((item, index) => (
-          <span key={`${item}-${index}`} className={`loadlink-message-sketch-stamp stamp-${index + 1}`}>
-            <TruckSketch variant={item} compact />
-          </span>
-        ))}
-        <span className="loadlink-message-route route-one" />
-        <span className="loadlink-message-route route-two" />
-        <span className="loadlink-message-route route-three" />
-      </div>
-    );
-  }
+  if (mode === "background") return null;
 
   const inline = mode === "inline";
   return (
-    <div className={`loadlink-message-loader ${inline ? "is-inline" : "is-full"} ${darkMode ? "is-dark" : "is-light"}`}>
-      <div className="loadlink-message-loader-art" data-scene={variant}>
-        <div className="loadlink-loader-skyline" />
-        <TruckSketch variant={variant} />
-        <div className="loadlink-loader-road"><span /><span /><span /></div>
+    <div className={`flex ${inline ? "min-h-[260px]" : "min-h-[100dvh]"} w-full items-center justify-center px-5 py-8 ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
+      <div className={`w-full ${inline ? "max-w-xl" : "max-w-[760px]"} text-center`}>
+        <div className={`relative mx-auto overflow-hidden border ${inline ? "aspect-[1.75/1]" : "aspect-[1.5/1] sm:aspect-[1.75/1]"} ${darkMode ? "border-[#f6b800]/50 bg-[#0d0d0d]" : "border-[#e6bd4d] bg-[#f7f1e3]"}`}>
+          <div className={`absolute inset-x-0 bottom-[22%] h-[30%] opacity-70 ${darkMode ? "text-white/10" : "text-black/12"}`} aria-hidden="true">
+            <svg viewBox="0 0 800 180" className="h-full w-full" preserveAspectRatio="none">
+              <path fill="currentColor" d="M0 180V90h65V10h28v170h32V55h44v125h40V110h54V40h36v140h50V78h61v102h45V120h58V65h30v115h46V95h75v85h45V52h42v128h69v-40h50v40Z" />
+            </svg>
+          </div>
+          <div className="absolute inset-x-[8%] top-[17%] bottom-[18%] text-[#f6b800]">
+            <TruckSketch variant={variant} />
+          </div>
+          <div className={`absolute inset-x-0 bottom-0 border-t ${darkMode ? "border-[#f6b800]/35" : "border-[#e6bd4d]"}`} />
+          <div className="absolute bottom-[9%] left-[17%] h-1 w-[26%] overflow-hidden bg-[#f6b800]/25"><span className="block h-full w-[58%] bg-[#f6b800] animate-pulse" /></div>
+        </div>
+
+        <div className={inline ? "mt-5" : "mt-8"}>
+          {!inline ? <p className={`text-[10px] font-black uppercase tracking-[.24em] ${darkMode ? "text-[#f6b800]" : "text-[#9b7600]"}`}>LoadLink Messages</p> : null}
+          <h1 className={`${inline ? "text-xl" : "text-3xl sm:text-4xl"} mt-2 font-black tracking-[-.045em]`}>{inline ? "Loading conversation" : scene.name}</h1>
+          <p className={`mx-auto mt-3 max-w-xl ${inline ? "text-xs" : "text-sm sm:text-base"} font-semibold leading-6 ${darkMode ? "text-white/55" : "text-black/52"}`}>{scene.note}</p>
+          <div className="mt-5 flex items-center justify-center gap-2" aria-hidden="true">
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#f6b800]" />
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#f6b800]/70 [animation-delay:160ms]" />
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#f6b800]/40 [animation-delay:320ms]" />
+          </div>
+        </div>
       </div>
-      <div className="loadlink-message-loader-copy">
-        <p>LOADLINK MESSAGES</p>
-        <h1>{inline ? "Loading conversation" : scene.name}</h1>
-        <span>{scene.note}</span>
-      </div>
-      <div className="loadlink-loader-dots" aria-hidden="true"><i /><i /><i /></div>
     </div>
   );
 }
 
-function TruckSketch({ variant, compact = false }: { variant: number; compact?: boolean }) {
+function TruckSketch({ variant }: { variant: number }) {
   const scene = SCENES[variant];
   const trailerShape = variant === 5 ? "M77 41h58c9 0 14 8 14 17v15H77Z" : variant === 1 ? "M76 35h72l-10 39H76Z" : "M76 34h73v40H76Z";
   return (
-    <svg className={compact ? "loadlink-truck-sketch compact" : "loadlink-truck-sketch"} viewBox="0 0 190 100" role="img" aria-label={`${scene.name} truck sketch`}>
+    <svg className="h-full w-full" viewBox="0 0 190 100" role="img" aria-label={`${scene.name} truck sketch`}>
       <g fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <path d={trailerShape} />
         <path d="M24 48h36l12 13v13H19V57l5-9Z" />
@@ -82,12 +82,10 @@ function TruckSketch({ variant, compact = false }: { variant: number; compact?: 
         <path d="M20 74h135" />
         <circle cx="42" cy="78" r="8" /><circle cx="64" cy="78" r="8" /><circle cx="103" cy="78" r="8" /><circle cx="135" cy="78" r="8" />
         <path d="M9 86h163M17 91h144" strokeDasharray="8 7" />
-        {variant % 2 === 0 ? <path d="M88 44h47M88 51h38M88 58h44" opacity=".7" /> : <path d="M88 47l13-7 13 7 13-7 13 7" opacity=".7" />}
-        {variant === 4 ? <path d="M93 34v-8h12v8m18 0v-13h12v13" /> : null}
-        {variant === 3 ? <path d="M93 34v-9m14 9V22m14 12V25m14 9V20" /> : null}
+        {variant % 2 === 0 ? <path d="M88 44h47M88 51h38M88 58h44" opacity=".72" /> : <path d="M88 47l13-7 13 7 13-7 13 7" opacity=".72" />}
         <path d="M154 28c8-8 14-8 22-2M157 35c6-5 10-5 16-2" opacity=".55" />
       </g>
-      <text x="88" y="68" className="loadlink-truck-label">{scene.cargo}</text>
+      <text x="88" y="68" fill="currentColor" fontSize="8" letterSpacing="1.2">{scene.cargo}</text>
     </svg>
   );
 }
