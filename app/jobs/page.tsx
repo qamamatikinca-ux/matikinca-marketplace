@@ -22,7 +22,7 @@ import { matchesSouthAfricanLocation, SOUTH_AFRICA_LOCATIONS } from "@/lib/south
 type VehicleGroup = "Catering / Event" | "Trucks / Trailers" | "Farming / Mining";
 type QuickCategory = "truck" | "event-catering" | "logistics" | "mining-farming" | "";
 type PortalFilter = "job" | "contract" | "asset" | "";
-type SortMode = "newest" | "open" | "views" | "oldest";
+type JobSortMode = "relevance" | "priority" | "needed_soon" | "newest";
 
 type JobListing = {
   id: string;
@@ -46,7 +46,8 @@ type JobListing = {
   listingType?: "job" | "contract" | "asset";
   listingLabel?: string;
   vehicleNeeded?: string;
-  status?: "active" | "filled" | "closed" | "draft";
+  neededBy?: string;
+  priorityLevel?: "flexible" | "standard" | "urgent";
 };
 
 type JobRow = {
@@ -67,7 +68,6 @@ type JobRow = {
   view_count?: number | null;
   last_viewed_at?: string | null;
   user_id?: string | null;
-  status?: string | null;
 };
 
 
@@ -106,12 +106,21 @@ const starterJobs: JobListing[] = [
 function getListingDetails(description: string) {
   const match = description.match(/^Listing type:\s*([^\n]+)/i);
   const vehicleMatch = description.match(/^Vehicle needed:\s*([^\n]+)/im);
+  const neededMatch = description.match(/^Needed by:\s*([^\n]+)/im);
+  const priorityMatch = description.match(/^Priority:\s*(flexible|standard|urgent)/im);
   const rawType = match?.[1]?.trim() || "Job";
   const vehicleNeeded = vehicleMatch?.[1]?.trim() || "";
-  const cleanDescription = description.replace(/^Listing type:\s*[^\n]+\n?/i, "").replace(/^Vehicle needed:\s*[^\n]+\n?/im, "").trim();
+  const neededBy = neededMatch?.[1]?.trim() || "";
+  const rawPriority = (priorityMatch?.[1]?.toLowerCase() || "standard") as "flexible" | "standard" | "urgent";
+  const cleanDescription = description
+    .replace(/^Listing type:\s*[^\n]+\n?/i, "")
+    .replace(/^Vehicle needed:\s*[^\n]+\n?/im, "")
+    .replace(/^Needed by:\s*[^\n]+\n?/im, "")
+    .replace(/^Priority:\s*[^\n]+\n?/im, "")
+    .trim();
   const normalised = rawType.toLowerCase();
   const listingType: "job" | "contract" | "asset" = normalised === "contract" ? "contract" : normalised === "job" ? "job" : "asset";
-  return { listingType, listingLabel: rawType, vehicleNeeded, cleanDescription };
+  return { listingType, listingLabel: rawType, vehicleNeeded, neededBy, priorityLevel: rawPriority, cleanDescription };
 }
 
 function mapJobRow(row: JobRow, verifiedUsers: Set<string> = new Set()): JobListing {
@@ -138,7 +147,8 @@ function mapJobRow(row: JobRow, verifiedUsers: Set<string> = new Set()): JobList
     listingType: details.listingType,
     listingLabel: details.listingLabel,
     vehicleNeeded: details.vehicleNeeded,
-    status: row.status === "filled" ? "filled" : row.status === "closed" ? "closed" : row.status === "draft" ? "draft" : "active",
+    neededBy: details.neededBy,
+    priorityLevel: details.priorityLevel,
   };
 }
 
@@ -170,7 +180,7 @@ function saveViewedJob(job: JobListing) {
     const nextItem = {
       id: job.id,
       title: job.title,
-      href: `/listing/${job.id}`,
+      href: `/jobs#job-${job.id}`,
       category: "Job",
       type: job.group,
       image: job.photos[0] || "/images/jobs/job-card-1.jpg",
@@ -196,7 +206,7 @@ function saveViewedJob(job: JobListing) {
 function saveLikedJob(job: JobListing) {
   try {
     const current = JSON.parse(localStorage.getItem("loadlink-liked-listings") || "[]");
-    const item = { id: job.id, title: job.title, href: `/listing/${job.id}`, category: "Job", type: job.group, image: job.photos[0] || "/images/jobs/job-card-1.jpg", meta: `${job.city} - ${formatListingRate(job.rate)}`, savedAt: Date.now() };
+    const item = { id: job.id, title: job.title, href: `/jobs#job-${job.id}`, category: "Job", type: job.group, image: job.photos[0] || "/images/jobs/job-card-1.jpg", meta: `${job.city} - ${formatListingRate(job.rate)}`, savedAt: Date.now() };
     const exists = Array.isArray(current) && current.some((entry) => entry?.id === job.id);
     const next = exists ? current.filter((entry) => entry?.id !== job.id) : [item, ...(Array.isArray(current) ? current : [])].slice(0, 30);
     localStorage.setItem("loadlink-liked-listings", JSON.stringify(next));
@@ -225,7 +235,7 @@ function getLikedJobIds() {
 }
 
 async function shareListing(job: JobListing) {
-  const url = `${window.location.origin}/listing/${job.id}`;
+  const url = `${window.location.origin}/jobs#job-${job.id}`;
   const data = { title: job.title, text: `${job.title} in ${job.city} on LoadLink`, url };
   try {
     if (navigator.share) await navigator.share(data);
@@ -345,8 +355,7 @@ export default function JobsPortalPage() {
   const [analyticsJob, setAnalyticsJob] = useState<JobListing | null>(null);
   const [loadError, setLoadError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortMode, setSortMode] = useState<SortMode>("newest");
-  const [viewerUserId, setViewerUserId] = useState("");
+  const [sortMode, setSortMode] = useState<JobSortMode>("relevance");
 
   async function fetchJobs() {
     setLoadError("");
@@ -390,29 +399,24 @@ export default function JobsPortalPage() {
   useEffect(() => {
     const savedTheme = localStorage.getItem("loadlink-theme");
     if (savedTheme === "dark") setDarkMode(true);
+    const deviceKey = getDeviceKey();
     const locallyOwnedJobs = getOwnedJobs();
     setOwnedJobs(locallyOwnedJobs);
     setLikedJobIds(getLikedJobIds());
 
-    if (isSupabaseConfigured) {
-      supabase.auth.getUser().then(async ({ data }) => {
-        if (!isAuthenticatedUser(data.user)) { setViewerUserId(""); return; }
-        setViewerUserId(data.user.id);
-        const ownerKeys = Array.from(new Set(Object.values(locallyOwnedJobs).filter(Boolean)));
-        for (const ownerKey of ownerKeys) {
-          try {
+    if (isSupabaseConfigured && Object.keys(locallyOwnedJobs).length > 0) {
+      const ownerKeys = Array.from(new Set(Object.values(locallyOwnedJobs).filter(Boolean)));
+      supabase.auth.getUser()
+        .then(async ({ data }) => {
+          if (!isAuthenticatedUser(data.user)) return;
+          for (const ownerKey of ownerKeys) {
             await supabase.rpc("claim_guest_listings", { p_owner_key: ownerKey });
-          } catch {
-            // Guest-claim failure should not block the jobs page from loading.
           }
-        }
-        if (ownerKeys.length) {
           await syncAccountState().catch(() => undefined);
           await fetchJobs();
-        }
-      }).catch(() => setViewerUserId(""));
+        })
+        .catch(() => undefined);
     }
-
     const params = new URLSearchParams(window.location.search);
     const querySearch = params.get("search") || "";
     const category = (params.get("category") || "") as QuickCategory;
@@ -466,20 +470,10 @@ export default function JobsPortalPage() {
   useEffect(() => {
     if (!loadingJobs && window.location.hash) {
       setTimeout(() => {
-        const hash = window.location.hash;
-        const target = document.querySelector(hash);
-        if (target) {
-          target.scrollIntoView({ behavior: "smooth", block: "start" });
-          return;
-        }
-        const match = hash.match(/^#job-([0-9a-f-]{36})$/i);
-        if (!match) return;
-        const listingId = match[1];
-        const stillPublic = sharedJobs.some((job) => job.id === listingId);
-        if (!stillPublic) window.location.replace(`/listing/${listingId}`);
+        document.querySelector(window.location.hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 400);
     }
-  }, [loadingJobs, sharedJobs]);
+  }, [loadingJobs, sharedJobs.length]);
 
 
   function toggleDarkMode() {
@@ -517,13 +511,23 @@ export default function JobsPortalPage() {
       return keywordMatch && selectedCityMatch && regionMatch && groupMatch && categoryMatch && inferredPortalMatch && explicitPortalMatch;
     });
 
+    const priorityWeight = (job: JobListing) => job.priorityLevel === "urgent" ? 3 : job.priorityLevel === "standard" ? 2 : 1;
     return [...filtered].sort((a, b) => {
-      if (sortMode === "views") return (b.viewCount || 0) - (a.viewCount || 0);
-      if (sortMode === "oldest") return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
-      if (sortMode === "open") {
-        const aOpen = a.status === "active" ? 1 : 0;
-        const bOpen = b.status === "active" ? 1 : 0;
-        if (aOpen !== bOpen) return bOpen - aOpen;
+      if (sortMode === "priority") {
+        const priorityDelta = priorityWeight(b) - priorityWeight(a);
+        if (priorityDelta) return priorityDelta;
+      }
+      if (sortMode === "needed_soon") {
+        const aDate = a.neededBy ? new Date(`${a.neededBy}T23:59:59`).getTime() : Number.MAX_SAFE_INTEGER;
+        const bDate = b.neededBy ? new Date(`${b.neededBy}T23:59:59`).getTime() : Number.MAX_SAFE_INTEGER;
+        if (aDate !== bDate) return aDate - bDate;
+      }
+      if (sortMode === "newest") return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      if (sortMode === "relevance") {
+        const promotedDelta = Number(Boolean(b.sponsored)) - Number(Boolean(a.sponsored));
+        if (promotedDelta) return promotedDelta;
+        const priorityDelta = priorityWeight(b) - priorityWeight(a);
+        if (priorityDelta) return priorityDelta;
       }
       return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
@@ -595,11 +599,11 @@ export default function JobsPortalPage() {
   }
 
   async function deleteJob(job: JobListing) {
-    if (!viewerUserId || job.userId !== viewerUserId) {
-      alert("Only the signed-in account that owns this post can delete it.");
+    const ownerKey = ownedJobs[job.id];
+    if (!ownerKey) {
+      alert("Only the device that posted this job can delete it.");
       return;
     }
-    const ownerKey = ownedJobs[job.id] || "";
 
     const confirmed = confirm("Delete this post from LoadLink?");
     if (!confirmed) return;
@@ -610,7 +614,7 @@ export default function JobsPortalPage() {
     });
 
     if (error || data !== true) {
-      alert("Only the signed-in account that owns this post can delete it.");
+      alert("This post can only be deleted from the device that created it.");
       return;
     }
 
@@ -703,20 +707,19 @@ export default function JobsPortalPage() {
       {portalRailJobs.length ? <FeaturedJobsRail jobs={portalRailJobs} darkMode={darkMode} onOpen={openGallery} /> : null}
 
       <section id="matching-jobs" className="mx-auto max-w-5xl px-5 pb-12 pt-4">
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="mb-6 grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
           <div>
-            <h2 className="text-3xl font-black tracking-[-0.045em] md:text-4xl">{hasSearched ? `Matching ${portalCopy.results.toLowerCase()}` : portalCopy.results}</h2>
-            <p className={`mt-2 text-xs font-semibold ${darkMode ? "text-white/45" : "text-black/45"}`}>{matchingJobs.length} public opportunit{matchingJobs.length === 1 ? "y" : "ies"}</p>
+            <h2 className="text-4xl font-black tracking-[-0.05em]">{hasSearched ? `Matching ${portalCopy.results.toLowerCase()}` : portalCopy.results}</h2>
+            <p className={`mt-2 text-xs font-semibold ${darkMode ? "text-white/45" : "text-black/45"}`}>Sort work by fit, urgency or the date it is needed.</p>
           </div>
-
           <div className="flex items-center gap-2">
-            <label className={`flex h-11 items-center gap-2 rounded-xl border px-3 ${darkMode ? "border-white/15 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
-              <span className={`text-[10px] font-black uppercase tracking-[.12em] ${darkMode ? "text-white/45" : "text-black/45"}`}>Sort</span>
-              <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)} className={`min-w-0 bg-transparent text-xs font-black outline-none ${darkMode ? "text-white" : "text-black"}`} aria-label="Sort jobs">
-                <option value="newest">Newest opportunities</option>
-                <option value="open">Open opportunities</option>
-                <option value="views">Most viewed</option>
-                <option value="oldest">Oldest first</option>
+            <label className={`flex h-11 items-center gap-2 rounded-xl border px-3 text-xs font-bold ${darkMode ? "border-white/15 bg-[#111]" : "border-black/10 bg-white"}`}>
+              <span className={darkMode ? "text-white/45" : "text-black/45"}>Sort by</span>
+              <select value={sortMode} onChange={(event) => setSortMode(event.target.value as JobSortMode)} className="bg-transparent font-black outline-none">
+                <option value="relevance">Best match</option>
+                <option value="priority">Most urgent first</option>
+                <option value="needed_soon">Needed soonest</option>
+                <option value="newest">Newest first</option>
               </select>
             </label>
             <RequireAuthLink href={portalCopy.listHref} className={`hidden h-11 items-center border px-4 text-xs font-black uppercase tracking-wide md:inline-flex ${darkMode ? "border-[#f6b800] text-[#f6b800]" : "border-black text-black"}`}>{portalCopy.listLabel}</RequireAuthLink>
@@ -732,7 +735,7 @@ export default function JobsPortalPage() {
                 key={job.id}
                 job={job}
                 darkMode={darkMode}
-                isOwner={Boolean(viewerUserId && job.userId === viewerUserId)}
+                isOwner={Boolean(ownedJobs[job.id])}
                 isLiked={likedJobIds.has(job.id)}
                 onToggleLiked={() => toggleLiked(job)}
                 onShare={() => shareListing(job)}
@@ -762,7 +765,7 @@ export default function JobsPortalPage() {
 
       {galleryJob ? <PhotoGalleryModal job={galleryJob} onClose={() => setGalleryJob(null)} /> : null}
       {analyticsJob ? <ListingAnalyticsModal job={analyticsJob} ownerKey={ownedJobs[analyticsJob.id] || ""} onClose={() => setAnalyticsJob(null)} /> : null}
-      {editJob ? <EditJobModal job={editJob} ownerKey={ownedJobs[editJob.id] || ""} onClose={() => setEditJob(null)} onUpdated={() => { setEditJob(null); fetchJobs(); }} /> : null}
+      {editJob ? <EditJobModal job={editJob} ownerKey={ownedJobs[editJob.id]} onClose={() => setEditJob(null)} onUpdated={() => { setEditJob(null); fetchJobs(); }} /> : null}
     </main>
   );
 }
@@ -813,6 +816,8 @@ function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onRe
           <span className="rounded-full bg-[#2f9f5b] px-3 py-1.5 text-[10px] font-black uppercase text-white">{job.listingLabel || "Job"}</span>
           <span className={`rounded-full px-3 py-1.5 text-[10px] font-black uppercase ${darkMode ? "bg-white/10 text-white" : "bg-[#eef2f8] text-[#263246]"}`}>{job.group}</span>
           {job.vehicleNeeded ? <span className={`rounded-full px-3 py-1.5 text-[10px] font-black uppercase ${darkMode ? "bg-white/10 text-white" : "bg-[#eef2f8] text-[#263246]"}`}>{job.vehicleNeeded}</span> : null}
+          {job.neededBy ? <span className="rounded-full bg-[#fff2bf] px-3 py-1.5 text-[10px] font-black uppercase text-[#725300]">Needed {new Intl.DateTimeFormat("en-ZA", { day: "numeric", month: "short" }).format(new Date(`${job.neededBy}T12:00:00`))}</span> : null}
+          {job.priorityLevel === "urgent" ? <span className="rounded-full bg-red-500 px-3 py-1.5 text-[10px] font-black uppercase text-white">Urgent</span> : null}
           {job.verified ? <VerifiedBadge /> : null}
           {job.sponsored ? <span className="rounded-full bg-[#168eea] px-3 py-1.5 text-[10px] font-black uppercase text-white">Promoted</span> : null}
         </div>
@@ -865,7 +870,7 @@ function ContactSellerStack({ job, darkMode }: { job: JobListing; darkMode: bool
       </div>
       <div className="grid grid-cols-3 border-t border-black/10">
         <a href={`tel:${job.contactNumber.replace(/\s/g, "")}`} className="flex min-h-16 flex-col items-center justify-center gap-1.5 border-r border-black/10 bg-[#168eea] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><PhoneIcon /> Call</a>
-        <RequireAuthLink href={`/messages?listing=${encodeURIComponent(job.id)}&suggest=1`} className="flex min-h-16 flex-col items-center justify-center gap-1.5 border-r border-black/10 bg-[#168eea] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><MessageIcon /> Message</RequireAuthLink>
+        <RequireAuthLink href={`/messages?listing=${encodeURIComponent(job.id)}`} className="flex min-h-16 flex-col items-center justify-center gap-1.5 border-r border-black/10 bg-[#168eea] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><MessageIcon /> Message</RequireAuthLink>
         <a href={whatsappPhone ? `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}` : "#"} onClick={(e) => { if (!whatsappPhone) { e.preventDefault(); greetPoster(job); } }} target="_blank" rel="noreferrer" className="flex min-h-16 flex-col items-center justify-center gap-1.5 bg-[#0d442b] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><WhatsAppIcon /> WhatsApp</a>
       </div>
     </div>
@@ -1071,7 +1076,7 @@ function EditJobModal({ job, ownerKey, onClose, onUpdated }: { job: JobListing; 
     setSaving(false);
 
     if (error || data !== true) {
-      alert("Only the signed-in account that owns this post can edit it.");
+      alert("This post can only be edited from the device that created it.");
       return;
     }
 

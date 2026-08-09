@@ -17,24 +17,16 @@ import {
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
-import MessageVisualScene from "@/components/MessageVisualScene";
-import LogisticsMessageTools, { type QuoteAutofillDefaults, type QuoteVehicleOption, type StructuredQuote } from "@/components/LogisticsMessageTools";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { getBuyerKey, getBuyerKeys, getOwnerKeys } from "@/lib/chatKeys";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 import { errorMessage, getFreshAuthenticatedUser } from "@/lib/reliableSupabase";
-import {
-  DEFAULT_MESSAGE_PRIVACY,
-  profileRowToMessagePrivacy,
-  readMessagePrivacy,
-  type MessagePrivacyPreferences,
-  writeMessagePrivacy,
-} from "@/lib/messagePrivacy";
 import styles from "./messages.module.css";
 
 type Role = "buyer" | "owner";
+type ConversationFolder = "inbox" | "potential" | "starred" | "archived";
 
 type ConversationRow = {
   id: string;
@@ -54,21 +46,12 @@ type ConversationRow = {
   daily_message_limit: number | string | null;
   is_pro: boolean | null;
   archived?: boolean | null;
-  request_status?: "pending" | "accepted" | "declined" | null;
 };
 
 type Conversation = ConversationRow & {
   accessKey: string;
   role: Role;
   unreadCount: number;
-};
-
-type QuoteBranding = { name: string; logo: string | null };
-type QuotePayload = StructuredQuote & {
-  status?: "pending" | "accepted" | "declined";
-  listing_title?: string;
-  dealership_name?: string;
-  dealership_logo?: string | null;
 };
 
 type ChatMessage = {
@@ -80,11 +63,6 @@ type ChatMessage = {
   file_name: string | null;
   file_type: string | null;
   file_size: number | null;
-  edited_at?: string | null;
-  deleted_at?: string | null;
-  message_kind?: "text" | "quote" | "system" | null;
-  structured_payload?: QuotePayload | Record<string, unknown> | null;
-  starred_by_me?: boolean | null;
 };
 
 type AttachmentPayload = {
@@ -123,6 +101,7 @@ const ACCEPTED_FILE_TYPES = [
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
+const CHAT_WALLPAPER_COUNT = 10;
 const CHAT_ARCHIVE_STORAGE_KEY = "loadlink-archived-conversations-v1";
 
 function readLocalArchivedIds() {
@@ -212,11 +191,11 @@ function activityText(conversation: Conversation, now = Date.now()) {
   const timestamp = new Date(conversation.other_last_seen).getTime();
   if (!Number.isFinite(timestamp)) return "Activity status unavailable";
   const difference = Math.max(0, now - timestamp);
-  if (difference < 120_000) return "Active in messages";
+  if (difference < 60_000) return "Active in messages";
   if (difference < 3_600_000)
-    return `Active in messages ${Math.max(1, Math.round(difference / 60_000))} min ago`;
+    return `Active ${Math.max(1, Math.round(difference / 60_000))} min ago`;
   if (difference < 86_400_000)
-    return `Active in messages ${Math.max(1, Math.round(difference / 3_600_000))} hr ago`;
+    return `Active ${Math.max(1, Math.round(difference / 3_600_000))} hr ago`;
 
   return `Last active ${new Intl.DateTimeFormat("en-ZA", {
     day: "2-digit",
@@ -255,15 +234,12 @@ function recordingTime(seconds: number) {
   return `${minutes}:${remainder}`;
 }
 
-function fileToBase64(file: File, onProgress?: (progress: number) => void) {
+function fileToBase64(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error("The selected file could not be read."));
-    reader.onprogress = (event) => {
-      if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 68));
-    };
+    reader.onerror = () =>
+      reject(new Error("The selected file could not be read."));
     reader.onload = () => {
-      onProgress?.(72);
       const result = String(reader.result || "");
       resolve(result.includes(",") ? result.split(",")[1] : result);
     };
@@ -326,104 +302,7 @@ function cleanError(error: unknown, fallback: string) {
   return message || fallback;
 }
 
-
-type QuoteReuseListingRow = {
-  id?: string | null;
-  title?: string | null;
-  city?: string | null;
-  vehicle_group?: string | null;
-  rate?: string | null;
-  description?: string | null;
-  listing_kind?: string | null;
-  status?: string | null;
-  moderation_status?: string | null;
-};
-
-function parseQuoteRate(value: string | null | undefined): Pick<StructuredQuote, "amount" | "unit"> {
-  const compact = String(value || "").replace(/\s+/g, "");
-  const amountMatch = compact.match(/(?:R|ZAR)?([0-9]+(?:\.[0-9]+)?)/i);
-  const unit: StructuredQuote["unit"] = /\/?km|perkm/i.test(compact)
-    ? "km"
-    : /\/?ton|perton/i.test(compact)
-      ? "ton"
-      : /\/?day|perday/i.test(compact)
-        ? "day"
-        : "total";
-  return { amount: amountMatch?.[1] || "", unit };
-}
-
-function listingVehicleNeed(description: string | null | undefined, fallback: string) {
-  const match = String(description || "").match(/^Vehicle needed:\s*([^\n]+)/im);
-  return String(match?.[1] || fallback || "").trim();
-}
-
-function postedVehicleSummary(description: string | null | undefined, fallback: string) {
-  const value = String(description || "");
-  const read = (label: string) => value.match(new RegExp(`^${label}:\\s*([^\\n]+)`, "im"))?.[1]?.trim() || "";
-  const parts = [read("Year"), read("Make"), read("Model"), read("Vehicle subtype")].filter(Boolean);
-  const payload = read("Payload");
-  const main = parts.join(" ").replace(/\s+/g, " ").trim() || fallback;
-  return payload ? `${main} · Payload ${payload}` : main;
-}
-
-function starterMessages(conversation: Conversation) {
-  const title = conversation.listing_title || "this listing";
-  if (conversation.role === "owner") {
-    return [
-      `Thanks for your interest in ${title}. Please confirm the vehicle you have available and your earliest collection time.`,
-      `Please send your proposed rate, vehicle details and availability for ${title}.`,
-      "Before we proceed, please confirm the collection area, delivery requirements and the documents you can provide.",
-    ];
-  }
-  return [
-    `Hi, I’m interested in ${title}. Is it still available?`,
-    `Please confirm the rate, collection details, delivery requirements and availability for ${title}.`,
-    "I may have a suitable vehicle available. Please share the route, cargo details, loading time and payment terms.",
-  ];
-}
-
-
-function listingRouteSummary(description: string | null | undefined) {
-  const value = String(description || "");
-  const read = (labels: string[]) => {
-    for (const label of labels) {
-      const match = value.match(new RegExp(`^${label}:\\s*([^\\n]+)`, "im"));
-      if (match?.[1]?.trim()) return match[1].trim();
-    }
-    return "";
-  };
-  const explicit = read(["Route"]);
-  if (explicit) return explicit;
-  const from = read(["Pickup location", "Collection", "From", "Origin"]);
-  const to = read(["Delivery location", "Delivery", "To", "Destination"]);
-  return from && to ? `${from} → ${to}` : "";
-}
-
 export default function MessagesPage() {
-  // LOADLINK V2.5.4 SESSION WALLPAPER
-  useEffect(() => {
-    const count = 10;
-    const lastKey = "loadlink-chat-wallpaper-last-v254";
-    const last = Number(window.localStorage.getItem(lastKey));
-    const random = window.crypto?.getRandomValues
-      ? window.crypto.getRandomValues(new Uint32Array(1))[0]
-      : Math.floor(Math.random() * 0xffffffff);
-
-    let next = (random % count) + 1;
-    if (Number.isInteger(last) && last >= 1 && last <= count && next === last) next = (next % count) + 1;
-
-    const file = String(next).padStart(2, "0");
-    document.documentElement.style.setProperty(
-      "--loadlink-chat-wallpaper-v254",
-      `url("/images/chat-wallpapers/chat-${file}.svg")`,
-    );
-    window.localStorage.setItem(lastKey, String(next));
-
-    return () => {
-      document.documentElement.style.removeProperty("--loadlink-chat-wallpaper-v254");
-    };
-  }, []);
-
   const router = useRouter();
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -431,15 +310,13 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
   const [query, setQuery] = useState("");
-  const [folder, setFolder] = useState<"inbox" | "potential" | "archived">("inbox");
-  const [chatSearch, setChatSearch] = useState("");
-  const [chatSearchOpen, setChatSearchOpen] = useState(false);
-  const [starredOnly, setStarredOnly] = useState(false);
-  const [editingMessageId, setEditingMessageId] = useState("");
-  const [messageMenuId, setMessageMenuId] = useState("");
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [failedUpload, setFailedUpload] = useState<{ file: File; caption?: string } | null>(null);
+  const [folder, setFolder] = useState<ConversationFolder>("inbox");
+  const [showArchived, setShowArchived] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState("");
+  const [starredMessageIds, setStarredMessageIds] = useState<Set<string>>(new Set());
+  const [starredThreadIds, setStarredThreadIds] = useState<Set<string>>(new Set());
   const [archiveBusy, setArchiveBusy] = useState(false);
+  const [wallpaperIndex, setWallpaperIndex] = useState(1);
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -450,16 +327,7 @@ export default function MessagesPage() {
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [blockState, setBlockState] = useState<BlockState>({ blocked_by_me: false, blocked_by_other: false });
   const [blockBusy, setBlockBusy] = useState(false);
-  const [reportBusy, setReportBusy] = useState(false);
-  const [composerActionsOpen, setComposerActionsOpen] = useState(false);
-  const [potentialDealReviewOpen, setPotentialDealReviewOpen] = useState(false);
-  const [quoteBranding, setQuoteBranding] = useState<QuoteBranding>({ name: "", logo: null });
-  const [quoteDefaults, setQuoteDefaults] = useState<QuoteAutofillDefaults | null>(null);
-  const [quoteVehicles, setQuoteVehicles] = useState<QuoteVehicleOption[]>([]);
-  const [showStarterSuggestions, setShowStarterSuggestions] = useState(false);
-  const [messagePrivacy, setMessagePrivacy] = useState<MessagePrivacyPreferences>(
-    () => DEFAULT_MESSAGE_PRIVACY,
-  );
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
   const [presenceNow, setPresenceNow] = useState(() => Date.now());
 
   const messageViewportRef = useRef<HTMLDivElement>(null);
@@ -479,17 +347,6 @@ export default function MessagesPage() {
   const recordingCancelledRef = useRef(false);
 
   useEffect(() => {
-    const syncPrivacy = () => setMessagePrivacy(readMessagePrivacy());
-    syncPrivacy();
-    window.addEventListener("storage", syncPrivacy);
-    window.addEventListener("loadlink-message-privacy-updated", syncPrivacy as EventListener);
-    return () => {
-      window.removeEventListener("storage", syncPrivacy);
-      window.removeEventListener("loadlink-message-privacy-updated", syncPrivacy as EventListener);
-    };
-  }, []);
-
-  useEffect(() => {
     if (!loading) return;
     const safety = window.setTimeout(() => {
       setLoading(false);
@@ -504,22 +361,26 @@ export default function MessagesPage() {
   }, []);
 
   useEffect(() => {
-    const viewport = window.visualViewport;
-    const syncHeight = () => {
-      const height = Math.max(320, Math.round(viewport?.height || window.innerHeight));
-      document.documentElement.style.setProperty("--loadlink-message-vh", `${height}px`);
+    const key = "loadlink-chat-wallpaper-session-v1";
+    const stored = Number(window.sessionStorage.getItem(key));
+    const next = Number.isInteger(stored) && stored >= 1 && stored <= CHAT_WALLPAPER_COUNT
+      ? stored
+      : Math.floor(Math.random() * CHAT_WALLPAPER_COUNT) + 1;
+    window.sessionStorage.setItem(key, String(next));
+    setWallpaperIndex(next);
+  }, []);
+
+  useEffect(() => {
+    const updateViewportHeight = () => {
+      const height = Math.round(window.visualViewport?.height || window.innerHeight);
+      setViewportHeight(height);
     };
-    syncHeight();
-    viewport?.addEventListener("resize", syncHeight);
-    viewport?.addEventListener("scroll", syncHeight);
-    window.addEventListener("resize", syncHeight);
-    window.addEventListener("orientationchange", syncHeight);
+    updateViewportHeight();
+    window.addEventListener("resize", updateViewportHeight);
+    window.visualViewport?.addEventListener("resize", updateViewportHeight);
     return () => {
-      viewport?.removeEventListener("resize", syncHeight);
-      viewport?.removeEventListener("scroll", syncHeight);
-      window.removeEventListener("resize", syncHeight);
-      window.removeEventListener("orientationchange", syncHeight);
-      document.documentElement.style.removeProperty("--loadlink-message-vh");
+      window.removeEventListener("resize", updateViewportHeight);
+      window.visualViewport?.removeEventListener("resize", updateViewportHeight);
     };
   }, []);
 
@@ -529,177 +390,6 @@ export default function MessagesPage() {
       null,
     [conversations, selectedId],
   );
-
-  // LOADLINK V2.5.9 QUOTE SOURCE REUSE
-  useEffect(() => {
-    let cancelled = false;
-    setQuoteDefaults(null);
-    setQuoteVehicles([]);
-    if (!selectedConversation?.listing_id) return;
-
-    (async () => {
-      try {
-        let listingData = null;
-        const listingResult = await supabase
-          .from("job_listings")
-          .select("title,city,vehicle_group,rate,description,listing_kind")
-          .eq("id", selectedConversation.listing_id)
-          .maybeSingle();
-
-        if (!listingResult.error && listingResult.data) listingData = listingResult.data;
-        if (cancelled || !listingData) return;
-
-        const parsedRate = parseQuoteRate(String(listingData.rate || ""));
-        const vehicleNeed = listingVehicleNeed(String(listingData.description || ""), String(listingData.vehicle_group || ""));
-        const currentRoute = listingRouteSummary(String(listingData.description || ""));
-        setQuoteDefaults({
-          sourceLabel: `Current post · ${String(listingData.title || "listing").trim()}`,
-          ...(parsedRate.amount ? parsedRate : {}),
-          ...(vehicleNeed ? { vehicle: vehicleNeed } : {}),
-          ...(currentRoute ? { route: currentRoute } : {}),
-          ...(listingData.city ? { availability: String(listingData.city) } : {}),
-        });
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!isAuthenticatedUser(user)) return;
-
-        let postRows: Array<{
-          id?: string | null;
-          title?: string | null;
-          city?: string | null;
-          vehicle_group?: string | null;
-          rate?: string | null;
-          description?: string | null;
-          listing_kind?: string | null;
-          status?: string | null;
-          moderation_status?: string | null;
-        }> = [];
-        const postsResult = await supabase
-          .from("job_listings")
-          .select("id,title,city,vehicle_group,rate,description,listing_kind,status,moderation_status")
-          .eq("user_id", user.id)
-          .neq("id", selectedConversation.listing_id)
-          .order("created_at", { ascending: false })
-          .limit(20);
-
-        if (!postsResult.error) {
-          postRows = postsResult.data || [];
-        } else if (/listing_kind|moderation_status|schema cache|column/i.test(postsResult.error.message)) {
-          const fallback = await supabase
-            .from("job_listings")
-            .select("id,title,city,vehicle_group,rate,description")
-            .eq("user_id", user.id)
-            .neq("id", selectedConversation.listing_id)
-            .order("created_at", { ascending: false })
-            .limit(20);
-          if (!fallback.error) postRows = fallback.data || [];
-        }
-
-        if (cancelled) return;
-        setQuoteVehicles(postRows
-          .filter((row) => {
-            const status = String(row.status || "active").toLowerCase();
-            const moderation = String(row.moderation_status || "approved").toLowerCase();
-            return !["deleted", "closed", "filled"].includes(status) && moderation !== "rejected";
-          })
-          .map((row) => {
-            const rate = parseQuoteRate(String(row.rate || ""));
-            const title = String(row.title || row.vehicle_group || "My post").trim();
-            const description = String(row.description || "");
-            const kind = String(row.listing_kind || (/^Listing type:\s*(Job|Contract)/im.test(description) ? "job" : "vehicle")).toLowerCase();
-            const vehicleValue = kind === "vehicle"
-              ? postedVehicleSummary(description, title)
-              : listingVehicleNeed(description, String(row.vehicle_group || ""));
-            const routeValue = listingRouteSummary(description);
-            const kindLabel = kind === "vehicle" ? "Vehicle" : kind === "contract" ? "Contract" : "Post";
-            return {
-              id: String(row.id),
-              label: title,
-              meta: [kindLabel, String(row.city || "").trim()].filter(Boolean).join(" · "),
-              ...(vehicleValue ? { vehicle: vehicleValue } : {}),
-              ...(routeValue ? { route: routeValue } : {}),
-              ...(row.city ? { availability: String(row.city).trim() } : {}),
-              ...(rate.amount ? rate : {}),
-            };
-          })
-        );
-      } catch {
-        // Quote reuse is optional and must never block messaging.
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [selectedConversation?.listing_id]);
-
-
-  useEffect(() => {
-    if (!selectedId) return;
-    try {
-      setText(window.localStorage.getItem(`loadlink-message-draft:${selectedId}`) || "");
-    } catch {
-      setText("");
-    }
-  }, [selectedId]);
-
-  useEffect(() => {
-    setComposerActionsOpen(false);
-    setPotentialDealReviewOpen(false);
-  }, [selectedId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setQuoteBranding({ name: "", logo: null });
-    if (!selectedConversation?.listing_id) return;
-
-    (async () => {
-      try {
-        const listingResult = await supabase
-          .from("job_listings")
-          .select("dealership_id,poster_photo,posted_by")
-          .eq("id", selectedConversation.listing_id)
-          .maybeSingle();
-        if (cancelled || listingResult.error || !listingResult.data) return;
-        const listing = listingResult.data as { dealership_id?: string | null; poster_photo?: string | null; posted_by?: string | null };
-        if (!listing.dealership_id) return;
-
-        const dealerResult = await supabase
-          .from("dealership_profiles")
-          .select("name,profile_image_url")
-          .eq("id", listing.dealership_id)
-          .maybeSingle();
-        if (cancelled) return;
-        if (!dealerResult.error && dealerResult.data) {
-          const dealer = dealerResult.data as { name?: string | null; profile_image_url?: string | null };
-          setQuoteBranding({
-            name: String(dealer.name || listing.posted_by || "Dealership").trim(),
-            logo: String(dealer.profile_image_url || listing.poster_photo || "").trim() || null,
-          });
-        } else {
-          setQuoteBranding({
-            name: String(listing.posted_by || "Dealership").trim(),
-            logo: String(listing.poster_photo || "").trim() || null,
-          });
-        }
-      } catch {
-        // Dealership branding is optional and must never block chat.
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedConversation?.listing_id]);
-
-  useEffect(() => {
-    if (!selectedId) return;
-    try {
-      const key = `loadlink-message-draft:${selectedId}`;
-      if (text.trim()) window.localStorage.setItem(key, text);
-      else window.localStorage.removeItem(key);
-    } catch {
-      // Draft persistence must never block messaging.
-    }
-  }, [selectedId, text]);
 
   const messagesUsedToday = selectedConversation
     ? toCount(selectedConversation.messages_used_today)
@@ -712,40 +402,44 @@ export default function MessagesPage() {
     selectedConversation && !isPro && messagesUsedToday >= dailyMessageLimit,
   );
   const conversationBlocked = blockState.blocked_by_me || blockState.blocked_by_other;
-  const potentialDealPending = Boolean(selectedConversation?.role === "owner" && selectedConversation.request_status === "pending");
-  const potentialDealDeclined = Boolean(selectedConversation?.request_status === "declined");
+
+  const loadStars = useCallback(async (userId: string) => {
+    if (!userId) return;
+    const result = await supabase.from("message_stars").select("message_id,thread_id").eq("user_id", userId);
+    if (result.error) {
+      if (!/relation|schema cache|does not exist/i.test(result.error.message)) setError(cleanError(result.error, "Starred messages could not load."));
+      return;
+    }
+    const rows = (result.data || []) as { message_id: string; thread_id: string }[];
+    setStarredMessageIds(new Set(rows.map((row) => row.message_id)));
+    setStarredThreadIds(new Set(rows.map((row) => row.thread_id)));
+  }, []);
+
+  useEffect(() => {
+    setShowArchived(folder === "archived");
+  }, [folder]);
 
   const visibleConversations = useMemo(() => {
     const search = query.trim().toLowerCase();
     return conversations.filter((conversation) => {
-      const pendingDeal = conversation.role === "owner" && conversation.request_status === "pending";
-      if (folder === "archived" && !conversation.archived) return false;
-      if (folder === "potential" && (!pendingDeal || conversation.archived)) return false;
-      if (folder === "inbox" && (conversation.archived || pendingDeal || (conversation.role === "owner" && conversation.request_status === "declined"))) return false;
+      const archived = Boolean(conversation.archived);
+      if (folder === "archived" && !archived) return false;
+      if (folder !== "archived" && archived) return false;
+      if (folder === "starred" && !starredThreadIds.has(conversation.id)) return false;
+      if (folder === "potential" && !conversation.last_message) return false;
       if (!search) return true;
       return `${conversation.other_name} ${conversation.listing_title} ${conversation.last_message || ""}`
         .toLowerCase()
         .includes(search);
     });
-  }, [conversations, folder, query]);
+  }, [conversations, folder, query, starredThreadIds]);
 
   const archivedCount = useMemo(
     () => conversations.filter((conversation) => Boolean(conversation.archived)).length,
     [conversations],
   );
-  const potentialDealCount = useMemo(
-    () => conversations.filter((conversation) => conversation.role === "owner" && conversation.request_status === "pending" && !conversation.archived).length,
-    [conversations],
-  );
-  const searchedMessages = useMemo(() => {
-    const needle = chatSearch.trim().toLowerCase();
-    return messages.filter((message) => {
-      if (starredOnly && !message.starred_by_me) return false;
-      if (!needle) return true;
-      const structured = message.structured_payload ? JSON.stringify(message.structured_payload) : "";
-      return `${message.body || ""} ${message.file_name || ""} ${structured}`.toLowerCase().includes(needle);
-    });
-  }, [chatSearch, messages, starredOnly]);
+  const potentialDealCount = useMemo(() => conversations.filter((conversation) => !conversation.archived && Boolean(conversation.last_message)).length, [conversations]);
+  const starredCount = starredThreadIds.size;
 
   const loadConversations = useCallback(async (preferredId?: string) => {
     const requestSequence = ++conversationLoadSequenceRef.current;
@@ -830,7 +524,7 @@ export default function MessagesPage() {
         if (result.error) throw result.error;
         const rows = (result.data || []) as ChatMessage[];
         if (requestSequence !== messageLoadSequenceRef.current) return;
-        const signature = rows.map((row) => `${row.id}:${row.created_at}:${row.body}:${row.attachment_id || ""}:${row.edited_at || ""}:${row.deleted_at || ""}:${row.starred_by_me ? 1 : 0}:${row.message_kind || ""}:${JSON.stringify(row.structured_payload || {})}`).join("|");
+        const signature = rows.map((row) => `${row.id}:${row.created_at}:${row.body}:${row.attachment_id || ""}`).join("|");
         const changed = signature !== messageSignatureRef.current;
         if (changed) {
           const viewport = messageViewportRef.current;
@@ -876,43 +570,11 @@ export default function MessagesPage() {
           return;
         }
 
-        const { data: privacyRow } = await supabase
-          .from("profiles")
-          .select("message_activity_visible,message_typing_indicators,message_requests_enabled,message_notification_previews")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        await Promise.allSettled(
-          Array.from(new Set([getBuyerKey(), ...getOwnerKeys()])).map((accessKey) =>
-            supabase.rpc("loadlink_register_chat_access_key", { p_access_key: accessKey }),
-          ),
-        );
-
-        if (privacyRow) {
-          const nextPrivacy = profileRowToMessagePrivacy(
-            privacyRow as Record<string, unknown>,
-          );
-          writeMessagePrivacy(nextPrivacy);
-          setMessagePrivacy(nextPrivacy);
-        }
-
         await syncAccountState().catch(() => undefined);
+        setCurrentUserId(user.id);
+        await loadStars(user.id);
         const params = new URLSearchParams(window.location.search);
-        let listingId = params.get("listing");
-        const dealershipId = params.get("dealership");
-        if (!listingId && dealershipId) {
-          const dealerListing = await supabase
-            .from("job_listings")
-            .select("id")
-            .eq("dealership_id", dealershipId)
-            .eq("status", "active")
-            .eq("moderation_status", "approved")
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          if (!dealerListing.error && dealerListing.data?.id) listingId = String(dealerListing.data.id);
-        }
-        setShowStarterSuggestions(params.get("suggest") === "1" || Boolean(listingId));
+        const listingId = params.get("listing");
         const metadata = user.user_metadata || {};
         const buyerName =
           params.get("name") ||
@@ -940,7 +602,7 @@ export default function MessagesPage() {
             });
           }
           if (openResult.error) throw openResult.error;
-          openedId = String((openResult.data && typeof openResult.data === "object" && "id" in openResult.data ? openResult.data.id : openResult.data) || "");
+          openedId = String(openResult.data || "");
           await recordUserActivity("conversation_opened", {
             entityType: "listing",
             entityId: listingId,
@@ -960,7 +622,7 @@ export default function MessagesPage() {
         await loadConversations(openedId);
         refreshTimer = setInterval(
           () => loadConversations().catch(() => undefined),
-          10000,
+          5000,
         );
       } catch (initialiseError) {
         if (active)
@@ -975,7 +637,7 @@ export default function MessagesPage() {
       active = false;
       if (refreshTimer) clearInterval(refreshTimer);
     };
-  }, [loadConversations, router]);
+  }, [loadConversations, loadStars, router]);
 
   useEffect(() => {
     if (!selectedConversation) {
@@ -999,15 +661,13 @@ export default function MessagesPage() {
     });
     const messageTimer = setInterval(() => {
       if (active) loadMessages(selectedConversation).catch(() => undefined);
-    }, 5000);
+    }, 2500);
     const touchPresence = () => {
       if (document.visibilityState === "hidden") return;
-      if (!messagePrivacy.activityVisible) return;
       supabase.rpc("touch_listing_guest_presence", {
         p_thread_id: selectedConversation.id,
         p_access_key: selectedConversation.accessKey,
-        p_is_typing:
-          messagePrivacy.typingIndicators && typingActiveRef.current,
+        p_is_typing: typingActiveRef.current,
       }).then(() => undefined);
     };
     touchPresence();
@@ -1031,12 +691,7 @@ export default function MessagesPage() {
         })
         .then(() => undefined);
     };
-  }, [
-    loadMessages,
-    messagePrivacy.activityVisible,
-    messagePrivacy.typingIndicators,
-    selectedId,
-  ]);
+  }, [loadMessages, selectedId]);
 
   useEffect(() => {
     if (!forceScrollRef.current) return;
@@ -1049,21 +704,26 @@ export default function MessagesPage() {
     return () => window.cancelAnimationFrame(frame);
   }, [messages, messagesLoading, selectedId]);
 
+  async function toggleStar(message: ChatMessage) {
+    if (!currentUserId || !selectedConversation) return;
+    const starred = starredMessageIds.has(message.id);
+    setStarredMessageIds((current) => { const next = new Set(current); starred ? next.delete(message.id) : next.add(message.id); return next; });
+    if (!starred) setStarredThreadIds((current) => new Set(current).add(selectedConversation.id));
+    try {
+      const result = starred
+        ? await supabase.from("message_stars").delete().eq("user_id", currentUserId).eq("message_id", message.id)
+        : await supabase.from("message_stars").insert({ user_id: currentUserId, message_id: message.id, thread_id: selectedConversation.id });
+      if (result.error) throw result.error;
+      await loadStars(currentUserId);
+    } catch (starError) {
+      await loadStars(currentUserId);
+      setError(cleanError(starError, "The message star could not be saved."));
+    }
+  }
+
   async function send(event?: FormEvent) {
     event?.preventDefault();
     if (!selectedConversation || !text.trim() || sending || uploading) return;
-    if (editingMessageId) {
-      await saveEditedMessage();
-      return;
-    }
-    if (potentialDealDeclined) {
-      setError("This potential deal was declined and can no longer receive messages.");
-      return;
-    }
-    if (potentialDealPending) {
-      setError("Accept this potential deal before replying.");
-      return;
-    }
     if (conversationBlocked) {
       setError(blockState.blocked_by_me ? "Unblock this user before sending a message." : "This user has blocked this conversation.");
       return;
@@ -1072,15 +732,6 @@ export default function MessagesPage() {
       setError(
         "You have used today’s 50 free messages. Upgrade to Pro to keep messaging today.",
       );
-      return;
-    }
-
-    if (
-      /\b(?:otp|one[- ]time pin|password|banking pin|card pin|cvv)\b/i.test(text) &&
-      !window.confirm(
-        "LoadLink will never ask for your password, OTP, PIN or CVV. Send this message only if it does not expose private security information.",
-      )
-    ) {
       return;
     }
 
@@ -1095,7 +746,6 @@ export default function MessagesPage() {
         p_body: text.trim(),
       });
       if (result.error) throw result.error;
-      void sendPushNotification(selectedConversation, text.trim());
       forceScrollRef.current = true;
       typingActiveRef.current = false;
       setText("");
@@ -1113,160 +763,10 @@ export default function MessagesPage() {
     }
   }
 
-  async function sendPushNotification(conversation: Conversation, preview: string) {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      if (!token) return;
-      await fetch("/api/push/message", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          threadId: conversation.id,
-          preview: preview.slice(0, 180),
-        }),
-      });
-    } catch {
-      // Push delivery is best-effort and must never block messaging.
-    }
-  }
-
-  async function sendStructuredQuote(quote: StructuredQuote) {
-    if (!selectedConversation || sending || uploading || conversationBlocked || dailyLimitReached || potentialDealPending || potentialDealDeclined) return;
-    setSending(true);
-    setError("");
-    try {
-      const result = await supabase.rpc("send_listing_guest_structured_message", {
-        p_thread_id: selectedConversation.id,
-        p_access_key: selectedConversation.accessKey,
-        p_kind: "quote",
-        p_payload: {
-          ...quote,
-          listing_title: selectedConversation.listing_title,
-          status: "pending",
-          ...(quoteBranding.name ? { dealership_name: quoteBranding.name } : {}),
-          ...(quoteBranding.logo ? { dealership_logo: quoteBranding.logo } : {}),
-        },
-      });
-      if (result.error) throw result.error;
-      void sendPushNotification(selectedConversation, `New rate quote · R${quote.amount}`);
-      forceScrollRef.current = true;
-      await loadMessages(selectedConversation);
-      await loadConversations(selectedConversation.id);
-    } catch (quoteError) {
-      setError(cleanError(quoteError, "The structured quote could not be sent. Run LOADLINK-MESSAGES-V2.sql if the message upgrade is not installed yet."));
-    } finally {
-      setSending(false);
-    }
-  }
-
-  function beginEdit(message: ChatMessage) {
-    if (!selectedConversation || message.sender_role !== selectedConversation.role || message.deleted_at) return;
-    const age = Date.now() - new Date(message.created_at).getTime();
-    if (!Number.isFinite(age) || age > 15 * 60_000) {
-      setError("Messages can be edited for 15 minutes after sending.");
-      return;
-    }
-    setEditingMessageId(message.id);
-    updateTyping(message.body);
-    window.requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>('[data-loadlink-message-composer="true"]')?.focus());
-  }
-
-  async function saveEditedMessage() {
-    if (!selectedConversation || !editingMessageId || !text.trim() || sending) return;
-    setSending(true);
-    setError("");
-    try {
-      const result = await supabase.rpc("edit_listing_guest_message", {
-        p_message_id: editingMessageId,
-        p_access_key: selectedConversation.accessKey,
-        p_body: text.trim(),
-      });
-      if (result.error) throw result.error;
-      setEditingMessageId("");
-      setText("");
-      await loadMessages(selectedConversation);
-      await loadConversations(selectedConversation.id);
-    } catch (editError) {
-      setError(cleanError(editError, "The message could not be edited."));
-    } finally {
-      setSending(false);
-    }
-  }
-
-  async function deleteMessage(message: ChatMessage) {
-    if (!selectedConversation || message.sender_role !== selectedConversation.role || message.deleted_at) return;
-    if (!window.confirm("Delete this message for everyone? This is available for 15 minutes after sending.")) return;
-    setError("");
-    try {
-      const result = await supabase.rpc("delete_listing_guest_message", {
-        p_message_id: message.id,
-        p_access_key: selectedConversation.accessKey,
-      });
-      if (result.error) throw result.error;
-      if (editingMessageId === message.id) { setEditingMessageId(""); setText(""); }
-      await loadMessages(selectedConversation);
-      await loadConversations(selectedConversation.id);
-    } catch (deleteError) {
-      setError(cleanError(deleteError, "The message could not be deleted."));
-    }
-  }
-
-  async function toggleStar(message: ChatMessage) {
-    if (!selectedConversation) return;
-    const next = !Boolean(message.starred_by_me);
-    setMessages((current) => current.map((item) => item.id === message.id ? { ...item, starred_by_me: next } : item));
-    const result = await supabase.rpc("set_listing_guest_message_star", {
-      p_message_id: message.id,
-      p_access_key: selectedConversation.accessKey,
-      p_starred: next,
-    });
-    if (result.error) {
-      setMessages((current) => current.map((item) => item.id === message.id ? { ...item, starred_by_me: !next } : item));
-      setError(cleanError(result.error, "The starred-message setting could not be saved."));
-    }
-  }
-
-  async function respondToQuote(message: ChatMessage, status: "accepted" | "declined") {
-    if (!selectedConversation || message.sender_role === selectedConversation.role) return;
-    setError("");
-    try {
-      const result = await supabase.rpc("respond_listing_guest_quote", {
-        p_message_id: message.id,
-        p_access_key: selectedConversation.accessKey,
-        p_status: status,
-      });
-      if (result.error) throw result.error;
-      void sendPushNotification(selectedConversation, status === "accepted" ? "Your LoadLink quote was accepted" : "Your LoadLink quote was declined");
-      await loadMessages(selectedConversation);
-    } catch (quoteError) {
-      setError(cleanError(quoteError, "The quote response could not be saved."));
-    }
-  }
-
-  async function updatePotentialDeal(status: "accepted" | "declined") {
-    if (!selectedConversation || selectedConversation.role !== "owner") return;
-    setError("");
-    try {
-      const result = await supabase.rpc("set_listing_guest_request_status", {
-        p_thread_id: selectedConversation.id,
-        p_access_key: selectedConversation.accessKey,
-        p_status: status,
-      });
-      if (result.error) throw result.error;
-      await loadConversations(selectedConversation.id);
-      if (status === "accepted") setFolder("inbox");
-      else returnToInbox();
-    } catch (requestError) {
-      setError(cleanError(requestError, "The potential-deal request could not be updated."));
-    }
-  }
-
   function updateTyping(nextText: string) {
     setText(nextText);
-    typingActiveRef.current =
-      messagePrivacy.typingIndicators && Boolean(nextText.trim());
-    if (!selectedConversation || !messagePrivacy.typingIndicators) return;
+    typingActiveRef.current = Boolean(nextText.trim());
+    if (!selectedConversation) return;
 
     const now = Date.now();
     if (!nextText.trim() || now - lastTypingPingRef.current > 2500) {
@@ -1274,8 +774,7 @@ export default function MessagesPage() {
       supabase.rpc("touch_listing_guest_presence", {
         p_thread_id: selectedConversation.id,
         p_access_key: selectedConversation.accessKey,
-        p_is_typing:
-          messagePrivacy.typingIndicators && Boolean(nextText.trim()),
+        p_is_typing: Boolean(nextText.trim()),
       }).then(() => undefined);
     }
 
@@ -1301,14 +800,6 @@ export default function MessagesPage() {
 
   async function sendAttachment(file: File, caption?: string) {
     if (!selectedConversation || uploading || sending) return;
-    if (potentialDealDeclined) {
-      setError("This potential deal was declined and can no longer receive attachments.");
-      return;
-    }
-    if (potentialDealPending) {
-      setError("Accept this potential deal before sending an attachment.");
-      return;
-    }
     if (conversationBlocked) {
       setError(blockState.blocked_by_me ? "Unblock this user before sending an attachment." : "This user has blocked this conversation.");
       return;
@@ -1328,14 +819,11 @@ export default function MessagesPage() {
     }
 
     setUploading(true);
-    setUploadProgress(1);
-    setFailedUpload(null);
     setError("");
     try {
       const user = await getFreshAuthenticatedUser();
       if (!user) throw new Error("Your sign-in session expired.");
-      const base64 = await fileToBase64(file, setUploadProgress);
-      setUploadProgress(78);
+      const base64 = await fileToBase64(file);
       const result = await supabase.rpc("send_listing_guest_attachment", {
         p_thread_id: selectedConversation.id,
         p_access_key: selectedConversation.accessKey,
@@ -1345,8 +833,6 @@ export default function MessagesPage() {
         p_caption: caption ?? (text.trim() || null),
       });
       if (result.error) throw result.error;
-      setUploadProgress(100);
-      void sendPushNotification(selectedConversation, fileType.startsWith("audio/") ? "Voice note" : file.name);
       forceScrollRef.current = true;
       typingActiveRef.current = false;
       setText("");
@@ -1358,11 +844,9 @@ export default function MessagesPage() {
       await loadMessages(selectedConversation);
       await loadConversations(selectedConversation.id);
     } catch (uploadError) {
-      setFailedUpload({ file, caption });
-      setError(cleanError(uploadError, fileType.startsWith("audio/") ? "The voice note could not be sent. You can retry it below." : "The file could not be sent. You can retry it below."));
+      setError(cleanError(uploadError, fileType.startsWith("audio/") ? "The voice note could not be sent." : "The file could not be sent."));
     } finally {
       setUploading(false);
-      window.setTimeout(() => setUploadProgress(0), 350);
     }
   }
 
@@ -1374,7 +858,7 @@ export default function MessagesPage() {
   }
 
   async function startRecording() {
-    if (!selectedConversation || recording || uploading || sending || conversationBlocked || dailyLimitReached || potentialDealPending || potentialDealDeclined) return;
+    if (!selectedConversation || recording || uploading || sending || conversationBlocked || dailyLimitReached) return;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
       setError("Voice notes are not supported by this browser. You can attach an audio file instead.");
       return;
@@ -1477,8 +961,8 @@ export default function MessagesPage() {
         throw result.error;
       }
       setError(willArchive ? "Conversation archived." : "Conversation restored to the inbox.");
-      if (willArchive && folder !== "archived") returnToInbox();
-      if (!willArchive && folder === "archived") returnToInbox();
+      if (willArchive && !showArchived) returnToInbox();
+      if (!willArchive && showArchived) returnToInbox();
     } catch (archiveError) {
       setError(cleanError(archiveError, "The archive setting could not be saved."));
     } finally {
@@ -1513,39 +997,6 @@ export default function MessagesPage() {
     }
   }
 
-  async function reportConversation() {
-    if (!selectedConversation || reportBusy) return;
-    const reason = window.prompt(
-      "Briefly explain what is unsafe, misleading or inappropriate about this conversation.",
-    );
-    if (!reason?.trim()) return;
-    if (reason.trim().length < 5) {
-      setError("Add a little more detail before submitting the report.");
-      return;
-    }
-
-    setReportBusy(true);
-    setError("");
-    try {
-      const result = await supabase.rpc("report_listing_guest_conversation", {
-        p_thread_id: selectedConversation.id,
-        p_access_key: selectedConversation.accessKey,
-        p_reason: reason.trim(),
-      });
-      if (result.error) throw result.error;
-      setError("Report submitted privately to LoadLink for review.");
-    } catch (reportError) {
-      setError(
-        cleanError(
-          reportError,
-          "The conversation report could not be submitted.",
-        ),
-      );
-    } finally {
-      setReportBusy(false);
-    }
-  }
-
   async function downloadAttachment(message: ChatMessage) {
     if (!selectedConversation || !message.attachment_id) return;
     setError("");
@@ -1576,11 +1027,6 @@ export default function MessagesPage() {
     selectedIdRef.current = conversation.id;
     setSelectedId(conversation.id);
     setShowDetails(false);
-    setChatSearch("");
-    setChatSearchOpen(false);
-    setStarredOnly(false);
-    setEditingMessageId("");
-    setMessageMenuId("");
     window.history.replaceState({}, "", `/messages?thread=${conversation.id}`);
   }
 
@@ -1589,45 +1035,78 @@ export default function MessagesPage() {
     setSelectedId("");
     setMessages([]);
     setShowDetails(false);
-    setChatSearch("");
-    setChatSearchOpen(false);
-    setStarredOnly(false);
-    setEditingMessageId("");
-    setMessageMenuId("");
     window.history.replaceState({}, "", "/messages");
   }
 
   if (loading) {
+    const loadingSurface = darkMode ? "border-white/10 bg-white/[.04]" : "border-black/10 bg-white";
     return (
-      <main
-        className={`min-h-[100svh] ${
-          darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"
-        }`}
-      >
-        <MessageVisualScene mode="loading" darkMode={darkMode} />
+      <main className={`min-h-[100dvh] overflow-hidden ${darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"}`}>
+        <header className={`grid h-[72px] grid-cols-[56px_1fr_56px] items-center border-b px-3 ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
+          <div className={`h-10 w-10 animate-pulse rounded-full ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
+          <HomeLogoLink theme={darkMode ? "dark" : "light"} />
+          <div className={`ml-auto h-10 w-10 animate-pulse rounded-full ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
+        </header>
+        <div className="mx-auto grid min-h-[calc(100dvh-72px)] w-full max-w-[1500px] md:grid-cols-[340px_minmax(0,1fr)]">
+          <aside className={`hidden border-r p-5 md:block ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+            <div className={`h-8 w-36 animate-pulse rounded ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
+            <div className={`mt-5 h-12 animate-pulse rounded-xl ${darkMode ? "bg-white/10" : "bg-black/5"}`} />
+            <div className="mt-5 space-y-4">
+              {[0, 1, 2, 3].map((item) => (
+                <div key={item} className="flex items-center gap-3">
+                  <div className={`h-12 w-12 animate-pulse rounded-full ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
+                  <div className="flex-1 space-y-2">
+                    <div className={`h-3 w-2/3 animate-pulse rounded ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
+                    <div className={`h-3 w-full animate-pulse rounded ${darkMode ? "bg-white/5" : "bg-black/5"}`} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </aside>
+          <section className="relative flex min-h-0 items-center justify-center overflow-hidden px-6">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(246,184,0,.14),transparent_42%)]" />
+            <div className={`relative w-full max-w-sm rounded-3xl border p-7 text-center shadow-2xl ${loadingSurface}`}>
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#f6b800]/55 bg-black text-[#f6b800] shadow-[0_0_35px_rgba(246,184,0,.16)]">
+                <MessageIcon />
+              </div>
+              <p className="mt-6 text-[10px] font-black uppercase tracking-[.24em] text-[#b88900]">LoadLink messages</p>
+              <h1 className="mt-2 text-2xl font-black">Connecting your inbox</h1>
+              <p className={`mx-auto mt-3 max-w-xs text-sm leading-6 ${darkMode ? "text-white/55" : "text-black/55"}`}>Loading conversations securely. Your messages will appear here without moving the page.</p>
+              <div className="mt-6 flex justify-center gap-2" aria-label="Loading messages">
+                {[0, 1, 2].map((item) => <span key={item} className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#f6b800]" style={{ animationDelay: `${item * 120}ms` }} />)}
+              </div>
+            </div>
+          </section>
+        </div>
       </main>
     );
   }
 
   return (
-    <main
-      data-theme={darkMode ? "dark" : "light"}
-      style={{ height: "var(--loadlink-message-vh, 100dvh)", minHeight: "var(--loadlink-message-vh, 100svh)" }}
-      className={`${styles.messageApp} loadlink-messages flex flex-col overflow-hidden ${
-        darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"
-      }`}
-    >
-      <header className={`relative h-[72px] shrink-0 border-b md:h-20 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"}`}>
-        <div className="absolute left-3 top-1/2 z-10 -translate-y-1/2 md:left-5">
+    <main data-theme={darkMode ? "dark" : "light"} style={viewportHeight ? { height: `${viewportHeight}px` } : undefined} className={`${styles.messageApp} loadlink-messages flex h-[100dvh] flex-col overflow-hidden ${darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"}`}>
+      <header className={`relative grid h-[72px] grid-cols-[56px_1fr_56px] items-center border-b px-3 md:h-20 md:grid-cols-[120px_1fr_120px] md:px-5 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"}`}>
+        <div className="relative z-10 flex items-center gap-1">
           <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
+          <Link
+            href="/"
+            className="hidden items-center gap-2 text-sm font-black md:inline-flex"
+            aria-label="Back to LoadLink home"
+          >
+            <span className="text-2xl">←</span>
+            <span>Home</span>
+          </Link>
         </div>
         <HomeLogoLink
-          theme="auto"
-          showGlow={false}
-          className="loadlink-official-header-logo pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+          theme={darkMode ? "dark" : "light"}
+          className="pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
           logoClassName="loadlink-messages-header-logo"
         />
-        <div className="absolute right-3 top-1/2 z-10 -translate-y-1/2 md:right-5">
+        <div className="relative z-10 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => loadConversations(selectedIdRef.current).catch((refreshError) => setError(cleanError(refreshError, "Could not refresh.")))}
+            className="hidden text-[11px] font-black uppercase tracking-wide text-[#b88900] sm:block"
+          >Refresh</button>
           <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} />
         </div>
       </header>
@@ -1639,7 +1118,12 @@ export default function MessagesPage() {
           <div className="border-b border-black/10 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h1 className="text-3xl font-black tracking-[-.035em]">Messages</h1>
+                <p className="text-[10px] font-black uppercase tracking-[.22em] text-[#b88900]">
+                  LoadLink
+                </p>
+                <h1 className="mt-1 text-3xl font-black tracking-[-.04em]">
+                  Messages
+                </h1>
               </div>
               <span className="rounded-full bg-black px-3 py-1.5 text-xs font-black text-[#f6b800]">
                 {conversations.reduce(
@@ -1659,10 +1143,12 @@ export default function MessagesPage() {
               />
             </label>
             <div className="loadlink-folder-tabs mt-4 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Conversation folders">
-              <button type="button" role="tab" aria-selected={folder === "inbox"} onClick={() => { setFolder("inbox"); setQuery(""); }} className={`shrink-0 rounded-2xl border px-4 py-3 text-sm font-black tracking-normal transition ${folder === "inbox" ? "border-black bg-black text-white" : "border-black/10 bg-white text-black/55"}`}>Inbox</button>
-              <button type="button" role="tab" aria-selected={folder === "potential"} onClick={() => { setFolder("potential"); setQuery(""); }} className={`shrink-0 rounded-2xl border px-4 py-3 text-sm font-black tracking-normal transition ${folder === "potential" ? "border-black bg-black text-white" : "border-black/10 bg-white text-black/55"}`}>Potential deals{potentialDealCount ? ` · ${potentialDealCount}` : ""}</button>
-              <button type="button" role="tab" aria-selected={folder === "archived"} onClick={() => { setFolder("archived"); setQuery(""); }} className={`shrink-0 rounded-2xl border px-4 py-3 text-sm font-black tracking-normal transition ${folder === "archived" ? "border-black bg-black text-white" : "border-black/10 bg-white text-black/55"}`}>Archived{archivedCount ? ` · ${archivedCount}` : ""}</button>
+              <button type="button" role="tab" aria-selected={folder === "inbox"} onClick={() => { setFolder("inbox"); setQuery(""); }} className={`shrink-0 rounded-xl border px-4 py-3 text-sm font-black transition ${folder === "inbox" ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-black/10 bg-white text-black/55"}`}>Inbox</button>
+              <button type="button" role="tab" aria-selected={folder === "potential"} onClick={() => { setFolder("potential"); setQuery(""); }} className={`shrink-0 rounded-xl border px-4 py-3 text-sm font-black transition ${folder === "potential" ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-black/10 bg-white text-black/55"}`}>Potential deals{potentialDealCount ? ` · ${potentialDealCount}` : ""}</button>
+              <button type="button" role="tab" aria-selected={folder === "starred"} onClick={() => { setFolder("starred"); setQuery(""); }} className={`shrink-0 rounded-xl border px-4 py-3 text-sm font-black transition ${folder === "starred" ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-black/10 bg-white text-black/55"}`}>★ Starred{starredCount ? ` · ${starredCount}` : ""}</button>
+              <button type="button" role="tab" aria-selected={folder === "archived"} onClick={() => { setFolder("archived"); setQuery(""); }} className={`shrink-0 rounded-xl border px-4 py-3 text-sm font-black transition ${folder === "archived" ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-black/10 bg-white text-black/55"}`}>Archived{archivedCount ? ` · ${archivedCount}` : ""}</button>
             </div>
+            {folder === "starred" ? <p className="mt-2 text-[11px] font-semibold text-black/45">Starred messages stay easy to find without changing or moving the conversation.</p> : null}
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -1702,11 +1188,11 @@ export default function MessagesPage() {
                         <span
                           className={`truncate text-xs ${conversation.unreadCount ? "font-black text-black" : "font-medium text-black/50"}`}
                         >
-                          {messagePrivacy.notificationPreviews
-                            ? `${conversation.last_message_has_attachment ? "Attachment · " : ""}${conversation.last_message || "Start the conversation"}`
-                            : conversation.unreadCount
-                              ? "New message"
-                              : "Message preview hidden"}
+                          {conversation.last_message_has_attachment
+                            ? "Attachment · "
+                            : ""}
+                          {conversation.last_message ||
+                            "Start the conversation"}
                         </span>
                         {conversation.unreadCount ? (
                           <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#f6b800] px-1 text-[10px] font-black text-black">
@@ -1726,14 +1212,16 @@ export default function MessagesPage() {
                   <MessageIcon />
                 </div>
                 <h2 className="mt-5 text-xl font-black">
-                  {folder === "archived" ? "No archived conversations" : folder === "potential" ? "No potential deals yet" : "No conversations yet"}
+                  {folder === "archived" ? "No archived conversations" : folder === "starred" ? "No starred messages yet" : folder === "potential" ? "No potential deals yet" : "No conversations yet"}
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-black/55">
                   {folder === "archived"
                     ? "Archived conversations stay available here until you restore them."
-                    : folder === "potential"
-                      ? "New enquiries from people you have not accepted yet will appear here."
-                      : "Open a listing and tap Message to start a private conversation."}
+                    : folder === "starred"
+                      ? "Tap the star beside an important message and its conversation will appear here."
+                      : folder === "potential"
+                        ? "Active conversations with replies appear here so promising discussions are easier to revisit."
+                        : "Open a listing and tap Message to start a private conversation."}
                 </p>
                 <Link
                   href="/jobs"
@@ -1769,7 +1257,7 @@ export default function MessagesPage() {
                   )}
                 />
                 <div className="min-w-0 flex-1">
-                  <h2 className="truncate text-base font-bold md:text-lg">
+                  <h2 className="truncate text-base font-black md:text-lg">
                     {selectedConversation.other_name}
                   </h2>
                   <p
@@ -1777,10 +1265,16 @@ export default function MessagesPage() {
                   >
                     {activityText(selectedConversation, presenceNow)}
                   </p>
-                  <p className="hidden truncate text-[11px] font-semibold text-black/40 sm:block">
+                  <p className="hidden truncate text-[11px] font-semibold text-[#8a6700] sm:block">
                     {replyText(selectedConversation.average_reply_minutes)}
                   </p>
-
+                  <p
+                    className={`mt-0.5 text-[10px] font-black ${dailyLimitReached ? "text-red-600" : "text-black/40"}`}
+                  >
+                    {isPro
+                      ? "Pro messaging · no daily limit"
+                      : `${messagesUsedToday}/${dailyMessageLimit} messages used today`}
+                  </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {selectedConversation.other_phone ? (
@@ -1803,7 +1297,6 @@ export default function MessagesPage() {
                   >
                     {blockBusy ? "Saving…" : blockState.blocked_by_me ? "Unblock" : "Block"}
                   </button>
-                  <button type="button" onClick={() => setChatSearchOpen((value) => !value)} className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black" aria-label="Search this conversation" aria-expanded={chatSearchOpen}><SearchIcon /></button>
                   <button
                     type="button"
                     onClick={() => setShowDetails((value) => !value)}
@@ -1816,36 +1309,10 @@ export default function MessagesPage() {
                 </div>
               </header>
 
-              <div className={`loadlink-listing-context flex min-h-[40px] items-center gap-2 border-b px-3 py-1.5 md:px-5 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black text-[#f6b800]"><BriefcaseIcon /></span>
-                <p className="min-w-0 flex-1 truncate text-[11px] font-semibold">{selectedConversation.listing_title}</p>
-                <Link href={`/listing/${selectedConversation.listing_id}`} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[9px] font-semibold uppercase ${darkMode ? "border-white/15 text-white/75" : "border-black/10 text-black/70"}`}>View</Link>
+              <div className="loadlink-chat-privacy border-b border-[#d7b33b]/35 bg-[#fff7dc] px-4 py-2.5 text-[11px] font-semibold leading-5 text-black/60">
+                Messages and attachments are protected in transit and stored
+                privately. Only people in this conversation can access them.
               </div>
-
-              {potentialDealPending ? (
-                <>
-                  <div className="flex min-h-[44px] items-center justify-between gap-3 border-b border-[#f6b800]/25 bg-[#fff9e8] px-3 py-2 text-[10px] font-semibold text-black md:px-5">
-                    <span className="min-w-0 truncate"><strong>Potential deal</strong><span className="text-black/50"> · new listing enquiry</span></span>
-                    <button type="button" onClick={() => setPotentialDealReviewOpen((value) => !value)} className="shrink-0 rounded-lg border border-black/10 bg-white px-2.5 py-1.5 text-[9px] font-black uppercase">{potentialDealReviewOpen ? "Close" : "Review"}</button>
-                  </div>
-                  {potentialDealReviewOpen ? (
-                    <div className="flex flex-wrap gap-2 border-b border-black/10 bg-white px-3 py-2.5 md:px-5">
-                      <button type="button" onClick={() => void updatePotentialDeal("accepted")} className="rounded-lg bg-black px-3 py-2 text-[9px] font-black uppercase text-white">Accept deal</button>
-                      <button type="button" onClick={() => void updatePotentialDeal("declined")} className="rounded-lg border border-black/15 px-3 py-2 text-[9px] font-black uppercase">Decline</button>
-                      <button type="button" onClick={() => void toggleBlock()} disabled={blockBusy} className="rounded-lg border border-black/15 px-3 py-2 text-[9px] font-black uppercase disabled:opacity-50">{blockState.blocked_by_me ? "Unblock" : "Block"}</button>
-                      <button type="button" onClick={() => void reportConversation()} disabled={reportBusy} className="rounded-lg border border-black/15 px-3 py-2 text-[9px] font-black uppercase disabled:opacity-50">Report</button>
-                    </div>
-                  ) : null}
-                </>
-              ) : null}
-
-              {potentialDealDeclined ? (
-                <div className="border-b border-black/10 bg-[#f5f3ed] px-4 py-3 text-xs font-bold text-black/55 md:px-5">This potential deal was declined. The conversation is read-only.</div>
-              ) : null}
-
-              {chatSearchOpen ? (
-                <div className="flex items-center gap-2 border-b border-black/10 bg-white px-3 py-2 md:px-5"><SearchIcon /><input autoFocus value={chatSearch} onChange={(event) => setChatSearch(event.target.value)} placeholder="Search messages, rates or files" className="h-10 min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none" /><button type="button" onClick={() => setStarredOnly((value) => !value)} className={`h-9 shrink-0 rounded-xl border px-2 text-[9px] font-black ${starredOnly ? "border-black bg-black text-white" : "border-black/10 text-black/50"}`}>{starredOnly ? "★ Starred" : "☆ Starred"}</button><span className="hidden text-[10px] font-bold text-black/40 sm:inline">{chatSearch.trim() || starredOnly ? `${searchedMessages.length} found` : ""}</span><button type="button" onClick={() => { setChatSearch(""); setStarredOnly(false); setChatSearchOpen(false); }} className="h-9 w-9 rounded-full border border-black/10 text-sm font-black">×</button></div>
-              ) : null}
 
               {conversationBlocked ? (
                 <div className="flex items-center justify-between gap-3 border-b border-red-300 bg-red-50 px-4 py-3 text-xs font-bold text-red-700">
@@ -1855,36 +1322,26 @@ export default function MessagesPage() {
               ) : null}
 
               {showDetails ? (
-                <div className="pointer-events-none fixed inset-0 z-[95] xl:hidden" aria-hidden={false}>
-                  <section
-                    role="dialog"
-                    aria-modal="false"
-                    aria-label="Conversation details"
-                    style={{ height: "var(--loadlink-message-vh, 100dvh)" }}
-                    className={`pointer-events-auto absolute right-0 top-0 flex w-[min(92vw,420px)] flex-col border-l shadow-[-18px_0_45px_rgba(0,0,0,.18)] ${darkMode ? "border-white/10 bg-[#0b0b0b] text-white" : "border-black/10 bg-white text-black"}`}
-                  >
-                    <div className={`sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between border-b px-4 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
-                      <div><strong className="text-sm font-bold">Conversation info</strong><p className={`mt-0.5 text-[9px] font-medium ${darkMode ? "text-white/45" : "text-black/45"}`}>Details and account actions</p></div>
-                      <button type="button" onClick={() => setShowDetails(false)} className={`flex h-9 w-9 items-center justify-center rounded-full border text-lg ${darkMode ? "border-white/15 text-white" : "border-black/10 text-black"}`} aria-label="Close conversation info">×</button>
-                    </div>
-                    <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-                      <ConversationDetails darkMode={darkMode} conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} reportBusy={reportBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} onReport={reportConversation} />
-                    </div>
-                  </section>
+                <div className="border-b border-black/10 bg-white p-4 xl:hidden">
+                  <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} />
                 </div>
               ) : null}
 
               <div
                 ref={messageViewportRef}
-                className={`loadlink-message-viewport loadlink-chat-wallpaper relative min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8 ${darkMode ? "bg-[#090909]" : "bg-[#f6f3eb]"}`}
+                className="loadlink-message-viewport loadlink-chat-wallpaper min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8"
+                style={{ backgroundImage: `url(/images/chat-wallpapers/chat-${String(wallpaperIndex).padStart(2, "0")}.svg)` }}
               >
                 {messagesLoading && messages.length === 0 ? (
-                  <div className="flex h-full min-h-[180px] items-center justify-center"><div className="flex items-center gap-3 rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-bold text-black/55"><span className="h-4 w-4 animate-spin rounded-full border-2 border-black/20 border-t-black" />Loading conversation…</div></div>
-                ) : searchedMessages.length ? (
+                  <div className="flex h-full items-center justify-center">
+                    <div className="h-9 w-9 animate-spin rounded-full border-2 border-black/10 border-t-[#f6b800]" />
+                  </div>
+                ) : messages.length ? (
                   <div className="mx-auto max-w-3xl space-y-3">
-                    {searchedMessages.map((message, index) => {
-                      const mine = message.sender_role === selectedConversation.role;
-                      const previous = searchedMessages[index - 1];
+                    {messages.map((message, index) => {
+                      const mine =
+                        message.sender_role === selectedConversation.role;
+                      const previous = messages[index - 1];
                       const showDay =
                         !previous ||
                         new Date(previous.created_at).toDateString() !==
@@ -1914,36 +1371,43 @@ export default function MessagesPage() {
                               />
                             ) : null}
                             <div
-                              className={`relative max-w-[82%] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[72%] ${
+                              className={`max-w-[82%] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[72%] ${
                                 mine
                                   ? "rounded-br-sm bg-black text-white"
                                   : "rounded-bl-sm border border-black/5 bg-white text-black"
                               }`}
                             >
-                              {message.deleted_at ? (
-                                <p className={`text-sm italic ${mine ? "text-white/55" : "text-black/45"}`}>Message deleted</p>
-                              ) : message.message_kind === "quote" && message.structured_payload ? (
-                                <QuoteMessageCard message={message} mine={mine} canRespond={!mine} branding={quoteBranding} onRespond={(status) => void respondToQuote(message, status)} />
-                              ) : message.attachment_id ? (
+                              {message.attachment_id ? (
                                 message.file_type?.startsWith("audio/") ? (
                                   <VoiceAttachment message={message} accessKey={selectedConversation.accessKey} mine={mine} onError={setError} />
                                 ) : (
-                                  <DocumentAttachmentCard message={message} mine={mine} onOpen={() => void downloadAttachment(message)} />
+                                  <button
+                                    type="button"
+                                    onClick={() => downloadAttachment(message)}
+                                    className={`mb-2 flex w-full items-center gap-3 rounded-xl border p-3 text-left ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}
+                                  >
+                                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${mine ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><PaperclipIcon /></span>
+                                    <span className="min-w-0 flex-1">
+                                      <strong className="block truncate text-xs font-black">{message.file_name || "Attachment"}</strong>
+                                      <span className={`mt-0.5 block text-[10px] font-semibold ${mine ? "text-white/55" : "text-black/45"}`}>{fileSizeLabel(message.file_size)} · Tap to open</span>
+                                    </span>
+                                  </button>
                                 )
                               ) : null}
-                              {!message.deleted_at && message.message_kind !== "quote" && message.body && (!message.attachment_id || message.body !== "Shared an attachment") ? (
-                                <p className="whitespace-pre-wrap break-words text-sm font-medium leading-6">{message.body}</p>
+                              {message.body &&
+                              (!message.attachment_id ||
+                                message.body !== "Shared an attachment") ? (
+                                <p className="whitespace-pre-wrap break-words text-sm font-medium leading-6">
+                                  {message.body}
+                                </p>
                               ) : null}
-                              <div className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] font-semibold ${mine ? "text-white/45" : "text-black/35"}`}>
-                                {message.edited_at && !message.deleted_at ? <span>edited ·</span> : null}<span>{formatClock(message.created_at)}</span>{mine ? <span aria-label="Sent">✓</span> : null}
-                                {!message.deleted_at ? <button type="button" onClick={() => setMessageMenuId((current) => current === message.id ? "" : message.id)} className={`ml-1 flex h-5 w-6 items-center justify-center rounded-md text-[13px] leading-none ${mine ? "text-white/55 hover:bg-white/10" : "text-black/40 hover:bg-black/5"}`} aria-label="Message options" aria-expanded={messageMenuId === message.id}>•••</button> : null}
+                              <div
+                                className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] font-bold ${mine ? "text-white/45" : "text-black/35"}`}
+                              >
+                                <button type="button" onClick={() => void toggleStar(message)} className={`mr-1 text-[14px] leading-none ${starredMessageIds.has(message.id) ? "text-[#f6b800]" : mine ? "text-white/35" : "text-black/30"}`} aria-label={starredMessageIds.has(message.id) ? "Remove star" : "Star message"}>{starredMessageIds.has(message.id) ? "★" : "☆"}</button>
+                                <span>{formatClock(message.created_at)}</span>
+                                {mine ? <span aria-label="Sent">✓</span> : null}
                               </div>
-                              {!message.deleted_at && messageMenuId === message.id ? (
-                                <div className={`absolute bottom-7 right-2 z-20 min-w-[126px] overflow-hidden rounded-xl border p-1 shadow-xl ${mine ? "border-white/15 bg-[#171717] text-white" : "border-black/10 bg-white text-black"}`}>
-                                  <button type="button" onClick={() => { void toggleStar(message); setMessageMenuId(""); }} className={`block w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold ${mine ? "hover:bg-white/10" : "hover:bg-black/[.04]"}`}>{message.starred_by_me ? "★ Unstar" : "☆ Star"}</button>
-                                  {mine && message.message_kind !== "quote" && Date.now() - new Date(message.created_at).getTime() <= 15 * 60_000 ? <><button type="button" onClick={() => { beginEdit(message); setMessageMenuId(""); }} className={`block w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold ${mine ? "hover:bg-white/10" : "hover:bg-black/[.04]"}`}>Edit</button><button type="button" onClick={() => { setMessageMenuId(""); void deleteMessage(message); }} className="block w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold text-red-500 hover:bg-red-500/10">Delete</button></> : null}
-                                </div>
-                              ) : null}
                             </div>
                           </div>
                         </div>
@@ -1966,8 +1430,13 @@ export default function MessagesPage() {
                       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-black text-[#f6b800]">
                         <MessageIcon />
                       </div>
-                      <h3 className="mt-5 text-2xl font-black">{chatSearch.trim() || starredOnly ? (starredOnly && !chatSearch.trim() ? "No starred messages" : "No matching messages") : "Start the conversation"}</h3>
-                      <p className="mt-2 text-sm leading-6 text-black/50">{chatSearch.trim() || starredOnly ? "Try a different search or turn off the Starred filter." : "Ask about availability, location, timing, price or the requirements for this listing."}</p>
+                      <h3 className="mt-5 text-2xl font-black">
+                        Start the conversation
+                      </h3>
+                      <p className="mt-2 text-sm leading-6 text-black/50">
+                        Ask about availability, location, timing, price or the
+                        requirements for this listing.
+                      </p>
                     </div>
                   </div>
                 )}
@@ -1976,20 +1445,6 @@ export default function MessagesPage() {
               {error ? (
                 <div className="border-t border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
                   {error}
-                </div>
-              ) : null}
-
-              {showStarterSuggestions && selectedConversation && !conversationBlocked && !potentialDealDeclined ? (
-                <div className={`border-t px-3 py-2.5 ${darkMode ? "border-white/10 bg-[#0c0c0c]" : "border-black/10 bg-[#fbfaf7]"}`}>
-                  <div className="mx-auto flex max-w-3xl items-center gap-2">
-                    <span className={`shrink-0 text-[9px] font-semibold uppercase tracking-[.12em] ${darkMode ? "text-white/40" : "text-black/40"}`}>Suggested</span>
-                    <div className="no-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto">
-                      {starterMessages(selectedConversation).map((suggestion) => (
-                        <button key={suggestion} type="button" onClick={() => { updateTyping(suggestion); setShowStarterSuggestions(false); }} className={`shrink-0 rounded-full border px-3 py-2 text-[10px] font-semibold ${darkMode ? "border-white/12 bg-white/[.04] text-white/80" : "border-black/10 bg-white text-black/75"}`}>{suggestion.length > 58 ? `${suggestion.slice(0, 58)}…` : suggestion}</button>
-                      ))}
-                    </div>
-                    <button type="button" onClick={() => setShowStarterSuggestions(false)} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm ${darkMode ? "text-white/45" : "text-black/40"}`} aria-label="Hide suggested messages">×</button>
-                  </div>
                 </div>
               ) : null}
 
@@ -2004,54 +1459,32 @@ export default function MessagesPage() {
                   onChange={uploadFile}
                   className="hidden"
                 />
-                {editingMessageId ? <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 rounded-xl border border-black/10 bg-[#f7f4ed] px-3 py-2 text-[10px] font-bold"><span>Editing message · changes are allowed for 15 minutes after sending.</span><button type="button" onClick={() => { setEditingMessageId(""); setText(""); }} className="font-black uppercase">Cancel</button></div> : null}
-                {uploading && uploadProgress ? <div className="mx-auto mb-2 max-w-3xl"><div className="h-1.5 overflow-hidden rounded-full bg-black/10"><div className="h-full rounded-full bg-[#f6b800] transition-[width]" style={{ width: `${uploadProgress}%` }} /></div><p className="mt-1 text-right text-[9px] font-bold text-black/40">Uploading {uploadProgress}%</p></div> : null}
-                {failedUpload && !uploading ? <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[10px] font-bold text-red-700"><span className="min-w-0 truncate">{failedUpload.file.type.startsWith("audio/") ? "Voice note" : failedUpload.file.name} failed to send.</span><span className="flex shrink-0 gap-2"><button type="button" onClick={() => void sendAttachment(failedUpload.file, failedUpload.caption)} className="rounded-lg bg-red-600 px-3 py-1.5 font-black text-white">Retry</button><button type="button" onClick={() => setFailedUpload(null)} className="rounded-lg border border-red-300 px-2 py-1.5 font-black">Dismiss</button></span></div> : null}
                 <div className="mx-auto flex max-w-3xl items-end gap-2">
-                  <div className="relative shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setComposerActionsOpen((value) => !value)}
-                      disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
-                      className={`flex h-11 w-11 items-center justify-center rounded-full border text-xl font-light disabled:opacity-40 ${composerActionsOpen ? "border-black bg-black text-white" : "border-black/10 bg-[#f3f0e8] text-black"}`}
-                      aria-label="Open message actions"
-                      aria-expanded={composerActionsOpen}
-                    >
-                      {composerActionsOpen ? "×" : "+"}
-                    </button>
-                    {composerActionsOpen ? (
-                      <div className="absolute bottom-[calc(100%+.5rem)] left-0 z-30 w-48 overflow-hidden rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl">
-                        <button type="button" onClick={() => { setComposerActionsOpen(false); fileInputRef.current?.click(); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-black/[.04]"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f3f0e8]"><PaperclipIcon /></span><span className="min-w-0"><span className="block text-xs font-semibold">Attach file</span><span className="mt-0.5 block text-[9px] font-medium text-black/40">Photos and documents · 5 MB max</span></span></button>
-                        <LogisticsMessageTools
-                          threadId={selectedConversation.id}
-                          listingTitle={selectedConversation.listing_title}
-                          role={selectedConversation.role}
-                          darkMode={darkMode}
-                          disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
-                          trigger="menu"
-                          onClose={() => setComposerActionsOpen(false)}
-                          onSendQuote={sendStructuredQuote}
-                          quoteDefaults={quoteDefaults}
-                          savedVehicles={quoteVehicles}
-                          onInsert={(message) => updateTyping(text.trim() ? `${text.trim()}
-
-${message}` : message)}
-                        />
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="min-w-0 flex-1 rounded-2xl border border-black/10 bg-[#f6f4ee] px-3.5 py-2 focus-within:border-[#f6b800] focus-within:bg-white">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={sending || uploading || dailyLimitReached || conversationBlocked}
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-black/10 bg-[#f3f0e8] text-black disabled:opacity-40"
+                    aria-label="Attach a file"
+                  >
+                    <PaperclipIcon />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => recording ? stopRecording(false) : void startRecording()}
+                    disabled={sending || uploading || dailyLimitReached || conversationBlocked}
+                    className={`flex h-12 shrink-0 items-center justify-center rounded-full border px-3 text-xs font-black ${recording ? "min-w-[82px] border-red-500 bg-red-500 text-white" : "w-12 border-black/10 bg-[#f3f0e8] text-black"} disabled:opacity-40`}
+                    aria-label={recording ? "Stop and send voice note" : "Record voice note"}
+                  >
+                    {recording ? recordingTime(recordingSeconds) : <MicrophoneIcon />}
+                  </button>
+                  <div className="min-w-0 flex-1 rounded-2xl border border-black/10 bg-[#f6f4ee] px-4 py-2 focus-within:border-[#f6b800] focus-within:bg-white">
                     <textarea
                       value={text}
                       onChange={(event) => updateTyping(event.target.value)}
                       onKeyDown={handleComposerKeyDown}
-                      data-loadlink-message-composer="true"
                       placeholder={
-                        potentialDealDeclined
-                          ? "Potential deal declined"
-                          : potentialDealPending
-                            ? "Accept this potential deal to reply"
-                            : conversationBlocked
+                        conversationBlocked
                           ? "Messaging is blocked"
                           : dailyLimitReached
                             ? "Daily free message limit reached"
@@ -2059,40 +1492,56 @@ ${message}` : message)}
                               ? "Recording voice note…"
                               : uploading
                                 ? "Sending attachment…"
-                                : "Message"
+                                : "Type a message"
                       }
                       rows={1}
                       maxLength={4000}
-                      disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
-                      className="max-h-28 min-h-7 w-full resize-none bg-transparent py-1 text-sm font-medium outline-none placeholder:text-black/35 disabled:opacity-50"
+                      disabled={sending || uploading || dailyLimitReached || conversationBlocked}
+                      className="max-h-32 min-h-8 w-full resize-none bg-transparent py-1 text-sm font-medium outline-none placeholder:text-black/35 disabled:opacity-50"
                     />
                   </div>
-                  {text.trim() || editingMessageId ? (
-                    <button
-                      type="submit"
-                      disabled={!text.trim() || sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f6b800] text-black shadow-sm transition active:scale-95 disabled:bg-black/10 disabled:text-black/25"
-                      aria-label={editingMessageId ? "Save edited message" : "Send message"}
-                    >
-                      {sending ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-black/20 border-t-black" /> : <SendIcon />}
-                    </button>
+                  <button
+                    type="submit"
+                    disabled={
+                      !text.trim() || sending || uploading || dailyLimitReached || conversationBlocked
+                    }
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f6b800] text-black shadow-sm transition active:scale-95 disabled:bg-black/10 disabled:text-black/25"
+                    aria-label="Send message"
+                  >
+                    {sending ? (
+                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-black/20 border-t-black" />
+                    ) : (
+                      <SendIcon />
+                    )}
+                  </button>
+                </div>
+                <div className="loadlink-chat-composer-meta mx-auto mt-2 flex max-w-3xl flex-wrap items-center justify-center gap-2 text-center text-[10px] font-semibold text-black/40">
+                  <span>Photos, documents and voice notes up to 5 MB</span>
+                  <span aria-hidden="true">·</span>
+                  {isPro ? (
+                    <span className="font-black text-[#8a6700]">
+                      Pro messaging active
+                    </span>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => recording ? stopRecording(false) : void startRecording()}
-                      disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
-                      className={`flex h-11 shrink-0 items-center justify-center rounded-full border text-xs font-black ${recording ? "min-w-[76px] border-red-500 bg-red-500 px-3 text-white" : "w-11 border-black/10 bg-[#f3f0e8] text-black"} disabled:opacity-40`}
-                      aria-label={recording ? "Stop and send voice note" : "Record voice note"}
-                    >
-                      {recording ? recordingTime(recordingSeconds) : <MicrophoneIcon />}
-                    </button>
+                    <>
+                      <span
+                        className={
+                          dailyLimitReached
+                            ? "font-black text-red-600"
+                            : "font-black text-[#8a6700]"
+                        }
+                      >
+                        {messagesUsedToday}/{dailyMessageLimit} messages used today
+                      </span>
+                      <Link
+                        href="/help?topic=pro-messaging"
+                        className="font-black text-black underline decoration-[#f6b800] decoration-2 underline-offset-2"
+                      >
+                        Upgrade
+                      </Link>
+                    </>
                   )}
                 </div>
-                {!isPro && messagesUsedToday >= Math.max(40, dailyMessageLimit - 10) ? (
-                  <div className={`mx-auto mt-1.5 max-w-3xl text-center text-[9px] font-semibold ${dailyLimitReached ? "text-red-600" : "text-black/42"}`}>
-                    {messagesUsedToday}/{dailyMessageLimit} messages used today{dailyLimitReached ? " · daily limit reached" : ""}
-                  </div>
-                ) : null}
               </form>
             </>
           ) : (
@@ -2101,7 +1550,10 @@ ${message}` : message)}
                 <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-black text-[#f6b800]">
                   <MessageIcon large />
                 </div>
-                <h2 className="mt-6 text-4xl font-black tracking-[-.05em]">
+                <p className="mt-6 text-xs font-black uppercase tracking-[.22em] text-[#b88900]">
+                  LoadLink chat
+                </p>
+                <h2 className="mt-2 text-4xl font-black tracking-[-.05em]">
                   Your logistics conversations in one place
                 </h2>
                 <p className="mt-4 text-sm font-medium leading-7 text-black/50">
@@ -2115,7 +1567,7 @@ ${message}` : message)}
 
         <aside className="loadlink-details-panel hidden min-h-0 overflow-y-auto border-l border-black/10 bg-white p-5 xl:block">
           {selectedConversation ? (
-            <ConversationDetails darkMode={darkMode} conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} reportBusy={reportBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} onReport={reportConversation} />
+            <ConversationDetails conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} />
           ) : null}
         </aside>
       </div>
@@ -2130,8 +1582,6 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [waveform, setWaveform] = useState<WaveformBar[]>(() => defaultWaveformBars());
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState<1 | 1.5 | 2>(1);
   const audioRef = useRef<HTMLAudioElement>(null);
   const autoplayRef = useRef(false);
 
@@ -2153,7 +1603,6 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
       return;
     }
     setLoading(true);
-    setLoadFailed(false);
     try {
       const result = await supabase.rpc("get_listing_guest_attachment", {
         p_attachment_id: message.attachment_id,
@@ -2167,8 +1616,7 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
       autoplayRef.current = playAfterLoad;
       setUrl(URL.createObjectURL(blob));
     } catch (error) {
-      setLoadFailed(true);
-      onError(cleanError(error, "Voice note could not be opened. Tap Retry on the voice note."));
+      onError(cleanError(error, "Voice note could not be opened."));
     } finally {
       setLoading(false);
     }
@@ -2181,7 +1629,7 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
     }
     const audio = audioRef.current;
     if (!audio) return;
-    if (audio.paused) { audio.playbackRate = playbackRate; await audio.play().catch(() => undefined); }
+    if (audio.paused) await audio.play().catch(() => undefined);
     else audio.pause();
   }
 
@@ -2243,54 +1691,9 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
           </button>
           <div className={`mt-0.5 flex items-center justify-between gap-3 text-[10px] font-bold ${mine ? "text-white/58" : "text-black/48"}`}>
             <span>{url ? timeLabel(currentTime) : "Voice note"}</span>
-            <span className="flex items-center gap-2">{loadFailed ? <button type="button" onClick={() => void loadVoiceNote(false)} className="font-black underline">Retry</button> : null}<button type="button" onClick={() => { const next = playbackRate === 1 ? 1.5 : playbackRate === 1.5 ? 2 : 1; setPlaybackRate(next); if (audioRef.current) audioRef.current.playbackRate = next; }} className="rounded-full border border-current/20 px-2 py-0.5 font-black">{playbackRate}×</button><span>{duration ? timeLabel(duration) : fileSizeLabel(message.file_size)}</span></span>
+            <span>{duration ? timeLabel(duration) : fileSizeLabel(message.file_size)}</span>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function documentKind(message: ChatMessage) {
-  const name = (message.file_name || "").toLowerCase();
-  if (/\bpod\b|proof[- _]?of[- _]?delivery/.test(name)) return "Proof of delivery";
-  if (/invoice|tax[- _]?invoice/.test(name)) return "Invoice";
-  if (/quote|quotation/.test(name)) return "Quotation";
-  if (message.file_type?.startsWith("image/")) return "Photo";
-  return "Document";
-}
-
-function DocumentAttachmentCard({ message, mine, onOpen }: { message: ChatMessage; mine: boolean; onOpen: () => void }) {
-  const kind = documentKind(message);
-  return (
-    <button type="button" onClick={onOpen} className={`mb-2 w-full rounded-2xl border p-3 text-left ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}>
-      <div className="flex items-center gap-3">
-        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${mine ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><PaperclipIcon /></span>
-        <span className="min-w-0 flex-1"><span className={`block text-[9px] font-black uppercase tracking-wide ${mine ? "text-white/50" : "text-black/45"}`}>{kind}</span><strong className="mt-0.5 block truncate text-xs font-black">{message.file_name || kind}</strong><span className={`mt-0.5 block text-[10px] font-semibold ${mine ? "text-white/55" : "text-black/45"}`}>{fileSizeLabel(message.file_size)} · Open</span></span>
-      </div>
-    </button>
-  );
-}
-
-function QuoteMessageCard({ message, mine, canRespond, branding, onRespond }: { message: ChatMessage; mine: boolean; canRespond: boolean; branding: QuoteBranding; onRespond: (status: "accepted" | "declined") => void }) {
-  const payload = (message.structured_payload || {}) as QuotePayload;
-  const status = payload.status || "pending";
-  const unitText = payload.unit === "km" ? "per km" : payload.unit === "ton" ? "per ton" : payload.unit === "day" ? "per day" : "total trip";
-  const brandName = String(payload.dealership_name || branding.name || "").trim();
-  const brandLogo = String(payload.dealership_logo || branding.logo || "").trim();
-  const statusClass = status === "accepted" ? "bg-emerald-500/15 text-emerald-500" : status === "declined" ? "bg-red-500/15 text-red-500" : mine ? "bg-white/10 text-white/60" : "bg-black/5 text-black/55";
-  return (
-    <div className={`min-w-[236px] overflow-hidden rounded-2xl border ${mine ? "border-white/15 bg-white/[.06]" : "border-black/10 bg-[#fffaf0]"}`}>
-      <div className={`flex items-center gap-2 border-b px-3 py-2 ${mine ? "border-white/10" : "border-black/10"}`}>
-        {brandLogo ? <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1"><img src={brandLogo} alt={brandName ? `${brandName} logo` : "Dealership logo"} className="h-full w-full object-contain" /></span> : null}
-        <div className="min-w-0 flex-1"><strong className="block truncate text-[10px] font-black">{brandName || "Rate quote"}</strong><span className={`block text-[8px] font-semibold ${mine ? "text-white/45" : "text-black/40"}`}>{brandName ? "Dealership quote" : "Structured quote"}</span></div>
-        <span className="flex h-7 w-[76px] shrink-0 items-center justify-center overflow-hidden rounded-md bg-white px-1.5"><img src="/images/loadlink-logo-light.png" alt="LoadLink" className="h-full w-full object-contain" /></span>
-      </div>
-      <div className="p-3">
-        <div className="flex items-center justify-between gap-3"><strong className="text-[10px] font-black uppercase tracking-wide">Quote</strong><span className={`rounded-full px-2 py-1 text-[8px] font-black uppercase ${statusClass}`}>{status}</span></div>
-        <p className="mt-2 text-2xl font-black">R{payload.amount || "—"} <span className={`text-[9px] font-bold ${mine ? "text-white/50" : "text-black/45"}`}>{unitText}</span></p>
-        <div className={`mt-2 grid gap-1 text-[9px] font-semibold ${mine ? "text-white/65" : "text-black/60"}`}>{payload.vehicle ? <span><strong>Vehicle:</strong> {payload.vehicle}</span> : null}{payload.route ? <span><strong>Route:</strong> {payload.route}</span> : null}{payload.availability ? <span><strong>Available:</strong> {payload.availability}</span> : null}<span><strong>VAT:</strong> {(payload.vat || "not_applicable").replace("_", " ")}</span>{payload.terms ? <span><strong>Terms:</strong> {payload.terms}</span> : null}</div>
-        {canRespond && status === "pending" ? <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => onRespond("declined")} className={`h-9 rounded-xl border text-[9px] font-black uppercase ${mine ? "border-white/20" : "border-black/15"}`}>Decline</button><button type="button" onClick={() => onRespond("accepted")} className="h-9 rounded-xl bg-[#f6b800] text-[9px] font-black uppercase text-black">Accept</button></div> : null}
       </div>
     </div>
   );
@@ -2343,109 +1746,94 @@ function Avatar({
 }
 
 function ConversationDetails({
-  darkMode,
   conversation,
   blockState,
   blockBusy,
-  reportBusy,
   archiveBusy,
   onToggleArchive,
   onToggleBlock,
-  onReport,
 }: {
-  darkMode: boolean;
   conversation: Conversation;
   blockState: BlockState;
   blockBusy: boolean;
-  reportBusy: boolean;
   archiveBusy: boolean;
   onToggleArchive: () => Promise<void>;
   onToggleBlock: () => Promise<void>;
-  onReport: () => Promise<void>;
 }) {
-  const muted = darkMode ? "text-white/48" : "text-black/45";
-  const faint = darkMode ? "text-white/35" : "text-black/35";
-  const line = darkMode ? "border-white/10" : "border-black/10";
-  const soft = darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-black/[.02]";
-
   return (
-    <div className={darkMode ? "text-white" : "text-black"}>
-      <div className="flex items-center gap-3">
+    <div>
+      <p className="text-[10px] font-black uppercase tracking-[.22em] text-[#b88900]">
+        Conversation details
+      </p>
+      <div className="mt-5 flex items-center gap-3">
         <Avatar
           name={conversation.other_name}
           photo={conversation.other_photo}
           size="h-12 w-12"
           online={isRecentlyActive(conversation.other_last_seen)}
         />
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-bold">{conversation.other_name}</h3>
-          <p className={`mt-0.5 truncate text-xs font-medium ${muted}`}>{activityText(conversation)}</p>
+        <div className="min-w-0">
+          <h3 className="truncate font-black">{conversation.other_name}</h3>
+          <p className="mt-0.5 text-xs font-semibold text-black/45">
+            {activityText(conversation)}
+          </p>
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <Link
-          href={`/listing/${conversation.listing_id}`}
-          className="flex h-10 items-center justify-center rounded-xl bg-[#f6b800] px-3 text-center text-[10px] font-bold text-black"
-        >
-          View listing
-        </Link>
+      <div className="mt-6 space-y-3 border-y border-black/10 py-5">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-wide text-black/35">Listing</p>
+          <p className="mt-1 text-sm font-black leading-5">{conversation.listing_title}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-wide text-black/35">Response pattern</p>
+          <p className="mt-1 text-sm font-semibold leading-5">{replyText(conversation.average_reply_minutes)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-wide text-black/35">Messaging plan</p>
+          <p className="mt-1 text-sm font-semibold leading-5">
+            {conversation.is_pro
+              ? "Pro · unlimited daily messaging"
+              : `${toCount(conversation.messages_used_today)}/${Math.max(1, toCount(conversation.daily_message_limit) || 50)} messages used today`}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-2">
         <button
           type="button"
           onClick={() => void onToggleArchive()}
           disabled={archiveBusy}
-          className={`flex h-10 items-center justify-center gap-1.5 rounded-xl border px-3 text-[10px] font-semibold ${darkMode ? "border-white/15 text-white" : "border-black/12 text-black"} disabled:opacity-45`}
+          className="flex items-center justify-center gap-2 rounded-xl border border-[#b88900]/45 bg-[#fff8de] px-4 py-3 text-xs font-black uppercase tracking-wide text-[#705300] disabled:opacity-45"
         >
           <ArchiveIcon />
-          {archiveBusy ? "Saving…" : conversation.archived ? "Restore" : "Archive"}
+          {archiveBusy ? "Saving…" : conversation.archived ? "Restore to inbox" : "Archive conversation"}
         </button>
-        <button
-          type="button"
-          onClick={() => void onToggleBlock()}
-          disabled={blockBusy || blockState.blocked_by_other}
-          className={`flex h-10 items-center justify-center rounded-xl border px-3 text-[10px] font-semibold ${blockState.blocked_by_me ? "border-red-500/50 text-red-500" : darkMode ? "border-white/15 text-white/80" : "border-black/12 text-black/75"} disabled:opacity-45`}
+        <Link
+          href={`/jobs#job-${conversation.listing_id}`}
+          className="flex items-center justify-center rounded-xl border border-black/10 px-4 py-3 text-xs font-black uppercase tracking-wide"
         >
-          {blockBusy ? "Saving…" : blockState.blocked_by_me ? "Unblock" : blockState.blocked_by_other ? "Blocked" : "Block"}
-        </button>
-        <button
-          type="button"
-          onClick={() => void onReport()}
-          disabled={reportBusy}
-          className="flex h-10 items-center justify-center rounded-xl border border-red-500/40 px-3 text-[10px] font-semibold text-red-500 disabled:opacity-45"
-        >
-          {reportBusy ? "Sending…" : "Report"}
-        </button>
+          View listing
+        </Link>
+        {conversation.other_phone ? (
+          <a
+            href={`tel:${conversation.other_phone.replace(/\s/g, "")}`}
+            className="flex items-center justify-center rounded-xl bg-black px-4 py-3 text-xs font-black uppercase tracking-wide text-[#f6b800]"
+          >
+            Call contact
+          </a>
+        ) : null}
       </div>
 
-      {conversation.other_phone ? (
-        <a href={`tel:${conversation.other_phone.replace(/\s/g, "")}`} className={`mt-2 flex h-10 items-center justify-center rounded-xl border text-[10px] font-semibold ${darkMode ? "border-white/15 text-white/80" : "border-black/12 text-black/75"}`}>
-          Call contact
-        </a>
-      ) : null}
+      <button type="button" onClick={() => void onToggleBlock()} disabled={blockBusy || blockState.blocked_by_other} className={`mt-5 flex h-11 w-full items-center justify-center border text-xs font-black uppercase ${blockState.blocked_by_me ? "border-red-500 bg-red-50 text-red-600" : "border-black/15 text-black"} disabled:opacity-45`}>
+        {blockBusy ? "Saving…" : blockState.blocked_by_me ? "Unblock user" : blockState.blocked_by_other ? "This user blocked the chat" : "Block user"}
+      </button>
 
-      <div className={`mt-5 rounded-2xl border p-4 ${soft}`}>
-        <p className={`text-[9px] font-semibold uppercase tracking-[.12em] ${faint}`}>Listing</p>
-        <p className="mt-1 text-sm font-semibold leading-5">{conversation.listing_title}</p>
-        <div className={`my-4 border-t ${line}`} />
-        <p className={`text-[9px] font-semibold uppercase tracking-[.12em] ${faint}`}>Response pattern</p>
-        <p className="mt-1 text-sm font-medium leading-5">{replyText(conversation.average_reply_minutes)}</p>
-        <div className={`my-4 border-t ${line}`} />
-        <p className={`text-[9px] font-semibold uppercase tracking-[.12em] ${faint}`}>Privacy</p>
-        <p className="mt-1 text-sm font-semibold">Private conversation</p>
-        <p className={`mt-1 text-xs font-medium leading-5 ${muted}`}>Messages and attachments are visible only to participants in this conversation.</p>
-        <div className={`my-4 border-t ${line}`} />
-        <p className={`text-[9px] font-semibold uppercase tracking-[.12em] ${faint}`}>Messaging plan</p>
-        <p className="mt-1 text-sm font-medium leading-5">
-          {conversation.is_pro
-            ? "Pro · unlimited daily messaging"
-            : `${toCount(conversation.messages_used_today)}/${Math.max(1, toCount(conversation.daily_message_limit) || 50)} messages used today`}
+      <div className="mt-6 rounded-xl border border-[#e5c34c]/35 bg-[#fff8de] p-4">
+        <p className="text-xs font-black">Stay safe</p>
+        <p className="mt-2 text-xs font-medium leading-5 text-black/55">
+          Confirm listing details before paying. Avoid sending passwords, PINs or one-time verification codes.
         </p>
-        {!conversation.is_pro ? <Link href="/account/packages" className="mt-2 inline-flex rounded-lg bg-[#f6b800] px-2.5 py-1.5 text-[9px] font-semibold text-black">View messaging plans</Link> : null}
-      </div>
-
-      <div className={`mt-4 rounded-xl border p-3 ${soft}`}>
-        <p className="text-xs font-semibold">Safety reminder</p>
-        <p className={`mt-1 text-[11px] font-medium leading-5 ${muted}`}>Confirm listing details before paying. Never send passwords, PINs or one-time verification codes.</p>
       </div>
     </div>
   );
@@ -2463,9 +1851,6 @@ function PlayPauseIcon({ playing }: { playing: boolean }) {
     </svg>
   );
 }
-
-function SearchIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="2" /><path d="m16 16 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
-function BriefcaseIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16v12H4V7Zm5 0V4h6v3M4 12h16" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>; }
 
 function InfoIcon() {
   return (

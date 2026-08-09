@@ -91,8 +91,7 @@ export default function SignUpPage() {
       ) : (
         <form onSubmit={createAccount} className="grid gap-4">
           <label className="grid gap-2"><span className="text-sm font-bold">Email address</span><input className={input} type="email" inputMode="email" autoCapitalize="none" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" maxLength={254} required /></label>
-          <label className="grid gap-2"><span className="text-sm font-bold">Create password</span><input className={input} type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" maxLength={128} required /></label>
-          <PasswordStrengthMeter password={password} darkMode={darkMode} />
+          <div className="grid gap-2"><label className="grid gap-2"><span className="text-sm font-bold">Create password</span><input className={input} type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" maxLength={128} required /></label><PasswordStrengthMeter password={password} darkMode={darkMode} /></div>
           <label className="grid gap-2"><span className="text-sm font-bold">Confirm password</span><input className={input} type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" maxLength={128} required />{confirmPassword ? <span className={`text-[11px] font-bold ${password === confirmPassword ? "text-emerald-500" : "text-red-500"}`}>{password === confirmPassword ? "✓ Passwords match" : "Passwords do not match"}</span> : null}</label>
           <TurnstileChallenge onToken={setCaptchaToken} resetKey={captchaResetKey} darkMode={darkMode} />
           <button type="submit" disabled={busy} className="mt-1 h-13 rounded-2xl bg-[#f6b800] px-5 text-sm font-black text-black disabled:opacity-45">{busy ? "Creating securely…" : "Create account"}</button>

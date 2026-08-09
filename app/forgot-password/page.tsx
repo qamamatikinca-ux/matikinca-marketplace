@@ -26,7 +26,7 @@ export default function ForgotPasswordPage() {
     setBusy(true);
     try {
       const { error } = await recoverySupabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${window.location.origin}/reset-password?flow=recovery`,
         ...(captchaToken ? { captchaToken } : {}),
       });
       if (error) {

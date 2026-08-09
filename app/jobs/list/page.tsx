@@ -82,6 +82,8 @@ export default function ListJobPage() {
   const [contactNumber, setContactNumber] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [description, setDescription] = useState("");
+  const [neededBy, setNeededBy] = useState("");
+  const [priorityLevel, setPriorityLevel] = useState<"flexible" | "standard" | "urgent">("standard");
   const [packageType] = useState<"standard">("standard");
   const [boostJob, setBoostJob] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -137,7 +139,7 @@ export default function ListJobPage() {
       setListingMode(saved.listingMode || "job"); setAssetType(saved.assetType || "Truck"); setVehicleNeeded(saved.vehicleNeeded || "Any suitable vehicle");
       setTitle(saved.title || ""); setCity(saved.city || "Johannesburg"); setGroup(saved.group || "Trucks / Trailers");
       setRate(saved.rate || ""); setPostedBy(saved.postedBy || ""); setContactNumber(saved.contactNumber || "");
-      setWhatsappNumber(saved.whatsappNumber || ""); setDescription(saved.description || ""); setBoostJob(Boolean(saved.boostJob));
+      setWhatsappNumber(saved.whatsappNumber || ""); setDescription(saved.description || ""); setNeededBy(saved.neededBy || ""); setPriorityLevel(saved.priorityLevel || "standard"); setBoostJob(Boolean(saved.boostJob));
       submissionIdRef.current = String(saved.submissionId || localStorage.getItem("loadlink-job-submission-id") || createSafeRandomId());
       localStorage.setItem("loadlink-job-submission-id", submissionIdRef.current);
     } catch {
@@ -147,10 +149,10 @@ export default function ListJobPage() {
   }, []);
 
   useEffect(() => {
-    const draft = { listingMode, assetType, vehicleNeeded, title, city, group, rate, postedBy, contactNumber, whatsappNumber, description, boostJob, submissionId: submissionIdRef.current || localStorage.getItem("loadlink-job-submission-id") || "" };
+    const draft = { listingMode, assetType, vehicleNeeded, title, city, group, rate, postedBy, contactNumber, whatsappNumber, description, neededBy, priorityLevel, boostJob, submissionId: submissionIdRef.current || localStorage.getItem("loadlink-job-submission-id") || "" };
     const timer = window.setTimeout(() => localStorage.setItem("loadlink-job-draft-v1", JSON.stringify(draft)), 150);
     return () => window.clearTimeout(timer);
-  }, [listingMode, assetType, vehicleNeeded, title, city, group, rate, postedBy, contactNumber, whatsappNumber, description, boostJob]);
+  }, [listingMode, assetType, vehicleNeeded, title, city, group, rate, postedBy, contactNumber, whatsappNumber, description, neededBy, priorityLevel, boostJob]);
 
   const pageCopy = useMemo(() => {
     if (listingMode === "asset") {
@@ -325,6 +327,13 @@ export default function ListJobPage() {
       setMessage("Complete the required listing details before publishing.");
       return;
     }
+    if ((listingMode === "job" || listingMode === "contract") && neededBy) {
+      const selectedDay = new Date(`${neededBy}T23:59:59`);
+      if (Number.isNaN(selectedDay.getTime()) || selectedDay.getTime() < Date.now()) {
+        setMessage("Choose today or a future date for when the vehicle or work is needed.");
+        return;
+      }
+    }
     if (!isValidSouthAfricanPhone(contactNumber)) {
       setMessage("Enter a valid South African number, for example 0821234567 or +27821234567.");
       return;
@@ -355,7 +364,8 @@ export default function ListJobPage() {
       const posterPhotoUrl = posterPhoto ? await uploadOne(posterPhoto, user.id, submissionId, "posters", 0) : "";
       const listingType = listingMode === "asset" ? assetType : listingMode === "contract" ? "Contract" : "Job";
       const vehicleLine = listingMode === "job" ? `Vehicle needed: ${vehicleNeeded}\n` : "";
-      const storedDescription = `Listing type: ${listingType}\n${vehicleLine}${description.trim()}`;
+      const timingLine = listingMode === "asset" ? "" : `${neededBy ? `Needed by: ${neededBy}\n` : ""}Priority: ${priorityLevel}\n`;
+      const storedDescription = `Listing type: ${listingType}\n${vehicleLine}${timingLine}${description.trim()}`;
 
       const fullListing = {
         title: title.trim(),
@@ -507,6 +517,18 @@ export default function ListJobPage() {
               <FieldLabel label={listingMode === "asset" ? "Rate or hire price" : "Budget or rate"} darkMode={darkMode}>
                 <input required value={rate} onChange={(e) => setRate(e.target.value)} placeholder="R2 500 per load or Request a quote" className={inputClass} />
               </FieldLabel>
+              {listingMode !== "asset" ? <>
+                <FieldLabel label="When is the vehicle or work needed?" darkMode={darkMode}>
+                  <input type="date" min={new Date().toISOString().slice(0, 10)} value={neededBy} onChange={(e) => setNeededBy(e.target.value)} className={inputClass} />
+                </FieldLabel>
+                <FieldLabel label="How time-sensitive is this?" darkMode={darkMode}>
+                  <select value={priorityLevel} onChange={(e) => setPriorityLevel(e.target.value as "flexible" | "standard" | "urgent")} className={inputClass}>
+                    <option value="flexible">Flexible timing</option>
+                    <option value="standard">Normal priority</option>
+                    <option value="urgent">Urgent — needed soon</option>
+                  </select>
+                </FieldLabel>
+              </> : null}
               <FieldLabel label="Description" darkMode={darkMode} wide>
                 <textarea required value={description} onChange={(e) => setDescription(e.target.value)} placeholder={listingMode === "asset" ? "Describe the unit, condition, availability and service area" : listingMode === "contract" ? "Explain the route, load, frequency and contract requirements" : "Explain the route, load, dates and important requirements"} className={`${inputClass} min-h-32 py-3`} />
               </FieldLabel>

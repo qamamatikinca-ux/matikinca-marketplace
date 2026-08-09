@@ -103,18 +103,15 @@ export default function SearchResultsClient() {
           Search public listings, approved drivers, dealerships and every main section of the website.
         </p>
 
-        <form onSubmit={submit} className="mt-7 grid gap-3 md:grid-cols-[180px_1fr_240px_auto]">
-          <select
-            value={scope}
-            onChange={(event) => router.push(routeForScope(event.target.value as SearchScope, input, place))}
-            className={`h-14 rounded-xl border px-4 text-sm font-black ${darkMode ? "border-white/15 bg-black" : "border-black/15 bg-white"}`}
-            aria-label="Search category"
-          >
-            {searchScopes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-          </select>
-          <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Search everything on LoadLink" className={`h-14 rounded-xl border px-4 text-sm font-bold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-black" : "border-black/15 bg-white"}`} />
-          <SouthAfricaLocationInput value={place} onChange={setPlace} darkMode={darkMode} placeholder="City, town or province" ariaLabel="Filter all LoadLink results by South African location" className={`h-14 w-full rounded-xl border px-4 text-sm font-bold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-black text-white" : "border-black/15 bg-white text-black"}`} />
-          <button type="submit" className="h-14 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase tracking-wide text-black">Search</button>
+        <div className={`mt-7 overflow-x-auto rounded-2xl border p-1.5 no-scrollbar ${darkMode ? "border-white/12 bg-[#111]" : "border-black/10 bg-white"}`} role="tablist" aria-label="Search LoadLink sections">
+          <div className="flex min-w-max gap-1.5">
+            {searchScopes.map((item) => <button key={item.value} type="button" role="tab" aria-selected={scope === item.value} onClick={() => router.push(routeForScope(item.value, input, place))} className={`rounded-xl px-4 py-2.5 text-sm font-black ${scope === item.value ? "bg-[#f6b800] text-black" : darkMode ? "text-white/55" : "text-black/50"}`}>{item.label}</button>)}
+          </div>
+        </div>
+        <form onSubmit={submit} className={`mt-3 grid gap-3 rounded-[24px] border p-3 md:grid-cols-[1fr_240px_auto] ${darkMode ? "border-white/12 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+          <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Search everything on LoadLink" className={`h-14 rounded-xl border px-4 text-sm font-bold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-black" : "border-black/10 bg-[#faf8f2]"}`} />
+          <SouthAfricaLocationInput value={place} onChange={setPlace} darkMode={darkMode} placeholder="City, town or province" ariaLabel="Filter all LoadLink results by South African location" className={`h-14 w-full rounded-xl border px-4 text-sm font-bold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`} />
+          <button type="submit" className="h-14 rounded-xl bg-[#f6b800] px-7 text-sm font-black text-black">Search</button>
         </form>
 
         <div className="mt-8 flex items-center justify-between gap-4">

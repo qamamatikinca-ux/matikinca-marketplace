@@ -130,7 +130,7 @@ export default function ToolsPage() {
       <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div><h1 className="text-4xl font-black tracking-[-.05em] md:text-6xl">Logistics tools</h1><p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 md:text-base ${muted}`}>Practical tools you can use anywhere on LoadLink. Pick a symbol, complete the details, then copy or share the result.</p></div>
         <div className={`flex gap-1 overflow-x-auto rounded-2xl border p-1 ${card}`}>
-          {(["All","Planning","Money","Operations"] as Category[]).map(item=><button key={item} type="button" onClick={()=>setCategory(item)} className={`shrink-0 rounded-xl px-4 py-2.5 text-xs font-black ${category===item?"bg-black text-white":muted}`}>{item}</button>)}
+          {(["All","Planning","Money","Operations"] as Category[]).map(item=><button key={item} type="button" onClick={()=>setCategory(item)} className={`shrink-0 rounded-xl px-4 py-2.5 text-xs font-black ${category===item?"bg-[#f6b800] text-black shadow-sm":muted}`}>{item}</button>)}
         </div>
       </div>
 
