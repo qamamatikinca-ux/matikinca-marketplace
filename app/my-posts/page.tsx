@@ -282,8 +282,8 @@ export default function MyPostsPage() {
           {filter === "review" ? (
             <div className={`mt-6 rounded-[24px] border p-5 ${surface}`}>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div><p className="text-[10px] font-black uppercase tracking-[.14em] text-[#b88900]">Review centre</p><h2 className="mt-1 text-2xl font-black tracking-[-.04em]">Only the posts that need attention.</h2><p className={`mt-2 max-w-2xl text-xs font-semibold leading-5 ${muted}`}>Rejected posts show the correction to make. Posts already in review need no action until LoadLink responds.</p></div>
-                <div className="flex flex-wrap gap-2"><span className="rounded-full bg-red-500/10 px-3 py-2 text-[10px] font-black text-red-500">{listings.filter((item) => (item.moderation_status || "pending") === "rejected").length} need changes</span><span className="rounded-full bg-[#f6b800]/15 px-3 py-2 text-[10px] font-black text-[#b88900]">{listings.filter((item) => (item.moderation_status || "pending") === "pending").length} waiting</span></div>
+                <div><p className="text-xs font-black">Review</p><h2 className="mt-1 text-2xl font-black tracking-[-.04em]">Only the posts that need attention.</h2><p className={`mt-2 max-w-2xl text-xs font-semibold leading-5 ${muted}`}>Rejected posts show the correction to make. Posts already in review need no action until LoadLink responds.</p></div>
+                <div className="flex flex-wrap gap-2"><span className="rounded-full bg-red-500/10 px-3 py-2 text-[10px] font-black text-red-500">{listings.filter((item) => (item.moderation_status || "pending") === "rejected").length} need changes</span><span className="rounded-full bg-black/5 px-3 py-2 text-[10px] font-black text-black/55">{listings.filter((item) => (item.moderation_status || "pending") === "pending").length} waiting</span></div>
               </div>
             </div>
           ) : (
@@ -529,7 +529,7 @@ function ReviewPostCard({ listing, darkMode, surface, muted, onEdit }: { listing
           <h2 className="mt-1 line-clamp-2 text-xl font-black tracking-[-.035em]">{listing.title}</h2>
           <p className="mt-1 text-xs font-black text-[#b88900]">{formatListingRate(listing.rate)}</p>
           <div className={`mt-3 rounded-2xl border px-3 py-2.5 ${rejected ? "border-red-500/25 bg-red-500/[.07]" : darkMode ? "border-white/8 bg-white/[.025]" : "border-black/8 bg-black/[.02]"}`}>
-            <p className={`text-[9px] font-black uppercase tracking-[.1em] ${rejected ? "text-red-500" : "text-[#b88900]"}`}>{rejected ? "What LoadLink needs" : "Status"}</p>
+            <p className={`text-[10px] font-black ${rejected ? "text-red-500" : muted}`}>{rejected ? "What LoadLink needs" : "Status"}</p>
             <p className={`mt-1 line-clamp-2 text-[11px] font-semibold leading-5 ${muted}`}>{feedback}</p>
           </div>
         </div>
@@ -713,12 +713,12 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
           <div className="flex items-start gap-4">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[.12em] ${rejected ? "bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-400/25" : "bg-[#f6b800]/12 text-[#ffd45a] ring-1 ring-inset ring-[#f6b800]/20"}`}>
+                <span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[.12em] ${rejected ? "bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-400/25" : "bg-white/[.07] text-white/65 ring-1 ring-inset ring-white/10"}`}>
                   {rejected ? "Needs changes" : "Editing post"}
                 </span>
                 <span className="truncate text-[10px] font-bold uppercase tracking-[.11em] text-white/[.35]">{listing.vehicle_group || listing.listing_kind || "LoadLink listing"}</span>
               </div>
-              <h2 className="mt-3 text-[28px] font-black leading-[1.02] tracking-[-.045em] sm:text-3xl">{rejected ? "Review & resubmit" : "Edit your post"}</h2>
+              <h2 className="mt-3 text-[28px] font-black leading-[1.02] tracking-[-.045em] sm:text-3xl">{rejected ? "Fix your post" : "Edit your post"}</h2>
               <p className="mt-2 max-w-xl text-xs font-medium leading-5 text-white/[.48]">{guidedMode ? `${currentGuide.title}: ${currentGuide.copy}` : rejected && !showFullEditor ? "LoadLink has highlighted what needs attention. Choose how you want to fix it." : "Change only what is needed, then send the corrected post back for review."}</p>
             </div>
             <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[.04] text-xl text-white/[.75] transition hover:border-white/25 hover:text-white" aria-label="Close edit post">×</button>
@@ -749,8 +749,8 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
               <section className="overflow-hidden rounded-[26px] border border-white/10 bg-white/[.035]">
                 <div className="p-5 sm:p-6"><p className="text-[10px] font-black uppercase tracking-[.14em] text-red-300">What needs attention</p><p className="mt-2 text-base font-semibold leading-7 text-white/[.78]">{feedback}</p></div>
                 <div className="grid gap-2 border-t border-white/10 p-4 sm:grid-cols-2 sm:p-5">
-                  <button type="button" onClick={() => { setGuidedMode(true); setGuideStep(0); setError(""); }} className="rounded-[20px] bg-[#f6b800] p-4 text-left text-black"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-black text-[#f6b800] text-[11px] font-black">1→</span><strong className="mt-4 block text-sm font-black">Fix step by step</strong><span className="mt-1 block text-[10px] font-semibold leading-4 text-black/60">LoadLink shows one correction at a time so the screen stays simple.</span></button>
-                  <button type="button" onClick={() => setShowFullEditor(true)} className="rounded-[20px] border border-white/12 bg-black/20 p-4 text-left"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[.07] text-[#ffd45a] text-lg">✎</span><strong className="mt-4 block text-sm font-black">Edit all at once</strong><span className="mt-1 block text-[10px] font-semibold leading-4 text-white/[.45]">Open category, photos and listing details together.</span></button>
+                  <button type="button" onClick={() => { setGuidedMode(true); setGuideStep(0); setError(""); }} className="rounded-[20px] bg-white p-4 text-left text-black"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-black text-white text-[11px] font-black">1→</span><strong className="mt-4 block text-sm font-black">Fix step by step</strong><span className="mt-1 block text-[10px] font-semibold leading-4 text-black/60">LoadLink shows one correction at a time so the screen stays simple.</span></button>
+                  <button type="button" onClick={() => setShowFullEditor(true)} className="rounded-[20px] border border-white/12 bg-black/20 p-4 text-left"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[.07] text-white/70 text-lg">✎</span><strong className="mt-4 block text-sm font-black">Edit all at once</strong><span className="mt-1 block text-[10px] font-semibold leading-4 text-white/[.45]">Open category, photos and listing details together.</span></button>
                 </div>
               </section>
             ) : null}
@@ -873,7 +873,7 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
 
             {editorVisible && guidedMode && showGuideReview ? (
               <section className="rounded-[24px] border border-[#f6b800]/25 bg-[#f6b800]/[.055] p-4 sm:p-5">
-                <p className="text-[10px] font-black uppercase tracking-[.14em] text-[#ffd45a]">Final review</p>
+                <p className="text-xs font-black text-white/60">Final review</p>
                 <h3 className="mt-1 text-lg font-black">Ready to send back to LoadLink?</h3>
                 <div className="mt-4 grid gap-2 text-xs font-semibold text-white/[.62]">
                   <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/[.08] bg-black/20 px-4 py-3"><span>Category</span><strong className="text-right text-white">{vehicleGroup}</strong></div>

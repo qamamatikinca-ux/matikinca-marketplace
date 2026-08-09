@@ -7,6 +7,7 @@ import type { User } from "@supabase/supabase-js";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
+import TruckGearboxSketch from "@/components/TruckGearboxSketch";
 import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
 import { clearActiveAccountState, syncAccountState } from "@/lib/accountState";
 import { isAuthenticatedUser, loginHref } from "@/lib/auth";
@@ -277,9 +278,11 @@ export default function AccountSettingsPage() {
 
       <section className="mx-auto max-w-6xl px-4 py-7 sm:px-5 md:px-8 md:py-10">
         <div className="max-w-3xl">
-          <h1 className="text-2xl font-bold tracking-[-.025em] md:text-3xl">Settings</h1>
-          <p className={`mt-1.5 text-sm leading-6 ${muted}`}>Profile, messages and security.</p>
+          <h1 className="text-3xl font-black tracking-[-.035em] md:text-4xl">Settings</h1>
+          <p className={`mt-1.5 text-sm font-semibold leading-6 ${muted}`}>Profile, messages and security.</p>
         </div>
+
+        <div className="mt-5 max-w-3xl"><TruckGearboxSketch darkMode={darkMode} /></div>
 
         <div className={`mt-5 flex max-w-xl gap-1 rounded-2xl border p-1.5 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-white"}`}>
           <button type="button" onClick={() => setSettingsView("profile")} className={tabClass("profile")}>Profile</button>
@@ -295,10 +298,10 @@ export default function AccountSettingsPage() {
             <aside className={`h-fit border p-5 ${surface}`}>
               <div className="mx-auto flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-current/15 bg-black text-xl font-bold text-white">{form.avatar_url ? <img src={form.avatar_url} alt="Profile" className="h-full w-full object-cover" /> : initials}</div>
               <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void uploadAvatar(event)} className="hidden" />
-              <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="mt-4 h-10 w-full rounded-xl border border-[#f6b800] bg-[#f6b800] px-4 text-xs font-semibold text-black disabled:opacity-50">{uploading ? "Uploading…" : "Change photo"}</button>
+              <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="mt-4 h-10 w-full rounded-xl bg-black px-4 text-xs font-black text-white disabled:opacity-50">{uploading ? "Uploading…" : "Change photo"}</button>
               <div className={`mt-4 rounded-xl border p-3 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-black/[.02]"}`}><p className="text-[10px] font-semibold uppercase tracking-[.1em] opacity-50">Profile complete</p><p className="mt-1 text-xl font-bold">{completion}%</p></div>
               <div className={`mt-4 border-t pt-4 ${darkMode ? "border-white/10" : "border-black/10"}`}><Info label="Email" value={user?.email || "Not available"} /><Info label="Verification" value={form.verification_status.replaceAll("_", " ")} /><Info label="Package" value={form.subscription_plan} /></div>
-              <div className="mt-4 grid gap-2"><Link href="/verify" className="flex h-10 items-center justify-center rounded-xl bg-[#f6b800] px-3 text-center text-xs font-semibold text-black">Verification</Link><Link href="/account/packages" className="flex h-10 items-center justify-center rounded-xl bg-[#f6b800] px-3 text-center text-xs font-semibold text-black">Package</Link>{hasDriverProfile ? <Link href="/driver-profile" className="flex h-10 items-center justify-center rounded-xl bg-[#f6b800] px-3 text-center text-xs font-semibold text-black">Driver profile</Link> : null}</div>
+              <div className="mt-4 grid gap-2"><Link href="/verify" className={`flex h-10 items-center justify-center rounded-xl border px-3 text-center text-xs font-black ${darkMode ? "border-white/12" : "border-black/10"}`}>Verification</Link><Link href="/account/packages" className={`flex h-10 items-center justify-center rounded-xl border px-3 text-center text-xs font-black ${darkMode ? "border-white/12" : "border-black/10"}`}>Package</Link>{hasDriverProfile ? <Link href="/driver-profile" className={`flex h-10 items-center justify-center rounded-xl border px-3 text-center text-xs font-black ${darkMode ? "border-white/12" : "border-black/10"}`}>Driver profile</Link> : null}</div>
             </aside>
 
             <form onSubmit={saveProfile} className={`border p-5 md:p-7 ${surface}`}>

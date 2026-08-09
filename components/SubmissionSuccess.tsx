@@ -104,7 +104,7 @@ export default function SubmissionSuccess({
                 <p className="text-sm font-black">How was posting on LoadLink?</p>
                 <p className="mt-1 text-xs leading-5 text-white/45">Your rating goes to Customer Experience and the LoadLink Control Centre.</p>
               </div>
-              <span className="shrink-0 rounded-full bg-[#f6b800]/12 px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-[#f6b800]">{ratingLabel}</span>
+              <span className="shrink-0 rounded-full bg-white/[.06] px-3 py-1 text-[10px] font-black text-white/70">{ratingLabel}</span>
             </div>
 
             <div className="mt-4 flex items-center justify-between gap-1" aria-label="Posting experience rating">

@@ -11,6 +11,7 @@ import SiteMenu from "@/components/SiteMenu";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
+import PhotoLimitUpgradeToast from "@/components/PhotoLimitUpgradeToast";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 import { currentRelativePath, loginHref } from "@/lib/auth";
 import { getAccountOwnerKey, getOwnedJobKeys, setOwnedJobKeys } from "@/lib/chatKeys";
@@ -69,6 +70,7 @@ export default function ListYourVehiclePage() {
   const [vehiclePhotoProgress, setVehiclePhotoProgress] = useState("");
   const [message, setMessage] = useState("");
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const [photoLimitToast, setPhotoLimitToast] = useState(false);
   const [submittedListingId, setSubmittedListingId] = useState<string | null>(null);
   const [sellerType, setSellerType] = useState<SellerType>("private");
   const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory | null>(null);
@@ -254,7 +256,13 @@ export default function ListYourVehiclePage() {
       vehiclePreviewUrlsRef.current = previews;
       setVehiclePhotos(selected);
       setVehiclePreviews(previews);
-      if (allSelected.length > max) setMessage(`This package allows up to ${max} vehicle photos. Extra photos were ignored.`);
+      if (allSelected.length > max) {
+        setMessage(`We kept the first ${max} vehicle photos.`);
+        if (max === 5) {
+          setPhotoLimitToast(false);
+          window.requestAnimationFrame(() => setPhotoLimitToast(true));
+        }
+      }
     } catch (error) {
       previews.forEach(revokePreviewUrl);
       setMessage(readableUploadError(error, "One selected vehicle photo could not be prepared."));
@@ -465,6 +473,7 @@ export default function ListYourVehiclePage() {
 
   return (
     <main className={`min-h-screen transition-colors ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
+      <PhotoLimitUpgradeToast open={photoLimitToast} onClose={() => setPhotoLimitToast(false)} limit={5} />
       <SubmissionSuccess
         open={submissionSuccess}
         title="Vehicle submission sent"

@@ -18,6 +18,7 @@ import { submitJobListing } from "@/lib/listingSubmission";
 import { getAccountOwnerKey } from "@/lib/chatKeys";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
+import PhotoLimitUpgradeToast from "@/components/PhotoLimitUpgradeToast";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 
 type VehicleGroup = "Catering / Event" | "Trucks / Trailers" | "Farming / Mining";
@@ -93,6 +94,7 @@ export default function ListJobPage() {
   const [message, setMessage] = useState("");
   const [authReady, setAuthReady] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const [photoLimitToast, setPhotoLimitToast] = useState(false);
   const [submittedListingId, setSubmittedListingId] = useState<string | null>(null);
   const submitLockRef = useRef(false);
   const submissionIdRef = useRef("");
@@ -260,7 +262,9 @@ export default function ListJobPage() {
       setFiles(preparedFiles);
       replaceListingPreviews(preparedUrls);
       if (hadExtraPhotos) {
-        setMessage(`This package allows up to ${photoLimit} photos. Extra photos were ignored.`);
+        setMessage(`We kept the first ${photoLimit} photos.`);
+        setPhotoLimitToast(false);
+        window.requestAnimationFrame(() => setPhotoLimitToast(true));
       }
     } catch (error) {
       preparedUrls.forEach(revokePreviewUrl);
@@ -443,6 +447,7 @@ export default function ListJobPage() {
 
   return (
     <main className={`min-h-screen transition-colors duration-500 ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
+      <PhotoLimitUpgradeToast open={photoLimitToast} onClose={() => setPhotoLimitToast(false)} limit={photoLimit} />
       <SubmissionSuccess
         open={submissionSuccess}
         title={listingMode === "contract" ? "Contract published" : listingMode === "asset" ? "Listing published" : "Job published"}

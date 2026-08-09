@@ -1639,7 +1639,7 @@ export default function MessagesPage() {
           <div className="border-b border-black/10 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-bold tracking-[-.025em]">Messages</h1>
+                <h1 className="text-3xl font-black tracking-[-.035em]">Messages</h1>
               </div>
               <span className="rounded-full bg-black px-3 py-1.5 text-xs font-black text-[#f6b800]">
                 {conversations.reduce(
@@ -1658,10 +1658,10 @@ export default function MessagesPage() {
                 className="h-12 w-full rounded-xl border border-black/10 bg-[#f5f3ed] px-4 text-sm font-semibold outline-none transition focus:border-[#f6b800] focus:bg-white"
               />
             </label>
-            <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl bg-black/[.04] p-1" role="tablist" aria-label="Conversation folders">
-              <button type="button" role="tab" aria-selected={folder === "inbox"} onClick={() => { setFolder("inbox"); setQuery(""); }} className={`rounded-lg px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[.04em] transition ${folder === "inbox" ? "bg-black text-white shadow-sm" : "text-black/45"}`}>Inbox</button>
-              <button type="button" role="tab" aria-selected={folder === "potential"} onClick={() => { setFolder("potential"); setQuery(""); }} className={`rounded-lg px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[.04em] transition ${folder === "potential" ? "bg-black text-white shadow-sm" : "text-black/45"}`}>Potential Deals{potentialDealCount ? ` (${potentialDealCount})` : ""}</button>
-              <button type="button" role="tab" aria-selected={folder === "archived"} onClick={() => { setFolder("archived"); setQuery(""); }} className={`rounded-lg px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[.04em] transition ${folder === "archived" ? "bg-black text-white shadow-sm" : "text-black/45"}`}>Archived{archivedCount ? ` (${archivedCount})` : ""}</button>
+            <div className="loadlink-folder-tabs mt-4 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Conversation folders">
+              <button type="button" role="tab" aria-selected={folder === "inbox"} onClick={() => { setFolder("inbox"); setQuery(""); }} className={`shrink-0 rounded-2xl border px-4 py-3 text-sm font-black tracking-normal transition ${folder === "inbox" ? "border-black bg-black text-white" : "border-black/10 bg-white text-black/55"}`}>Inbox</button>
+              <button type="button" role="tab" aria-selected={folder === "potential"} onClick={() => { setFolder("potential"); setQuery(""); }} className={`shrink-0 rounded-2xl border px-4 py-3 text-sm font-black tracking-normal transition ${folder === "potential" ? "border-black bg-black text-white" : "border-black/10 bg-white text-black/55"}`}>Potential deals{potentialDealCount ? ` · ${potentialDealCount}` : ""}</button>
+              <button type="button" role="tab" aria-selected={folder === "archived"} onClick={() => { setFolder("archived"); setQuery(""); }} className={`shrink-0 rounded-2xl border px-4 py-3 text-sm font-black tracking-normal transition ${folder === "archived" ? "border-black bg-black text-white" : "border-black/10 bg-white text-black/55"}`}>Archived{archivedCount ? ` · ${archivedCount}` : ""}</button>
             </div>
           </div>
 

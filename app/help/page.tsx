@@ -1,130 +1,136 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ChangeEvent } from "react";
+import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import LinkBot from "@/components/LinkBot";
+import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
+import SiteMenu from "@/components/SiteMenu";
+import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 const groups = [
-  {
-    name: "Getting started",
-    items: [
-      ["What is LoadLink?", "LoadLink connects people posting logistics work, contracts, vehicles and useful mobile units with people who can provide them."],
-      ["How do I create an account?", "Open Login from the account icon, choose a sign-in method and complete the requested details."],
-      ["How do I search?", "Describe what you need using a vehicle, service, location or portal, such as side tipper job in Pretoria."],
-      ["Why can’t I find a listing?", "Clear filters, check spelling, try a broader location and confirm that you are in the correct Jobs, Contracts or Vehicles portal."],
-    ],
-  },
-  {
-    name: "Posting and managing listings",
-    items: [
-      ["How do I post a job?", "Use the plus button, choose Post a job, then add the work, location, required vehicle or mobile unit, rate and contact details."],
-      ["What can I list?", "You can list trucks, trailers, mobile toilets, mobile fridges, food trucks, mobile kitchens and other relevant mobile units."],
-      ["Why should I add a rate?", "A clear rate helps users decide quickly. All listing prices are displayed in South African rand by default."],
-      ["How do I edit or delete my post?", "Use the owner controls on the device that created the listing."],
-      ["How many photos should I add?", "Use clear, recent photos. Put the strongest and most accurate photo first."],
-      ["What makes a good title?", "Use the exact service and location, for example 34-ton side tipper needed in Rustenburg."],
-    ],
-  },
-  {
-    name: "Verification and trust",
-    items: [
-      ["How does verification work?", "Confirm your cellphone number, then upload an ID or passport and a clear selfie."],
-      ["How long does verification take?", "It usually takes a few minutes when a reviewer is available."],
-      ["What does the gold Verified badge mean?", "It means the user completed LoadLink’s required identity checks and was approved."],
-      ["Are my identity documents public?", "No. Verification documents are stored privately and are not shown on listings."],
-    ],
-  },
-  {
-    name: "Safety, messaging and reports",
-    items: [
-      ["How do I message a poster?", "Open a listing and choose Message. LoadLink asks you to sign in first, then opens a private conversation linked to your account."],
-      ["Will my messages still be there later?", "Yes. Signed-in conversations are stored in Supabase and connected to your account so you can reopen them later."],
-      ["How do I report a suspicious listing?", "Tap Report, explain the issue clearly and avoid sending money or sensitive documents."],
-      ["Does LoadLink guarantee a job or payment?", "No. Users must confirm identities, terms, routes and payment arrangements before doing business."],
-      ["What should I check before accepting work?", "Confirm the company or person, collection and delivery points, cargo, vehicle requirements, dates, rate and payment terms."],
-    ],
-  },
-  {
-    name: "Analytics and visibility",
-    items: [
-      ["Where can I see listing views?", "Open Analytics from your owner notification or listing controls."],
-      ["What do unique viewers mean?", "It estimates how many different devices opened your listing without exposing private personal details."],
-      ["How can I improve visibility?", "Use an exact title, correct location, clear rate, strong first photo and complete contact information."],
-      ["What is Premium visibility?", "It is an optional placement upgrade that can increase prominence where featured space is available."],
-    ],
-  },
-  {
-    name: "Accounts and technical help",
-    items: [
-      ["I forgot my password. What do I do?", "Open Forgot password from Login and follow the reset email."],
-      ["Why is a page not opening?", "Refresh once, check your connection, then return home and reopen the portal."],
-      ["Why are my friend’s posts missing?", "Make sure you are on the correct portal and filters are cleared. If posts still do not appear, report the issue with the listing title and poster name."],
-      ["Does LoadLink work on Android and computers?", "Yes. The interface is responsive for mobile, tablet and desktop browsers. Keep the browser updated for the best experience."],
-    ],
-  },
+  { name: "Getting started", icon: "start", items: [
+    ["What is LoadLink?", "LoadLink connects logistics work, contracts, vehicles and mobile units with people who can provide them."],
+    ["How do I create an account?", "Open the account button, choose a sign-in method and complete your profile."],
+    ["How do I search?", "Choose the relevant portal and search by vehicle, service, location or work type."],
+  ]},
+  { name: "Posting", icon: "post", items: [
+    ["How do I post?", "Use the post action, choose the correct category, then add clear details, a location, rate and photos."],
+    ["Why was my post rejected?", "Open My Posts → Review. LoadLink shows the reason and can guide you through correcting it step by step."],
+    ["How many photos can I add?", "Standard posts support up to 5 photos. Pro and eligible dealer listings can use higher limits."],
+  ]},
+  { name: "Messages & deals", icon: "message", items: [
+    ["How do I message a poster?", "Open an active listing and choose Message. LoadLink opens a conversation attached to that listing."],
+    ["What are Potential Deals?", "New listing enquiries can enter Potential Deals so the poster can review them before accepting the conversation."],
+    ["Can I archive a chat?", "Yes. Archived conversations remain available in the Archived folder until restored."],
+  ]},
+  { name: "Safety & account", icon: "shield", items: [
+    ["Are verification documents public?", "No. Identity and verification files are private and are not shown on public listings."],
+    ["How do I check account access?", "Open Menu → Activity & access to review recent devices, login activity and account records."],
+    ["How do I report suspicious activity?", "Use the report controls and do not send passwords, OTPs, PINs or banking login details."],
+  ]},
+  { name: "Packages & billing", icon: "card", items: [
+    ["What does Pro change?", "Pro unlocks eligible premium listing features such as higher photo limits and analytics where offered."],
+    ["Where can I see payments?", "Open Menu → Activity & access to see LoadLink billing records linked to your account."],
+  ]},
 ];
 
-export default function Help() {
+const QUICK = ["Rejected post", "Posting photos", "Messages", "Verification", "Payments"];
+
+export default function HelpPage() {
+  const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [query, setQuery] = useState("");
-  const results = useMemo(
-    () =>
-      groups
-        .map((group) => ({
-          ...group,
-          items: group.items.filter(([question, answer]) =>
-            `${question} ${answer}`.toLowerCase().includes(query.toLowerCase())
-          ),
-        }))
-        .filter((group) => group.items.length),
-    [query]
-  );
+  const q = query.trim().toLowerCase();
+  const results = useMemo(() => groups.map(group => ({
+    ...group,
+    items: q ? group.items.filter(([a,b]) => `${a} ${b}`.toLowerCase().includes(q)) : group.items,
+  })).filter(group => group.items.length), [q]);
+
+  const page = darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black";
+  const card = darkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white";
+  const muted = darkMode ? "text-white/50" : "text-black/50";
 
   return (
-    <main className="min-h-screen bg-[#fff7df] text-black">
-      <header className="sticky top-0 z-40 grid h-20 grid-cols-[70px_1fr_70px] items-center border-b border-black/10 bg-white px-4">
-        <Link href="/" className="text-2xl font-black" aria-label="Home">←</Link>
-        <HomeLogoLink theme="light" />
-        <button onClick={() => document.getElementById("help-search")?.focus()} className="text-sm font-black">Search</button>
+    <main className={`min-h-screen ${page}`}>
+      <header className={`sticky top-0 z-40 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
+        <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4 md:px-7">
+          <div className="flex items-center gap-2"><SiteMenu darkMode={darkMode}/><AuthStatusButton darkMode={darkMode}/></div>
+          <HomeLogoLink theme={darkMode ? "dark" : "light"} />
+          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="ml-auto"/>
+        </div>
       </header>
 
-      <section className="bg-black px-5 py-12 text-white">
-        <div className="mx-auto max-w-4xl">
-          <h1 className=" text-5xl font-black">How can we help?</h1>
-          <p className="mt-4 max-w-2xl text-white/60">Search common questions or ask LinkBot for guided LoadLink help.</p>
-          <input
-            id="help-search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search accounts, listings, messaging, verification or safety"
-            className="mt-7 h-14 w-full border border-white/20 bg-white px-5 font-semibold text-black outline-none focus:border-[#f6b800]"
-          />
-          <div className="mt-4"><LinkBot /></div>
-        </div>
-      </section>
+      <section className="mx-auto max-w-5xl px-4 pb-20 pt-7 md:px-7 md:pt-11">
+        <div className="grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
+          <div>
+            <h1 className="text-4xl font-black tracking-[-.05em] md:text-6xl">Help that gets you moving.</h1>
+            <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 md:text-base ${muted}`}>Search LoadLink help or open a topic. The most common posting, messaging and account questions are kept short and practical.</p>
+            <label className="mt-6 block">
+              <span className="sr-only">Search LoadLink help</span>
+              <div className={`flex h-14 items-center gap-3 rounded-2xl border px-4 ${card}`}>
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="2"/><path d="m16 16 5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                <input id="help-search" value={query} onChange={(e: ChangeEvent<HTMLInputElement>)=>setQuery(e.target.value)} className="min-w-0 flex-1 bg-transparent text-sm font-bold outline-none" placeholder="Search posting, messages, payments…" />
+                {query ? <button type="button" onClick={()=>setQuery("")} className="text-xs font-black">Clear</button> : null}
+              </div>
+            </label>
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              {QUICK.map(item => <button key={item} type="button" onClick={()=>setQuery(item)} className={`shrink-0 rounded-full border px-3 py-2 text-xs font-bold ${darkMode ? "border-white/10 bg-white/[.03]" : "border-black/10 bg-white"}`}>{item}</button>)}
+            </div>
+          </div>
 
-      <section className="mx-auto max-w-4xl px-5 py-10">
-        {results.length ? (
-          results.map((group) => (
-            <div key={group.name} className="mb-10">
-              <h2 className="mb-3 text-2xl font-black">{group.name}</h2>
-              <div className="border-t border-black/15">
-                {group.items.map(([question, answer]) => (
-                  <details key={question} className="border-b border-black/15 bg-white">
-                    <summary className="cursor-pointer px-4 py-5 text-lg font-black">{question}</summary>
-                    <p className="px-4 pb-5 leading-7 text-black/65">{answer}</p>
+          <div className={`rounded-[26px] border p-5 ${card}`}>
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-black text-[#f6b800]">
+                <svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H8l-4 4V5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M8 9h8M8 12h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+              </span>
+              <div><h2 className="text-lg font-black">Need guided help?</h2><p className={`mt-1 text-xs font-semibold ${muted}`}>Describe the problem in your own words.</p></div>
+            </div>
+            <div className="mt-4"><LinkBot /></div>
+          </div>
+        </div>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          {results.length ? results.map(group => (
+            <section key={group.name} className={`overflow-hidden rounded-[26px] border ${card}`}>
+              <div className={`flex items-center gap-3 border-b p-5 ${darkMode ? "border-white/10" : "border-black/10"}`}>
+                <TopicIcon name={group.icon}/>
+                <h2 className="text-xl font-black tracking-[-.02em]">{group.name}</h2>
+              </div>
+              <div>
+                {group.items.map(([question,answer]) => (
+                  <details key={question} className={`group border-b last:border-b-0 ${darkMode ? "border-white/8" : "border-black/8"}`}>
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-sm font-black">
+                      <span>{question}</span><span className="text-lg font-medium opacity-45 transition group-open:rotate-45">+</span>
+                    </summary>
+                    <p className={`px-5 pb-5 text-sm font-semibold leading-6 ${muted}`}>{answer}</p>
                   </details>
                 ))}
               </div>
-            </div>
-          ))
-        ) : (
-          <div className="border border-black/10 bg-white p-8 text-center">
-            <h2 className="text-2xl font-black">No exact answer found</h2>
-            <p className="mt-3 text-black/55">Use the visible LinkBot button to describe the problem in your own words.</p>
-          </div>
-        )}
+            </section>
+          )) : (
+            <section className={`rounded-[26px] border p-7 md:col-span-2 ${card}`}>
+              <h2 className="text-2xl font-black">No exact match</h2>
+              <p className={`mt-2 text-sm font-semibold ${muted}`}>Try a shorter search or use LinkBot above.</p>
+            </section>
+          )}
+        </div>
+
+        <div className={`mt-5 flex flex-col gap-3 rounded-[24px] border p-5 sm:flex-row sm:items-center sm:justify-between ${card}`}>
+          <div><h2 className="text-lg font-black">Still stuck?</h2><p className={`mt-1 text-xs font-semibold ${muted}`}>You can also return to the marketplace or review your own posts.</p></div>
+          <div className="flex gap-2"><Link href="/my-posts" className="flex h-11 items-center rounded-xl border border-current/10 px-4 text-xs font-black">My posts</Link><Link href="/jobs" className="flex h-11 items-center rounded-xl bg-black px-4 text-xs font-black text-white">Browse work</Link></div>
+        </div>
       </section>
     </main>
   );
+}
+
+function TopicIcon({ name }: { name: string }) {
+  return <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black text-[#f6b800]">
+    {name === "post" ? <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M5 4h14v16H5V4Zm4 4h6M9 12h6M9 16h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+    : name === "message" ? <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H8l-4 4V5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>
+    : name === "shield" ? <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="m12 3 7 3v5c0 4.5-2.8 7.6-7 10-4.2-2.4-7-5.5-7-10V6l7-3Z" stroke="currentColor" strokeWidth="2"/></svg>
+    : name === "card" ? <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M3 10h18" stroke="currentColor" strokeWidth="2"/></svg>
+    : <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5v14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>}
+  </span>
 }

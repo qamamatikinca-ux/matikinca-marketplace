@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 
 import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
+import LoadLinkLogo from "@/components/LoadLinkLogo";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
@@ -106,12 +107,14 @@ export default function ListingStatePage() {
         <div className={`w-full overflow-hidden rounded-[28px] border ${surface}`}>
           <div className={`h-1.5 w-full ${data?.state === "rejected" || data?.state === "deleted" ? "bg-red-500" : "bg-[#f6b800]"}`} />
           <div className="p-6 md:p-9">
-            <div className={`flex h-14 w-14 items-center justify-center rounded-2xl border text-2xl font-black ${
-              data?.state === "rejected" || data?.state === "deleted"
-                ? darkMode ? "border-red-500/40 bg-red-500/10 text-red-400" : "border-red-300 bg-red-50 text-red-600"
-                : "border-[#f6b800]/45 bg-[#f6b800]/10 text-[#b88900]"
-            }`}>{data?.state === "deleted" ? "×" : data?.state === "rejected" ? "!" : "LL"}</div>
-            <p className={`mt-6 text-[10px] font-black uppercase tracking-[.18em] ${data?.state === "rejected" || data?.state === "deleted" ? "text-red-500" : "text-[#b88900]"}`}>{copy.eyebrow}</p>
+            <div className="flex min-h-14 items-center">
+              {data?.state === "deleted" || data?.state === "rejected" ? (
+                <span className={`flex h-12 w-12 items-center justify-center rounded-full border text-xl font-black ${data.state === "deleted" ? "border-red-500/30 text-red-500" : "border-red-500/30 text-red-500"}`}>{data.state === "deleted" ? "×" : "!"}</span>
+              ) : (
+                <LoadLinkLogo theme={darkMode ? "dark" : "light"} showGlow={false} containerClassName="!w-[132px]" />
+              )}
+            </div>
+            <p className={`mt-5 text-xs font-black ${data?.state === "rejected" || data?.state === "deleted" ? "text-red-500" : muted}`}>{copy.eyebrow}</p>
             <h1 className="mt-2 text-3xl font-black tracking-[-.045em] md:text-5xl">{copy.title}</h1>
             <p className={`mt-4 max-w-xl text-sm font-semibold leading-7 md:text-base ${muted}`}>{copy.copy}</p>
 
