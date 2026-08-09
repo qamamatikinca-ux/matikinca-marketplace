@@ -1,4 +1,4 @@
-LOADLINK V2.6.3 — AUTH SECURITY ACTIVATION
+LOADLINK V2.6.4 — AUTH SECURITY ACTIVATION
 
 The code update hardens the auth UI and flow immediately. Two protections require one-time Supabase / Vercel dashboard configuration because their secrets must NEVER be hard-coded into the website.
 
@@ -22,7 +22,7 @@ Supabase:
 - Paste the PRIVATE Turnstile secret key into Supabase.
 - Never put that secret in GitHub or NEXT_PUBLIC_* variables.
 
-V2.6.3 automatically displays the security challenge on:
+V2.6.4 automatically displays the security challenge on:
 - Sign in
 - Create account
 - Forgot password
@@ -55,7 +55,7 @@ Authentication -> URL Configuration:
 
 Authentication -> MFA:
 - Keep TOTP verification enabled.
-- V2.6.3 adds authenticator-app setup in Settings -> Security.
+- V2.6.4 adds authenticator-app setup in Settings -> Security.
 - Users who enable it are forced through the LoadLink MFA screen when their session is only AAL1.
 - Before public launch, enable TOTP on the LoadLink owner/admin account and any staff account with privileged access.
 
@@ -66,7 +66,7 @@ Authentication -> Audit Logs:
 Email:
 - Configure production Custom SMTP before public launch so confirmation and recovery mail is reliable.
 
-3) WHAT V2.6.3 DOES IN CODE
+3) WHAT V2.6.4 DOES IN CODE
 
 - Modern focused LoadLink login/signup/recovery design.
 - Generic login and recovery errors to reduce account enumeration.

@@ -37,10 +37,7 @@ export default function AuthShell({
       <section className="mx-auto grid min-h-[calc(100vh-76px)] max-w-6xl items-center gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[.86fr_1.14fr] lg:gap-10 lg:py-12">
         <aside className={`hidden min-h-[560px] overflow-hidden rounded-[30px] border p-8 lg:flex lg:flex-col lg:justify-between ${darkMode ? "border-white/10 bg-[#0a0a0a]" : "border-black/10 bg-[#111] text-white"}`}>
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[.05] px-3 py-2 text-xs font-bold text-white/72">
-              <ShieldIcon /> {status}
-            </div>
-            <h2 className="mt-8 max-w-sm text-5xl font-black leading-[.98] tracking-[-.055em]">Access LoadLink without the clutter.</h2>
+            <h2 className="max-w-sm text-5xl font-black leading-[.98] tracking-[-.055em]">Access LoadLink without the clutter.</h2>
             <p className="mt-5 max-w-md text-sm font-semibold leading-7 text-white/52">A focused sign-in experience for your posts, messages, tools and logistics activity.</p>
           </div>
           <div className="grid gap-3">
@@ -53,9 +50,6 @@ export default function AuthShell({
         <div className={`w-full overflow-hidden rounded-[30px] border shadow-[0_18px_60px_rgba(0,0,0,.08)] ${card}`}>
           <div className="p-5 sm:p-7 md:p-9">
             <div className="mb-7">
-              <div className={`mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[11px] font-bold ${darkMode ? "border-white/10 bg-white/[.035] text-white/58" : "border-black/10 bg-black/[.02] text-black/58"}`}>
-                <ShieldIcon /> Secure LoadLink access
-              </div>
               <h1 className="text-4xl font-black tracking-[-.045em] sm:text-[44px]">{title}</h1>
               <p className={`mt-3 max-w-xl text-sm font-semibold leading-6 ${muted}`}>{description}</p>
             </div>

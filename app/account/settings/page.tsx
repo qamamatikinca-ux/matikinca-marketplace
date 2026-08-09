@@ -263,7 +263,27 @@ export default function AccountSettingsPage() {
   const textarea = `${input} min-h-28 py-3`;
   const muted = darkMode ? "text-white/55" : "text-black/55";
 
-  if (loading) return <main className={`flex min-h-screen items-center justify-center text-sm font-semibold uppercase tracking-[.12em] ${darkMode ? "bg-black text-white/55" : "bg-[#f4efe3] text-black/55"}`}>Loading settings…</main>;
+  if (loading) {
+    return (
+      <main className={`min-h-screen ${page}`}>
+        <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
+          <div className="relative mx-auto flex h-[76px] max-w-6xl items-center px-4 sm:px-5">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 sm:left-5"><SiteMenu darkMode={darkMode} /></div>
+            <HomeLogoLink theme="auto" showGlow={false} className="pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center" logoClassName="w-[132px] sm:w-[148px]" />
+            <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="absolute right-4 top-1/2 -translate-y-1/2 sm:right-5" />
+          </div>
+        </header>
+        <section className="mx-auto flex min-h-[calc(100vh-76px)] max-w-4xl items-center justify-center px-4 py-10 sm:px-5">
+          <div className={`w-full max-w-2xl rounded-[28px] border px-5 py-8 text-center sm:px-8 sm:py-10 ${surface}`}>
+            <p className={`text-[11px] font-black uppercase tracking-[.16em] ${darkMode ? "text-[#f6b800]" : "text-[#b68500]"}`}>LoadLink settings</p>
+            <h1 className="mt-3 text-4xl font-black tracking-[-.045em] sm:text-5xl">Loading your settings</h1>
+            <p className={`mx-auto mt-3 max-w-xl text-sm font-semibold leading-6 ${muted}`}>Preparing your profile, notifications and security preferences.</p>
+            <div className="mt-8"><TruckGearboxSketch darkMode={darkMode} /></div>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   const tabClass = (view: "profile" | "messages" | "security") => `min-w-0 flex-1 rounded-xl px-3 py-3 text-xs font-semibold transition ${settingsView === view ? "bg-[#f6b800] text-black shadow-sm" : (darkMode ? "text-white/55 hover:bg-white/[.05]" : "text-black/55 hover:bg-black/[.04]")}`;
 
@@ -283,7 +303,6 @@ export default function AccountSettingsPage() {
           <p className={`mt-1.5 text-sm font-semibold leading-6 ${muted}`}>Profile, messages and security.</p>
         </div>
 
-        <div className="mt-5 max-w-3xl"><TruckGearboxSketch darkMode={darkMode} /></div>
 
         <div className={`mt-5 flex max-w-xl gap-1 rounded-2xl border p-1.5 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-white"}`}>
           <button type="button" onClick={() => setSettingsView("profile")} className={tabClass("profile")}>Profile</button>
