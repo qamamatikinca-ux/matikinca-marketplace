@@ -7,7 +7,7 @@ import type { User } from "@supabase/supabase-js";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
-import TruckGearboxSketch from "@/components/TruckGearboxSketch";
+import LoadLinkLoading from "@/components/LoadLinkLoading";
 import MfaSecurityCard from "@/components/MfaSecurityCard";
 import PasswordStrengthMeter from "@/components/PasswordStrengthMeter";
 import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
@@ -264,29 +264,7 @@ export default function AccountSettingsPage() {
   const textarea = `${input} min-h-28 py-3`;
   const muted = darkMode ? "text-white/55" : "text-black/55";
 
-  if (loading) {
-    return (
-      <main className={`min-h-screen ${page}`}>
-        <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
-          <div className="relative mx-auto flex h-[76px] max-w-6xl items-center px-4 sm:px-5">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 sm:left-5"><SiteMenu darkMode={darkMode} /></div>
-            <HomeLogoLink theme="auto" showGlow={false} className="pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center" logoClassName="w-[132px] sm:w-[148px]" />
-            <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="absolute right-4 top-1/2 -translate-y-1/2 sm:right-5" />
-          </div>
-        </header>
-        <section className="relative mx-auto flex min-h-[calc(100vh-76px)] max-w-5xl items-center justify-center overflow-hidden px-4 py-8 sm:px-5 md:py-10">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(246,184,0,.12),transparent_46%)]" />
-          <div className={`relative w-full max-w-2xl rounded-[30px] border p-4 text-center shadow-2xl sm:p-6 ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-white"}`}>
-            <TruckGearboxSketch darkMode={darkMode} />
-            <h1 className="mt-5 text-2xl font-black tracking-[-.035em] sm:text-3xl">Preparing your settings</h1>
-            <div className="mt-5 flex justify-center gap-2" aria-label="Loading settings">
-              {[0, 1, 2].map((item) => <span key={item} className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#f6b800]" style={{ animationDelay: `${item * 120}ms` }} />)}
-            </div>
-          </div>
-        </section>
-      </main>
-    );
-  }
+  if (loading) return <LoadLinkLoading />;
 
   const tabClass = (view: "profile" | "messages" | "security") => `min-w-0 flex-1 rounded-xl px-3 py-3 text-xs font-semibold transition ${settingsView === view ? "bg-[#f6b800] text-black shadow-sm" : (darkMode ? "text-white/55 hover:bg-white/[.05]" : "text-black/55 hover:bg-black/[.04]")}`;
 
