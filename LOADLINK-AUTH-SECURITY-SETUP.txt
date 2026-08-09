@@ -1,0 +1,88 @@
+LOADLINK V2.6.3 — AUTH SECURITY ACTIVATION
+
+The code update hardens the auth UI and flow immediately. Two protections require one-time Supabase / Vercel dashboard configuration because their secrets must NEVER be hard-coded into the website.
+
+1) CLOUDFLARE TURNSTILE BOT PROTECTION — RECOMMENDED
+
+Cloudflare:
+- Create a Turnstile widget for your LoadLink production domain.
+- Copy the PUBLIC site key and PRIVATE secret key.
+
+Vercel:
+- Project -> Settings -> Environment Variables
+- Add:
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY=<public Turnstile site key>
+- Apply it to Production (and Preview only if that preview domain is registered with Turnstile).
+- Redeploy after adding it.
+
+Supabase:
+- Authentication -> Bot and Abuse Protection / CAPTCHA
+- Enable CAPTCHA protection.
+- Choose Cloudflare Turnstile.
+- Paste the PRIVATE Turnstile secret key into Supabase.
+- Never put that secret in GitHub or NEXT_PUBLIC_* variables.
+
+V2.6.3 automatically displays the security challenge on:
+- Sign in
+- Create account
+- Forgot password
+when NEXT_PUBLIC_TURNSTILE_SITE_KEY exists.
+
+IMPORTANT: Enable Supabase CAPTCHA only after the Vercel public site key is set and deployed. Otherwise authentication requests will correctly fail because no challenge token is being supplied.
+
+2) SUPABASE AUTH SETTINGS — TIGHT PRODUCTION BASELINE
+
+Authentication -> Sign In / Password Security:
+- Confirm email: ON
+- Minimum password length: 12 or greater
+- Require lowercase letters
+- Require uppercase letters
+- Require numbers
+- Require symbols
+- Leaked password protection: ON if your Supabase plan supports it
+- Require reauthentication/current password for password changes where available
+
+Authentication -> Rate Limits:
+- Keep Supabase Auth rate limiting enabled.
+- Review email/OTP/recovery quotas before launch.
+- Do not weaken the default IP protections simply to avoid development rate-limit messages.
+
+Authentication -> URL Configuration:
+- SITE_URL should be your exact LoadLink production origin.
+- Keep Redirect URLs narrow. Include only domains/routes LoadLink genuinely uses.
+- Ensure the production allow-list covers the exact LoadLink auth routes used by this patch, especially `/auth/callback` and `/reset-password`.
+- Avoid broad wildcard redirect URLs in production.
+
+Authentication -> MFA:
+- Keep TOTP verification enabled.
+- V2.6.3 adds authenticator-app setup in Settings -> Security.
+- Users who enable it are forced through the LoadLink MFA screen when their session is only AAL1.
+- Before public launch, enable TOTP on the LoadLink owner/admin account and any staff account with privileged access.
+
+Authentication -> Audit Logs:
+- Review Supabase Auth Audit Logs for logins, resets, refreshes and logouts.
+- Enable database audit-log storage if you need searchable auth events inside Supabase.
+
+Email:
+- Configure production Custom SMTP before public launch so confirmation and recovery mail is reliable.
+
+3) WHAT V2.6.3 DOES IN CODE
+
+- Modern focused LoadLink login/signup/recovery design.
+- Generic login and recovery errors to reduce account enumeration.
+- PKCE auth flow.
+- Hardened internal `next` redirect validation.
+- Password reset uses a dedicated recovery page.
+- Successful password reset signs out existing sessions globally.
+- Optional TOTP MFA enrollment in Settings -> Security.
+- Enrolled MFA accounts are intercepted before ordinary LoadLink pages until AAL2 verification completes.
+- Optional Turnstile token support on login/signup/recovery.
+- Auth pages are sent with Cache-Control: no-store.
+- Security headers: anti-framing, nosniff, referrer policy, restricted browser permissions, HSTS and a safe baseline CSP.
+- Raw Supabase/provider error text is not exposed to ordinary users on auth pages.
+
+4) IMPORTANT LIMIT
+
+LoadLink uses Supabase authentication. A public Supabase publishable key is intentionally visible in web apps, so security must NOT rely on hiding that key. The real controls are Supabase Auth rate limits, CAPTCHA, strong password policy, MFA, secure redirect configuration and database RLS.
+
+Do not paste service-role keys, Turnstile secrets, Supabase management tokens or private SMTP credentials into client code or NEXT_PUBLIC_* variables.

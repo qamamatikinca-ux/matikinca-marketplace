@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
-import HomeLogoLink from "@/components/HomeLogoLink";
+import AuthShell from "@/components/AuthShell";
 import { syncAccountState } from "@/lib/accountState";
 import { isAuthenticatedUser, safeNextPath } from "@/lib/auth";
+import { destinationAfterMfa } from "@/lib/authSecurity";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 
 export default function AuthCallbackPage() {
@@ -14,85 +14,48 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     let active = true;
-    let timeout: ReturnType<typeof setTimeout> | null = null;
+    let timeout: number | null = null;
+
+    async function complete(next: string) {
+      await syncAccountState().catch(() => undefined);
+      const destination = await destinationAfterMfa(next);
+      if (active) router.replace(destination);
+    }
 
     async function finishSignIn() {
-      if (!isSupabaseConfigured) {
-        setError("Supabase is not connected on this deployment.");
-        return;
-      }
-
+      if (!isSupabaseConfigured) { setError("Secure sign-in is temporarily unavailable."); return; }
       const params = new URLSearchParams(window.location.search);
       const next = safeNextPath(params.get("next"), "/");
-      const oauthError = params.get("error_description") || params.get("error");
-      if (oauthError) {
-        setError(oauthError);
-        return;
-      }
+      if (params.get("error") || params.get("error_description")) { setError("The sign-in provider did not complete the request. Return to sign in and try again."); return; }
 
       const code = params.get("code");
       if (code) {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (exchangeError && !/already|verifier|session/i.test(exchangeError.message)) {
-          setError(exchangeError.message);
-          return;
-        }
+        if (exchangeError && !/already|verifier|session/i.test(exchangeError.message)) { setError("The secure sign-in link expired or could not be verified. Try signing in again."); return; }
       }
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (isAuthenticatedUser(user)) { await complete(next); return; }
 
-      if (isAuthenticatedUser(user)) {
-        await syncAccountState().catch(() => undefined);
-        if (active) router.replace(next);
-        return;
-      }
-
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
         if (!active || !isAuthenticatedUser(session?.user)) return;
         subscription.unsubscribe();
-        await syncAccountState().catch(() => undefined);
-        router.replace(next);
+        await complete(next);
       });
 
-      timeout = setTimeout(() => {
+      timeout = window.setTimeout(() => {
         subscription.unsubscribe();
-        if (active) setError("Google sign-in took too long. Return to the login page and try again.");
+        if (active) setError("Sign-in took too long. Return to the login page and try again.");
       }, 12_000);
     }
 
-    finishSignIn().catch((callbackError) => {
-      if (active) setError(callbackError instanceof Error ? callbackError.message : "Sign-in could not be completed.");
-    });
-
-    return () => {
-      active = false;
-      if (timeout) clearTimeout(timeout);
-    };
+    void finishSignIn().catch(() => { if (active) setError("Sign-in could not be completed securely. Try again."); });
+    return () => { active = false; if (timeout) window.clearTimeout(timeout); };
   }, [router]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-black px-5 text-white">
-      <section className="w-full max-w-md border border-[#f6b800]/40 bg-[#0b0b0b] p-7 text-center">
-        <HomeLogoLink theme="dark" />
-        {error ? (
-          <>
-            <div className="mx-auto mt-8 flex h-12 w-12 items-center justify-center rounded-full border border-red-400 text-xl font-black text-red-400">!</div>
-            <h1 className="mt-5 text-2xl font-black">Sign-in could not finish</h1>
-            <p className="mt-3 text-sm leading-6 text-white/60">{error}</p>
-            <button type="button" onClick={() => router.replace("/login")} className="mt-6 h-12 w-full bg-[#f6b800] text-sm font-black uppercase text-black">Return to sign in</button>
-          </>
-        ) : (
-          <>
-            <div className="mx-auto mt-8 h-12 w-12 animate-spin rounded-full border-2 border-white/15 border-t-[#f6b800]" />
-            <h1 className="mt-5 text-2xl font-black">Completing Google sign-in</h1>
-            <p className="mt-3 text-sm text-white/55">Your posts, messages and activity are being connected to your account.</p>
-          </>
-        )}
-      </section>
-    </main>
+    <AuthShell title={error ? "Sign-in could not finish" : "Securing your session"} description={error ? "Nothing was changed on your account." : "LoadLink is verifying the sign-in response before opening your account."}>
+      {error ? <><p role="alert" className="rounded-2xl border border-red-500/25 bg-red-500/[.07] px-4 py-4 text-sm font-semibold text-red-500">{error}</p><button type="button" onClick={() => router.replace("/login")} className="mt-4 h-13 w-full rounded-2xl bg-[#f6b800] text-sm font-black text-black">Return to sign in</button></> : <div className="py-7 text-center"><div className="mx-auto h-12 w-12 animate-spin rounded-full border-2 border-current/10 border-t-[#f6b800]" /><p className="mt-5 text-sm font-semibold opacity-50">Verifying provider, account and session…</p></div>}
+    </AuthShell>
   );
 }

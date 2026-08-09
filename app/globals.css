@@ -463,7 +463,7 @@ input[list]::-webkit-calendar-picker-indicator { opacity:0 !important; display:n
 .loadlink-messages [data-loadlink-message-composer="true"] { scroll-margin-bottom: 12px; }
 .loadlink-logistics-sheet { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 
-/* LOADLINK V2.6.2 UX REFINEMENT START */
+/* LOADLINK V2.6.3 UX REFINEMENT START */
 html body,
 html body button,
 html body a,
@@ -522,4 +522,4 @@ html[data-loadlink-simple="true"] p {
     font-size: 17px;
   }
 }
-/* LOADLINK V2.6.2 UX REFINEMENT END */
+/* LOADLINK V2.6.3 UX REFINEMENT END */

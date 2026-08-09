@@ -1,117 +1,90 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import AuthStatusButton from "@/components/AuthStatusButton";
-import HomeLogoLink from "@/components/HomeLogoLink";
-import SiteMenu from "@/components/SiteMenu";
+import { useState, type FormEvent } from "react";
+import AuthShell from "@/components/AuthShell";
+import TurnstileChallenge, { loadLinkTurnstileConfigured } from "@/components/TurnstileChallenge";
 import { syncAccountState } from "@/lib/accountState";
+import { friendlyAuthError, strongPasswordIssue } from "@/lib/authSecurity";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
-import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 
 export default function SignUpPage() {
   const router = useRouter();
-  const { darkMode, toggleTheme } = useLoadLinkTheme();
+  const { darkMode } = useLoadLinkTheme();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
   async function createAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
     setMessage("");
-    if (!isSupabaseConfigured) {
-      setMessage("Supabase is not connected on this deployment.");
-      return;
-    }
-    if (fullName.trim().length < 2) {
-      setMessage("Enter your full name.");
-      return;
-    }
-    if (password.length < 8) {
-      setMessage("Use a password with at least 8 characters.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setMessage("The two passwords do not match.");
-      return;
-    }
+    if (!isSupabaseConfigured) { setMessage("Secure account creation is temporarily unavailable."); return; }
+    if (fullName.trim().length < 2) { setMessage("Enter your full name."); return; }
+    const passwordIssue = strongPasswordIssue(password);
+    if (passwordIssue) { setMessage(passwordIssue); return; }
+    if (password !== confirmPassword) { setMessage("The two passwords do not match."); return; }
+    if (loadLinkTurnstileConfigured && !captchaToken) { setMessage("Complete the security check before creating your account."); return; }
 
     setBusy(true);
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/account/settings")}`;
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim().toLowerCase(),
-      password,
-      options: { emailRedirectTo: redirectTo, data: { full_name: fullName.trim(), name: fullName.trim() } },
-    });
-    setBusy(false);
-    if (error) {
-      setMessage(error.message);
-      return;
+    try {
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/account/settings")}`;
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: {
+          emailRedirectTo: redirectTo,
+          data: { full_name: fullName.trim(), name: fullName.trim() },
+          ...(captchaToken ? { captchaToken } : {}),
+        },
+      });
+      if (error) throw error;
+      if (data.session) {
+        await syncAccountState().catch(() => undefined);
+        router.replace("/account/settings");
+        return;
+      }
+      setMessage("Check your email to finish setting up your LoadLink account. If an account already exists, use sign in instead.");
+    } catch (error) {
+      setMessage(friendlyAuthError(error, "signup"));
+    } finally {
+      setBusy(false);
+      setCaptchaToken("");
+      setCaptchaResetKey((value) => value + 1);
     }
-    if (data.session) {
-      await syncAccountState().catch(() => undefined);
-      router.replace("/account/settings");
-      return;
-    }
-    setMessage("Account created. Check your email and confirm your address, then sign in.");
   }
 
   async function continueWithGoogle() {
     if (!isSupabaseConfigured || busy) return;
-    setBusy(true);
+    setBusy(true); setMessage("");
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/account/settings")}`;
     const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
-    if (error) {
-      setBusy(false);
-      setMessage(error.message);
-    }
+    if (error) { setBusy(false); setMessage("Google sign-in could not start. Try again."); }
   }
 
-
-  const page = darkMode ? "bg-black text-white" : "bg-[#fff3cf] text-black";
-  const surface = darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-[#fffaf0]";
-  const input = `mt-2 h-12 w-full border px-4 text-sm font-semibold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-white text-black" : "border-black/15 bg-white text-black"}`;
-  const muted = darkMode ? "text-white/55" : "text-black/55";
+  const input = `h-13 w-full rounded-2xl border px-4 text-[15px] font-semibold outline-none transition focus:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.045] text-white placeholder:text-white/28" : "border-black/12 bg-[#fffdf8] text-black placeholder:text-black/30"}`;
+  const issue = password ? strongPasswordIssue(password) : "";
 
   return (
-    <main className={`min-h-screen ${page}`}>
-      <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
-        <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4">
-          <div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div>
-          <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="ml-auto" />
-        </div>
-      </header>
-
-      <section className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-xl items-center px-5 py-10">
-        <div className={`w-full border p-6 md:p-8 ${surface}`}>
-          <h1 className=" text-4xl font-black tracking-[-.05em]">Create your account</h1>
-          <p className={`mt-3 text-sm leading-6 ${muted}`}>Sign in is required before posting, messaging or managing a dealership or driver profile.</p>
-
-          <button type="button" onClick={() => void continueWithGoogle()} disabled={busy} className="mt-6 flex h-12 w-full items-center justify-center border border-black/15 bg-white text-sm font-black text-black disabled:opacity-50">Continue with Google</button>
-          <div className={`my-6 flex items-center gap-3 text-xs font-black uppercase ${muted}`}><span className="h-px flex-1 bg-current opacity-20" />or use email<span className="h-px flex-1 bg-current opacity-20" /></div>
-
-          <form onSubmit={createAccount} className="grid gap-4">
-            <label className="text-xs font-black uppercase tracking-[.1em]">Full name<input className={input} value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" required /></label>
-            <label className="text-xs font-black uppercase tracking-[.1em]">Email<input className={input} type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label>
-            <label className="text-xs font-black uppercase tracking-[.1em]">Password<input className={input} type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" minLength={8} required /></label>
-            <label className="text-xs font-black uppercase tracking-[.1em]">Confirm password<input className={input} type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength={8} required /></label>
-            <button type="submit" disabled={busy} className="mt-2 h-12 bg-[#f6b800] text-xs font-black uppercase tracking-[.14em] text-black disabled:opacity-50">{busy ? "Creating account…" : "Create account"}</button>
-          </form>
-
-          {message ? <p role="status" className="mt-5 border border-[#f6b800]/40 bg-[#f6b800]/10 p-4 text-sm font-bold">{message}</p> : null}
-          <p className={`mt-6 text-center text-sm ${muted}`}>Already registered? <Link href="/login" className="font-black text-[#b88900]">Sign in</Link></p>
-        </div>
-      </section>
-    </main>
+    <AuthShell title="Create your account" description="One account for LoadLink posts, messages, tools, driver profiles and dealership activity." footer={<>Already registered? <Link href="/login" className="font-black text-[#b88900]">Sign in</Link></>}>
+      <button type="button" onClick={() => void continueWithGoogle()} disabled={busy} className="flex h-13 w-full items-center justify-center rounded-2xl border border-black/10 bg-white px-4 text-sm font-black text-black shadow-sm disabled:opacity-50">Continue with Google</button>
+      <div className={`my-6 flex items-center gap-3 text-xs font-semibold ${darkMode ? "text-white/35" : "text-black/35"}`}><span className="h-px flex-1 bg-current opacity-30" />or use email<span className="h-px flex-1 bg-current opacity-30" /></div>
+      <form onSubmit={createAccount} className="grid gap-4">
+        <label className="grid gap-2"><span className="text-sm font-bold">Full name</span><input className={input} value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" maxLength={140} required /></label>
+        <label className="grid gap-2"><span className="text-sm font-bold">Email address</span><input className={input} type="email" inputMode="email" autoCapitalize="none" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" maxLength={254} required /></label>
+        <label className="grid gap-2"><span className="text-sm font-bold">Password</span><input className={input} type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" maxLength={128} required /><span className={`text-[11px] font-semibold leading-5 ${issue ? "text-amber-600" : password ? "text-emerald-500" : darkMode ? "text-white/38" : "text-black/38"}`}>{password ? issue || "Strong password format ✓" : "12+ characters with upper/lowercase, a number and a symbol."}</span></label>
+        <label className="grid gap-2"><span className="text-sm font-bold">Confirm password</span><input className={input} type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" maxLength={128} required /></label>
+        <TurnstileChallenge onToken={setCaptchaToken} resetKey={captchaResetKey} darkMode={darkMode} />
+        <button type="submit" disabled={busy} className="mt-1 h-13 rounded-2xl bg-[#f6b800] px-5 text-sm font-black text-black disabled:opacity-45">{busy ? "Creating securely…" : "Create account"}</button>
+      </form>
+      {message ? <p role="status" aria-live="polite" className={`mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold leading-5 ${darkMode ? "border-white/10 bg-white/[.03] text-white/68" : "border-black/10 bg-black/[.02] text-black/68"}`}>{message}</p> : null}
+    </AuthShell>
   );
 }
-
-

@@ -10,6 +10,7 @@ import NotificationCenter from "@/components/NotificationCenter";
 import ThemeCoordinator from "@/components/ThemeCoordinator";
 import SimpleModeCoordinator from "@/components/SimpleModeCoordinator";
 import AccountActivityTracker from "@/components/AccountActivityTracker";
+import AuthMfaGate from "@/components/AuthMfaGate";
 
 import MarketplaceRestrictionGuard from "@/components/phase2/MarketplaceRestrictionGuard";
 export const metadata: Metadata = {
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <ThemeCoordinator />
         <SimpleModeCoordinator />
         <AccountActivityTracker />
+        <AuthMfaGate />
         <MarketplaceRestrictionGuard />
         <Suspense fallback={null}><GlobalLoading /></Suspense>
         <SwipeDotsEnhancer />

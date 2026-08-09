@@ -1,378 +1,128 @@
 "use client";
 
-import HomeLogoLink from "@/components/HomeLogoLink";
-import SiteMenu from "@/components/SiteMenu";
-
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
-import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
-import { isAuthenticatedUser, safeNextPath } from "@/lib/auth";
-import AuthStatusButton from "@/components/AuthStatusButton";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import AuthShell from "@/components/AuthShell";
+import TurnstileChallenge, { loadLinkTurnstileConfigured } from "@/components/TurnstileChallenge";
 import { clearActiveAccountState, syncAccountState } from "@/lib/accountState";
+import { isAuthenticatedUser, safeNextPath } from "@/lib/auth";
+import { destinationAfterMfa, friendlyAuthError } from "@/lib/authSecurity";
+import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
-import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { darkMode } = useLoadLinkTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
-  const { darkMode: isDark, toggleTheme } = useLoadLinkTheme();
+  const [busy, setBusy] = useState(false);
   const [signedInEmail, setSignedInEmail] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
   useEffect(() => {
-
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("reset") === "success") setMessage("Password updated. Sign in again with your new password.");
     if (!isSupabaseConfigured) return;
-
-    supabase.auth.getUser().then(({ data }) => {
-      if (isAuthenticatedUser(data.user)) setSignedInEmail(data.user.email || "Google account");
+    void supabase.auth.getUser().then(({ data }) => {
+      if (isAuthenticatedUser(data.user)) setSignedInEmail(data.user.email || "LoadLink account");
     });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSignedInEmail(isAuthenticatedUser(session?.user) ? session?.user.email || "Google account" : "");
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSignedInEmail(isAuthenticatedUser(session?.user) ? session?.user.email || "LoadLink account" : "");
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
-  function getNextPath() {
+  const getNextPath = useCallback(() => {
     if (typeof window === "undefined") return "/";
     return safeNextPath(new URLSearchParams(window.location.search).get("next"), "/");
+  }, []);
+
+  async function finishSignIn() {
+    await syncAccountState().catch(() => undefined);
+    const destination = await destinationAfterMfa(getNextPath());
+    router.replace(destination);
   }
 
-
-  async function handleLogin(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
     setMessage("");
+    if (!isSupabaseConfigured) { setMessage("Secure sign-in is temporarily unavailable."); return; }
+    if (loadLinkTurnstileConfigured && !captchaToken) { setMessage("Complete the security check before signing in."); return; }
 
-    if (!isSupabaseConfigured) {
-      setMessage("Supabase is not connected yet.");
-      return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+        options: captchaToken ? { captchaToken } : undefined,
+      });
+      if (error) throw error;
+      setMessage("Signed in. Opening LoadLink…");
+      await finishSignIn();
+    } catch (error) {
+      setMessage(friendlyAuthError(error, "login"));
+    } finally {
+      setBusy(false);
+      setCaptchaToken("");
+      setCaptchaResetKey((value) => value + 1);
     }
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    await syncAccountState().catch(() => undefined);
-    setMessage("Signed in successfully.");
-    router.replace(getNextPath());
   }
 
   async function handleGoogleOAuth() {
+    if (busy) return;
     setMessage("");
-
-    if (!isSupabaseConfigured) {
-      setMessage("Supabase is not connected yet.");
-      return;
-    }
-
+    if (!isSupabaseConfigured) { setMessage("Secure sign-in is temporarily unavailable."); return; }
+    setBusy(true);
     const next = getNextPath();
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo },
-    });
-
-    if (error) setMessage(error.message);
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
+    if (error) { setBusy(false); setMessage("Google sign-in could not start. Try again."); }
   }
 
   async function handleSignOut() {
-    await syncAccountState().catch(() => undefined);
+    setBusy(true);
     await supabase.auth.signOut();
     clearActiveAccountState();
     setSignedInEmail("");
+    setBusy(false);
     setMessage("Signed out.");
   }
 
+  const input = `h-13 w-full rounded-2xl border px-4 text-[15px] font-semibold outline-none transition focus:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.045] text-white placeholder:text-white/28" : "border-black/12 bg-[#fffdf8] text-black placeholder:text-black/30"}`;
+
   return (
-    <main
-      className={[
-        "min-h-screen transition-colors duration-300",
-        isDark ? "bg-[#050505] text-white" : "bg-[#fff3cf] text-[#111111]",
-      ].join(" ")}
-    >
-      <header
-        className={[
-          "sticky top-0 z-50 border-b transition-colors duration-300",
-          isDark ? "border-white/10 bg-black" : "border-black/10 bg-white",
-        ].join(" ")}
-      >
-        <div className="grid h-20 w-full grid-cols-[92px_1fr_52px] items-center px-4">
-          <div className="flex items-center gap-2">
-            <SiteMenu darkMode={isDark} className={isDark ? "text-white" : "text-black"} />
-
-            <AuthStatusButton darkMode={isDark} />
-          </div>
-
-          <HomeLogoLink logoClassName="loadlink-logo-dark-fix" />
-          <LoadLinkThemeToggle darkMode={isDark} onToggle={toggleTheme} className="ml-auto" />
+    <AuthShell title="Welcome back" description="Sign in to manage posts, messages, quotes and your LoadLink account.">
+      {signedInEmail ? (
+        <div className={`mb-6 rounded-2xl border p-4 ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-black/[.02]"}`}>
+          <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/12 text-lg font-black text-emerald-500">✓</span><div className="min-w-0"><p className="text-sm font-black">Already signed in</p><p className={`mt-0.5 truncate text-xs ${darkMode ? "text-white/48" : "text-black/48"}`}>{signedInEmail}</p></div></div>
+          <div className="mt-4 grid grid-cols-2 gap-2"><button type="button" onClick={() => void finishSignIn()} className="h-11 rounded-xl bg-[#f6b800] text-xs font-black text-black">Continue</button><button type="button" onClick={() => void handleSignOut()} disabled={busy} className="h-11 rounded-xl border border-current/15 text-xs font-bold disabled:opacity-50">Sign out</button></div>
         </div>
-      </header>
+      ) : null}
 
-      <section className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-[520px] flex-col justify-center px-5 py-8">
-        <header className="mb-7 text-center">
-          <p
-            className={[
-              "text-sm font-medium tracking-wide",
-              isDark ? "text-neutral-400" : "text-[#4b3d20]",
-            ].join(" ")}
-          >
-            Sign in to access your logistics portal.
-          </p>
-        </header>
+      <button type="button" onClick={() => void handleGoogleOAuth()} disabled={busy} className="flex h-13 w-full items-center justify-center gap-3 rounded-2xl border border-black/10 bg-white px-4 text-sm font-black text-black shadow-sm transition active:scale-[.99] disabled:opacity-50"><GoogleLogo />Continue with Google</button>
 
-        <div
-          className={[
-            "border p-5 transition-colors duration-300",
-            isDark
-              ? "border-yellow-500/30 bg-[#0b0b0b] shadow-[0_0_45px_rgba(0,0,0,0.55)]"
-              : "border-[#d4a532] bg-[#fffaf0] shadow-[0_14px_35px_rgba(0,0,0,0.14)]",
-          ].join(" ")}
-        >
-          <div
-            className={[
-              "mb-5 border px-4 py-5 text-center",
-              isDark
-                ? "border-yellow-500/25 bg-black"
-                : "border-[#d4a532] bg-[#fff1c2]",
-            ].join(" ")}
-          >
-            <p className={["text-base font-black", isDark ? "text-white" : "text-black"].join(" ")}>
-              Logistics made simple.
-            </p>
-            <p
-              className={[
-                "mt-2 text-sm leading-6",
-                isDark ? "text-neutral-400" : "text-[#5c4a24]",
-              ].join(" ")}
-            >
-              Find trucks, jobs and contracts from one clean portal.
-            </p>
-          </div>
+      <div className={`my-6 flex items-center gap-3 text-xs font-semibold ${darkMode ? "text-white/35" : "text-black/35"}`}><span className="h-px flex-1 bg-current opacity-30" />or sign in with email<span className="h-px flex-1 bg-current opacity-30" /></div>
 
-          {signedInEmail ? (
-            <div className="mb-5 border border-[#f6b800] bg-[#f6b800]/10 p-4 text-center">
-              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#f6b800] text-xl font-black text-black">✓</div>
-              <p className={["mt-3 text-sm font-black", isDark ? "text-white" : "text-black"].join(" ")}>Signed in with Google</p>
-              <p className={["mt-1 text-xs", isDark ? "text-white/55" : "text-black/55"].join(" ")}>{signedInEmail}</p>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => router.replace(getNextPath())} className="h-10 bg-[#f6b800] text-xs font-black uppercase text-black">Continue</button>
-                <button type="button" onClick={handleSignOut} className={["h-10 border text-xs font-black uppercase", isDark ? "border-white/20 text-white" : "border-black/20 text-black"].join(" ")}>Sign out</button>
-              </div>
-            </div>
-          ) : null}
+      <form onSubmit={handleLogin} className="grid gap-4" noValidate>
+        <label className="grid gap-2"><span className="text-sm font-bold">Email address</span><input className={input} type="email" inputMode="email" autoCapitalize="none" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" maxLength={254} required /></label>
+        <label className="grid gap-2"><span className="flex items-center justify-between gap-3 text-sm font-bold"><span>Password</span><Link href="/forgot-password" className={`text-xs font-bold underline-offset-4 hover:underline ${darkMode ? "text-white/58" : "text-black/58"}`}>Forgot password?</Link></span><span className="relative block"><input className={`${input} pr-16`} type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Your password" maxLength={128} required /><button type="button" onClick={() => setShowPassword((value) => !value)} className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-xl px-3 py-2 text-[11px] font-black ${darkMode ? "text-white/48" : "text-black/48"}`}>{showPassword ? "Hide" : "Show"}</button></span></label>
 
-          <div className="grid gap-3">
-            <button
-              type="button"
-              onClick={handleGoogleOAuth}
-              className="flex h-12 w-full items-center justify-center gap-3 border border-neutral-200 bg-white px-4 text-sm font-bold text-black active:scale-[0.99]"
-            >
-              <GoogleLogo />
-              Continue with Google
-            </button>
+        <TurnstileChallenge onToken={setCaptchaToken} resetKey={captchaResetKey} darkMode={darkMode} />
+        <button type="submit" disabled={busy || !email.trim() || !password} className="mt-1 h-13 rounded-2xl bg-[#f6b800] px-5 text-sm font-black text-black shadow-[0_12px_30px_rgba(246,184,0,.18)] transition active:scale-[.99] disabled:opacity-45">{busy ? "Checking securely…" : "Sign in"}</button>
+      </form>
 
-            <button
-              type="button"
-              disabled
-              aria-disabled="true"
-              title="Apple sign-in is coming soon"
-              className="flex h-12 w-full cursor-not-allowed items-center justify-center gap-3 border border-neutral-200 bg-white px-4 text-sm font-bold text-black opacity-55"
-            >
-              <AppleLogo />
-              Continue with Apple
-              <span className="ml-1 text-[10px] font-black uppercase tracking-wide text-black/45">Coming soon</span>
-            </button>
-          </div>
+      {message ? <p role="status" aria-live="polite" className={`mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold leading-5 ${darkMode ? "border-white/10 bg-white/[.03] text-white/68" : "border-black/10 bg-black/[.02] text-black/68"}`}>{message}</p> : null}
 
-          <div className="my-6 flex items-center gap-3">
-            <div className={["h-px flex-1", isDark ? "bg-white/15" : "bg-black/15"].join(" ")} />
-            <span className={["text-xs font-medium", isDark ? "text-neutral-500" : "text-[#7a672f]"].join(" ")}>
-              or
-            </span>
-            <div className={["h-px flex-1", isDark ? "bg-white/15" : "bg-black/15"].join(" ")} />
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <label className="block">
-              <span
-                className={[
-                  "mb-2 block text-xs font-black uppercase tracking-[0.32em]",
-                  isDark ? "text-neutral-500" : "text-[#6f5b2a]",
-                ].join(" ")}
-              >
-                Email
-              </span>
-              <input
-                className={[
-                  "h-12 w-full border px-4 text-sm font-semibold outline-none transition placeholder:text-neutral-500 focus:border-yellow-400",
-                  isDark
-                    ? "border-yellow-500/20 bg-[#fff8b8] text-black"
-                    : "border-[#d4a532] bg-white text-black",
-                ].join(" ")}
-                type="email"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                required
-              />
-            </label>
-
-            <label className="block">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <span
-                  className={[
-                    "block text-xs font-black uppercase tracking-[0.32em]",
-                    isDark ? "text-neutral-500" : "text-[#6f5b2a]",
-                  ].join(" ")}
-                >
-                  Password
-                </span>
-
-                <Link
-                  href="/forgot-password"
-                  className={["text-xs font-black", isDark ? "text-yellow-400" : "text-[#9b7600]"].join(" ")}
-                >
-                  Forgot password?
-                </Link>
-              </div>
-
-              <input
-                className={[
-                  "h-12 w-full border px-4 text-sm font-semibold outline-none transition placeholder:text-neutral-500 focus:border-yellow-400",
-                  isDark
-                    ? "border-yellow-500/20 bg-[#fff8b8] text-black"
-                    : "border-[#d4a532] bg-white text-black",
-                ].join(" ")}
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                required
-              />
-            </label>
-
-            <button
-              type="submit"
-              className="h-12 w-full border border-yellow-400 bg-yellow-400 text-sm font-black uppercase tracking-wide text-black active:scale-[0.99]"
-            >
-              Sign in
-            </button>
-          </form>
-
-          {message ? (
-            <p
-              className={[
-                "mt-4 border px-4 py-3 text-center text-xs",
-                isDark
-                  ? "border-white/10 bg-black text-neutral-300"
-                  : "border-[#d4a532] bg-[#fff1c2] text-[#4b3d20]",
-              ].join(" ")}
-            >
-              {message}
-            </p>
-          ) : null}
-
-          <p
-            className={[
-              "mt-6 text-center text-sm",
-              isDark ? "text-neutral-400" : "text-[#4b3d20]",
-            ].join(" ")}
-          >
-            New to LoadLink? {" "}
-            <Link href="/signup" className={["font-black", isDark ? "text-yellow-400" : "text-[#9b7600]"].join(" ")}>
-              Create account
-            </Link>
-          </p>
-        </div>
-
-        <div className="mt-6 text-center">
-          <Link
-            href="/"
-            className={[
-              "inline-block text-sm font-bold transition",
-              isDark ? "text-neutral-400 hover:text-yellow-400" : "text-[#4b3d20] hover:text-black",
-            ].join(" ")}
-          >
-            Back to LoadLink
-          </Link>
-        </div>
-      </section>
-    </main>
-  );
-}
-
-function MenuIcon() {
-  return (
-    <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function SunIcon() {
-  return (
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
-      <circle cx="12" cy="12" r="4.5" fill="currentColor" />
-      <path d="M12 2.5v2.2M12 19.3v2.2M21.5 12h-2.2M4.7 12H2.5M18.72 5.28l-1.56 1.56M6.84 17.16l-1.56 1.56M18.72 18.72l-1.56-1.56M6.84 6.84 5.28 5.28" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function MoonIcon() {
-  return (
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
-      <path d="M20.2 14.1A8.7 8.7 0 0 1 9.9 3.8a8.7 8.7 0 1 0 10.3 10.3Z" fill="currentColor" />
-    </svg>
-  );
-}
-
-function AppleLogo() {
-  return (
-    <svg
-      aria-hidden="true"
-      width="23"
-      height="23"
-      viewBox="0 0 24 24"
-      fill="black"
-      className="shrink-0"
-    >
-      <path d="M17.05 12.54c-.03-3.06 2.5-4.53 2.61-4.6-1.42-2.08-3.64-2.36-4.43-2.39-1.89-.19-3.68 1.11-4.64 1.11-.96 0-2.44-1.08-4.01-1.05-2.06.03-3.96 1.2-5.02 3.04-2.14 3.71-.55 9.21 1.54 12.22 1.02 1.47 2.23 3.12 3.83 3.06 1.54-.06 2.12-.99 3.98-.99 1.86 0 2.38.99 4.01.96 1.65-.03 2.7-1.5 3.71-2.97 1.17-1.71 1.65-3.37 1.68-3.45-.04-.02-3.23-1.24-3.26-4.94ZM14 3.56c.85-1.03 1.42-2.46 1.26-3.88-1.22.05-2.7.81-3.58 1.84-.79.91-1.48 2.37-1.29 3.76 1.36.11 2.75-.69 3.61-1.72Z" />
-    </svg>
+      <p className={`mt-5 text-center text-[11px] font-semibold leading-5 ${darkMode ? "text-white/38" : "text-black/38"}`}>LoadLink will never ask for your password in a message, listing or quote.</p>
+    </AuthShell>
   );
 }
 
 function GoogleLogo() {
-  return (
-    <svg aria-hidden="true" width="23" height="23" viewBox="0 0 48 48" className="shrink-0">
-      <path
-        fill="#EA4335"
-        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
-      />
-      <path
-        fill="#4285F4"
-        d="M46.5 24.5c0-1.57-.14-3.08-.41-4.5H24v9h12.62c-.54 2.91-2.18 5.38-4.65 7.04l7.18 5.57C43.35 37.75 46.5 31.9 46.5 24.5z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M10.54 28.41c-.48-1.43-.75-2.96-.75-4.54s.27-3.11.75-4.54l-7.98-6.19C.93 16.39 0 20.02 0 23.87s.93 7.48 2.56 10.73l7.98-6.19z"
-      />
-      <path
-        fill="#34A853"
-        d="M24 48c6.48 0 11.93-2.13 15.9-5.79l-7.18-5.57c-2 1.34-4.56 2.13-8.72 2.13-6.26 0-11.57-4.22-13.46-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
-      />
-    </svg>
-  );
+  return <svg aria-hidden="true" width="21" height="21" viewBox="0 0 48 48" className="shrink-0"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7A19.9 19.9 0 0 0 24 4C12.9 4 4 12.9 4 24s8.9 20 20 20c11.5 0 19.1-8.1 19.1-19.5 0-1.3-.1-2.7-.4-4Z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8A12 12 0 0 1 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7A19.9 19.9 0 0 0 24 4c-7.7 0-14.3 4.3-17.7 10.7Z"/><path fill="#4CAF50" d="M24 44c5 0 9.6-1.9 13-5l-6-5.1A11.9 11.9 0 0 1 12.9 28.5l-6.5 5A20 20 0 0 0 24 44Z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3a12 12 0 0 1-4.3 5.9l6 5.1c-.4.4 6.1-4.5 6.1-14.5 0-1.3-.1-2.7-.4-4Z"/></svg>;
 }

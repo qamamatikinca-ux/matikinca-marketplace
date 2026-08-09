@@ -8,6 +8,7 @@ import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import TruckGearboxSketch from "@/components/TruckGearboxSketch";
+import MfaSecurityCard from "@/components/MfaSecurityCard";
 import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
 import { clearActiveAccountState, syncAccountState } from "@/lib/accountState";
 import { isAuthenticatedUser, loginHref } from "@/lib/auth";
@@ -229,7 +230,7 @@ export default function AccountSettingsPage() {
   }
 
   async function updatePassword() {
-    if (password.length < 8) { setMessage("Your new password must contain at least 8 characters."); return; }
+    if (password.length < 12 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) { setMessage("Use at least 12 characters with upper/lowercase, a number and a symbol."); return; }
     if (password !== confirmPassword) { setMessage("The two passwords do not match."); return; }
     setSaving(true);
     const { error } = await supabase.auth.updateUser({ password });
@@ -343,6 +344,7 @@ export default function AccountSettingsPage() {
         {settingsView === "security" ? (
           <div className="mt-6 grid max-w-3xl gap-4">
             <section className={`border p-5 md:p-7 ${surface}`}><h2 className="text-xl font-bold">Password</h2><p className={`mt-2 text-sm ${muted}`}>{googleOnly ? "Set a LoadLink password while keeping Google sign-in connected." : "Change your password without disconnecting other sign-in methods."}</p><div className="mt-5 grid gap-4 md:grid-cols-2"><Field label={googleOnly ? "Set a password" : "New password"}><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" className={input} /></Field><Field label="Confirm password"><input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" className={input} /></Field></div><button type="button" onClick={() => void updatePassword()} disabled={saving || !password} className="mt-5 h-11 rounded-xl bg-[#f6b800] px-5 text-xs font-semibold text-black disabled:opacity-40">{googleOnly ? "Set password" : "Update password"}</button></section>
+            <MfaSecurityCard darkMode={darkMode} />
             <section className={`border p-5 md:p-7 ${surface}`}><h2 className="text-xl font-bold">Account access</h2><p className={`mt-2 text-sm ${muted}`}>Sign out or request account deletion.</p><div className="mt-5 flex flex-wrap gap-3"><button type="button" onClick={() => void signOut()} className="h-11 rounded-xl border border-red-500 px-5 text-xs font-semibold text-red-500">Sign out</button><button type="button" onClick={requestDeletion} className="h-11 rounded-xl border border-current/20 px-5 text-xs font-semibold">Request deletion</button></div></section>
           </div>
         ) : null}
