@@ -10,8 +10,9 @@ import { useUnreadMessages } from "@/lib/useUnreadMessages";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import LoadLinkGearIcon from "@/components/LoadLinkGearIcon";
 import LoadLinkLogo from "@/components/LoadLinkLogo";
+import { readLoadLinkSimpleMode, setLoadLinkSimpleMode } from "@/components/SimpleModeCoordinator";
 
-type IconName = "home" | "briefcase" | "contract" | "drivers" | "help" | "messages" | "notifications" | "posts" | "settings" | "privacy" | "driver" | "dealer" | "packages";
+type IconName = "home" | "briefcase" | "contract" | "drivers" | "help" | "messages" | "notifications" | "posts" | "settings" | "driver" | "dealer" | "packages" | "tools" | "activity" | "simple";
 type MenuLink = { label: string; href: string; description: string; icon: IconName };
 
 const marketplaceLinks: MenuLink[] = [
@@ -19,6 +20,7 @@ const marketplaceLinks: MenuLink[] = [
   { label: "Find jobs", href: "/jobs", description: "Available logistics work", icon: "briefcase" },
   { label: "Find contracts", href: "/contracts", description: "Recurring and project work", icon: "contract" },
   { label: "Driver profiles", href: "/drivers", description: "Approved drivers for hire", icon: "drivers" },
+  { label: "Tools", href: "/tools", description: "Quotes and logistics helpers", icon: "tools" },
   { label: "Help centre", href: "/help", description: "Support and safety guidance", icon: "help" },
 ];
 
@@ -32,12 +34,19 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
   const [guestMode, setGuestMode] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState<number | null>(null);
+  const [simpleMode, setSimpleMode] = useState(false);
   const openButtonRef = useRef<HTMLButtonElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => setMounted(true), []);
   useEffect(() => { try { setGuestMode(localStorage.getItem("loadlink-guest-mode") === "true"); } catch {} }, []);
+  useEffect(() => {
+    const sync = () => setSimpleMode(readLoadLinkSimpleMode());
+    sync();
+    window.addEventListener("loadlink-simple-mode-changed", sync as EventListener);
+    return () => window.removeEventListener("loadlink-simple-mode-changed", sync as EventListener);
+  }, []);
 
   const loadUnreadNotifications = useCallback(async () => {
     if (!isSupabaseConfigured || !account.user?.id) { setUnreadNotifications(null); return; }
@@ -100,17 +109,24 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
       : dealer
         ? { label: "Dealership pending", href: "/dealer", description: "Review your application status", icon: "dealer" }
         : { label: "Apply as a dealership", href: "/dealer", description: "Create a dealership application", icon: "dealer" };
+    const essential: MenuLink[] = [
+      { label: "Messages", href: "/messages", description: "Your conversations", icon: "messages" },
+      { label: "My posts", href: "/my-posts", description: "Manage your listings", icon: "posts" },
+      { label: "Activity & access", href: "/account/activity", description: "Logins, devices and payments", icon: "activity" },
+      { label: "Profile settings", href: "/account/settings", description: "Profile, account and alerts", icon: "settings" },
+    ];
+    if (simpleMode) return essential;
     return [
       { label: "Messages", href: "/messages", description: "Your conversations", icon: "messages" },
       { label: "Notifications", href: "/notifications", description: "Reviews, messages and account updates", icon: "notifications" },
       { label: "My posts", href: "/my-posts", description: "Manage your listings", icon: "posts" },
+      { label: "Activity & access", href: "/account/activity", description: "Logins, devices and payments", icon: "activity" },
       { label: "Profile settings", href: "/account/settings", description: "Profile, account and alerts", icon: "settings" },
-      { label: "Privacy & messaging", href: "/account/settings#message-privacy", description: "Potential deals, activity and privacy", icon: "privacy" },
       ...(account.driverProfile ? [{ label: "Driver profile", href: "/driver-profile", description: "Manage your driver profile", icon: "driver" as const }] : []),
       dealerLink,
       { label: "Packages", href: "/packages", description: "Manual, Pro and Dealer plans", icon: "packages" },
     ];
-  }, [account.dealer, account.driverProfile]);
+  }, [account.dealer, account.driverProfile, simpleMode]);
 
   function continueAsGuest() { try { localStorage.setItem("loadlink-guest-mode", "true"); } catch {} setGuestMode(true); }
   async function signOut() {
@@ -151,8 +167,13 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
           <div className="flex flex-1 flex-col justify-center px-5 py-8"><div className={`rounded-[24px] border p-6 ${border} ${darkMode ? "bg-white/[.035]" : "bg-white"}`}><h2 className="text-3xl font-black tracking-[-.04em]">Welcome to LoadLink</h2><p className={`mt-3 text-sm font-semibold leading-6 ${muted}`}>Sign in to post, message and manage your account, or continue browsing as a guest.</p><Link href="/login" className="mt-6 flex h-12 items-center justify-center rounded-xl bg-[#f6b800] px-5 text-xs font-black uppercase tracking-[.12em] text-black">Sign in or create account</Link><button type="button" onClick={continueAsGuest} className={`mt-3 h-12 w-full rounded-xl border text-xs font-black uppercase tracking-[.12em] ${border}`}>Continue as guest</button></div></div>
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
-            <MenuSection title="Marketplace" links={marketplaceLinks} pathname={pathname} darkMode={darkMode} border={border} muted={muted} />
-            {signedIn ? <MenuSection title="Account and tools" links={accountLinks} pathname={pathname} darkMode={darkMode} border={border} muted={muted} unreadNotifications={unreadNotifications} unreadMessages={unreadMessages} /> : <div className={`rounded-2xl border p-4 ${border}`}><p className="text-sm font-black">Browsing as guest</p><p className={`mt-1 text-xs leading-5 ${muted}`}>Sign in when you want to post, follow, message or save account activity.</p><Link href="/login" className="mt-4 flex h-11 items-center justify-center rounded-xl bg-[#f6b800] text-xs font-black uppercase text-black">Sign in</Link></div>}
+            <button type="button" onClick={() => { const next = !simpleMode; setLoadLinkSimpleMode(next); setSimpleMode(next); if (next) window.location.href = "/simple"; }} className={`mb-5 flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${simpleMode ? "border-[#f6b800] bg-[#f6b800] text-black" : `${border} ${darkMode ? "bg-white/[.035]" : "bg-white"}`}`}>
+              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${simpleMode ? "bg-black text-[#f6b800]" : darkMode ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><MenuItemIcon name="simple" /></span>
+              <span className="min-w-0 flex-1"><strong className="block text-sm font-black">Simple mode</strong><span className={`mt-1 block text-[10px] font-semibold leading-4 ${simpleMode ? "text-black/60" : muted}`}>Larger actions and fewer choices for easier navigation.</span></span>
+              <span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${simpleMode ? "bg-black text-[#f6b800]" : darkMode ? "bg-white/[.08]" : "bg-black/[.06]"}`}>{simpleMode ? "On" : "Off"}</span>
+            </button>
+            <MenuSection title={simpleMode ? "Essentials" : "Marketplace"} links={simpleMode ? marketplaceLinks.filter((item) => ["/", "/jobs", "/tools", "/help"].includes(item.href)) : marketplaceLinks} pathname={pathname} darkMode={darkMode} border={border} muted={muted} />
+            {signedIn ? <MenuSection title={simpleMode ? "Your account" : "Account and security"} links={accountLinks} pathname={pathname} darkMode={darkMode} border={border} muted={muted} unreadNotifications={unreadNotifications} unreadMessages={unreadMessages} /> : <div className={`rounded-2xl border p-4 ${border}`}><p className="text-sm font-black">Browsing as guest</p><p className={`mt-1 text-xs leading-5 ${muted}`}>Sign in when you want to post, follow, message or save account activity.</p><Link href="/login" className="mt-4 flex h-11 items-center justify-center rounded-xl bg-[#f6b800] text-xs font-black uppercase text-black">Sign in</Link></div>}
           </div>
         )}
         {signedIn ? <footer className={`border-t p-4 ${border}`}><button type="button" onClick={() => void signOut()} disabled={signingOut} className="h-12 w-full rounded-xl border border-red-500/45 text-xs font-black uppercase tracking-[.12em] text-red-500">{signingOut ? "Signing out…" : "Sign out"}</button></footer> : null}
@@ -165,8 +186,7 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
 
 function MenuSection({ title, links, pathname, darkMode, border, muted, unreadNotifications = null, unreadMessages = 0 }: { title: string; links: MenuLink[]; pathname: string; darkMode: boolean; border: string; muted: string; unreadNotifications?: number | null; unreadMessages?: number }) {
   return <section className="mb-7"><h2 className={`mb-3 px-1 text-[11px] font-black uppercase tracking-[.18em] ${muted}`}>{title}</h2><div className="grid grid-cols-2 gap-2">{links.map((item, index) => {
-    const cleanHref = item.href.split("#")[0];
-    const active = pathname === cleanHref || (cleanHref !== "/" && pathname.startsWith(`${cleanHref}/`));
+    const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
     const badge = item.icon === "notifications" ? unreadNotifications : item.icon === "messages" ? unreadMessages : 0;
     const unpaired = links.length % 2 === 1 && index === links.length - 1;
     return <Link key={`${item.href}-${item.label}`} href={item.href} className={`relative min-h-[118px] rounded-2xl border p-4 transition ${unpaired ? "col-span-2" : ""} ${active ? "border-[#f6b800] bg-[#f6b800] text-black" : `${border} ${darkMode ? "bg-white/[.035]" : "bg-white"}`}`}><span className={`relative mb-3 flex h-9 w-9 items-center justify-center rounded-xl ${active ? "bg-black text-[#f6b800]" : darkMode ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><MenuItemIcon name={item.icon} />{typeof badge === "number" && badge > 0 ? <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full border border-black bg-[#f6b800] px-1 text-[9px] font-black text-black">{badge > 99 ? "99+" : badge}</span> : null}</span><span className="block text-sm font-black leading-4">{item.label}</span><span className={`mt-2 block text-[10px] font-semibold leading-4 ${active ? "text-black/60" : muted}`}>{item.description}</span></Link>;
@@ -203,14 +223,18 @@ function MenuItemIcon({ name }: { name: IconName }) {
       return <svg {...common}><path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 6 2.5 6.5 2.5 6.5H4s2.5-.5 2.5-6.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9.5 19a2.8 2.8 0 0 0 5 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
     case "posts":
       return <svg {...common}><path d="M4 4h16v16H4V4Zm4 5h8M8 13h8M8 17h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
-    case "privacy":
-      return <svg {...common}><path d="M12 3 4.5 6v5.2c0 4.7 3.1 8 7.5 9.8 4.4-1.8 7.5-5.1 7.5-9.8V6L12 3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9.5 12.2 11.2 14l3.6-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
     case "settings":
       return <LoadLinkGearIcon />;
     case "driver":
       return <svg {...common}><circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2" /><path d="M5 21a7 7 0 0 1 14 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
     case "dealer":
       return <svg {...common}><path d="M3 9h18l-2-5H5L3 9Zm2 0v11h14V9M8 20v-6h8v6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>;
+    case "tools":
+      return <svg {...common}><path d="m14 6 4-4 4 4-4 4m-6 1-8 8m3-11 9 9M4 4l16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case "activity":
+      return <svg {...common}><path d="M4 19V5m0 14h16M7 15l3-4 3 2 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case "simple":
+      return <svg {...common}><path d="M5 7h14M5 12h9M5 17h6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /><circle cx="18" cy="12" r="2" fill="currentColor" /></svg>;
     default:
       return <svg {...common}><path d="M4 7h16v13H4V7Zm4-3h8v3" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M8 12h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
   }

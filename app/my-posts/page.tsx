@@ -279,12 +279,21 @@ export default function MyPostsPage() {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <DashboardMetric label="Total" value={String(listings.length)} darkMode={darkMode} />
-            <DashboardMetric label="Live" value={String(activeCount)} darkMode={darkMode} />
-            <DashboardMetric label="Needs attention" value={String(reviewCount)} darkMode={darkMode} />
-            <DashboardMetric label="Total views" value={String(totalViews)} darkMode={darkMode} />
-          </div>
+          {filter === "review" ? (
+            <div className={`mt-6 rounded-[24px] border p-5 ${surface}`}>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div><p className="text-[10px] font-black uppercase tracking-[.14em] text-[#b88900]">Review centre</p><h2 className="mt-1 text-2xl font-black tracking-[-.04em]">Only the posts that need attention.</h2><p className={`mt-2 max-w-2xl text-xs font-semibold leading-5 ${muted}`}>Rejected posts show the correction to make. Posts already in review need no action until LoadLink responds.</p></div>
+                <div className="flex flex-wrap gap-2"><span className="rounded-full bg-red-500/10 px-3 py-2 text-[10px] font-black text-red-500">{listings.filter((item) => (item.moderation_status || "pending") === "rejected").length} need changes</span><span className="rounded-full bg-[#f6b800]/15 px-3 py-2 text-[10px] font-black text-[#b88900]">{listings.filter((item) => (item.moderation_status || "pending") === "pending").length} waiting</span></div>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <DashboardMetric label="Total" value={String(listings.length)} darkMode={darkMode} />
+              <DashboardMetric label="Live" value={String(activeCount)} darkMode={darkMode} />
+              <DashboardMetric label="Needs attention" value={String(reviewCount)} darkMode={darkMode} />
+              <DashboardMetric label="Total views" value={String(totalViews)} darkMode={darkMode} />
+            </div>
+          )}
         </div>
       </section>
 
@@ -322,6 +331,10 @@ export default function MyPostsPage() {
                 const state = postStateLabel(listing);
                 const tone = postStateTone(listing, darkMode);
                 const inactive = inactiveReason(listing);
+
+                if (filter === "review") {
+                  return <ReviewPostCard key={listing.id} listing={listing} darkMode={darkMode} surface={surface} muted={muted} onEdit={() => setEditing(listing)} />;
+                }
 
                 return (
                   <article key={listing.id} className={`overflow-hidden rounded-[22px] border ${surface}`}>
@@ -500,6 +513,35 @@ function inactiveReason(listing: MyListing) {
   return null;
 }
 
+function ReviewPostCard({ listing, darkMode, surface, muted, onEdit }: { listing: MyListing; darkMode: boolean; surface: string; muted: string; onEdit: () => void }) {
+  const moderation = listing.moderation_status || "pending";
+  const rejected = moderation === "rejected";
+  const feedback = listing.moderation_notes || (rejected ? "LoadLink needs a correction before this post can go live." : "LoadLink is reviewing this post. No action is needed right now.");
+  return (
+    <article className={`overflow-hidden rounded-[24px] border ${surface}`}>
+      <div className="flex gap-4 p-4 sm:p-5">
+        <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-[18px] bg-black sm:h-28 sm:w-28">
+          <img src={listing.photos?.[0] || "/images/jobs/job-card-1.jpg"} alt={listing.title} loading="lazy" className="h-full w-full object-cover" />
+          <span className={`absolute left-2 top-2 rounded-full px-2 py-1 text-[8px] font-black uppercase ${rejected ? "bg-red-600 text-white" : "bg-[#f6b800] text-black"}`}>{rejected ? "Needs changes" : "In review"}</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className={`truncate text-[9px] font-black uppercase tracking-[.11em] ${muted}`}>{listing.city} · {listing.vehicle_group}</p>
+          <h2 className="mt-1 line-clamp-2 text-xl font-black tracking-[-.035em]">{listing.title}</h2>
+          <p className="mt-1 text-xs font-black text-[#b88900]">{formatListingRate(listing.rate)}</p>
+          <div className={`mt-3 rounded-2xl border px-3 py-2.5 ${rejected ? "border-red-500/25 bg-red-500/[.07]" : darkMode ? "border-white/8 bg-white/[.025]" : "border-black/8 bg-black/[.02]"}`}>
+            <p className={`text-[9px] font-black uppercase tracking-[.1em] ${rejected ? "text-red-500" : "text-[#b88900]"}`}>{rejected ? "What LoadLink needs" : "Status"}</p>
+            <p className={`mt-1 line-clamp-2 text-[11px] font-semibold leading-5 ${muted}`}>{feedback}</p>
+          </div>
+        </div>
+      </div>
+      <div className={`grid gap-2 border-t p-3 sm:grid-cols-2 ${darkMode ? "border-white/10" : "border-black/10"}`}>
+        <Link href={`/listing/${listing.id}`} className={`flex h-11 items-center justify-center rounded-xl border text-xs font-black ${darkMode ? "border-white/12" : "border-black/10"}`}>View post</Link>
+        {rejected ? <button type="button" onClick={onEdit} className="h-11 rounded-xl bg-[#f6b800] text-xs font-black text-black">Fix this post</button> : <div className={`flex h-11 items-center justify-center rounded-xl text-xs font-bold ${muted}`}>Waiting for LoadLink</div>}
+      </div>
+    </article>
+  );
+}
+
 function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose: () => void; onSaved: () => void }) {
   const [title, setTitle] = useState(listing.title);
   const [city, setCity] = useState(listing.city);
@@ -514,6 +556,7 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
   const [error, setError] = useState("");
   const [guidedMode, setGuidedMode] = useState(false);
   const [guideStep, setGuideStep] = useState(0);
+  const [showFullEditor, setShowFullEditor] = useState((listing.moderation_status || "pending") !== "rejected");
   const photoLimit = ["pro", "dealer"].includes(listing.package_type || "") ? 15 : 5;
   const rejected = (listing.moderation_status || "pending") === "rejected";
   const vehicleGroups = ["Catering / Event", "Trucks / Trailers", "Farming / Mining"] as const;
@@ -651,6 +694,7 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
   const showGuidePhotos = guidedMode && guideStep === 2;
   const showGuideDetails = guidedMode && guideStep === 3;
   const showGuideReview = guidedMode && guideStep === 4;
+  const editorVisible = !rejected || guidedMode || showFullEditor;
 
   function nextGuideStep() {
     setError("");
@@ -675,7 +719,7 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
                 <span className="truncate text-[10px] font-bold uppercase tracking-[.11em] text-white/[.35]">{listing.vehicle_group || listing.listing_kind || "LoadLink listing"}</span>
               </div>
               <h2 className="mt-3 text-[28px] font-black leading-[1.02] tracking-[-.045em] sm:text-3xl">{rejected ? "Review & resubmit" : "Edit your post"}</h2>
-              <p className="mt-2 max-w-xl text-xs font-medium leading-5 text-white/[.48]">{guidedMode ? `${currentGuide.title}: ${currentGuide.copy}` : "Make the required changes below. Your post keeps its existing details until you submit the update."}</p>
+              <p className="mt-2 max-w-xl text-xs font-medium leading-5 text-white/[.48]">{guidedMode ? `${currentGuide.title}: ${currentGuide.copy}` : rejected && !showFullEditor ? "LoadLink has highlighted what needs attention. Choose how you want to fix it." : "Change only what is needed, then send the corrected post back for review."}</p>
             </div>
             <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[.04] text-xl text-white/[.75] transition hover:border-white/25 hover:text-white" aria-label="Close edit post">×</button>
           </div>
@@ -683,40 +727,34 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
 
         {rejected ? (
           <div className="border-b border-white/10 bg-[#0c0c0c] px-4 py-3 sm:px-6">
-            {!guidedMode ? (
-              <button
-                type="button"
-                onClick={() => { setGuidedMode(true); setGuideStep(0); setError(""); }}
-                className="flex w-full items-center justify-between gap-4 rounded-[18px] border border-[#f6b800]/25 bg-[#f6b800]/[.07] px-4 py-3 text-left transition hover:border-[#f6b800]/45"
-              >
-                <span>
-                  <strong className="block text-xs font-black text-[#ffd45a]">Guide me through fixing this</strong>
-                  <span className="mt-0.5 block text-[10px] font-semibold leading-4 text-white/[.46]">Optional · LoadLink will walk you through the rejection one step at a time.</span>
-                </span>
-                <span className="shrink-0 text-lg text-[#ffd45a]">→</span>
-              </button>
-            ) : (
+            {guidedMode ? (
               <div>
                 <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[9px] font-black uppercase tracking-[.13em] text-[#ffd45a]">Guided correction</p>
-                    <p className="mt-1 text-xs font-black text-white">Step {guideStep + 1} of {guideSteps.length} · {currentGuide.title}</p>
-                  </div>
-                  <button type="button" onClick={() => setGuidedMode(false)} className="shrink-0 rounded-full border border-white/12 px-3 py-1.5 text-[9px] font-black text-white/[.58]">Edit everything</button>
+                  <div><p className="text-[9px] font-black uppercase tracking-[.13em] text-[#ffd45a]">Guided correction</p><p className="mt-1 text-xs font-black text-white">Step {guideStep + 1} of {guideSteps.length} · {currentGuide.title}</p></div>
+                  <button type="button" onClick={() => { setGuidedMode(false); setShowFullEditor(true); }} className="shrink-0 rounded-full border border-white/12 px-3 py-1.5 text-[9px] font-black text-white/[.58]">Edit all</button>
                 </div>
-                <div className="mt-3 grid grid-cols-5 gap-1.5" aria-hidden="true">
-                  {guideSteps.map((step, index) => (
-                    <span key={step.title} className={`h-1.5 rounded-full ${index <= guideStep ? "bg-[#f6b800]" : "bg-white/10"}`} />
-                  ))}
-                </div>
+                <div className="mt-3 grid grid-cols-5 gap-1.5" aria-hidden="true">{guideSteps.map((step, index) => <span key={step.title} className={`h-1.5 rounded-full ${index <= guideStep ? "bg-[#f6b800]" : "bg-white/10"}`} />)}</div>
               </div>
+            ) : showFullEditor ? (
+              <div className="flex items-center justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[.13em] text-white/[.35]">Editing all fields</p><p className="mt-1 text-xs font-semibold text-white/[.55]">Everything is available below, but only change what is needed.</p></div><button type="button" onClick={() => setShowFullEditor(false)} className="rounded-full border border-white/12 px-3 py-1.5 text-[9px] font-black">Overview</button></div>
+            ) : (
+              <p className="text-[10px] font-semibold text-white/[.45]">Choose a correction style below. Nothing has been changed yet.</p>
             )}
           </div>
         ) : null}
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           <div className="grid gap-4">
-            {(!guidedMode || showGuideFeedback) ? (
+            {rejected && !guidedMode && !showFullEditor ? (
+              <section className="overflow-hidden rounded-[26px] border border-white/10 bg-white/[.035]">
+                <div className="p-5 sm:p-6"><p className="text-[10px] font-black uppercase tracking-[.14em] text-red-300">What needs attention</p><p className="mt-2 text-base font-semibold leading-7 text-white/[.78]">{feedback}</p></div>
+                <div className="grid gap-2 border-t border-white/10 p-4 sm:grid-cols-2 sm:p-5">
+                  <button type="button" onClick={() => { setGuidedMode(true); setGuideStep(0); setError(""); }} className="rounded-[20px] bg-[#f6b800] p-4 text-left text-black"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-black text-[#f6b800] text-[11px] font-black">1→</span><strong className="mt-4 block text-sm font-black">Fix step by step</strong><span className="mt-1 block text-[10px] font-semibold leading-4 text-black/60">LoadLink shows one correction at a time so the screen stays simple.</span></button>
+                  <button type="button" onClick={() => setShowFullEditor(true)} className="rounded-[20px] border border-white/12 bg-black/20 p-4 text-left"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[.07] text-[#ffd45a] text-lg">✎</span><strong className="mt-4 block text-sm font-black">Edit all at once</strong><span className="mt-1 block text-[10px] font-semibold leading-4 text-white/[.45]">Open category, photos and listing details together.</span></button>
+                </div>
+              </section>
+            ) : null}
+            {editorVisible && (!guidedMode || showGuideFeedback) ? (
             <section className={`rounded-[22px] border p-4 ${rejected ? "border-red-400/25 bg-red-500/[.075]" : "border-[#f6b800]/20 bg-[#f6b800]/[.055]"}`}>
               <div className="flex items-start gap-3">
                 <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black ${rejected ? "bg-red-500/15 text-red-300" : "bg-[#f6b800]/15 text-[#ffd45a]"}`}>!</span>
@@ -739,7 +777,7 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
             </section>
             ) : null}
 
-            {(!guidedMode || showGuideCategory) ? (
+            {editorVisible && (!guidedMode || showGuideCategory) ? (
             <section className="rounded-[24px] border border-white/10 bg-white/[.035] p-4 sm:p-5">
               <div className="mb-4">
                 <p className="text-[10px] font-black uppercase tracking-[.14em] text-white/[.38]">Listing category</p>
@@ -762,7 +800,7 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
             </section>
             ) : null}
 
-            {(!guidedMode || showGuidePhotos) ? (
+            {editorVisible && (!guidedMode || showGuidePhotos) ? (
             <section className="rounded-[24px] border border-white/10 bg-white/[.035] p-4 sm:p-5">
               <div className="flex items-end justify-between gap-4">
                 <div>
@@ -797,7 +835,7 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
             </section>
             ) : null}
 
-            {(!guidedMode || showGuideDetails) ? (
+            {editorVisible && (!guidedMode || showGuideDetails) ? (
             <section className="rounded-[24px] border border-white/10 bg-white/[.035] p-4 sm:p-5">
               <div className="mb-4">
                 <p className="text-[10px] font-black uppercase tracking-[.14em] text-white/[.38]">Post information</p>
@@ -833,7 +871,7 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
             </section>
             ) : null}
 
-            {guidedMode && showGuideReview ? (
+            {editorVisible && guidedMode && showGuideReview ? (
               <section className="rounded-[24px] border border-[#f6b800]/25 bg-[#f6b800]/[.055] p-4 sm:p-5">
                 <p className="text-[10px] font-black uppercase tracking-[.14em] text-[#ffd45a]">Final review</p>
                 <h3 className="mt-1 text-lg font-black">Ready to send back to LoadLink?</h3>
@@ -856,7 +894,7 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
               </div>
             ) : null}
 
-            {(!guidedMode || showGuideReview) ? (
+            {editorVisible && (!guidedMode || showGuideReview) ? (
               <div className="rounded-[20px] border border-white/[.08] bg-black/25 px-4 py-3">
                 <p className="text-[10px] font-black uppercase tracking-[.12em] text-white/[.36]">After you submit</p>
                 <p className="mt-1 text-xs font-semibold leading-5 text-white/[.52]">The updated post returns to LoadLink review. It becomes public again only after approval.</p>
@@ -866,7 +904,9 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
         </div>
 
         <footer className="sticky bottom-0 z-20 border-t border-white/10 bg-[#090909]/96 px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-6 sm:pb-5">
-          {guidedMode ? (
+          {rejected && !guidedMode && !showFullEditor ? (
+            <button type="button" onClick={onClose} className="h-12 w-full rounded-2xl border border-white/12 bg-white/[.035] text-xs font-black text-white/[.72]">Close for now</button>
+          ) : guidedMode ? (
             <div className="grid grid-cols-[.72fr_1.28fr] gap-3">
               <button
                 type="button"

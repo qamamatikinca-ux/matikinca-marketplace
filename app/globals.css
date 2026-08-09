@@ -462,3 +462,41 @@ input[list]::-webkit-calendar-picker-indicator { opacity:0 !important; display:n
 .loadlink-messages .loadlink-message-viewport { min-height: 0 !important; flex: 1 1 0% !important; overflow-y: auto !important; }
 .loadlink-messages [data-loadlink-message-composer="true"] { scroll-margin-bottom: 12px; }
 .loadlink-logistics-sheet { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+
+/* LOADLINK V2.6.1 SIMPLE MODE START */
+html[data-loadlink-simple="true"] {
+  scroll-behavior: auto;
+}
+
+html[data-loadlink-simple="true"] body {
+  letter-spacing: 0;
+}
+
+html[data-loadlink-simple="true"] * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+html[data-loadlink-simple="true"] main {
+  --loadlink-simple-radius: 20px;
+}
+
+html[data-loadlink-simple="true"] button,
+html[data-loadlink-simple="true"] a,
+html[data-loadlink-simple="true"] input,
+html[data-loadlink-simple="true"] select,
+html[data-loadlink-simple="true"] textarea {
+  font-size: max(14px, 1em);
+}
+
+html[data-loadlink-simple="true"] [data-loadlink-menu-panel] {
+  width: min(96vw, 470px) !important;
+}
+
+@media (max-width: 640px) {
+  html[data-loadlink-simple="true"] body {
+    font-size: 17px;
+  }
+}
+/* LOADLINK V2.6.1 SIMPLE MODE END */
