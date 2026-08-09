@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
+import SubmissionSuccess from "@/components/SubmissionSuccess";
 import { isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -14,6 +15,7 @@ type Answers = {
   teamSeats: 1 | 3 | 5;
   showroom: boolean;
 };
+type RequestState = "idle" | "sent" | "pending";
 
 const DEFAULTS: Answers = { listings: 2, photos: 5, analytics: false, priority: false, teamSeats: 1, showroom: false };
 
@@ -40,9 +42,11 @@ function recommendationFor(answers: Answers): Recommendation {
 
 export default function PackageGuide({ darkMode = false }: { darkMode?: boolean }) {
   const [answers, setAnswers] = useState<Answers>(DEFAULTS);
-  const [showCustom, setShowCustom] = useState(false);
+  const [showTailored, setShowTailored] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
+  const [requestState, setRequestState] = useState<RequestState>("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [success, setSuccess] = useState(false);
   const recommendation = useMemo(() => recommendationFor(answers), [answers]);
   const estimate = useMemo(() => estimateCustom(answers), [answers]);
   const surface = darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white";
@@ -50,16 +54,26 @@ export default function PackageGuide({ darkMode = false }: { darkMode?: boolean 
 
   const planName = recommendation === "manual" ? "Manual listing" : recommendation === "pro" ? "Pro" : recommendation === "dealer" ? "Dealer" : "Tailored package";
   const reason = recommendation === "manual"
-    ? "Best when you only list occasionally and do not need analytics or a team workspace."
+    ? "You list occasionally and do not need analytics or a team workspace."
     : recommendation === "pro"
-      ? "Best for regular operators who need more listings, more photos or performance tools."
+      ? "You list regularly or need more photos, analytics or stronger visibility."
       : recommendation === "dealer"
-        ? "Best when you need a public dealership showroom, larger inventory and staff access."
-        : "Your needs sit between the standard packages, so a tailored request may fit better.";
+        ? "You need a public showroom, larger inventory or staff access."
+        : "Your needs sit between the standard plans, so a tailored request may suit you better.";
+  const planHref = recommendation === "manual" ? "#manual-package" : recommendation === "pro" ? "#pro-package" : recommendation === "dealer" ? "#dealer-package" : "#plan-guide";
+
+  const summary = useMemo(() => {
+    const items = [`${answers.listings <= 2 ? "1–2" : answers.listings <= 5 ? "3–5" : answers.listings < 15 ? "6–14" : "15+"} active vehicle listings`, `${answers.photos} photos per listing`];
+    if (answers.analytics) items.push("Listing analytics");
+    if (answers.priority) items.push("Stronger marketplace visibility");
+    if (answers.showroom) items.push("Public dealership showroom");
+    if (answers.teamSeats > 1) items.push(answers.teamSeats === 3 ? "Small team access" : "5+ staff access");
+    return items.slice(0, 5);
+  }, [answers]);
 
   async function requestTailored() {
-    if (submitting) return;
-    setMessage("");
+    if (submitting || requestState !== "idle") return;
+    setErrorMessage("");
     const { data: { user } } = await supabase.auth.getUser();
     if (!isAuthenticatedUser(user)) {
       window.location.assign(loginHref("/packages#plan-guide"));
@@ -75,59 +89,122 @@ export default function PackageGuide({ darkMode = false }: { darkMode?: boolean 
     });
     setSubmitting(false);
     if (result.error) {
-      if (result.error.code === "23505") setMessage("You already have a tailored package request under review.");
-      else setMessage(/relation|schema cache|does not exist/i.test(result.error.message) ? "Run the V2.6.9 Supabase SQL once, then submit the tailored request again." : "The tailored-package request could not be submitted. Try again.");
+      if (result.error.code === "23505") {
+        setRequestState("pending");
+        return;
+      }
+      setErrorMessage(/relation|schema cache|does not exist/i.test(result.error.message)
+        ? "Tailored requests are not ready yet. Run the V2.6.11 Supabase update once, then try again."
+        : "The request could not be sent. Please try again.");
       return;
     }
-    setMessage(`Request sent. LoadLink will review the R${estimate.toLocaleString("en-ZA")}/month estimate before anything is activated or charged.`);
+    setRequestState("sent");
+    setSuccess(true);
   }
 
   return (
-    <section id="plan-guide" className={`rounded-[30px] border p-5 md:p-7 ${surface}`}>
-      <div className="grid gap-6 lg:grid-cols-[1fr_.8fr]">
-        <div>
-          <h2 className="text-3xl font-black tracking-[-.045em] md:text-4xl">Find the right package</h2>
-          <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Answer a few practical questions. The LoadLink Plan Guide will recommend a package or prepare a tailored request for Control Centre review.</p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <GuideField label="Active vehicle listings">
-              <select value={answers.listings} onChange={(e) => setAnswers((current) => ({ ...current, listings: Number(e.target.value) }))} className={inputClass(darkMode)}>
-                {[1,2,3,5,10,15,20].map((value) => <option key={value} value={value}>{value}</option>)}
-              </select>
-            </GuideField>
-            <GuideField label="Photos per listing">
-              <select value={answers.photos} onChange={(e) => setAnswers((current) => ({ ...current, photos: Number(e.target.value) as 5 | 10 | 15 }))} className={inputClass(darkMode)}>
-                <option value={5}>Up to 5</option><option value={10}>Up to 10</option><option value={15}>Up to 15</option>
-              </select>
-            </GuideField>
-          </div>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <Choice checked={answers.analytics} onChange={(value) => setAnswers((current) => ({ ...current, analytics: value }))} label="Listing analytics" />
-            <Choice checked={answers.priority} onChange={(value) => setAnswers((current) => ({ ...current, priority: value }))} label="Higher-priority placement" />
-            <Choice checked={answers.showroom} onChange={(value) => setAnswers((current) => ({ ...current, showroom: value }))} label="Public dealership showroom" />
-            <GuideField label="People managing the account">
-              <select value={answers.teamSeats} onChange={(e) => setAnswers((current) => ({ ...current, teamSeats: Number(e.target.value) as 1 | 3 | 5 }))} className={inputClass(darkMode)}>
-                <option value={1}>Just me</option><option value={3}>Up to 3</option><option value={5}>Up to 5</option>
-              </select>
-            </GuideField>
-          </div>
+    <>
+      <SubmissionSuccess open={success} title="Package request sent" message="Control Centre will review your tailored package and final price." />
+      <section id="plan-guide" className={`rounded-[30px] border p-5 md:p-7 ${surface}`}>
+        <div className="max-w-3xl">
+          <p className={`text-xs font-black uppercase tracking-[.16em] ${muted}`}>Plan guide</p>
+          <h2 className="mt-2 text-3xl font-black tracking-[-.045em] md:text-4xl">Find the package that fits</h2>
+          <p className={`mt-3 text-sm font-semibold leading-6 ${muted}`}>Choose what you actually need. LoadLink will point you to a standard plan or let you send one clear tailored request.</p>
         </div>
 
-        <aside className={`rounded-[24px] border p-5 ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-[#faf8f2]"}`}>
-          <p className={`text-xs font-black ${muted}`}>Recommended</p>
-          <h3 className="mt-2 text-4xl font-black tracking-[-.05em]">{planName}</h3>
-          <p className={`mt-3 text-sm font-semibold leading-6 ${muted}`}>{reason}</p>
-          <div className="mt-5 grid gap-2">
-            {recommendation === "dealer" ? <Link href="/packages#dealer-package" className="flex h-12 items-center justify-center rounded-xl bg-[#f6b800] px-5 text-sm font-black text-black">View Dealer package</Link> : recommendation === "manual" ? <Link href="/list-your-vehicle?plan=manual" className="flex h-12 items-center justify-center rounded-xl bg-[#f6b800] px-5 text-sm font-black text-black">Use Manual listing</Link> : recommendation === "pro" ? <Link href="/list-your-vehicle?plan=pro" className="flex h-12 items-center justify-center rounded-xl bg-[#f6b800] px-5 text-sm font-black text-black">Choose Pro</Link> : null}
-            <button type="button" onClick={() => setShowCustom((value) => !value)} className={`h-12 rounded-xl border px-5 text-sm font-black ${darkMode ? "border-white/15" : "border-black/12"}`}>{showCustom ? "Hide tailored option" : "Build a tailored package"}</button>
+        <div className="mt-7 grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
+          <div className="grid gap-5">
+            <Question title="How many vehicles do you normally advertise?">
+              <OptionRow
+                options={[
+                  [2, "1–2"],
+                  [5, "3–5"],
+                  [10, "6–14"],
+                  [15, "15+"],
+                ]}
+                value={answers.listings}
+                onChange={(value) => setAnswers((current) => ({ ...current, listings: Number(value) }))}
+                darkMode={darkMode}
+              />
+            </Question>
+
+            <Question title="How many photos do you need per listing?">
+              <OptionRow
+                options={[[5, "5"], [10, "10"], [15, "15"]]}
+                value={answers.photos}
+                onChange={(value) => setAnswers((current) => ({ ...current, photos: Number(value) as 5 | 10 | 15 }))}
+                darkMode={darkMode}
+              />
+            </Question>
+
+            <Question title="Which extra tools matter to you?">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <ToggleChoice checked={answers.analytics} onChange={(value) => setAnswers((current) => ({ ...current, analytics: value }))} label="Listing analytics" darkMode={darkMode} />
+                <ToggleChoice checked={answers.priority} onChange={(value) => setAnswers((current) => ({ ...current, priority: value }))} label="Stronger visibility" darkMode={darkMode} />
+                <ToggleChoice checked={answers.showroom} onChange={(value) => setAnswers((current) => ({ ...current, showroom: value }))} label="Dealership showroom" darkMode={darkMode} />
+              </div>
+            </Question>
+
+            <Question title="Who manages the account?">
+              <OptionRow
+                options={[[1, "Just me"], [3, "Small team"], [5, "5+ staff"]]}
+                value={answers.teamSeats}
+                onChange={(value) => setAnswers((current) => ({ ...current, teamSeats: Number(value) as 1 | 3 | 5 }))}
+                darkMode={darkMode}
+              />
+            </Question>
           </div>
-          {showCustom ? <div className={`mt-5 border-t pt-5 ${darkMode ? "border-white/10" : "border-black/10"}`}><p className="text-sm font-black">Estimated individual package</p><p className="mt-1 text-3xl font-black">R{estimate.toLocaleString("en-ZA")}<span className={`ml-1 text-xs ${muted}`}>/ month</span></p><p className={`mt-2 text-xs leading-5 ${muted}`}>This is an estimate, not a charge. Control Centre reviews the features and final price before the package can be approved.</p><button type="button" onClick={() => void requestTailored()} disabled={submitting} className="mt-4 h-12 w-full rounded-xl bg-black px-5 text-sm font-black text-[#f6b800] disabled:opacity-45">{submitting ? "Sending request…" : "Send for approval"}</button></div> : null}
-          {message ? <p className={`mt-4 rounded-xl border p-3 text-xs font-semibold leading-5 ${darkMode ? "border-white/10 bg-white/[.03]" : "border-black/10 bg-white"}`}>{message}</p> : null}
-        </aside>
-      </div>
-    </section>
+
+          <aside className={`self-start rounded-[24px] border p-5 ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-[#faf8f2]"}`}>
+            {!showTailored ? (
+              <>
+                <p className={`text-xs font-black uppercase tracking-[.14em] ${muted}`}>Recommended for you</p>
+                <h3 className="mt-2 text-4xl font-black tracking-[-.05em]">{planName}</h3>
+                <p className={`mt-3 text-sm font-semibold leading-6 ${muted}`}>{reason}</p>
+                {recommendation !== "custom" ? (
+                  <Link href={planHref} className="mt-5 flex h-12 items-center justify-center rounded-xl bg-[#f6b800] px-5 text-sm font-black text-black">View {planName}</Link>
+                ) : (
+                  <button type="button" onClick={() => setShowTailored(true)} className="mt-5 h-12 w-full rounded-xl bg-[#f6b800] px-5 text-sm font-black text-black">Review tailored option</button>
+                )}
+                {recommendation !== "custom" ? <button type="button" onClick={() => setShowTailored(true)} className={`mt-4 w-full text-center text-xs font-black underline underline-offset-4 ${muted}`}>Need a different mix? Request a tailored package</button> : null}
+              </>
+            ) : requestState === "sent" || requestState === "pending" ? (
+              <div className="py-3 text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f6b800] text-black">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 12 4 4 8-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <h3 className="mt-4 text-2xl font-black">{requestState === "sent" ? "Request sent" : "Already with Control Centre"}</h3>
+                <p className={`mt-2 text-sm font-semibold leading-6 ${muted}`}>{requestState === "sent" ? "Your tailored package is in review. Nothing is charged or activated until the final price is approved." : "Your tailored request is already being reviewed. You do not need to send it again."}</p>
+              </div>
+            ) : (
+              <>
+                <button type="button" onClick={() => setShowTailored(false)} className={`text-xs font-black underline underline-offset-4 ${muted}`}>Back to recommendation</button>
+                <p className={`mt-5 text-xs font-black uppercase tracking-[.14em] ${muted}`}>Tailored request</p>
+                <div className="mt-2 flex items-end gap-2"><span className="text-4xl font-black tracking-[-.05em]">R{estimate.toLocaleString("en-ZA")}</span><span className={`pb-1 text-xs font-bold ${muted}`}>estimated / month</span></div>
+                <ul className={`mt-4 space-y-2 text-sm font-semibold ${muted}`}>{summary.map((item) => <li key={item} className="flex gap-2"><span className="text-[#c18b00]">•</span>{item}</li>)}</ul>
+                <p className={`mt-4 text-xs font-semibold leading-5 ${muted}`}>Estimate only. Control Centre confirms the final package and price before anything can activate.</p>
+                <button type="button" onClick={() => void requestTailored()} disabled={submitting} className="mt-5 h-12 w-full rounded-xl bg-[#f6b800] px-5 text-sm font-black text-black disabled:opacity-45">{submitting ? "Sending…" : "Send to Control Centre"}</button>
+              </>
+            )}
+            {errorMessage ? <p className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs font-bold leading-5 text-red-600">{errorMessage}</p> : null}
+          </aside>
+        </div>
+      </section>
+    </>
   );
 }
 
-function GuideField({ label, children }: { label: string; children: ReactNode }) { return <label className="grid gap-2"><span className="text-xs font-black">{label}</span>{children}</label>; }
-function Choice({ checked, onChange, label }: { checked: boolean; onChange: (value: boolean) => void; label: string }) { return <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-current/10 px-4 text-sm font-bold"><input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-4 w-4 accent-[#f6b800]" />{label}</label>; }
-function inputClass(darkMode: boolean) { return `h-12 w-full rounded-xl border px-3 text-sm font-bold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-white text-black"}`; }
+function Question({ title, children }: { title: string; children: ReactNode }) {
+  return <div><p className="mb-2 text-sm font-black">{title}</p>{children}</div>;
+}
+
+function OptionRow({ options, value, onChange, darkMode }: { options: Array<[number, string]>; value: number; onChange: (value: number) => void; darkMode: boolean }) {
+  return <div className="flex flex-wrap gap-2">{options.map(([optionValue, label]) => {
+    const selected = value === optionValue;
+    return <button key={optionValue} type="button" onClick={() => onChange(optionValue)} className={`min-h-11 rounded-xl border px-4 text-sm font-black ${selected ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/15 bg-black text-white/70" : "border-black/10 bg-white text-black/65"}`}>{label}</button>;
+  })}</div>;
+}
+
+function ToggleChoice({ checked, onChange, label, darkMode }: { checked: boolean; onChange: (value: boolean) => void; label: string; darkMode: boolean }) {
+  return <button type="button" aria-pressed={checked} onClick={() => onChange(!checked)} className={`flex min-h-12 items-center justify-between rounded-xl border px-4 text-left text-sm font-bold ${checked ? "border-[#f6b800] bg-[#fff3c4] text-black" : darkMode ? "border-white/15 bg-black text-white/70" : "border-black/10 bg-white text-black/65"}`}><span>{label}</span><span className={`flex h-5 w-5 items-center justify-center rounded-full border text-[11px] ${checked ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-current/30"}`}>{checked ? "✓" : ""}</span></button>;
+}

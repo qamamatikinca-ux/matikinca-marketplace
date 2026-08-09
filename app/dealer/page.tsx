@@ -66,4 +66,4 @@ export default function DealerDashboard(){
 }
 function Benefit({title,body}:{title:string;body:string}){return <div className="rounded-2xl border border-current/10 p-4"><p className="font-black">{title}</p><p className="mt-1 text-xs font-semibold leading-5 opacity-55">{body}</p></div>}
 function Metric({surface,label,value}:{surface:string;label:string;value:number}){return <article className={`border p-5 ${surface}`}><p className="text-xs font-black uppercase opacity-45">{label}</p><p className="mt-2 text-3xl font-black">{value}</p></article>}
-function Info({label,value}:{label:string;value:string}){return <div><p className="text-[10px] font-black uppercase opacity-55">{label}</p><p className="mt-1 font-bold">{value}</p></div>}
+function Info({label,value}:{label:string;value:string}){return <div><p className="text-[10px] font-black uppercase opacity-45">{label}</p><p className="mt-1 font-bold">{value}</p></div>}

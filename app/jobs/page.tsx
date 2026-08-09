@@ -22,7 +22,7 @@ import { matchesSouthAfricanLocation, SOUTH_AFRICA_LOCATIONS } from "@/lib/south
 type VehicleGroup = "Catering / Event" | "Trucks / Trailers" | "Farming / Mining";
 type QuickCategory = "truck" | "event-catering" | "logistics" | "mining-farming" | "";
 type PortalFilter = "job" | "contract" | "asset" | "";
-type JobSortMode = "relevance" | "priority" | "needed_soon" | "newest";
+type JobSortMode = "needed_soon" | "newest" | "oldest";
 
 type JobListing = {
   id: string;
@@ -180,7 +180,7 @@ function saveViewedJob(job: JobListing) {
     const nextItem = {
       id: job.id,
       title: job.title,
-      href: `/jobs#job-${job.id}`,
+      href: `/listing/${job.id}`,
       category: "Job",
       type: job.group,
       image: job.photos[0] || "/images/jobs/job-card-1.jpg",
@@ -206,7 +206,7 @@ function saveViewedJob(job: JobListing) {
 function saveLikedJob(job: JobListing) {
   try {
     const current = JSON.parse(localStorage.getItem("loadlink-liked-listings") || "[]");
-    const item = { id: job.id, title: job.title, href: `/jobs#job-${job.id}`, category: "Job", type: job.group, image: job.photos[0] || "/images/jobs/job-card-1.jpg", meta: `${job.city} - ${formatListingRate(job.rate)}`, savedAt: Date.now() };
+    const item = { id: job.id, title: job.title, href: `/listing/${job.id}`, category: "Job", type: job.group, image: job.photos[0] || "/images/jobs/job-card-1.jpg", meta: `${job.city} - ${formatListingRate(job.rate)}`, savedAt: Date.now() };
     const exists = Array.isArray(current) && current.some((entry) => entry?.id === job.id);
     const next = exists ? current.filter((entry) => entry?.id !== job.id) : [item, ...(Array.isArray(current) ? current : [])].slice(0, 30);
     localStorage.setItem("loadlink-liked-listings", JSON.stringify(next));
@@ -235,7 +235,7 @@ function getLikedJobIds() {
 }
 
 async function shareListing(job: JobListing) {
-  const url = `${window.location.origin}/jobs#job-${job.id}`;
+  const url = `${window.location.origin}/listing/${job.id}`;
   const data = { title: job.title, text: `${job.title} in ${job.city} on LoadLink`, url };
   try {
     if (navigator.share) await navigator.share(data);
@@ -355,7 +355,7 @@ export default function JobsPortalPage() {
   const [analyticsJob, setAnalyticsJob] = useState<JobListing | null>(null);
   const [loadError, setLoadError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortMode, setSortMode] = useState<JobSortMode>("relevance");
+  const [sortMode, setSortMode] = useState<JobSortMode>("newest");
 
   async function fetchJobs() {
     setLoadError("");
@@ -470,10 +470,20 @@ export default function JobsPortalPage() {
   useEffect(() => {
     if (!loadingJobs && window.location.hash) {
       setTimeout(() => {
-        document.querySelector(window.location.hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        const hash = window.location.hash;
+        const target = document.querySelector(hash);
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        }
+        const match = hash.match(/^#job-([0-9a-f-]{36})$/i);
+        if (!match) return;
+        const listingId = match[1];
+        const stillPublic = sharedJobs.some((job) => job.id === listingId);
+        if (!stillPublic) window.location.replace(`/listing/${listingId}`);
       }, 400);
     }
-  }, [loadingJobs, sharedJobs.length]);
+  }, [loadingJobs, sharedJobs]);
 
 
   function toggleDarkMode() {
@@ -511,24 +521,13 @@ export default function JobsPortalPage() {
       return keywordMatch && selectedCityMatch && regionMatch && groupMatch && categoryMatch && inferredPortalMatch && explicitPortalMatch;
     });
 
-    const priorityWeight = (job: JobListing) => job.priorityLevel === "urgent" ? 3 : job.priorityLevel === "standard" ? 2 : 1;
     return [...filtered].sort((a, b) => {
-      if (sortMode === "priority") {
-        const priorityDelta = priorityWeight(b) - priorityWeight(a);
-        if (priorityDelta) return priorityDelta;
-      }
       if (sortMode === "needed_soon") {
         const aDate = a.neededBy ? new Date(`${a.neededBy}T23:59:59`).getTime() : Number.MAX_SAFE_INTEGER;
         const bDate = b.neededBy ? new Date(`${b.neededBy}T23:59:59`).getTime() : Number.MAX_SAFE_INTEGER;
         if (aDate !== bDate) return aDate - bDate;
       }
-      if (sortMode === "newest") return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-      if (sortMode === "relevance") {
-        const promotedDelta = Number(Boolean(b.sponsored)) - Number(Boolean(a.sponsored));
-        if (promotedDelta) return promotedDelta;
-        const priorityDelta = priorityWeight(b) - priorityWeight(a);
-        if (priorityDelta) return priorityDelta;
-      }
+      if (sortMode === "oldest") return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
       return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
   }, [allJobs, keyword, city, group, quickCategory, portalFilter, sortMode]);
@@ -710,16 +709,15 @@ export default function JobsPortalPage() {
         <div className="mb-6 grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
           <div>
             <h2 className="text-4xl font-black tracking-[-0.05em]">{hasSearched ? `Matching ${portalCopy.results.toLowerCase()}` : portalCopy.results}</h2>
-            <p className={`mt-2 text-xs font-semibold ${darkMode ? "text-white/45" : "text-black/45"}`}>Sort work by fit, urgency or the date it is needed.</p>
+            <p className={`mt-2 text-xs font-semibold ${darkMode ? "text-white/45" : "text-black/45"}`}>Sort by the date the job was posted or the date the vehicle is needed.</p>
           </div>
           <div className="flex items-center gap-2">
             <label className={`flex h-11 items-center gap-2 rounded-xl border px-3 text-xs font-bold ${darkMode ? "border-white/15 bg-[#111]" : "border-black/10 bg-white"}`}>
               <span className={darkMode ? "text-white/45" : "text-black/45"}>Sort by</span>
               <select value={sortMode} onChange={(event) => setSortMode(event.target.value as JobSortMode)} className="bg-transparent font-black outline-none">
-                <option value="relevance">Best match</option>
-                <option value="priority">Most urgent first</option>
-                <option value="needed_soon">Needed soonest</option>
                 <option value="newest">Newest first</option>
+                <option value="needed_soon">Needed soonest</option>
+                <option value="oldest">Oldest first</option>
               </select>
             </label>
             <RequireAuthLink href={portalCopy.listHref} className={`hidden h-11 items-center border px-4 text-xs font-black uppercase tracking-wide md:inline-flex ${darkMode ? "border-[#f6b800] text-[#f6b800]" : "border-black text-black"}`}>{portalCopy.listLabel}</RequireAuthLink>
@@ -870,7 +868,7 @@ function ContactSellerStack({ job, darkMode }: { job: JobListing; darkMode: bool
       </div>
       <div className="grid grid-cols-3 border-t border-black/10">
         <a href={`tel:${job.contactNumber.replace(/\s/g, "")}`} className="flex min-h-16 flex-col items-center justify-center gap-1.5 border-r border-black/10 bg-[#168eea] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><PhoneIcon /> Call</a>
-        <RequireAuthLink href={`/messages?listing=${encodeURIComponent(job.id)}`} className="flex min-h-16 flex-col items-center justify-center gap-1.5 border-r border-black/10 bg-[#168eea] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><MessageIcon /> Message</RequireAuthLink>
+        <RequireAuthLink href={`/messages?listing=${encodeURIComponent(job.id)}&suggest=1`} className="flex min-h-16 flex-col items-center justify-center gap-1.5 border-r border-black/10 bg-[#168eea] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><MessageIcon /> Message</RequireAuthLink>
         <a href={whatsappPhone ? `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}` : "#"} onClick={(e) => { if (!whatsappPhone) { e.preventDefault(); greetPoster(job); } }} target="_blank" rel="noreferrer" className="flex min-h-16 flex-col items-center justify-center gap-1.5 bg-[#0d442b] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><WhatsAppIcon /> WhatsApp</a>
       </div>
     </div>

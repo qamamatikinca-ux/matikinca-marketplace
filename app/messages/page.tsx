@@ -521,7 +521,7 @@ export default function MessagesPage() {
     [conversations, selectedId],
   );
 
-  // LOADLINK V2.5.7 QUOTE SOURCE REUSE
+  // LOADLINK V2.5.9 QUOTE SOURCE REUSE
   useEffect(() => {
     let cancelled = false;
     setQuoteDefaults(null);
@@ -554,7 +554,17 @@ export default function MessagesPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!isAuthenticatedUser(user)) return;
 
-        let postRows: any[] = [];
+        let postRows: Array<{
+          id?: string | null;
+          title?: string | null;
+          city?: string | null;
+          vehicle_group?: string | null;
+          rate?: string | null;
+          description?: string | null;
+          listing_kind?: string | null;
+          status?: string | null;
+          moderation_status?: string | null;
+        }> = [];
         const postsResult = await supabase
           .from("job_listings")
           .select("id,title,city,vehicle_group,rate,description,listing_kind,status,moderation_status")
@@ -581,7 +591,7 @@ export default function MessagesPage() {
           .filter((row) => {
             const status = String(row.status || "active").toLowerCase();
             const moderation = String(row.moderation_status || "approved").toLowerCase();
-            return !["deleted", "closed", "filled"].includes(status) && moderation !== "rejected";
+            return !["deleted", "removed", "inactive", "closed", "filled"].includes(status) && moderation !== "rejected";
           })
           .map((row) => {
             const rate = parseQuoteRate(String(row.rate || ""));
@@ -611,6 +621,7 @@ export default function MessagesPage() {
 
     return () => { cancelled = true; };
   }, [selectedConversation?.listing_id]);
+
 
   useEffect(() => {
     if (!selectedId) return;
@@ -1559,7 +1570,7 @@ export default function MessagesPage() {
     window.history.replaceState({}, "", "/messages");
   }
 
-  if (loading) {
+  if (loading || (messagesLoading && Boolean(selectedId) && messages.length === 0)) {
     return (
       <main
         className={`min-h-[100svh] ${
@@ -1838,10 +1849,10 @@ export default function MessagesPage() {
 
               <div
                 ref={messageViewportRef}
-                className={`loadlink-message-viewport loadlink-chat-wallpaper relative min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8 ${darkMode ? "bg-[#090909]" : "bg-[#f6f3eb]"}`}
+                className={`loadlink-message-viewport loadlink-chat-wallpaper relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-5 sm:px-5 md:px-8 ${darkMode ? "bg-[#090909]" : "bg-[#f6f3eb]"}`}
               >
                 {messagesLoading && messages.length === 0 ? (
-                  <div className="flex h-full min-h-[180px] items-center justify-center"><div className="flex items-center gap-3 rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-bold text-black/55"><span className="h-4 w-4 animate-spin rounded-full border-2 border-black/20 border-t-black" />Loading conversation…</div></div>
+                  <MessageVisualScene mode="inline" darkMode={darkMode} />
                 ) : searchedMessages.length ? (
                   <div className="mx-auto max-w-3xl space-y-3">
                     {searchedMessages.map((message, index) => {
@@ -1876,7 +1887,7 @@ export default function MessagesPage() {
                               />
                             ) : null}
                             <div
-                              className={`relative max-w-[82%] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[72%] ${
+                              className={`relative min-w-0 max-w-[calc(100%_-_2.75rem)] break-words [overflow-wrap:anywhere] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[72%] ${
                                 mine
                                   ? "rounded-br-sm bg-black text-white"
                                   : "rounded-bl-sm border border-black/5 bg-white text-black"
@@ -2153,7 +2164,7 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
   const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
 
   return (
-    <div className={`loadlink-voice-note mb-2 w-full min-w-[220px] rounded-2xl border px-3 py-2.5 ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}>
+    <div className={`loadlink-voice-note mb-2 w-full min-w-0 max-w-full rounded-2xl border px-3 py-2.5 ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}>
       {url ? (
         <audio
           ref={audioRef}
@@ -2236,7 +2247,7 @@ function QuoteMessageCard({ message, mine, canRespond, branding, onRespond }: { 
   const brandLogo = String(payload.dealership_logo || branding.logo || "").trim();
   const statusClass = status === "accepted" ? "bg-emerald-500/15 text-emerald-500" : status === "declined" ? "bg-red-500/15 text-red-500" : mine ? "bg-white/10 text-white/60" : "bg-black/5 text-black/55";
   return (
-    <div className={`min-w-[236px] overflow-hidden rounded-2xl border ${mine ? "border-white/15 bg-white/[.06]" : "border-black/10 bg-[#fffaf0]"}`}>
+    <div className={`w-full min-w-0 max-w-full overflow-hidden rounded-2xl border ${mine ? "border-white/15 bg-white/[.06]" : "border-black/10 bg-[#fffaf0]"}`}>
       <div className={`flex items-center gap-2 border-b px-3 py-2 ${mine ? "border-white/10" : "border-black/10"}`}>
         {brandLogo ? <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1"><img src={brandLogo} alt={brandName ? `${brandName} logo` : "Dealership logo"} className="h-full w-full object-contain" /></span> : null}
         <div className="min-w-0 flex-1"><strong className="block truncate text-[10px] font-black">{brandName || "Rate quote"}</strong><span className={`block text-[8px] font-semibold ${mine ? "text-white/45" : "text-black/40"}`}>{brandName ? "Dealership quote" : "Structured quote"}</span></div>

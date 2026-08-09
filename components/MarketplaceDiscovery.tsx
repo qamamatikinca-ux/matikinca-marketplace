@@ -128,20 +128,20 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
     <>
       <section className={`px-5 py-6 md:px-12 md:py-8 ${darkMode ? "bg-[#050505] text-white" : "bg-white text-black"}`}>
         <div className="mx-auto max-w-7xl">
-          <div className={`overflow-x-auto rounded-2xl border p-1.5 no-scrollbar ${darkMode ? "border-white/12 bg-[#111]" : "border-black/10 bg-[#f7f5ef]"}`} aria-label="Search category">
-            <div className="flex min-w-max gap-1.5">
+          <div className="overflow-x-auto no-scrollbar" aria-label="Search category">
+            <div className="flex min-w-max gap-3 pb-1">
               {searchScopes.map((item) => (
                 <button
                   key={item.value}
                   type="button"
                   onClick={() => chooseScope(item.value)}
                   aria-pressed={scope === item.value}
-                  className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
+                  className={`shrink-0 rounded-2xl border px-5 py-3 text-sm font-black transition active:scale-[.98] ${
                     scope === item.value
-                      ? "bg-[#f6b800] text-black shadow-sm"
+                      ? "border-[#f6b800] bg-[#f6b800] text-black shadow-sm"
                       : darkMode
-                        ? "text-white/58 hover:bg-white/[.05]"
-                        : "text-black/52 hover:bg-white"
+                        ? "border-white/15 bg-[#0d0d0d] text-white/70 hover:border-white/30"
+                        : "border-black/12 bg-white text-black/65 hover:border-black/25"
                   }`}
                 >
                   {item.label}

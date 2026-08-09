@@ -75,9 +75,41 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
 
   useEffect(() => {
     if (!open) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+
+    const body = document.body;
+    const html = document.documentElement;
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    const previous = {
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyLeft: body.style.left,
+      bodyRight: body.style.right,
+      bodyWidth: body.style.width,
+      bodyOverflow: body.style.overflow,
+      bodyOverscroll: body.style.overscrollBehavior,
+      htmlOverflow: html.style.overflow,
+      htmlOverscroll: html.style.overscrollBehavior,
+    };
+
+    // iOS Safari does not reliably honour body overflow:hidden for fixed drawers.
+    // Freeze the document at its exact scroll position while the menu owns touch scrolling.
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+    html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
+
     window.setTimeout(() => closeButtonRef.current?.focus(), 0);
+
+    const preventBackgroundScroll = (event: TouchEvent | WheelEvent) => {
+      const target = event.target as Node | null;
+      if (target && panelRef.current?.contains(target)) return;
+      if (event.cancelable) event.preventDefault();
+    };
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") { setOpen(false); return; }
@@ -89,10 +121,27 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
+
+    document.addEventListener("touchmove", preventBackgroundScroll as EventListener, { passive: false });
+    document.addEventListener("wheel", preventBackgroundScroll as EventListener, { passive: false });
     window.addEventListener("keydown", onKeyDown);
+
     return () => {
-      document.body.style.overflow = previous;
+      document.removeEventListener("touchmove", preventBackgroundScroll as EventListener);
+      document.removeEventListener("wheel", preventBackgroundScroll as EventListener);
       window.removeEventListener("keydown", onKeyDown);
+
+      body.style.position = previous.bodyPosition;
+      body.style.top = previous.bodyTop;
+      body.style.left = previous.bodyLeft;
+      body.style.right = previous.bodyRight;
+      body.style.width = previous.bodyWidth;
+      body.style.overflow = previous.bodyOverflow;
+      body.style.overscrollBehavior = previous.bodyOverscroll;
+      html.style.overflow = previous.htmlOverflow;
+      html.style.overscrollBehavior = previous.htmlOverscroll;
+
+      window.scrollTo(0, scrollY);
       window.setTimeout(() => openButtonRef.current?.focus(), 0);
     };
   }, [open]);
@@ -146,9 +195,9 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
   const menuUnlocked = signedIn || guestMode;
 
   const overlay = open ? (
-    <div className="fixed inset-0 z-[10000]" role="presentation" data-loadlink-menu-overlay>
-      <button type="button" data-loadlink-menu-backdrop className="absolute inset-0 bg-black/65 backdrop-blur-sm outline-none [-webkit-tap-highlight-color:transparent]" onClick={() => setOpen(false)} aria-label="Close menu" />
-      <aside ref={panelRef} data-loadlink-menu-panel className={`absolute inset-y-0 left-0 flex w-[min(94vw,430px)] flex-col border-r outline-none shadow-[24px_0_80px_rgba(0,0,0,.28)] ${panel} ${border}`} role="dialog" aria-modal="true" aria-label="LoadLink menu">
+    <div className="fixed inset-0 z-[10000] overscroll-none touch-none" role="presentation" data-loadlink-menu-overlay>
+      <button type="button" data-loadlink-menu-backdrop className="absolute inset-0 touch-none bg-black/65 backdrop-blur-sm outline-none [-webkit-tap-highlight-color:transparent]" onClick={() => setOpen(false)} aria-label="Close menu" />
+      <aside ref={panelRef} data-loadlink-menu-panel className={`absolute inset-y-0 left-0 flex w-[min(94vw,430px)] touch-pan-y flex-col overscroll-contain border-r outline-none shadow-[24px_0_80px_rgba(0,0,0,.28)] ${panel} ${border}`} role="dialog" aria-modal="true" aria-label="LoadLink menu">
         <header className={`border-b px-5 pb-5 pt-4 ${border}`}>
           <div className="flex items-center justify-between gap-4">
             <Link href="/" aria-label="LoadLink home"><LoadLinkLogo theme={darkMode ? "dark" : "light"} showGlow={false} containerClassName="!w-[150px]" className="h-9 w-auto" /></Link>
@@ -166,7 +215,7 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
         {!menuUnlocked ? (
           <div className="flex flex-1 flex-col justify-center px-5 py-8"><div className={`rounded-[24px] border p-6 ${border} ${darkMode ? "bg-white/[.035]" : "bg-white"}`}><h2 className="text-3xl font-black tracking-[-.04em]">Welcome to LoadLink</h2><p className={`mt-3 text-sm font-semibold leading-6 ${muted}`}>Sign in to post, message and manage your account, or continue browsing as a guest.</p><Link href="/login" className="mt-6 flex h-12 items-center justify-center rounded-xl bg-[#f6b800] px-5 text-xs font-black uppercase tracking-[.12em] text-black">Sign in or create account</Link><button type="button" onClick={continueAsGuest} className={`mt-3 h-12 w-full rounded-xl border text-xs font-black uppercase tracking-[.12em] ${border}`}>Continue as guest</button></div></div>
         ) : (
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
+          <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain px-4 py-5 [-webkit-overflow-scrolling:touch]">
             <button type="button" onClick={() => { const next = !simpleMode; setLoadLinkSimpleMode(next); setSimpleMode(next);  }} className={`mb-5 flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${simpleMode ? "border-[#f6b800] bg-[#f6b800] text-black" : `${border} ${darkMode ? "bg-white/[.035]" : "bg-white"}`}`}>
               <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${simpleMode ? "bg-black text-[#f6b800]" : darkMode ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><MenuItemIcon name="simple" /></span>
               <span className="min-w-0 flex-1"><strong className="block text-sm font-black">Simple mode</strong><span className={`mt-1 block text-[10px] font-semibold leading-4 ${simpleMode ? "text-black/60" : muted}`}>Same LoadLink layout with larger type, calmer motion and simpler controls.</span></span>

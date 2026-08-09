@@ -58,6 +58,24 @@ function groupForVehicle(value: string): VehicleGroup {
   return "Trucks / Trailers";
 }
 
+function priorityForNeededDate(value: string): "flexible" | "standard" | "urgent" {
+  if (!value) return "standard";
+  const selected = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(selected.getTime())) return "standard";
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+  const daysAway = Math.ceil((selected.getTime() - today.getTime()) / 86400000);
+  if (daysAway <= 1) return "urgent";
+  if (daysAway <= 7) return "standard";
+  return "flexible";
+}
+
+function todayForDateInput() {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
 function saveOwnedJob(jobId: string, ownerKey: string) {
   try {
     const current = JSON.parse(localStorage.getItem("loadlink-owned-job-keys") || "{}") as Record<string, string>;
@@ -83,7 +101,7 @@ export default function ListJobPage() {
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [description, setDescription] = useState("");
   const [neededBy, setNeededBy] = useState("");
-  const [priorityLevel, setPriorityLevel] = useState<"flexible" | "standard" | "urgent">("standard");
+  const priorityLevel = useMemo(() => priorityForNeededDate(neededBy), [neededBy]);
   const [packageType] = useState<"standard">("standard");
   const [boostJob, setBoostJob] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -139,7 +157,7 @@ export default function ListJobPage() {
       setListingMode(saved.listingMode || "job"); setAssetType(saved.assetType || "Truck"); setVehicleNeeded(saved.vehicleNeeded || "Any suitable vehicle");
       setTitle(saved.title || ""); setCity(saved.city || "Johannesburg"); setGroup(saved.group || "Trucks / Trailers");
       setRate(saved.rate || ""); setPostedBy(saved.postedBy || ""); setContactNumber(saved.contactNumber || "");
-      setWhatsappNumber(saved.whatsappNumber || ""); setDescription(saved.description || ""); setNeededBy(saved.neededBy || ""); setPriorityLevel(saved.priorityLevel || "standard"); setBoostJob(Boolean(saved.boostJob));
+      setWhatsappNumber(saved.whatsappNumber || ""); setDescription(saved.description || ""); setNeededBy(saved.neededBy || ""); setBoostJob(Boolean(saved.boostJob));
       submissionIdRef.current = String(saved.submissionId || localStorage.getItem("loadlink-job-submission-id") || createSafeRandomId());
       localStorage.setItem("loadlink-job-submission-id", submissionIdRef.current);
     } catch {
@@ -518,15 +536,22 @@ export default function ListJobPage() {
                 <input required value={rate} onChange={(e) => setRate(e.target.value)} placeholder="R2 500 per load or Request a quote" className={inputClass} />
               </FieldLabel>
               {listingMode !== "asset" ? <>
-                <FieldLabel label="When is the vehicle or work needed?" darkMode={darkMode}>
-                  <input type="date" min={new Date().toISOString().slice(0, 10)} value={neededBy} onChange={(e) => setNeededBy(e.target.value)} className={inputClass} />
-                </FieldLabel>
-                <FieldLabel label="How time-sensitive is this?" darkMode={darkMode}>
-                  <select value={priorityLevel} onChange={(e) => setPriorityLevel(e.target.value as "flexible" | "standard" | "urgent")} className={inputClass}>
-                    <option value="flexible">Flexible timing</option>
-                    <option value="standard">Normal priority</option>
-                    <option value="urgent">Urgent — needed soon</option>
-                  </select>
+                <FieldLabel label="Needed on" darkMode={darkMode}>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      required
+                      min={todayForDateInput()}
+                      value={neededBy}
+                      onChange={(e) => setNeededBy(e.target.value)}
+                      className={`${inputClass} pr-12`}
+                      aria-label="Choose the date this vehicle or work is needed"
+                    />
+                    <span className={`pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 ${darkMode ? "text-white/55" : "text-black/45"}`} aria-hidden="true">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M8 3v4M16 3v4M3 10h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                    </span>
+                  </div>
+                  <span className={`text-xs font-semibold ${darkMode ? "text-white/45" : "text-black/45"}`}>Choose the exact date. LoadLink handles urgency automatically.</span>
                 </FieldLabel>
               </> : null}
               <FieldLabel label="Description" darkMode={darkMode} wide>

@@ -37,11 +37,17 @@ export default function MessageVisualScene({ mode, darkMode }: { mode: Mode; dar
   const scene = SCENES[variant];
 
   if (mode === "background") {
+    const variants = [variant, (variant + 2) % SCENES.length, (variant + 5) % SCENES.length, (variant + 7) % SCENES.length, (variant + 9) % SCENES.length];
     return (
-      <div className="loadlink-message-sketch" aria-hidden="true" data-scene={variant}>
-        <TruckSketch variant={variant} compact />
+      <div className={`loadlink-message-sketch ${darkMode ? "is-dark" : "is-light"}`} aria-hidden="true" data-scene={variant}>
+        {variants.map((item, index) => (
+          <span key={`${item}-${index}`} className={`loadlink-message-sketch-stamp stamp-${index + 1}`}>
+            <TruckSketch variant={item} compact />
+          </span>
+        ))}
         <span className="loadlink-message-route route-one" />
         <span className="loadlink-message-route route-two" />
+        <span className="loadlink-message-route route-three" />
       </div>
     );
   }
@@ -55,6 +61,7 @@ export default function MessageVisualScene({ mode, darkMode }: { mode: Mode; dar
         <div className="loadlink-loader-road"><span /><span /><span /></div>
       </div>
       <div className="loadlink-message-loader-copy">
+        <p>LOADLINK MESSAGES</p>
         <h1>{inline ? "Loading conversation" : scene.name}</h1>
         <span>{scene.note}</span>
       </div>

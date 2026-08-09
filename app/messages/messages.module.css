@@ -121,3 +121,17 @@
   display: none !important;
 }
 /* LOADLINK V2.5.4 CLEAN SESSION SKETCH WALLPAPER END */
+
+/* LOADLINK V2.6.16 CHAT VIEWPORT INTEGRITY */
+.messageApp :global(.loadlink-message-viewport) {
+  min-width: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-bottom: 1rem;
+}
+.messageApp :global(.loadlink-message-viewport) > * {
+  min-width: 0;
+  max-width: 100%;
+}
