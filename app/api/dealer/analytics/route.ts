@@ -1,0 +1,3 @@
+import type { NextRequest } from "next/server";
+import { apiError, dealerServerClient, requireDealerContext } from "@/lib/dealer/server";
+export async function GET(request: NextRequest) { try { const client = dealerServerClient(request); await requireDealerContext(client); const days = [7,30,90].includes(Number(request.nextUrl.searchParams.get("days"))) ? Number(request.nextUrl.searchParams.get("days")) : 30; const { data, error } = await client.rpc("loadlink_dealer_analytics", { p_days: days }); if (error) throw error; return Response.json(data || {}); } catch (error) { return apiError(error); } }

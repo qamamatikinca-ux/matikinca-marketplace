@@ -138,7 +138,8 @@ export default function ListYourVehiclePage() {
       }
       const requestedDealer = params.get("dealership") || "";
       if (requestedDealer) {
-        const { data } = await supabase.from("dealership_profiles").select("id,name,contact_email,phone_number,whatsapp_number").eq("id", requestedDealer).eq("owner_user_id", user.id).maybeSingle();
+        const { data, error } = await supabase.rpc("loadlink_dealer_listing_context", { p_dealership_id: requestedDealer });
+        if (error) throw error;
         if (data) {
           setDealershipId(String(data.id));
           setDealershipName(String(data.name || ""));
@@ -332,6 +333,7 @@ export default function ListYourVehiclePage() {
     if (!isValidSouthAfricanPhone(contactNumber)) return "Enter a valid South African contact number.";
     if (whatsappNumber && !isValidSouthAfricanPhone(whatsappNumber)) return "Enter a valid WhatsApp number or leave it blank.";
     if (preparingVehiclePhotos) return "Wait for the selected photos to finish preparing.";
+    if (sellerType === "dealership" && packageType === "dealer" && vehiclePhotos.length < 10) return "Dealer listings require at least 10 clear photos. Your Dealer package supports up to 15.";
     if (vehiclePhotos.length < 2) return "Upload at least two clear photos of the actual vehicle or unit.";
     if (!documents.idDocument || !documents.registrationPaper || !documents.ownershipProof) return "Upload your ID, registration paper and proof of ownership or authority to list.";
     if (vehicleCategory === "truck" && !documents.driverLicence) return "Upload the driver’s licence for the truck listing.";

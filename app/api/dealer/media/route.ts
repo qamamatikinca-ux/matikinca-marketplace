@@ -1,0 +1,3 @@
+import type { NextRequest } from "next/server";
+import { apiError, dealerServerClient, requireDealerContext } from "@/lib/dealer/server";
+export async function GET(request: NextRequest) { try { const client = dealerServerClient(request); const context = await requireDealerContext(client); const { data, error } = await client.from("dealership_media_library").select("id,media_type,url,label,duration_seconds,created_at").eq("dealership_id", context.dealership_id).order("created_at", { ascending: false }).limit(60); if (error) throw error; return Response.json({ items: data || [] }); } catch (error) { return apiError(error); } }
