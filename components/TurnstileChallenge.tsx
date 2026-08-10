@@ -219,6 +219,7 @@ export default function TurnstileChallenge({
             : "border-black/10 bg-black/[.025] text-black/70"
         }`}
         role="status"
+        aria-live="polite"
       >
         Security verification is temporarily unavailable. Refresh and try again.
       </div>
@@ -236,6 +237,7 @@ export default function TurnstileChallenge({
       {failure ? (
         <div
           role="status"
+          aria-live="polite"
           className={`flex min-h-[54px] items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 ${
             darkMode
               ? "border-white/10 bg-white/[.035] text-white"
