@@ -39,7 +39,6 @@ export default function TurnstileChallenge({
     let active = true;
     let attempts = 0;
     let mountTimer: number | null = null;
-    let watchdogTimer: number | null = null;
     let settled = false;
 
     const fail = (reason: TurnstileFailureReason) => {
@@ -47,13 +46,6 @@ export default function TurnstileChallenge({
       settled = true;
       onToken("");
       onFailure?.(reason);
-    };
-
-    const clearWatchdog = () => {
-      if (watchdogTimer) {
-        window.clearTimeout(watchdogTimer);
-        watchdogTimer = null;
-      }
     };
 
     const mount = () => {
@@ -93,29 +85,21 @@ export default function TurnstileChallenge({
               return;
             }
             settled = true;
-            clearWatchdog();
             onToken(value);
           },
           "expired-callback": () => {
-            clearWatchdog();
             settled = false;
             fail("expired");
           },
           "timeout-callback": () => {
-            clearWatchdog();
             settled = false;
             fail("timeout");
           },
           "error-callback": () => {
-            clearWatchdog();
             settled = false;
             fail("error");
           },
         });
-
-        watchdogTimer = window.setTimeout(() => {
-          if (!settled) fail("timeout");
-        }, 20000);
       } catch {
         fail("error");
       }
@@ -137,7 +121,6 @@ export default function TurnstileChallenge({
     return () => {
       active = false;
       if (mountTimer) window.clearTimeout(mountTimer);
-      clearWatchdog();
       if (widgetRef.current && window.turnstile) {
         try {
           window.turnstile.remove(widgetRef.current);
