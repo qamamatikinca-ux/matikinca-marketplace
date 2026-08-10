@@ -39,7 +39,8 @@ export default function SignUpPage() {
     if (passwordIssue) { setMessage(passwordIssue); return; }
     if (!passwordStrength(password).strong) { setMessage("Your password is not strong enough yet. Complete all five password checks."); return; }
     if (password !== confirmPassword) { setMessage("The two passwords do not match."); return; }
-    if (loadLinkTurnstileConfigured && !captchaToken) { setMessage("Complete the security check before creating your account."); return; }
+    if (!loadLinkTurnstileConfigured) { setMessage("Security verification is temporarily unavailable. Refresh and try again."); return; }
+    if (!captchaToken) { setMessage("Complete the security check before creating your account."); return; }
 
     setBusy(true);
     try {
@@ -47,7 +48,7 @@ export default function SignUpPage() {
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
-        options: { emailRedirectTo: redirectTo, ...(captchaToken ? { captchaToken } : {}) },
+        options: { emailRedirectTo: redirectTo, captchaToken },
       });
       if (error) {
         if (duplicateEmailSignal(error)) { setMessage("This email is already in use. Sign in or use Forgot password."); return; }
