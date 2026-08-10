@@ -73,57 +73,89 @@ export default function DealerOverview({
       (value, index, array) =>
         array.findIndex((item) => item.id === value.id) === index,
     )
-    .slice(0, 4);
+    .slice(0, 5);
 
   const latest = statuses[0] || null;
-  const live = statuses.filter(
+  const liveStatuses = statuses.filter(
     (item) =>
       item.publication_status === "published" &&
       new Date(item.expires_at).getTime() > Date.now(),
   );
+
   const waiting =
     Number(summary.new_leads || 0) +
     Number(summary.overdue_followups || 0) +
     Number(summary.unread_messages || 0);
+  const stockTotal =
+    Number(summary.live_stock || 0) +
+    Number(summary.draft_stock || 0) +
+    Number(summary.pending_stock || 0) +
+    Number(summary.reserved_stock || 0);
+  const responseRate = Math.max(0, Math.min(100, Number(summary.response_rate || 0)));
+  const responseTime = summary.avg_response_minutes == null
+    ? "—"
+    : summary.avg_response_minutes < 60
+      ? `${Math.max(1, Math.round(summary.avg_response_minutes))}m`
+      : `${(summary.avg_response_minutes / 60).toFixed(summary.avg_response_minutes >= 600 ? 0 : 1)}h`;
 
   const attention = useMemo(() => {
     const items: Array<{
       label: string;
       detail: string;
       section: DealerSection;
+      level: "high" | "normal";
     }> = [];
+
     if (summary.overdue_followups) {
       items.push({
-        label: "Follow-ups",
-        detail: `${summary.overdue_followups} overdue`,
+        label: "Follow-ups overdue",
+        detail: `${summary.overdue_followups} customer${summary.overdue_followups === 1 ? "" : "s"} waiting for action`,
         section: "leads",
+        level: "high",
+      });
+    }
+    if (summary.unread_messages) {
+      items.push({
+        label: "Unread enquiries",
+        detail: `${summary.unread_messages} message${summary.unread_messages === 1 ? "" : "s"} not opened yet`,
+        section: "messages",
+        level: "high",
       });
     }
     const stockIssues = insights.filter((item) => item.kind === "inventory").length;
     if (stockIssues) {
       items.push({
-        label: "Stock",
-        detail: `${stockIssues} need attention`,
+        label: "Stock needs attention",
+        detail: `${stockIssues} listing${stockIssues === 1 ? "" : "s"} flagged by LoadLink`,
         section: "inventory",
+        level: "normal",
       });
     }
     if (context.verification_status === "changes_required") {
       items.push({
-        label: "Verification",
-        detail: "Changes required",
+        label: "Verification changes required",
+        detail: "Review the request before your dealership is fully cleared",
         section: "verification",
+        level: "high",
       });
     }
-    return items;
-  }, [context.verification_status, insights, summary.overdue_followups]);
+    return items.slice(0, 4);
+  }, [context.verification_status, insights, summary.overdue_followups, summary.unread_messages]);
 
   async function statusDone() {
     setStatusLoading(true);
     await Promise.all([Promise.resolve(onRefresh()), loadStatuses()]);
   }
 
+  const panel = darkMode
+    ? "border-white/10 bg-[#0b0b0b]"
+    : "border-black/[.08] bg-white";
+  const inset = darkMode
+    ? "border-white/10 bg-white/[.035]"
+    : "border-black/[.07] bg-[#faf8f3]";
+
   return (
-    <div className="grid gap-3" data-loadlink-dealer-home="modern-v3">
+    <div className="grid gap-3 sm:gap-4" data-loadlink-dealer-home="command-centre-v4">
       <DealerStatusComposer
         darkMode={darkMode}
         open={statusOpen}
@@ -133,136 +165,254 @@ export default function DealerOverview({
         onDone={() => void statusDone()}
       />
 
-      <section
-        className={`overflow-hidden rounded-[18px] border ${
-          darkMode
-            ? "border-white/10 bg-[#0b0b0b]"
-            : "border-black/[.08] bg-white"
-        }`}
-      >
-        <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-4 sm:px-5">
-          <div className="min-w-0">
-            <div className="text-[9px] font-black uppercase tracking-[.14em] opacity-35">
-              Today
-            </div>
-            <div className="mt-1 flex min-w-0 items-baseline gap-2">
-              <h1 className="truncate text-[20px] font-black tracking-[-.035em] sm:text-[22px]">
-                Your dealership
+      <section className={`relative overflow-hidden rounded-[22px] border ${panel}`}>
+        <div className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-[#f6b800]/[.06] blur-3xl" />
+        <div className="relative px-4 pb-4 pt-4 sm:px-6 sm:pb-5 sm:pt-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[.13em] opacity-40">
+                <span>Dealer dashboard</span>
+                <span className="h-1 w-1 rounded-full bg-current opacity-40" />
+                <span>{new Date().toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}</span>
+              </div>
+              <h1 className="mt-1.5 text-[24px] font-black tracking-[-.045em] sm:text-[30px]">
+                Your business, at a glance
               </h1>
-              <span
-                className={`shrink-0 text-[10px] font-black ${
-                  waiting
-                    ? darkMode
-                      ? "text-[#f6b800]"
-                      : "text-[#8b6800]"
-                    : "opacity-35"
-                }`}
-              >
-                {waiting ? `${waiting} waiting` : "All clear"}
-              </span>
+              <p className="mt-1 max-w-2xl text-[11px] font-semibold leading-5 opacity-50 sm:text-xs">
+                Stock, customers and dealership activity in one working view.
+              </p>
             </div>
+            <button
+              type="button"
+              onClick={() => setSection(waiting ? "leads" : "analytics")}
+              className={`shrink-0 rounded-full border px-3 py-2 text-[9px] font-black ${
+                waiting
+                  ? darkMode
+                    ? "border-[#f6b800]/35 bg-[#f6b800]/10 text-[#f6b800]"
+                    : "border-[#b88700]/25 bg-[#f6b800]/15 text-[#725600]"
+                  : "border-current/10 opacity-55"
+              }`}
+            >
+              {waiting ? `${waiting} need action` : "All clear"}
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setSection("leads")}
-            className="shrink-0 text-[10px] font-black opacity-45 transition hover:opacity-100"
-          >
-            Sales →
-          </button>
-        </div>
 
-        <div className="grid grid-cols-4 border-y border-current/10">
-          <Metric
-            label="Stock"
-            value={summary.live_stock}
-            onClick={() => setSection("inventory")}
-            darkMode={darkMode}
-          />
-          <Metric
-            label="New leads"
-            value={summary.new_leads}
-            hot={summary.new_leads > 0}
-            onClick={() => setSection("leads")}
-            darkMode={darkMode}
-          />
-          <Metric
-            label="Follow-ups"
-            value={summary.overdue_followups}
-            hot={summary.overdue_followups > 0}
-            onClick={() => setSection("leads")}
-            darkMode={darkMode}
-          />
-          <Metric
-            label="Inbox"
-            value={summary.unread_messages}
-            hot={summary.unread_messages > 0}
-            onClick={() => setSection("messages")}
-            darkMode={darkMode}
-            last
-          />
-        </div>
+          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <PulseCard
+              label="Live stock"
+              value={summary.live_stock}
+              detail={`${stockTotal} total vehicles`}
+              onClick={() => setSection("inventory")}
+              darkMode={darkMode}
+            />
+            <PulseCard
+              label="New leads"
+              value={summary.new_leads}
+              detail={`${summary.leads_30d || 0} in 30 days`}
+              hot={summary.new_leads > 0}
+              onClick={() => setSection("leads")}
+              darkMode={darkMode}
+            />
+            <PulseCard
+              label="Follow-ups"
+              value={summary.overdue_followups}
+              detail={summary.overdue_followups ? "Overdue now" : "Nothing overdue"}
+              hot={summary.overdue_followups > 0}
+              onClick={() => setSection("leads")}
+              darkMode={darkMode}
+            />
+            <PulseCard
+              label="Inbox"
+              value={summary.unread_messages}
+              detail={summary.unread_messages ? "Unread messages" : "Inbox clear"}
+              hot={summary.unread_messages > 0}
+              onClick={() => setSection("messages")}
+              darkMode={darkMode}
+            />
+          </div>
 
-        <div className="grid grid-cols-3 gap-px bg-current/10">
-          <QuickAction
-            label="Add vehicle"
-            detail="New stock"
-            icon="plus"
-            darkMode={darkMode}
-            onClick={() =>
-              window.location.assign(
-                `/list-your-vehicle?plan=dealer&dealership=${context.dealership_id}`,
-              )
-            }
-          />
-          <QuickAction
-            label="Post Status"
-            detail="Reach followers"
-            icon="status"
-            gold
-            darkMode={darkMode}
-            onClick={() => setStatusOpen(true)}
-          />
-          <QuickAction
-            label="Dealer page"
-            detail="Edit profile"
-            icon="store"
-            darkMode={darkMode}
-            onClick={() => setSection("showroom")}
-          />
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-0.5 sm:grid sm:grid-cols-3 sm:overflow-visible">
+            <CommandButton
+              label="Add vehicle"
+              detail="List new stock"
+              icon="plus"
+              darkMode={darkMode}
+              onClick={() =>
+                window.location.assign(
+                  `/list-your-vehicle?plan=dealer&dealership=${context.dealership_id}`,
+                )
+              }
+            />
+            <CommandButton
+              label="Post Status"
+              detail="Reach followers"
+              icon="status"
+              primary
+              darkMode={darkMode}
+              onClick={() => setStatusOpen(true)}
+            />
+            <CommandButton
+              label="Dealer page"
+              detail="Manage showroom"
+              icon="store"
+              darkMode={darkMode}
+              onClick={() => setSection("showroom")}
+            />
+          </div>
         </div>
       </section>
 
-      {attention.length ? (
-        <section
-          className={`rounded-[18px] border p-2 ${
-            darkMode
-              ? "border-white/10 bg-[#0b0b0b]"
-              : "border-black/[.08] bg-white"
-          }`}
-        >
-          <div className="mb-2 px-2 pt-1 text-[9px] font-black uppercase tracking-[.12em] opacity-35">
-            Needs attention
+      <div className="grid gap-3 xl:grid-cols-[1.18fr_.82fr]">
+        <Surface darkMode={darkMode} className="overflow-hidden rounded-[22px]">
+          <SectionHead
+            title="Sales desk"
+            detail="What needs your team first"
+            action="Open sales"
+            onClick={() => setSection("leads")}
+          />
+
+          <div className="grid grid-cols-3 border-b border-current/10">
+            <CompactStat label="Appointments" value={summary.appointments_today} />
+            <CompactStat label="Open quotes" value={summary.quotes_open} />
+            <CompactStat label="Avg response" value={responseTime} last />
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-0.5">
+
+          {appointments.length || priorities.length ? (
+            <div className="divide-y divide-current/10">
+              {appointments.slice(0, 2).map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setSection("leads")}
+                  className="group flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-current/[.025] sm:px-5"
+                >
+                  <QueueBadge kind="appointment" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[12px] font-black sm:text-[13px]">
+                      {item.customer_name || "Customer viewing"}
+                    </div>
+                    <div className="mt-0.5 truncate text-[9px] font-semibold opacity-45 sm:text-[10px]">
+                      Viewing · {item.listing_title || item.appointment_type}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] font-black">
+                      {new Date(item.starts_at).toLocaleTimeString("en-ZA", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                    <div className="mt-0.5 text-[8px] font-black uppercase tracking-[.08em] opacity-30">
+                      Today
+                    </div>
+                  </div>
+                </button>
+              ))}
+
+              {priorities.slice(0, appointments.length ? 3 : 5).map((lead) => {
+                const isOverdue = overdue.some((item) => item.id === lead.id);
+                return (
+                  <button
+                    key={lead.id}
+                    type="button"
+                    onClick={() => setSection("leads")}
+                    className="group flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-current/[.025] sm:px-5"
+                  >
+                    <QueueBadge kind={isOverdue || lead.priority === "high" ? "urgent" : "lead"} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[12px] font-black sm:text-[13px]">
+                        {lead.customer_name || "Customer enquiry"}
+                      </div>
+                      <div className="mt-0.5 truncate text-[9px] font-semibold opacity-45 sm:text-[10px]">
+                        {lead.listing_title || lead.source}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`text-[9px] font-black ${isOverdue ? "text-[#c28d00]" : "opacity-45"}`}>
+                        {isOverdue ? "Follow up" : relativeAge(lead.last_activity_at || lead.created_at)}
+                      </div>
+                      <div className="mt-0.5 text-[8px] font-black uppercase tracking-[.07em] opacity-25">
+                        {lead.status.replaceAll("_", " ")}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <EmptyState
+              title="Sales desk is clear"
+              detail="New enquiries, quotes, viewings and follow-ups will land here."
+            />
+          )}
+        </Surface>
+
+        <Surface darkMode={darkMode} className="overflow-hidden rounded-[22px]">
+          <SectionHead
+            title="Inventory position"
+            detail="Where your stock sits right now"
+            action="Manage stock"
+            onClick={() => setSection("inventory")}
+          />
+          <div className="p-4 sm:p-5">
+            <div className={`rounded-2xl border p-4 ${inset}`}>
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-[.1em] opacity-35">Total stock</div>
+                  <div className="mt-1 text-[32px] font-black tracking-[-.05em]">{stockTotal}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[18px] font-black">{summary.sold_30d || 0}</div>
+                  <div className="text-[8px] font-black uppercase tracking-[.08em] opacity-35">Sold 30d</div>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-4 overflow-hidden rounded-xl border border-current/10">
+                <StockStat label="Live" value={summary.live_stock} />
+                <StockStat label="Draft" value={summary.draft_stock} />
+                <StockStat label="Pending" value={summary.pending_stock} />
+                <StockStat label="Reserved" value={summary.reserved_stock} last />
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-[.08em] opacity-40">
+                <span>Showroom readiness</span>
+                <span>{Math.max(0, Math.min(100, Number(summary.profile_completion || 0)))}%</span>
+              </div>
+              <div className={`mt-2 h-1.5 overflow-hidden rounded-full ${darkMode ? "bg-white/10" : "bg-black/10"}`}>
+                <div
+                  className="h-full rounded-full bg-[#f6b800] transition-[width]"
+                  style={{ width: `${Math.max(0, Math.min(100, Number(summary.profile_completion || 0)))}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </Surface>
+      </div>
+
+      {attention.length ? (
+        <section className={`rounded-[22px] border p-3 sm:p-4 ${panel}`}>
+          <div className="mb-3 flex items-center justify-between gap-3 px-1">
+            <div>
+              <h2 className="text-[14px] font-black tracking-[-.02em]">Needs attention</h2>
+              <p className="mt-0.5 text-[9px] font-semibold opacity-40">LoadLink is surfacing work that should not be buried.</p>
+            </div>
+            <span className="rounded-full border border-current/10 px-2.5 py-1 text-[9px] font-black opacity-45">
+              {attention.length}
+            </span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             {attention.map((item) => (
               <button
                 key={item.label}
                 type="button"
                 onClick={() => setSection(item.section)}
-                className={`flex min-w-[150px] shrink-0 items-center gap-2 rounded-xl border px-3 py-2.5 text-left ${
-                  darkMode
-                    ? "border-white/10 bg-white/[.035]"
-                    : "border-black/[.07] bg-[#faf8f2]"
-                }`}
+                className={`flex min-h-[76px] items-start gap-3 rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${inset}`}
               >
-                <span className="h-2 w-2 shrink-0 rounded-full bg-[#f6b800]" />
+                <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.level === "high" ? "bg-[#f6b800]" : "bg-current opacity-25"}`} />
                 <span className="min-w-0">
-                  <span className="block truncate text-[10px] font-black opacity-45">
-                    {item.label}
-                  </span>
-                  <span className="mt-0.5 block truncate text-[11px] font-black">
-                    {item.detail}
-                  </span>
+                  <span className="block text-[11px] font-black">{item.label}</span>
+                  <span className="mt-1 block text-[9px] font-semibold leading-4 opacity-45">{item.detail}</span>
                 </span>
               </button>
             ))}
@@ -270,103 +420,40 @@ export default function DealerOverview({
         </section>
       ) : null}
 
-      <div className="grid gap-3 lg:grid-cols-[1.05fr_.95fr]">
-        <Surface darkMode={darkMode} className="overflow-hidden rounded-[18px]">
-          <div className="flex items-center justify-between gap-3 border-b border-current/10 px-4 py-3.5 sm:px-5">
-            <div>
-              <h2 className="text-[15px] font-black tracking-[-.02em]">Sales queue</h2>
-              <p className="mt-0.5 text-[10px] font-semibold opacity-40">
-                Who needs attention next
-              </p>
+      <div className="grid gap-3 xl:grid-cols-[.9fr_1.1fr]">
+        <Surface darkMode={darkMode} className="overflow-hidden rounded-[22px]">
+          <SectionHead
+            title="Performance"
+            detail="Useful operating numbers, not vanity metrics"
+            action="Full analytics"
+            onClick={() => setSection("analytics")}
+          />
+          <div className="p-4 sm:p-5">
+            <div className="grid grid-cols-2 gap-2">
+              <PerformanceTile label="Stock views" value={summary.stock_views_30d || 0} suffix="30d" darkMode={darkMode} />
+              <PerformanceTile label="Leads" value={summary.leads_30d || 0} suffix="30d" darkMode={darkMode} />
+              <PerformanceTile label="Response rate" value={`${Math.round(responseRate)}%`} suffix="handled" darkMode={darkMode} />
+              <PerformanceTile label="Followers" value={summary.followers || 0} suffix={`${summary.active_statuses || 0} Status live`} darkMode={darkMode} />
             </div>
-            <button
-              type="button"
-              onClick={() => setSection("leads")}
-              className="text-[10px] font-black opacity-45"
-            >
-              All leads →
-            </button>
+            <div className="mt-4">
+              <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-[.08em] opacity-40">
+                <span>Lead response discipline</span>
+                <span>{Math.round(responseRate)}%</span>
+              </div>
+              <div className={`mt-2 h-1.5 overflow-hidden rounded-full ${darkMode ? "bg-white/10" : "bg-black/10"}`}>
+                <div className="h-full rounded-full bg-[#f6b800]" style={{ width: `${responseRate}%` }} />
+              </div>
+            </div>
           </div>
-
-          {appointments.length || priorities.length ? (
-            <div className="divide-y divide-current/10">
-              {appointments.slice(0, 1).map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setSection("leads")}
-                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-current/[.025] sm:px-5"
-                >
-                  <QueueMark gold />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-black">
-                      {item.customer_name || "Customer viewing"}
-                    </div>
-                    <div className="mt-0.5 truncate text-[10px] opacity-45">
-                      Viewing · {item.listing_title || item.appointment_type}
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-black opacity-40">
-                    {new Date(item.starts_at).toLocaleTimeString("en-ZA", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </button>
-              ))}
-
-              {priorities.map((lead) => (
-                <button
-                  key={lead.id}
-                  type="button"
-                  onClick={() => setSection("leads")}
-                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-current/[.025] sm:px-5"
-                >
-                  <QueueMark
-                    gold={
-                      lead.priority === "high" ||
-                      overdue.some((item) => item.id === lead.id)
-                    }
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-black">
-                      {lead.customer_name || "Customer enquiry"}
-                    </div>
-                    <div className="mt-0.5 truncate text-[10px] opacity-45">
-                      {lead.listing_title || lead.source}
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-black opacity-35">
-                    {relativeAge(lead.last_activity_at || lead.created_at)}
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              title="Nothing waiting"
-              detail="New enquiries, viewings and follow-ups will appear here."
-            />
-          )}
         </Surface>
 
-        <Surface darkMode={darkMode} className="overflow-hidden rounded-[18px]">
-          <div className="flex items-center justify-between gap-3 border-b border-current/10 px-4 py-3.5 sm:px-5">
-            <div>
-              <h2 className="text-[15px] font-black tracking-[-.02em]">Status</h2>
-              <p className="mt-0.5 text-[10px] font-semibold opacity-40">
-                {live.length ? `${live.length} live now` : "Your latest dealership update"}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSection("marketing")}
-              className="text-[10px] font-black opacity-45"
-            >
-              Manage →
-            </button>
-          </div>
-
+        <Surface darkMode={darkMode} className="overflow-hidden rounded-[22px]">
+          <SectionHead
+            title="Dealership Status"
+            detail={liveStatuses.length ? `${liveStatuses.length} live with followers now` : "Your latest public update"}
+            action="Manage Status"
+            onClick={() => setSection("marketing")}
+          />
           {statusLoading ? (
             <div className="p-6 text-xs font-bold opacity-40">Loading Status…</div>
           ) : latest ? (
@@ -374,12 +461,12 @@ export default function DealerOverview({
           ) : (
             <EmptyState
               title="No Status yet"
-              detail="Post a photo, video, vehicle or offer and it will appear here."
+              detail="Post a photo, video, vehicle or promotion for followers to see."
               action={
                 <button
                   type="button"
                   onClick={() => setStatusOpen(true)}
-                  className="rounded-lg bg-[#f6b800] px-4 py-2.5 text-xs font-black text-black"
+                  className="rounded-xl bg-[#f6b800] px-4 py-2.5 text-xs font-black text-black"
                 >
                   Post Status
                 </button>
@@ -392,85 +479,152 @@ export default function DealerOverview({
   );
 }
 
-function Metric({
+function SectionHead({
+  title,
+  detail,
+  action,
+  onClick,
+}: {
+  title: string;
+  detail: string;
+  action: string;
+  onClick: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-current/10 px-4 py-3.5 sm:px-5 sm:py-4">
+      <div className="min-w-0">
+        <h2 className="truncate text-[14px] font-black tracking-[-.02em] sm:text-[15px]">{title}</h2>
+        <p className="mt-0.5 truncate text-[9px] font-semibold opacity-40 sm:text-[10px]">{detail}</p>
+      </div>
+      <button type="button" onClick={onClick} className="shrink-0 text-[9px] font-black opacity-45 transition hover:opacity-100 sm:text-[10px]">
+        {action} →
+      </button>
+    </div>
+  );
+}
+
+function PulseCard({
   label,
   value,
+  detail,
   hot,
   onClick,
   darkMode,
-  last,
 }: {
   label: string;
   value: number;
+  detail: string;
   hot?: boolean;
   onClick: () => void;
   darkMode: boolean;
-  last?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`min-w-0 px-1.5 py-3 text-center transition hover:bg-current/[.025] ${
-        last ? "" : "border-r border-current/10"
+      className={`rounded-2xl border p-3 text-left transition active:scale-[.985] sm:p-4 ${
+        darkMode ? "border-white/10 bg-white/[.03]" : "border-black/[.07] bg-[#fbf9f4]"
       }`}
     >
-      <div
-        className={`text-[18px] font-black tracking-[-.03em] ${
-          hot ? (darkMode ? "text-[#f6b800]" : "text-[#8b6800]") : ""
-        }`}
-      >
-        {value}
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate text-[9px] font-black uppercase tracking-[.07em] opacity-40">{label}</span>
+        {hot ? <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]" /> : null}
       </div>
-      <div className="mt-0.5 truncate text-[8px] font-black uppercase tracking-[.06em] opacity-35 sm:text-[9px]">
-        {label}
-      </div>
+      <div className={`mt-2 text-[25px] font-black tracking-[-.045em] ${hot ? (darkMode ? "text-[#f6b800]" : "text-[#876500]") : ""}`}>{value}</div>
+      <div className="mt-0.5 truncate text-[9px] font-semibold opacity-38">{detail}</div>
     </button>
   );
 }
 
-function QuickAction({
+function CommandButton({
   label,
   detail,
   icon,
   onClick,
-  gold,
+  primary,
   darkMode,
 }: {
   label: string;
   detail: string;
   icon: "plus" | "status" | "store";
   onClick: () => void;
-  gold?: boolean;
+  primary?: boolean;
   darkMode: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-[72px] px-3 py-3 text-left transition active:scale-[.985] sm:px-4 ${
-        gold
-          ? "bg-[#f6b800] text-black"
+      className={`flex min-w-[156px] items-center gap-3 rounded-2xl border px-3.5 py-3 text-left transition active:scale-[.985] sm:min-w-0 ${
+        primary
+          ? "border-[#f6b800] bg-[#f6b800] text-black"
           : darkMode
-            ? "bg-[#0b0b0b] text-white"
-            : "bg-white text-black"
+            ? "border-white/10 bg-white/[.025] text-white"
+            : "border-black/[.07] bg-white text-black"
       }`}
     >
-      <div className="flex items-center gap-2">
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${primary ? "bg-black/10" : "bg-current/[.055]"}`}>
         <ActionIcon kind={icon} />
-        <span className="truncate text-[11px] font-black sm:text-[12px]">{label}</span>
-      </div>
-      <div className={`mt-1 text-[9px] font-semibold ${gold ? "text-black/55" : "opacity-40"}`}>
-        {detail}
-      </div>
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-[10px] font-black sm:text-[11px]">{label}</span>
+        <span className={`mt-0.5 block truncate text-[8px] font-semibold ${primary ? "opacity-55" : "opacity-40"}`}>{detail}</span>
+      </span>
     </button>
   );
 }
 
+function CompactStat({ label, value, last }: { label: string; value: string | number; last?: boolean }) {
+  return (
+    <div className={`px-3 py-3 text-center ${last ? "" : "border-r border-current/10"}`}>
+      <div className="text-[15px] font-black tracking-[-.02em]">{value}</div>
+      <div className="mt-0.5 truncate text-[8px] font-black uppercase tracking-[.06em] opacity-35">{label}</div>
+    </div>
+  );
+}
+
+function StockStat({ label, value, last }: { label: string; value: number; last?: boolean }) {
+  return (
+    <div className={`px-1 py-2.5 text-center ${last ? "" : "border-r border-current/10"}`}>
+      <div className="text-[12px] font-black">{value}</div>
+      <div className="mt-0.5 text-[7px] font-black uppercase tracking-[.04em] opacity-35 sm:text-[8px]">{label}</div>
+    </div>
+  );
+}
+
+function PerformanceTile({ label, value, suffix, darkMode }: { label: string; value: string | number; suffix: string; darkMode: boolean }) {
+  return (
+    <div className={`rounded-2xl border p-3 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/[.07] bg-[#faf8f3]"}`}>
+      <div className="text-[9px] font-black uppercase tracking-[.06em] opacity-35">{label}</div>
+      <div className="mt-1.5 text-[20px] font-black tracking-[-.035em]">{value}</div>
+      <div className="mt-0.5 text-[8px] font-semibold opacity-35">{suffix}</div>
+    </div>
+  );
+}
+
+function QueueBadge({ kind }: { kind: "appointment" | "urgent" | "lead" }) {
+  const active = kind !== "lead";
+  return (
+    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${active ? "border-[#f6b800]/25 bg-[#f6b800]/10" : "border-current/10 bg-current/[.025]"}`}>
+      {kind === "appointment" ? (
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M7 3v3M17 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z" />
+          <path d="M8 12h3v3H8z" />
+        </svg>
+      ) : kind === "urgent" ? (
+        <span className="h-2.5 w-2.5 rounded-full bg-[#f6b800]" />
+      ) : (
+        <svg viewBox="0 0 24 24" className="h-4 w-4 opacity-55" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M4 5h16v12H8l-4 3V5Z" />
+          <path d="M8 9h8M8 12h5" />
+        </svg>
+      )}
+    </span>
+  );
+}
+
 function ActionIcon({ kind }: { kind: "plus" | "status" | "store" }) {
-  if (kind === "plus") {
-    return <span className="text-base font-black leading-none">＋</span>;
-  }
+  if (kind === "plus") return <span className="text-lg font-black leading-none">＋</span>;
   if (kind === "status") {
     return (
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
@@ -487,16 +641,6 @@ function ActionIcon({ kind }: { kind: "plus" | "status" | "store" }) {
   );
 }
 
-function QueueMark({ gold }: { gold?: boolean }) {
-  return (
-    <span
-      className={`h-2 w-2 shrink-0 rounded-full ${
-        gold ? "bg-[#f6b800]" : "bg-current opacity-20"
-      }`}
-    />
-  );
-}
-
 function StatusPreview({ item, darkMode }: { item: DealerStatus; darkMode: boolean }) {
   const complete = item.views
     ? Math.round((item.completed_views / item.views) * 100)
@@ -509,48 +653,30 @@ function StatusPreview({ item, darkMode }: { item: DealerStatus; darkMode: boole
     <div className="p-4 sm:p-5">
       <div className="flex gap-3.5">
         {item.media_url ? (
-          <div
-            className={`h-[94px] w-[84px] shrink-0 overflow-hidden rounded-xl ${
-              darkMode ? "bg-white/[.04]" : "bg-black/[.04]"
-            }`}
-          >
+          <div className={`h-[108px] w-[92px] shrink-0 overflow-hidden rounded-2xl ${darkMode ? "bg-white/[.04]" : "bg-black/[.04]"}`}>
             {item.content_type === "video" ? (
-              <video
-                src={item.media_url}
-                muted
-                playsInline
-                preload="metadata"
-                className="h-full w-full object-cover"
-              />
+              <video src={item.media_url} muted playsInline preload="metadata" className="h-full w-full object-cover" />
             ) : (
               <img src={item.media_url} alt="" className="h-full w-full object-cover" />
             )}
           </div>
         ) : (
-          <div className="flex h-[94px] w-[84px] shrink-0 items-center justify-center rounded-xl border border-current/10 text-[9px] font-black uppercase opacity-40">
+          <div className="flex h-[108px] w-[92px] shrink-0 items-center justify-center rounded-2xl border border-current/10 text-[8px] font-black uppercase tracking-[.08em] opacity-35">
             {item.content_type}
           </div>
         )}
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${
-                ended
-                  ? "bg-current opacity-25"
-                  : item.publication_status === "published"
-                    ? "bg-emerald-500"
-                    : "bg-[#f6b800]"
-              }`}
-            />
-            <span className="text-[9px] font-black uppercase tracking-[.09em] opacity-45">
+            <span className={`h-1.5 w-1.5 rounded-full ${ended ? "bg-current opacity-25" : item.publication_status === "published" ? "bg-emerald-500" : "bg-[#f6b800]"}`} />
+            <span className="text-[8px] font-black uppercase tracking-[.09em] opacity-45">
               {ended ? "Ended" : item.publication_status.replaceAll("_", " ")}
             </span>
           </div>
-          <h3 className="mt-2 truncate text-[14px] font-black">
+          <h3 className="mt-2 truncate text-[14px] font-black sm:text-[15px]">
             {item.title || item.listing_title || `${item.content_type} Status`}
           </h3>
-          <p className="mt-1 line-clamp-2 text-[10px] leading-4 opacity-50">
+          <p className="mt-1 line-clamp-2 text-[9px] font-semibold leading-4 opacity-45 sm:text-[10px]">
             {item.body || "Live dealership Status"}
           </p>
         </div>
@@ -566,19 +692,11 @@ function StatusPreview({ item, darkMode }: { item: DealerStatus; darkMode: boole
   );
 }
 
-function StatusStat({
-  value,
-  label,
-  last,
-}: {
-  value: string | number;
-  label: string;
-  last?: boolean;
-}) {
+function StatusStat({ value, label, last }: { value: string | number; label: string; last?: boolean }) {
   return (
     <div className={`px-1 py-2.5 text-center ${last ? "" : "border-r border-current/10"}`}>
       <div className="text-[12px] font-black">{value}</div>
-      <div className="mt-0.5 text-[8px] font-black uppercase opacity-35">{label}</div>
+      <div className="mt-0.5 text-[7px] font-black uppercase opacity-35 sm:text-[8px]">{label}</div>
     </div>
   );
 }
