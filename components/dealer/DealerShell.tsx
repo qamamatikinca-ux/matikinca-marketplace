@@ -1,32 +1,31 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import SiteMenu from "@/components/SiteMenu";
 import type { DealerProfile, DealerSection, DealerWorkspaceState } from "@/lib/dealer/types";
 import DealerGlobalSearch from "./DealerGlobalSearch";
-import { PrimaryButton, SecondaryButton } from "./ui";
 
 const sectionPermission: Partial<Record<DealerSection, string>> = {
-  inventory: "inventory.read", leads: "leads.read", customers: "customers.read", messages: "messages.read", analytics: "analytics.read", marketing: "marketing.read", team: "team.read", showroom: "showroom.read", verification: "verification.read", billing: "billing.read", reviews: "reviews.read", activity: "activity.read", settings: "showroom.write",
+  inventory: "inventory.read", leads: "leads.read", customers: "customers.read", messages: "messages.read",
+  analytics: "analytics.read", marketing: "marketing.read", team: "team.read", showroom: "showroom.read",
+  verification: "verification.read", billing: "billing.read", reviews: "reviews.read", activity: "activity.read", settings: "showroom.write",
 };
 
-const DAILY_NAV: Array<{ id: DealerSection; label: string }> = [
-  { id: "overview", label: "Overview" },
+const CORE_NAV: Array<{ id: DealerSection; label: string }> = [
+  { id: "overview", label: "Home" },
   { id: "inventory", label: "Stock" },
   { id: "leads", label: "Sales" },
   { id: "messages", label: "Inbox" },
-  { id: "marketing", label: "Updates" },
 ];
 
-const BUSINESS_NAV: Array<{ id: DealerSection; label: string }> = [
-  { id: "customers", label: "Customers" }, { id: "analytics", label: "Analytics" }, { id: "showroom", label: "Showroom" }, { id: "team", label: "Team" }, { id: "reviews", label: "Reviews" },
-];
-
-const ACCOUNT_NAV: Array<{ id: DealerSection; label: string }> = [
-  { id: "verification", label: "Verification" }, { id: "billing", label: "Billing" }, { id: "activity", label: "Activity" }, { id: "settings", label: "Settings" }, { id: "support", label: "Support" },
+const MORE_GROUPS: Array<{ label: string; items: Array<{ id: DealerSection; label: string }> }> = [
+  { label: "Customers", items: [{ id: "customers", label: "Customers" }, { id: "analytics", label: "Performance" }, { id: "reviews", label: "Reviews" }] },
+  { label: "Reach", items: [{ id: "marketing", label: "Status & updates" }, { id: "showroom", label: "Public showroom" }] },
+  { label: "Dealership", items: [{ id: "team", label: "Team" }, { id: "activity", label: "Activity" }] },
+  { label: "Account", items: [{ id: "verification", label: "Verification" }, { id: "billing", label: "Billing" }, { id: "settings", label: "Settings" }, { id: "support", label: "Support" }] },
 ];
 
 function statusText(context: DealerWorkspaceState) {
@@ -37,18 +36,22 @@ function statusText(context: DealerWorkspaceState) {
   if (context.subscription_status === "expired") return "Dealer access expired";
   if (context.verification_status === "changes_required") return "Verification action required";
   if (context.verification_status === "under_review" || context.verification_status === "submitted") return "Verification under review";
-  if (context.verification_status !== "approved") return "Dealer setup in progress";
-  return context.showroom_status === "live" ? "Showroom live" : "Showroom ready to publish";
+  if (context.verification_status !== "approved") return "Setup in progress";
+  return context.showroom_status === "live" ? "Showroom live" : "Showroom ready";
 }
 
-export default function DealerShell({ darkMode, toggleTheme, profile, context, section, setSection, onAddVehicle, onCreateStatus, children }: {
-  darkMode: boolean; toggleTheme: () => void; profile: DealerProfile; context: DealerWorkspaceState; section: DealerSection; setSection: (section: DealerSection) => void; onAddVehicle: () => void; onCreateStatus?: () => void; children: ReactNode;
+export default function DealerShell({ darkMode, toggleTheme, profile, context, section, setSection, onAddVehicle, children }: {
+  darkMode: boolean; toggleTheme: () => void; profile: DealerProfile; context: DealerWorkspaceState; section: DealerSection;
+  setSection: (section: DealerSection) => void; onAddVehicle: () => void; children: ReactNode;
 }) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const can = (id: DealerSection) => { const permission = sectionPermission[id]; return !permission || context.permissions.includes(permission as never); };
-  const daily = DAILY_NAV.filter((item) => can(item.id));
-  const business = BUSINESS_NAV.filter((item) => can(item.id));
-  const account = ACCOUNT_NAV.filter((item) => can(item.id));
-  const more = [...business, ...account];
+  const core = CORE_NAV.filter((item) => can(item.id));
+  const groups = MORE_GROUPS.map((group) => ({ ...group, items: group.items.filter((item) => can(item.id)) })).filter((group) => group.items.length);
+  const inMore = groups.some((group) => group.items.some((item) => item.id === section));
+
+  function go(next: DealerSection) { setSection(next); setMoreOpen(false); setSearchOpen(false); }
 
   return <main className={`min-h-screen ${darkMode ? "bg-black text-white" : "bg-[#f4f0e7] text-black"}`} data-loadlink-dealer-control-centre="v263-modern">
     <header className={`sticky top-0 z-50 h-[64px] border-b backdrop-blur-xl ${darkMode ? "border-white/10 bg-black/90" : "border-black/10 bg-[#f7f4ec]/92"}`}>
@@ -59,39 +62,51 @@ export default function DealerShell({ darkMode, toggleTheme, profile, context, s
       </div>
     </header>
 
-    <div className="mx-auto max-w-[1500px] px-3 pb-24 pt-4 sm:px-5 lg:grid lg:grid-cols-[205px_minmax(0,1fr)] lg:gap-5 lg:pb-10 lg:pt-5">
-      <aside className={`hidden h-[calc(100vh-84px)] self-start overflow-y-auto border lg:sticky lg:top-[76px] lg:block ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
-        <div className="border-b border-current/10 p-4"><div className="truncate text-sm font-black">{profile.name}</div><div className="mt-1 flex items-center gap-2 text-xs opacity-60"><span className={`h-2 w-2 rounded-full ${context.showroom_status === "live" && context.subscription_status === "active" ? "bg-emerald-500" : "bg-[#f6b800]"}`} />{statusText(context)}</div></div>
-        <NavGroup title="Work" items={daily} section={section} setSection={setSection} />
-        <NavGroup title="Business" items={business} section={section} setSection={setSection} />
-        <NavGroup title="Account" items={account} section={section} setSection={setSection} />
+    <div className="mx-auto max-w-[1480px] px-3 pb-28 pt-3 sm:px-5 lg:grid lg:grid-cols-[188px_minmax(0,1fr)] lg:gap-5 lg:pb-10 lg:pt-5">
+      <aside className={`hidden h-[calc(100vh-84px)] self-start overflow-y-auto rounded-2xl border lg:sticky lg:top-[76px] lg:block ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+        <div className="p-3.5">
+          <div className="flex items-center gap-2.5">
+            <Avatar darkMode={darkMode} profile={profile} />
+            <div className="min-w-0"><div className="truncate text-[13px] font-black">{profile.name}</div><div className="mt-0.5 flex items-center gap-1.5 truncate text-[10px] font-semibold opacity-50"><StatusDot context={context} />{statusText(context)}</div></div>
+          </div>
+        </div>
+        <div className="mx-2 border-t border-current/10" />
+        <nav className="p-2" aria-label="Dealer dashboard">
+          {core.map((item) => <SideButton key={item.id} active={section === item.id} onClick={() => go(item.id)}>{item.label}</SideButton>)}
+          <div className="my-2 border-t border-current/10" />
+          {groups.map((group) => <div key={group.label} className="mb-2"><div className="px-3 pb-1 pt-2 text-[9px] font-black uppercase tracking-[.12em] opacity-30">{group.label}</div>{group.items.map((item) => <SideButton key={item.id} active={section === item.id} onClick={() => go(item.id)}>{item.label}</SideButton>)}</div>)}
+        </nav>
       </aside>
 
       <div className="min-w-0">
-        <section className={`mb-4 border px-4 py-4 sm:px-5 ${darkMode ? "border-white/10 bg-[#0c0c0c]" : "border-black/10 bg-white"}`}>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className={`h-11 w-11 shrink-0 overflow-hidden rounded-full border ${darkMode ? "border-white/12 bg-white/[.04]" : "border-black/10 bg-[#f7f4ec]"}`}>{profile.profile_image_url ? <img src={profile.profile_image_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-sm font-black">{profile.name.slice(0, 2).toUpperCase()}</div>}</div>
-            <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h1 className="truncate text-[20px] font-black tracking-[-.035em] sm:text-[24px]">{profile.name}</h1>{context.verification_status === "approved" ? <span className="rounded-full border border-current/15 px-2 py-1 text-[10px] font-black">Verified</span> : null}</div><div className="mt-1 text-xs opacity-55">{statusText(context)}{context.renewal_at ? ` · Renews ${new Date(context.renewal_at).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}` : ""}</div></div>
-            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto"><PrimaryButton type="button" onClick={onAddVehicle}>Add vehicle</PrimaryButton><SecondaryButton darkMode={darkMode} type="button" onClick={() => onCreateStatus ? onCreateStatus() : setSection("marketing")}>Post update</SecondaryButton><SecondaryButton darkMode={darkMode} type="button" className="col-span-2 sm:col-auto" onClick={() => window.open(`/dealership/${profile.slug}`, "_blank")}>{context.showroom_status === "live" ? "View showroom" : "Preview showroom"}</SecondaryButton></div>
+        <div className={`mb-3 rounded-2xl border px-3 py-3 sm:px-4 ${darkMode ? "border-white/10 bg-[#0c0c0c]" : "border-black/10 bg-white"}`}>
+          <div className="flex items-center gap-2.5">
+            <div className="lg:hidden"><Avatar darkMode={darkMode} profile={profile} /></div>
+            <div className="min-w-0 flex-1 lg:hidden"><div className="truncate text-[15px] font-black tracking-[-.02em]">{profile.name}</div><div className="mt-0.5 flex items-center gap-1.5 truncate text-[10px] font-semibold opacity-50"><StatusDot context={context} />{statusText(context)}</div></div>
+            <div className="hidden min-w-0 flex-1 lg:block"><div className="text-[11px] font-black uppercase tracking-[.1em] opacity-35">Dealer workspace</div></div>
+            <button type="button" onClick={() => setSearchOpen((value) => !value)} className={`h-9 rounded-full border px-3 text-[11px] font-black ${darkMode ? "border-white/12 bg-white/[.03]" : "border-black/10 bg-[#faf8f3]"}`}>Search</button>
+            <button type="button" onClick={() => window.open(`/dealership/${profile.slug}`, "_blank")} className={`hidden h-9 rounded-full border px-3 text-[11px] font-black sm:block ${darkMode ? "border-white/12" : "border-black/10"}`}>{context.showroom_status === "live" ? "Showroom" : "Preview"}</button>
+            <button type="button" onClick={onAddVehicle} className="h-9 rounded-full bg-[#f6b800] px-4 text-[11px] font-black text-black">+ Vehicle</button>
           </div>
-          <div className="mt-4 max-w-xl"><DealerGlobalSearch darkMode={darkMode} setSection={setSection} /></div>
-        </section>
+          {searchOpen ? <div className="mt-3"><DealerGlobalSearch darkMode={darkMode} setSection={go} /></div> : null}
+        </div>
 
-        <nav className={`no-scrollbar mb-4 flex gap-1 overflow-x-auto border p-1 lg:hidden ${darkMode ? "border-white/10 bg-[#0c0c0c]" : "border-black/10 bg-white"}`} aria-label="Dealer navigation">
-          {daily.map((item) => <button key={item.id} type="button" onClick={() => setSection(item.id)} className={`min-h-10 shrink-0 rounded-lg px-3 text-xs font-black ${section === item.id ? "bg-black text-white dark:bg-white dark:text-black" : "opacity-58"}`}>{item.label}</button>)}
-          <select aria-label="More dealer sections" value={more.some((item) => item.id === section) ? section : ""} onChange={(e) => { if (e.target.value) setSection(e.target.value as DealerSection); }} className={`min-h-10 shrink-0 rounded-lg border px-3 text-xs font-black ${darkMode ? "border-white/10 bg-[#141414] text-white" : "border-black/10 bg-[#faf8f3] text-black"}`}><option value="">More</option>{more.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select>
-        </nav>
         {children}
       </div>
     </div>
+
+    <nav className={`fixed inset-x-0 bottom-0 z-50 border-t px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl lg:hidden ${darkMode ? "border-white/10 bg-[#080808]/95" : "border-black/10 bg-white/95"}`} aria-label="Dealer mobile navigation">
+      <div className="mx-auto grid max-w-xl grid-cols-5 gap-1">
+        {core.map((item) => <MobileButton key={item.id} active={section === item.id} onClick={() => go(item.id)}>{item.label}</MobileButton>)}
+        <div className="relative"><MobileButton active={inMore} onClick={() => setMoreOpen((value) => !value)}>More</MobileButton>{moreOpen ? <div className={`absolute bottom-[60px] right-0 w-[236px] max-h-[62vh] overflow-y-auto rounded-2xl border p-2 shadow-2xl ${darkMode ? "border-white/10 bg-[#111]" : "border-black/10 bg-white"}`}>{groups.map((group) => <div key={group.label} className="mb-1"><div className="px-3 pb-1 pt-2 text-[9px] font-black uppercase tracking-[.1em] opacity-30">{group.label}</div>{group.items.map((item) => <button type="button" key={item.id} onClick={() => go(item.id)} className={`mb-0.5 min-h-10 w-full rounded-xl px-3 text-left text-xs font-black ${section === item.id ? "bg-black text-white dark:bg-white dark:text-black" : "opacity-65"}`}>{item.label}</button>)}</div>)}</div> : null}</div>
+      </div>
+    </nav>
   </main>;
 }
 
-function NavGroup({ title, items, section, setSection }: { title: string; items: Array<{ id: DealerSection; label: string }>; section: DealerSection; setSection: (section: DealerSection) => void }) {
-  if (!items.length) return null;
-  return <div className="border-b border-current/10 p-2"><div className="px-3 pb-1 pt-2 text-[10px] font-black uppercase tracking-[.12em] opacity-35">{title}</div>{items.map((item) => <NavButton key={item.id} active={section === item.id} onClick={() => setSection(item.id)}>{item.label}</NavButton>)}</div>;
+function Avatar({ darkMode, profile }: { darkMode: boolean; profile: DealerProfile }) {
+  return <div className={`h-9 w-9 shrink-0 overflow-hidden rounded-full border ${darkMode ? "border-white/12 bg-white/[.04]" : "border-black/10 bg-[#f7f4ec]"}`}>{profile.profile_image_url ? <img src={profile.profile_image_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-[10px] font-black">{profile.name.slice(0, 2).toUpperCase()}</div>}</div>;
 }
-
-function NavButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
-  return <button type="button" onClick={onClick} className={`mb-1 flex min-h-10 w-full items-center rounded-lg px-3 text-left text-[13px] font-black transition ${active ? "bg-black text-white dark:bg-white dark:text-black" : "opacity-60 hover:bg-current/[.05] hover:opacity-100"}`}>{children}</button>;
-}
+function StatusDot({ context }: { context: DealerWorkspaceState }) { return <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${context.showroom_status === "live" && context.subscription_status === "active" ? "bg-emerald-500" : "bg-[#f6b800]"}`} />; }
+function SideButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) { return <button type="button" onClick={onClick} className={`mb-0.5 flex min-h-9 w-full items-center rounded-xl px-3 text-left text-[12px] font-black transition ${active ? "bg-current/[.08] opacity-100" : "opacity-55 hover:bg-current/[.04] hover:opacity-100"}`}>{children}</button>; }
+function MobileButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) { return <button type="button" onClick={onClick} className={`min-h-[50px] rounded-xl px-1 text-[10px] font-black transition ${active ? "bg-current/[.08] opacity-100" : "opacity-45"}`}>{children}</button>; }
