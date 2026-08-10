@@ -11,7 +11,11 @@ declare global {
   }
 }
 
-const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
+// Cloudflare Turnstile site keys are public by design. Keep the known-good
+// LoadLink production key as a fallback so a missing Vercel env var can never
+// silently remove CAPTCHA protection from signup/login/reset surfaces.
+const DEFAULT_LOADLINK_TURNSTILE_SITE_KEY = "0x4AAAAAAELFarTcMyOdHdOy";
+const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || DEFAULT_LOADLINK_TURNSTILE_SITE_KEY;
 const SCRIPT_ID = "loadlink-turnstile-script";
 
 export const loadLinkTurnstileConfigured = Boolean(SITE_KEY);
@@ -132,6 +136,13 @@ export default function TurnstileChallenge({
     };
   }, [containerId, darkMode, onFailure, onToken, resetKey]);
 
-  if (!SITE_KEY) return null;
+  if (!SITE_KEY) {
+    return (
+      <div className="rounded-xl border border-red-500/30 bg-red-500/[.06] px-4 py-3 text-sm font-semibold" role="status">
+        Security verification is temporarily unavailable. Refresh and try again.
+      </div>
+    );
+  }
+
   return <div id={containerId} className="min-h-[66px] overflow-hidden rounded-xl" aria-label="Security verification" />;
 }
