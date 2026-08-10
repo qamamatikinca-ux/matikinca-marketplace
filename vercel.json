@@ -1,0 +1,4 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "ignoreCommand": "if [ \"$VERCEL_PROJECT_ID\" = \"prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt\" ]; then exit 1; else exit 0; fi"
+}
