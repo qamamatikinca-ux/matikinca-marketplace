@@ -40,7 +40,30 @@ export default function MessageVisualScene({ mode, darkMode }: { mode: Mode; dar
 
   const inline = mode === "inline";
   return (
-    <div className={`flex ${inline ? "min-h-[260px]" : "min-h-[100dvh]"} w-full items-center justify-center px-5 py-8 ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
+    <div className={`ll-message-loader flex ${inline ? "min-h-[260px]" : "min-h-[100dvh]"} w-full items-center justify-center px-5 py-8 ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
+      <style>{`
+        @keyframes llTruckTravel { 0%,100% { transform: translate3d(-5px,0,0) } 50% { transform: translate3d(6px,-1px,0) } }
+        @keyframes llTruckBounce { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-1.5px) } }
+        @keyframes llWheelSpin { to { transform: rotate(360deg) } }
+        @keyframes llRoadMove { to { stroke-dashoffset: -30 } }
+        @keyframes llSignalOne { 0%,30%,100% { opacity:.18 } 45%,75% { opacity:.9 } }
+        @keyframes llSignalTwo { 0%,45%,100% { opacity:.15 } 60%,85% { opacity:.72 } }
+        @keyframes llProgress { 0% { transform: translateX(-105%) } 55% { transform: translateX(70%) } 100% { transform: translateX(205%) } }
+        @keyframes llLoaderDot { 0%,80%,100% { transform: scale(.72); opacity:.28 } 40% { transform: scale(1); opacity:1 } }
+        .ll-message-truck-wrap { animation: llTruckTravel 3.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; will-change: transform; }
+        .ll-message-truck-body { animation: llTruckBounce .8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+        .ll-message-wheel { animation: llWheelSpin .9s linear infinite; transform-box: fill-box; transform-origin: center; }
+        .ll-message-road { animation: llRoadMove .8s linear infinite; }
+        .ll-message-signal-one { animation: llSignalOne 1.7s ease-in-out infinite; }
+        .ll-message-signal-two { animation: llSignalTwo 1.7s ease-in-out infinite; }
+        .ll-message-progress { animation: llProgress 2.1s ease-in-out infinite; will-change: transform; }
+        .ll-message-dot { animation: llLoaderDot 1.2s ease-in-out infinite; }
+        .ll-message-dot:nth-child(2) { animation-delay: .16s; }
+        .ll-message-dot:nth-child(3) { animation-delay: .32s; }
+        @media (prefers-reduced-motion: reduce) {
+          .ll-message-truck-wrap,.ll-message-truck-body,.ll-message-wheel,.ll-message-road,.ll-message-signal-one,.ll-message-signal-two,.ll-message-progress,.ll-message-dot { animation-duration: 4s; }
+        }
+      `}</style>
       <div className={`w-full ${inline ? "max-w-xl" : "max-w-[760px]"} text-center`}>
         <div className={`relative mx-auto overflow-hidden border ${inline ? "aspect-[1.75/1]" : "aspect-[1.5/1] sm:aspect-[1.75/1]"} ${darkMode ? "border-[#f6b800]/50 bg-[#0d0d0d]" : "border-[#e6bd4d] bg-[#f7f1e3]"}`}>
           <div className={`absolute inset-x-0 bottom-[22%] h-[30%] opacity-70 ${darkMode ? "text-white/10" : "text-black/12"}`} aria-hidden="true">
@@ -52,17 +75,17 @@ export default function MessageVisualScene({ mode, darkMode }: { mode: Mode; dar
             <TruckSketch variant={variant} />
           </div>
           <div className={`absolute inset-x-0 bottom-0 border-t ${darkMode ? "border-[#f6b800]/35" : "border-[#e6bd4d]"}`} />
-          <div className="absolute bottom-[9%] left-[17%] h-1 w-[26%] overflow-hidden bg-[#f6b800]/25"><span className="block h-full w-[58%] bg-[#f6b800] animate-pulse" /></div>
+          <div className="absolute bottom-[9%] left-[17%] h-1 w-[26%] overflow-hidden bg-[#f6b800]/20"><span className="ll-message-progress block h-full w-[48%] bg-[#f6b800]" /></div>
         </div>
 
         <div className={inline ? "mt-5" : "mt-8"}>
-          {!inline ? <p className={`text-[10px] font-black uppercase tracking-[.24em] ${darkMode ? "text-[#f6b800]" : "text-[#9b7600]"}`}>LoadLink Messages</p> : null}
+          {!inline ? <p className={`text-[10px] font-black uppercase tracking-[.24em] ${darkMode ? "text-[#f6b800]" : "text-[#8a6800]"}`}>LoadLink Messages</p> : null}
           <h1 className={`${inline ? "text-xl" : "text-3xl sm:text-4xl"} mt-2 font-black tracking-[-.045em]`}>{inline ? "Loading conversation" : scene.name}</h1>
           <p className={`mx-auto mt-3 max-w-xl ${inline ? "text-xs" : "text-sm sm:text-base"} font-semibold leading-6 ${darkMode ? "text-white/55" : "text-black/52"}`}>{scene.note}</p>
           <div className="mt-5 flex items-center justify-center gap-2" aria-hidden="true">
-            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#f6b800]" />
-            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#f6b800]/70 [animation-delay:160ms]" />
-            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#f6b800]/40 [animation-delay:320ms]" />
+            <span className="ll-message-dot h-2.5 w-2.5 rounded-full bg-[#f6b800]" />
+            <span className="ll-message-dot h-2.5 w-2.5 rounded-full bg-[#f6b800]/70" />
+            <span className="ll-message-dot h-2.5 w-2.5 rounded-full bg-[#f6b800]/40" />
           </div>
         </div>
       </div>
@@ -75,17 +98,23 @@ function TruckSketch({ variant }: { variant: number }) {
   const trailerShape = variant === 5 ? "M77 41h58c9 0 14 8 14 17v15H77Z" : variant === 1 ? "M76 35h72l-10 39H76Z" : "M76 34h73v40H76Z";
   return (
     <svg className="h-full w-full" viewBox="0 0 190 100" role="img" aria-label={`${scene.name} truck sketch`}>
-      <g fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        <path d={trailerShape} />
-        <path d="M24 48h36l12 13v13H19V57l5-9Z" />
-        <path d="M31 52h22l8 9H31Z" />
-        <path d="M20 74h135" />
-        <circle cx="42" cy="78" r="8" /><circle cx="64" cy="78" r="8" /><circle cx="103" cy="78" r="8" /><circle cx="135" cy="78" r="8" />
-        <path d="M9 86h163M17 91h144" strokeDasharray="8 7" />
-        {variant % 2 === 0 ? <path d="M88 44h47M88 51h38M88 58h44" opacity=".72" /> : <path d="M88 47l13-7 13 7 13-7 13 7" opacity=".72" />}
-        <path d="M154 28c8-8 14-8 22-2M157 35c6-5 10-5 16-2" opacity=".55" />
+      <g className="ll-message-truck-wrap" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <g className="ll-message-truck-body">
+          <path d={trailerShape} />
+          <path d="M24 48h36l12 13v13H19V57l5-9Z" />
+          <path d="M31 52h22l8 9H31Z" />
+          <path d="M20 74h135" />
+          {variant % 2 === 0 ? <path d="M88 44h47M88 51h38M88 58h44" opacity=".72" /> : <path d="M88 47l13-7 13 7 13-7 13 7" opacity=".72" />}
+          <text x="88" y="68" fill="currentColor" stroke="none" fontSize="8" letterSpacing="1.2">{scene.cargo}</text>
+        </g>
+        <circle className="ll-message-wheel" cx="42" cy="78" r="8" strokeDasharray="7 3" />
+        <circle className="ll-message-wheel" cx="64" cy="78" r="8" strokeDasharray="7 3" />
+        <circle className="ll-message-wheel" cx="103" cy="78" r="8" strokeDasharray="7 3" />
+        <circle className="ll-message-wheel" cx="135" cy="78" r="8" strokeDasharray="7 3" />
+        <path className="ll-message-road" d="M9 86h163M17 91h144" strokeDasharray="8 7" />
+        <path className="ll-message-signal-one" d="M154 28c8-8 14-8 22-2" />
+        <path className="ll-message-signal-two" d="M157 35c6-5 10-5 16-2" />
       </g>
-      <text x="88" y="68" fill="currentColor" fontSize="8" letterSpacing="1.2">{scene.cargo}</text>
     </svg>
   );
 }
