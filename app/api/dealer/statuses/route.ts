@@ -9,6 +9,17 @@ function ownedPath(path: string, dealershipId: string) {
   return Boolean(path) && path.startsWith(`${dealershipId}/`) && !path.includes("..") && path.length < 500;
 }
 
+async function verifyStoredVideo(client: ReturnType<typeof dealerServerClient>, path: string) {
+  const download = await client.storage.from("dealership-status-media").download(path);
+  if (download.error || !download.data) throw download.error || new Error("Saved video could not be verified.");
+  const bytes = Buffer.from(await download.data.arrayBuffer());
+  const checked = checkedBuffer(bytes, String(download.data.type || "video/mp4"), STATUS_MEDIA, MAX_STATUS_BYTES);
+  if (!checked.mime.startsWith("video/")) throw new Error("Saved media is not a video.");
+  const measured = videoDurationSeconds(checked);
+  if (!measured || measured > 60.5) throw new Error("Dealer Status videos can be up to 60 seconds and must contain readable duration metadata.");
+  return measured;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const client = dealerServerClient(request);
@@ -44,7 +55,7 @@ export async function POST(request: NextRequest) {
         const download = await client.storage.from("dealership-status-media").download(uploadedPath);
         if (download.error || !download.data) throw download.error || new Error("Status media could not be verified.");
         const bytes = Buffer.from(await download.data.arrayBuffer());
-        const checked = checkedBuffer(bytes, String(body.mime || ""), STATUS_MEDIA, MAX_STATUS_BYTES);
+        const checked = checkedBuffer(bytes, String(body.mime || download.data.type || ""), STATUS_MEDIA, MAX_STATUS_BYTES);
         mediaType = checked.mime.startsWith("video/") ? "video" : "image";
         if ((contentType === "video") !== (mediaType === "video")) throw new Error("The uploaded media does not match this Status type.");
         if (mediaType === "video") {
@@ -54,14 +65,22 @@ export async function POST(request: NextRequest) {
         }
         mediaUrl = client.storage.from("dealership-status-media").getPublicUrl(uploadedPath).data.publicUrl;
       } else if (body.media_library_id) {
-        const { data: item, error: mediaError } = await client.from("dealership_media_library").select("id,media_type,url,duration_seconds").eq("id", String(body.media_library_id)).eq("dealership_id", context.dealership_id).maybeSingle();
+        const { data: item, error: mediaError } = await client.from("dealership_media_library")
+          .select("id,media_type,url,duration_seconds,storage_path")
+          .eq("id", String(body.media_library_id)).eq("dealership_id", context.dealership_id).maybeSingle();
         if (mediaError) throw mediaError;
         if (!item) throw new Error("Saved Dealer media was not found.");
         mediaType = item.media_type === "video" ? "video" : "image";
         if ((contentType === "video") !== (mediaType === "video")) throw new Error("Choose saved media that matches this Status type.");
         duration = item.duration_seconds ? Number(item.duration_seconds) : null;
-        if (mediaType === "video" && (!duration || duration > 60.5)) throw new Error("This saved video does not have a valid duration. Upload it again before using it in Status.");
+        if (mediaType === "video" && (!duration || duration > 60.5)) {
+          const path = String(item.storage_path || "");
+          if (!ownedPath(path, context.dealership_id)) throw new Error("This saved video needs to be uploaded again before it can be used.");
+          duration = await verifyStoredVideo(client, path);
+          await client.from("dealership_media_library").update({ duration_seconds: duration }).eq("id", item.id).eq("dealership_id", context.dealership_id);
+        }
         mediaUrl = String(item.url || "");
+        if (!mediaUrl) throw new Error("Saved Dealer media is unavailable.");
       } else throw new Error("Choose media for this Status.");
     }
 
