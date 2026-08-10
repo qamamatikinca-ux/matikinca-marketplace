@@ -1,5 +1,6 @@
 "use client";
 
+// Production deployment trigger: dealer UX + loader motion verified on 2026-08-10.
 import { useEffect, useState } from "react";
 
 type Mode = "loading" | "inline" | "background";
