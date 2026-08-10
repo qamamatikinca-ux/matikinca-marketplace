@@ -42,7 +42,7 @@ function statusText(context: DealerWorkspaceState) {
 }
 
 export default function DealerShell({ darkMode, toggleTheme, profile, context, section, setSection, onAddVehicle, onCreateStatus, children }: {
-  darkMode: boolean; toggleTheme: () => void; profile: DealerProfile; context: DealerWorkspaceState; section: DealerSection; setSection: (section: DealerSection) => void; onAddVehicle: () => void; onCreateStatus: () => void; children: ReactNode;
+  darkMode: boolean; toggleTheme: () => void; profile: DealerProfile; context: DealerWorkspaceState; section: DealerSection; setSection: (section: DealerSection) => void; onAddVehicle: () => void; onCreateStatus?: () => void; children: ReactNode;
 }) {
   const can = (id: DealerSection) => { const permission = sectionPermission[id]; return !permission || context.permissions.includes(permission as never); };
   const daily = DAILY_NAV.filter((item) => can(item.id));
@@ -72,7 +72,7 @@ export default function DealerShell({ darkMode, toggleTheme, profile, context, s
           <div className="flex flex-wrap items-center gap-3">
             <div className={`h-11 w-11 shrink-0 overflow-hidden rounded-full border ${darkMode ? "border-white/12 bg-white/[.04]" : "border-black/10 bg-[#f7f4ec]"}`}>{profile.profile_image_url ? <img src={profile.profile_image_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-sm font-black">{profile.name.slice(0, 2).toUpperCase()}</div>}</div>
             <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h1 className="truncate text-[20px] font-black tracking-[-.035em] sm:text-[24px]">{profile.name}</h1>{context.verification_status === "approved" ? <span className="rounded-full border border-current/15 px-2 py-1 text-[10px] font-black">Verified</span> : null}</div><div className="mt-1 text-xs opacity-55">{statusText(context)}{context.renewal_at ? ` · Renews ${new Date(context.renewal_at).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}` : ""}</div></div>
-            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto"><PrimaryButton type="button" onClick={onAddVehicle}>Add vehicle</PrimaryButton><SecondaryButton darkMode={darkMode} type="button" onClick={onCreateStatus}>Post update</SecondaryButton><SecondaryButton darkMode={darkMode} type="button" className="col-span-2 sm:col-auto" onClick={() => window.open(`/dealership/${profile.slug}`, "_blank")}>{context.showroom_status === "live" ? "View showroom" : "Preview showroom"}</SecondaryButton></div>
+            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto"><PrimaryButton type="button" onClick={onAddVehicle}>Add vehicle</PrimaryButton><SecondaryButton darkMode={darkMode} type="button" onClick={() => onCreateStatus ? onCreateStatus() : setSection("marketing")}>Post update</SecondaryButton><SecondaryButton darkMode={darkMode} type="button" className="col-span-2 sm:col-auto" onClick={() => window.open(`/dealership/${profile.slug}`, "_blank")}>{context.showroom_status === "live" ? "View showroom" : "Preview showroom"}</SecondaryButton></div>
           </div>
           <div className="mt-4 max-w-xl"><DealerGlobalSearch darkMode={darkMode} setSection={setSection} /></div>
         </section>
