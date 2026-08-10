@@ -12,10 +12,6 @@ declare global {
   }
 }
 
-// Cloudflare Turnstile site keys are public by design. The environment value
-// remains the preferred source; the production LoadLink key is retained as a
-// fallback so an accidental Vercel env omission cannot silently disable bot
-// protection on authentication surfaces.
 const DEFAULT_LOADLINK_TURNSTILE_SITE_KEY = "0x4AAAAAAELFarTcMyOdHdOy";
 const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || DEFAULT_LOADLINK_TURNSTILE_SITE_KEY;
 const SCRIPT_ID = "loadlink-turnstile-script";
@@ -114,10 +110,7 @@ export default function TurnstileChallenge({
       if (widgetRef.current) {
         try {
           window.turnstile.remove(widgetRef.current);
-        } catch {
-          // A stale widget can disappear during navigation. A fresh instance is
-          // rendered below, so cleanup failures are safe to ignore.
-        }
+        } catch {}
       }
 
       target.innerHTML = "";
@@ -153,7 +146,6 @@ export default function TurnstileChallenge({
             if (!active) return;
             settled = false;
             onToken("");
-            // Managed widgets refresh expired tokens automatically.
           },
           "timeout-callback": () => {
             if (!active) return;
@@ -171,9 +163,6 @@ export default function TurnstileChallenge({
               fail(reason, code);
               return;
             }
-            // Cloudflare's own retry stays active for transient iframe/network
-            // failures. Only replace it with LoadLink's retry state if it has
-            // not recovered after the grace period.
             scheduleNetworkFailure(code);
           },
         });
@@ -202,9 +191,7 @@ export default function TurnstileChallenge({
       if (widgetRef.current && window.turnstile) {
         try {
           window.turnstile.remove(widgetRef.current);
-        } catch {
-          // Ignore cleanup errors during navigation or retry.
-        }
+        } catch {}
       }
       widgetRef.current = null;
     };
