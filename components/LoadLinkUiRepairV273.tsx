@@ -8,15 +8,23 @@ function currentTheme() {
   return document.documentElement.classList.contains("dark") ? "dark" : "light";
 }
 
+function normalizeCurrentContractRoute() {
+  if (window.location.pathname !== "/jobs/list") return false;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("mode") !== "contract" || params.get("type") === "contract") return false;
+  params.delete("mode");
+  params.set("type", "contract");
+  window.location.replace(`/jobs/list?${params.toString()}`);
+  return true;
+}
+
 function centerHeaderLogos() {
   document.querySelectorAll<HTMLElement>('header a[aria-label="Go to LoadLink homepage"]').forEach((anchor) => {
     const header = anchor.closest<HTMLElement>("header");
     if (!header) return;
 
     const parent = anchor.parentElement as HTMLElement | null;
-    const target = parent && parent.closest("header") === header && getComputedStyle(parent).position === "absolute"
-      ? parent
-      : anchor;
+    const target = parent && parent.closest("header") === header && getComputedStyle(parent).position === "absolute" ? parent : anchor;
 
     if (getComputedStyle(header).position === "static") header.style.position = "relative";
     target.style.position = "absolute";
@@ -53,9 +61,7 @@ function liftLogisticsSheet() {
   let ancestor = sheet.parentElement;
   while (ancestor && ancestor !== document.body) {
     const computed = getComputedStyle(ancestor);
-    if (computed.position !== "static" && computed.zIndex !== "auto") {
-      ancestor.style.zIndex = "2147482990";
-    }
+    if (computed.position !== "static" || computed.zIndex !== "auto") ancestor.style.zIndex = "2147482990";
     ancestor = ancestor.parentElement;
   }
 }
@@ -69,6 +75,7 @@ function syncOverlayLock() {
 }
 
 function repair() {
+  if (normalizeCurrentContractRoute()) return;
   centerHeaderLogos();
   syncStandaloneLogos();
   repairContractLinks();
@@ -85,6 +92,7 @@ html.loadlink-overlay-lock,
 body.loadlink-overlay-lock {
   overflow: hidden !important;
   overscroll-behavior: none !important;
+  touch-action: none;
 }
 
 .loadlink-logistics-sheet {
@@ -92,6 +100,12 @@ body.loadlink-overlay-lock {
   max-height: calc(100dvh - max(12px, env(safe-area-inset-top))) !important;
   overscroll-behavior: contain !important;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+body:has(.loadlink-logistics-sheet) [data-loadlink-job-timing-toast="v272"] {
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .loadlink-chat-header button[aria-label="View latest dealer update"] {
