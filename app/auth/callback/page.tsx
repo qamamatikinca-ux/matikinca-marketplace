@@ -90,11 +90,6 @@ export default function AuthCallbackPage() {
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-current/10 bg-current/[.03]">
                   <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-current/10 border-t-[#f6b800]" />
                 </div>
-                <div className="mx-auto mt-6 flex max-w-[190px] justify-center gap-2">
-                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#f6b800] [animation-delay:0ms]" />
-                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#f6b800]/70 [animation-delay:180ms]" />
-                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#f6b800]/45 [animation-delay:360ms]" />
-                </div>
                 <p className={`mt-6 text-sm font-semibold ${muted}`}>Verifying provider and account…</p>
               </div>
             )}
