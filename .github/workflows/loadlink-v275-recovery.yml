@@ -1,0 +1,55 @@
+name: LoadLink V2.7.5 Recovery
+
+on:
+  push:
+    branches:
+      - recovery/v275
+    paths:
+      - '.github/workflows/loadlink-v275-recovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  BASE_SHA: a490107f050a1c19ed7ae7f1fcaca89ed9ef4d3d
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Apply recovery patch
+        run: python3 scripts/loadlink-v275-recovery.py
+      - name: Install dependencies
+        run: npm ci
+      - name: Production build validation
+        run: npm run build
+      - name: Commit validated recovery
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app components
+          if ! git diff --cached --quiet; then
+            git commit -m 'LoadLink V2.7.5 recovery: restore header packages dealer and logistics'
+            git push origin HEAD:recovery/v275
+          fi
+      - name: Create update-only zip
+        run: |
+          rm -f LoadLink-V2.7.5-RECOVERY-UPDATE-ONLY.zip
+          git diff --name-only "$BASE_SHA"..HEAD | grep -E '^(app|components|lib|public)/' > /tmp/v275-files.txt || true
+          echo '=== UPDATE FILES ==='
+          cat /tmp/v275-files.txt
+          test -s /tmp/v275-files.txt
+          zip -9 LoadLink-V2.7.5-RECOVERY-UPDATE-ONLY.zip -@ < /tmp/v275-files.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LoadLink-V2.7.5-RECOVERY-UPDATE-ONLY
+          path: LoadLink-V2.7.5-RECOVERY-UPDATE-ONLY.zip
+          retention-days: 7
