@@ -15,6 +15,7 @@ import {
 } from "react";
 
 import HomeLogoLink from "@/components/HomeLogoLink";
+import JobTimingToast from "@/components/JobTimingToast";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
@@ -1966,6 +1967,11 @@ export default function MessagesPage() {
                 </div>
               ) : null}
 
+              {selectedConversation ? (
+                <div data-loadlink-job-timing-toast="v272">
+                  <JobTimingToast listingId={selectedConversation.listing_id} conversationId={selectedConversation.id} listingTitle={selectedConversation.listing_title} darkMode={darkMode} onFollowUp={(message) => updateTyping(message)} />
+                </div>
+              ) : null}
               <form
                 onSubmit={send}
                 className="loadlink-chat-composer border-t border-black/10 bg-white p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:p-4"
@@ -1993,7 +1999,7 @@ export default function MessagesPage() {
                       {composerActionsOpen ? "×" : "+"}
                     </button>
                     {composerActionsOpen ? (
-                      <div className="absolute bottom-[calc(100%+.5rem)] left-0 z-30 w-48 overflow-hidden rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl">
+                      <div className="absolute bottom-[calc(100%+.5rem)] left-0 z-[70] max-h-[min(68vh,520px)] w-[min(84vw,320px)] overflow-y-auto rounded-2xl border border-black/10 bg-white p-1.5 shadow-2xl">
                         <button type="button" onClick={() => { setComposerActionsOpen(false); fileInputRef.current?.click(); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-black/[.04]"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f3f0e8]"><PaperclipIcon /></span><span className="min-w-0"><span className="block text-xs font-semibold">Attach file</span><span className="mt-0.5 block text-[9px] font-medium text-black/40">Photos and documents</span></span></button>
                         <LogisticsMessageTools
                           threadId={selectedConversation.id}

@@ -14,6 +14,7 @@ import AuthMfaGate from "@/components/AuthMfaGate";
 import ProfileOnboardingGate from "@/components/ProfileOnboardingGate";
 
 import MarketplaceRestrictionGuard from "@/components/phase2/MarketplaceRestrictionGuard";
+import LoadLinkRuntimeIntelligence from "@/components/LoadLinkRuntimeIntelligence";
 export const metadata: Metadata = {
   title: "LoadLink",
   description: "Logistics marketplace",
@@ -41,7 +42,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <ChatLauncher />
         <NetworkRecovery />
         {children}
-      </body>
+        <LoadLinkRuntimeIntelligence />
+</body>
     </html>
   );
 }

@@ -13,7 +13,6 @@ import type {
 } from "@/lib/dealer/types";
 import { dealerFetch, relativeAge } from "@/lib/dealer/client";
 import DealerStatusComposer from "./DealerStatusComposer";
-import DealerMoreMenuEnhancer from "./DealerMoreMenuEnhancer";
 import { EmptyState, Surface } from "./ui";
 
 type IconName =
@@ -193,9 +192,8 @@ export default function DealerOverview(props: any) {
   return (
     <div
       className="grid gap-3 sm:gap-4"
-      data-loadlink-dealer-home="command-centre-v5"
+      data-loadlink-dealer-home="command-centre-v272"
     >
-      <DealerMoreMenuEnhancer />
       <DealerStatusComposer
         darkMode={darkMode}
         open={statusOpen}

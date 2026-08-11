@@ -20,6 +20,8 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { createSafeRandomId, imageExtension, inferUploadContentType, prepareImageFileForForm, readableUploadError, revokePreviewUrl, validateImageFile } from "@/lib/mobilePosting";
 import { getFreshAuthenticatedUser, postingErrorMessage, withTransientRetry } from "@/lib/reliableSupabase";
+import { getLoadLinkIntelligence } from "@/lib/loadlinkIntelligence";
+import { inspectLoadLinkImage, showLoadLinkImageQuality } from "@/lib/loadlinkImageQuality";
 import { submitListingDirect } from "@/lib/listingSubmission";
 import { getTruckModel, getTruckModels, truckCatalog, truckYears, validateTruckTransmission } from "@/lib/truckCatalog";
 
@@ -132,9 +134,12 @@ export default function ListYourVehiclePage() {
 
       const params = new URLSearchParams(window.location.search);
       const requestedPlan = params.get("plan");
-      if (requestedPlan === "manual" || requestedPlan === "pro" || requestedPlan === "dealer") {
+      if (requestedPlan === "pro" || requestedPlan === "dealer") {
         setSelectedPlan(requestedPlan);
-        setPackageType(requestedPlan === "manual" ? "standard" : requestedPlan);
+        setPackageType(requestedPlan);
+      } else if (requestedPlan === "manual") {
+        setSelectedPlan(null);
+        setPackageType("standard");
       }
       const requestedDealer = params.get("dealership") || "";
       if (requestedDealer) {
@@ -198,7 +203,7 @@ export default function ListYourVehiclePage() {
 
   function choosePlan(plan: BusinessPlanId) {
     setSelectedPlan(plan);
-    setPackageType(plan === "manual" ? "standard" : plan);
+    setPackageType(plan);
     if (plan === "dealer") setSellerType("dealership");
     setMessage("");
     requestAnimationFrame(() => document.getElementById("vehicle-type")?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -241,6 +246,8 @@ export default function ListYourVehiclePage() {
         const source = candidates[index];
         const validation = validateImageFile(source, source.name || `Vehicle photo ${index + 1}`);
         if (validation) throw new Error(validation);
+        const quality = await inspectLoadLinkImage(source);
+        showLoadLinkImageQuality(quality.messages);
         setVehiclePhotoProgress(`Preparing vehicle photo ${index + 1} of ${candidates.length}…`);
         const prepared = await prepareImageFileForForm(source, {
           maxWidth: 1440,
@@ -360,6 +367,14 @@ export default function ListYourVehiclePage() {
     try {
       const user = await getFreshAuthenticatedUser();
       if (!user) throw new Error("Your sign-in session could not be confirmed.");
+      const intelligence = await getLoadLinkIntelligence();
+      if (!intelligence.capabilities.can_post_vehicle) {
+        if (["blocked","suspended"].includes(intelligence.account_status)) throw new Error(intelligence.account_reason || "You cannot post while this account is restricted.");
+        if (intelligence.plan === "dealer" && !intelligence.dealer_ready) throw new Error("Your Dealer plan is active, but the dealership must be approved before stock can be published.");
+        if (intelligence.plan_state === "under_review") throw new Error("Your plan request is still under review.");
+        if (["approved_for_payment","payment_pending"].includes(String(intelligence.plan_state))) throw new Error("Complete your approved plan payment before publishing a vehicle.");
+        throw new Error("Choose an active Pro or Dealer plan before publishing a vehicle.");
+      }
       const submissionId = currentSubmissionId();
       const ownerKey = getAccountOwnerKey(user.id); createdOwnerKey = ownerKey;
       const folder = submissionId;
@@ -503,11 +518,11 @@ export default function ListYourVehiclePage() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/65 to-black/35 [mask-image:linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)]" />
         <div className="relative mx-auto flex min-h-[300px] max-w-5xl flex-col justify-end px-5 pb-9 pt-20 text-white md:min-h-[360px]">
           <h1 className="max-w-3xl text-5xl font-black leading-[0.94] tracking-[-0.06em] md:text-7xl">{dealerPost ? `Add stock to ${dealershipName}` : "List your vehicle"}</h1>
-          <p className="mt-4 max-w-xl text-base font-semibold leading-7 text-white/75">Choose your package, then select a truck, trailer or mobile unit and add the relevant details.</p>
+          <p className="mt-4 max-w-xl text-base font-semibold leading-7 text-white/75">Choose what you’re listing and add the vehicle details.</p>
         </div>
       </section>
 
-      {!dealerPost ? (
+      {!dealerPost && !selectedPlan ? (
         <section className={`border-b px-4 py-6 md:px-6 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
           <div className={`mx-auto max-w-6xl rounded-[24px] border p-5 md:flex md:items-center md:justify-between md:gap-8 md:p-6 ${darkMode ? "border-white/12 bg-[#111]" : "border-black/10 bg-[#faf8f2]"}`}>
             <div>
@@ -523,7 +538,7 @@ export default function ListYourVehiclePage() {
         </section>
       ) : null}
 
-      <BusinessPlans darkMode={darkMode} selectable selectedPlan={selectedPlan} onSelect={choosePlan} />
+      {!selectedPlan ? <BusinessPlans darkMode={darkMode} selectable selectedPlan={selectedPlan} onSelect={choosePlan} /> : null}
 
       {selectedPlan ? <form onSubmit={submitVehicle} className="mx-auto grid max-w-5xl gap-6 px-4 py-7 md:px-6 md:py-12">
         <section id="vehicle-type" className={`scroll-mt-24 overflow-hidden rounded-2xl border ${surface}`}>
@@ -580,7 +595,7 @@ export default function ListYourVehiclePage() {
 
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="05" title="Contact and confirmation" description="Confirm the details before the product is added to LoadLink." />
-              <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7"><Field label={sellerType === "dealership" ? "Dealership / contact name" : "Owner / company name"}><input value={postedBy} onChange={(event) => setPostedBy(event.target.value)} className={inputClass} required /></Field><Field label="Contact number"><input value={contactNumber} onChange={(event) => setContactNumber(event.target.value)} placeholder="0821234567" className={inputClass} required /></Field><Field label="WhatsApp number — optional"><input value={whatsappNumber} onChange={(event) => setWhatsappNumber(event.target.value)} placeholder="0821234567" className={inputClass} /></Field><Field label="Selected plan"><div className={`${inputClass} flex items-center`}>{selectedPlan === "manual" ? "Manual listing — R15 per vehicle per day" : selectedPlan === "pro" ? "Pro listing — analytics enabled" : "Dealer package — dealership inventory"}</div></Field></div>
+              <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7"><Field label={sellerType === "dealership" ? "Dealership / contact name" : "Owner / company name"}><input value={postedBy} onChange={(event) => setPostedBy(event.target.value)} className={inputClass} required /></Field><Field label="Contact number"><input value={contactNumber} onChange={(event) => setContactNumber(event.target.value)} placeholder="0821234567" className={inputClass} required /></Field><Field label="WhatsApp number — optional"><input value={whatsappNumber} onChange={(event) => setWhatsappNumber(event.target.value)} placeholder="0821234567" className={inputClass} /></Field><Field label="Selected plan"><div className={`${inputClass} flex items-center`}>{false ? "Manual listing — R15 per vehicle per day" : selectedPlan === "pro" ? "Pro listing — analytics enabled" : "Dealer package — dealership inventory"}</div></Field></div>
               <div className="grid gap-3 px-5 pb-5 md:px-7 md:pb-7"><CheckRow checked={confirmOwnership} onChange={setConfirmOwnership} label="I own this vehicle or have written authority from the owner to list it." /><CheckRow checked={confirmAccuracy} onChange={setConfirmAccuracy} label="I confirm that the details, mileage, ownership history and uploaded documents are accurate." /></div>
               <div className="border-t border-[#f6b800]/25 bg-black p-5 text-white md:p-7">{message ? <div className="mb-4 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm font-bold leading-6 text-red-300">{message}</div> : null}<button type="submit" disabled={saving || preparingVehiclePhotos} className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[0.12em] text-black disabled:opacity-50">{saving ? "Submitting vehicle…" : dealershipId ? "Add to dealership inventory" : "Submit vehicle for verification"}</button><p className="mt-3 text-center text-xs leading-5 text-white/45">The product will appear in the dealership slider when linked to an approved dealership. Analytics remains available only on Pro listings.</p></div>
             </section>
@@ -594,10 +609,10 @@ export default function ListYourVehiclePage() {
 function Header({ darkMode, sellerType, dealerPost, onToggleTheme, onToggleSellerType }: { darkMode: boolean; sellerType: SellerType; dealerPost: boolean; onToggleTheme: () => void; onToggleSellerType: () => void }) {
   return (
     <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
-      <div className="grid h-20 grid-cols-[86px_1fr_142px] items-center px-3 sm:grid-cols-[120px_1fr_230px] sm:px-4">
+      <div className="relative flex h-20 items-center px-3 sm:px-4">
         <div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div>
-        <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-        <div className="flex items-center justify-end gap-2">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"><HomeLogoLink theme={darkMode ? "dark" : "light"} /></div>
+        <div className="ml-auto flex items-center justify-end gap-2">
           {!dealerPost ? <button type="button" onClick={onToggleSellerType} className={`max-w-[88px] text-right text-[9px] font-black leading-3 underline decoration-[#f6b800] decoration-2 underline-offset-4 sm:max-w-none sm:text-xs sm:leading-4 ${darkMode ? "text-white" : "text-black"}`}>{sellerType === "dealership" ? "List as a private seller" : "Are you a dealership?"}</button> : null}
           <LoadLinkThemeToggle darkMode={darkMode} onToggle={onToggleTheme} />
         </div>

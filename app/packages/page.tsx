@@ -12,16 +12,16 @@ export default function PackagesPage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
 
   return (
-    <main data-loadlink-packages-page="v2619" className={darkMode ? "min-h-screen bg-black text-white" : "min-h-screen bg-[#f4efe3] text-black"}>
-      <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black/95" : "border-black/10 bg-white/95"}`}>
-        <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4 backdrop-blur-md">
-          <div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div>
-          <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="ml-auto" />
+    <main data-loadlink-packages-page="v272" className={darkMode ? "min-h-screen bg-black text-white" : "min-h-screen bg-[#f4efe3] text-black"}>
+      <header className={`sticky top-0 z-50 h-[64px] border-b ${darkMode ? "border-white/10 bg-black/95" : "border-black/10 bg-white/95"}`}>
+        <div className="relative mx-auto flex h-full max-w-[1500px] items-center px-3 backdrop-blur-md sm:px-5">
+          <div className="flex items-center gap-1.5"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div>
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"><HomeLogoLink theme={darkMode ? "dark" : "light"} /></div>
+          <div className="ml-auto"><LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} /></div>
         </div>
       </header>
 
-      <section className="mx-auto max-w-6xl px-4 pb-4 pt-6 md:px-6 md:pt-9">
+      <section className="mx-auto max-w-5xl px-4 pb-4 pt-6 md:px-6 md:pt-9">
         <PackageGuide darkMode={darkMode} />
       </section>
       <BusinessPlans darkMode={darkMode} enableRequests />
