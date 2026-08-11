@@ -12,9 +12,10 @@ import SimpleModeCoordinator from "@/components/SimpleModeCoordinator";
 import AccountActivityTracker from "@/components/AccountActivityTracker";
 import AuthMfaGate from "@/components/AuthMfaGate";
 import ProfileOnboardingGate from "@/components/ProfileOnboardingGate";
-
 import MarketplaceRestrictionGuard from "@/components/phase2/MarketplaceRestrictionGuard";
 import LoadLinkRuntimeIntelligence from "@/components/LoadLinkRuntimeIntelligence";
+import LoadLinkUiRepairV273 from "@/components/LoadLinkUiRepairV273";
+
 export const metadata: Metadata = {
   title: "LoadLink",
   description: "Logistics marketplace",
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body>
         <ThemeCoordinator />
+        <LoadLinkUiRepairV273 />
         <SimpleModeCoordinator />
         <AccountActivityTracker />
         <AuthMfaGate />
@@ -43,7 +45,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <NetworkRecovery />
         {children}
         <LoadLinkRuntimeIntelligence />
-</body>
+      </body>
     </html>
   );
 }
