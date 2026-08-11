@@ -153,3 +153,5 @@ jobs:
           path: LoadLink-V2.7.13-UPDATE-ONLY.zip
           if-no-files-found: error
           retention-days: 14
+
+# packaging trigger v2
