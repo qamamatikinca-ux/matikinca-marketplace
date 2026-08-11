@@ -1,0 +1,28 @@
+name: LoadLink V2.7.5 Header Audit
+
+on:
+  push:
+    paths:
+      - '.github/workflows/loadlink-v275-header-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Find every LoadLink header implementation
+        run: |
+          echo '=== FILES USING HomeLogoLink ==='
+          grep -RIl --include='*.tsx' 'HomeLogoLink' app components || true
+          echo '=== FILES USING SiteMenu ==='
+          grep -RIl --include='*.tsx' 'SiteMenu' app components || true
+          echo '=== FILES USING LoadLinkThemeToggle ==='
+          grep -RIl --include='*.tsx' 'LoadLinkThemeToggle' app components || true
+          echo '=== FILES USING AuthStatusButton ==='
+          grep -RIl --include='*.tsx' 'AuthStatusButton' app components || true
+          echo '=== HEADER LINES ==='
+          grep -RIn --include='*.tsx' '<header' app components | head -250 || true
