@@ -113,12 +113,8 @@ export default function SecurityCodePage() {
     <main className={`min-h-[100dvh] px-4 py-5 sm:px-5 sm:py-8 ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
       <div className="mx-auto flex min-h-[calc(100dvh-2.5rem)] max-w-[480px] items-center justify-center sm:min-h-[calc(100dvh-4rem)]">
         <section data-loadlink-mfa-card="v2619" className={`w-full overflow-hidden rounded-[30px] border shadow-[0_26px_80px_rgba(0,0,0,.14)] ${surface}`}>
-          <div className={`flex min-h-20 items-center justify-between border-b px-5 py-4 ${darkMode ? "border-white/10 bg-black" : "border-black/8 bg-[#fbfaf6]"}`}>
+          <div className={`flex min-h-20 items-center justify-center border-b px-5 py-4 ${darkMode ? "border-white/10 bg-black" : "border-black/8 bg-[#fbfaf6]"}`}>
             <HomeLogoLink theme={darkMode ? "dark" : "light"} showGlow={false} logoClassName="w-[150px] sm:w-[164px]" />
-            <div className={`flex h-10 items-center gap-2 rounded-full border px-3 ${darkMode ? "border-white/10 bg-white/[.04]" : "border-black/8 bg-white"}`}>
-              <span className="h-2 w-2 rounded-full bg-[#f6b800]" />
-              <span className={`text-[9px] font-black uppercase tracking-[.12em] ${muted}`}>Secure sign-in</span>
-            </div>
           </div>
 
           <div className="p-5 sm:p-7">
