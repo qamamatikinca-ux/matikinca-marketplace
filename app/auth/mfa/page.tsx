@@ -106,6 +106,12 @@ export default function SecurityCodePage() {
     }
   }
 
+  // Never paint the security-code page until LoadLink has confirmed that this
+  // account actually has a code enabled. Normal sign-in flow now performs the
+  // same status check before routing here, so accounts without a code never see
+  // this screen or a flash of it.
+  if (mode === "checking") return null;
+
   const surface = darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white";
   const muted = darkMode ? "text-white/52" : "text-black/52";
 
@@ -158,13 +164,6 @@ export default function SecurityCodePage() {
                   Forgot code? <span className="underline decoration-[#f6b800] decoration-2 underline-offset-4">Recover by email</span>
                 </button>
               </form>
-            ) : null}
-
-            {mode === "checking" ? (
-              <div className={`mt-6 flex items-center gap-3 rounded-2xl border p-4 ${darkMode ? "border-white/10 bg-white/[.03]" : "border-black/8 bg-black/[.025]"}`}>
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-current/10 border-t-[#f6b800]" />
-                <div><p className="text-sm font-black">Checking account security</p><p className={`mt-1 text-xs font-semibold ${muted}`}>This should only take a moment.</p></div>
-              </div>
             ) : null}
 
             {mode === "error" ? (
