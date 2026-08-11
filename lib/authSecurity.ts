@@ -2,6 +2,8 @@ import { safeNextPath } from "@/lib/auth";
 import { securityCodeVerifiedForSession } from "@/lib/securityCode";
 import { supabase } from "@/lib/supabaseClient";
 
+type SecurityCodeStatus = { enabled?: boolean };
+
 export function strongPasswordIssue(password: string) {
   if (password.length < 12) return "Use at least 12 characters.";
   if (password.length > 128) return "Use no more than 128 characters.";
@@ -23,12 +25,21 @@ export function friendlyAuthError(error: unknown, context: "login" | "signup" | 
   return "Email or password is incorrect, or this account is not ready to sign in.";
 }
 
-// Kept under the original exported name so existing login/callback code does not
-// need to be touched. V2.6.9 replaces authenticator MFA with the LoadLink
-// 4-digit access-code checkpoint before account access.
+// Existing callers keep this name, but the routing decision now checks whether
+// the signed-in account actually has a LoadLink security code enabled before
+// navigating to /auth/mfa. Accounts without a code go straight to their target
+// page and never visibly land on the security-code screen.
 export async function destinationAfterMfa(nextValue: string) {
   const next = safeNextPath(nextValue, "/");
   const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) return next;
   if (securityCodeVerifiedForSession(session)) return next;
+
+  const { data, error } = await supabase.rpc("loadlink_security_code_status");
+  if (!error && !((data || {}) as SecurityCodeStatus).enabled) return next;
+
+  // Fail closed if the status check itself is unavailable: an account that may
+  // have a code should never silently bypass that protection.
   return `/auth/mfa?next=${encodeURIComponent(next)}`;
 }
