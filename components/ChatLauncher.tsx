@@ -12,7 +12,8 @@ export default function ChatLauncher() {
   const signedIn = Boolean(account.user);
   const { unread } = useUnreadMessages(signedIn);
 
-  if (pathname.startsWith("/messages") || pathname.startsWith("/login") || pathname.startsWith("/list-your-vehicle") || pathname.startsWith("/list-your-truck") || !account.ready) return null;
+  const dealerWorkspace = pathname === "/dealer" || pathname.startsWith("/dealer/") || pathname.startsWith("/dealer-dashboard");
+  if (pathname.startsWith("/messages") || pathname.startsWith("/login") || pathname.startsWith("/list-your-vehicle") || pathname.startsWith("/list-your-truck") || dealerWorkspace || !account.ready) return null;
 
   const href = signedIn ? "/messages" : loginHref("/messages");
   return (

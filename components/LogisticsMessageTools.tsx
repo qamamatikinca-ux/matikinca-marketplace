@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 type DealStage =
   | "Enquiry"
@@ -139,6 +140,18 @@ export default function LogisticsMessageTools({
     setReuseSourceId("");
     setReuseFields([]);
   }, [threadId]);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [open]);
 
   const templates = useMemo(() => {
     const title = clean(listingTitle) || "this listing";
@@ -355,8 +368,10 @@ export default function LogisticsMessageTools({
         </button>
       )}
 
-      {open ? (
-        <section className={`loadlink-logistics-sheet fixed inset-x-0 bottom-0 z-[90] max-h-[82dvh] overflow-y-auto rounded-t-[30px] border-t shadow-[0_-18px_50px_rgba(0,0,0,.24)] ${panel}`} aria-label="Logistics actions panel">
+      {open && typeof document !== "undefined" ? createPortal(
+        <>
+          <button type="button" className="fixed inset-0 z-[2147483600] bg-black/50" aria-label="Close logistics tools" onClick={closePanel} />
+          <section className={`loadlink-logistics-sheet fixed inset-x-0 bottom-0 z-[2147483640] max-h-[86dvh] overflow-y-auto rounded-t-[30px] border-t shadow-[0_-18px_50px_rgba(0,0,0,.30)] ${panel}`} aria-label="Logistics actions panel">
           <div className="mx-auto max-w-3xl p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <div className="flex items-start justify-between gap-4">
               <div><p className={`text-[9px] font-black uppercase tracking-[.18em] ${darkMode ? "text-[#f6b800]" : "text-[#8b6800]"}`}>In conversation</p><h2 className="mt-1 text-xl font-black tracking-[-.025em]">Logistics tools</h2><p className={`mt-1 text-xs font-medium ${muted}`}>Use a tool without leaving this chat.</p></div>
@@ -505,7 +520,9 @@ export default function LogisticsMessageTools({
               </div>
             </details>
           </div>
-        </section>
+          </section>
+        </>,
+        document.body,
       ) : null}
     </>
   );

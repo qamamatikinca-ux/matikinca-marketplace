@@ -13,7 +13,6 @@ import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 const RecentActivityPanel = lazy(() => import("@/components/RecentActivityPanel"));
 const MarketplaceDiscovery = lazy(() => import("@/components/MarketplaceDiscovery"));
 const LogisticsNews = lazy(() => import("@/components/LogisticsNews"));
-const AuthStatusButton = lazy(() => import("@/components/AuthStatusButton"));
 const SiteMenu = lazy(() => import("@/components/SiteMenu"));
 type PortalImage = {
   src: string;
@@ -111,8 +110,8 @@ function HomeExperience() {
       darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"
     }`}
   >
-    <div className="grid h-20 w-full grid-cols-[92px_minmax(0,1fr)_60px] items-center gap-3 px-4">
-      <div className="flex items-center gap-2">
+    <div className="relative mx-auto flex h-20 w-full items-center px-4">
+      <div className="z-10 flex items-center">
         <LoadLinkBoundary name="site menu">
           <Suspense fallback={<span className="h-10 w-10" aria-hidden="true" />}>
             <SiteMenu
@@ -121,15 +120,13 @@ function HomeExperience() {
             />
           </Suspense>
         </LoadLinkBoundary>
-
-        <LoadLinkBoundary name="account settings button">
-          <Suspense fallback={<span className="h-10 w-10" aria-hidden="true" />}>
-            <AuthStatusButton darkMode={darkMode} />
-          </Suspense>
-        </LoadLinkBoundary>
       </div>
 
-      <HomeLogoLink theme={darkMode ? "dark" : "light"} logoClassName="loadlink-logo-dark-fix" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        <div className="pointer-events-auto">
+          <HomeLogoLink theme={darkMode ? "dark" : "light"} showGlow={false} logoClassName="loadlink-logo-dark-fix" />
+        </div>
+      </div>
 
       <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleDarkMode} className="ml-auto" />
     </div>
