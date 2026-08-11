@@ -446,6 +446,7 @@ export default function MessagesPage() {
   const [blockBusy, setBlockBusy] = useState(false);
   const [reportBusy, setReportBusy] = useState(false);
   const [composerActionsOpen, setComposerActionsOpen] = useState(false);
+  const [logisticsWorkspaceOpen, setLogisticsWorkspaceOpen] = useState(false);
   const [potentialDealReviewOpen, setPotentialDealReviewOpen] = useState(false);
   const [quoteBranding, setQuoteBranding] = useState<QuoteBranding>({ name: "", logo: null });
   const [quoteDefaults, setQuoteDefaults] = useState<QuoteAutofillDefaults | null>(null);
@@ -1585,26 +1586,29 @@ export default function MessagesPage() {
     );
   }
 
-  return (
-    <>
-      {selectedConversation ? (
-        <LogisticsMessageTools
-          threadId={selectedConversation.id}
-          listingTitle={selectedConversation.listing_title}
-          role={selectedConversation.role}
-          darkMode={darkMode}
-          disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
-          trigger="hidden"
-          onOpen={() => setComposerActionsOpen(false)}
-          onSendQuote={sendStructuredQuote}
-          quoteDefaults={quoteDefaults}
-          savedVehicles={quoteVehicles}
-          onInsert={(message) => updateTyping(text.trim() ? `${text.trim()}
+  if (selectedConversation && logisticsWorkspaceOpen) {
+    return (
+      <LogisticsMessageTools
+        threadId={selectedConversation.id}
+        listingTitle={selectedConversation.listing_title}
+        role={selectedConversation.role}
+        darkMode={darkMode}
+        disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
+        trigger="hidden"
+        forceOpen
+        onClose={() => setLogisticsWorkspaceOpen(false)}
+        onSendQuote={sendStructuredQuote}
+        quoteDefaults={quoteDefaults}
+        savedVehicles={quoteVehicles}
+        onInsert={(message) => updateTyping(text.trim() ? `${text.trim()}
 
 ${message}` : message)}
-        />
-      ) : null}
-      <main
+      />
+    );
+  }
+
+  return (
+    <main
       data-theme={darkMode ? "dark" : "light"}
       style={{ height: "var(--loadlink-message-vh, 100dvh)", minHeight: "var(--loadlink-message-vh, 100svh)" }}
       className={`${styles.messageApp} loadlink-messages flex flex-col overflow-hidden ${
@@ -2014,7 +2018,7 @@ ${message}` : message)}
                           disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
                           onClick={() => {
                             setComposerActionsOpen(false);
-                            window.dispatchEvent(new Event("loadlink:open-logistics-tools"));
+                            setLogisticsWorkspaceOpen(true);
                           }}
                           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-bold hover:bg-black/[.04] disabled:opacity-40"
                         >
@@ -2100,8 +2104,7 @@ ${message}` : message)}
           ) : null}
         </aside>
       </div>
-      </main>
-    </>
+    </main>
   );
 }
 

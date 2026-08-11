@@ -64,6 +64,7 @@ type Props = {
   onClose?: () => void;
   quoteDefaults?: QuoteAutofillDefaults | null;
   savedVehicles?: QuoteVehicleOption[];
+  forceOpen?: boolean;
 };
 
 const STAGES: DealStage[] = [
@@ -119,8 +120,9 @@ export default function LogisticsMessageTools({
   onClose,
   quoteDefaults = null,
   savedVehicles = [],
+  forceOpen = false,
 }: Props) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(Boolean(forceOpen));
   const [stage, setStage] = useState<DealStage>("Enquiry");
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [quoteBusy, setQuoteBusy] = useState(false);
@@ -143,13 +145,13 @@ export default function LogisticsMessageTools({
     } catch {
       setStage("Enquiry");
     }
-    setOpen(false);
+    setOpen(Boolean(forceOpen));
     setQuoteOpen(false);
     setEditorTool(null);
     setEditorText("");
     setReuseSourceId("");
     setReuseFields([]);
-  }, [threadId]);
+  }, [threadId, forceOpen]);
 
   useEffect(() => {
     if (!open) return;
