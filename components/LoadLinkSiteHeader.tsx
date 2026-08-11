@@ -1,5 +1,6 @@
 "use client";
 
+// LoadLink V2.7.6: this is the locked customer-facing header used across the site.
 import { Suspense } from "react";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
