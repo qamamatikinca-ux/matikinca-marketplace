@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+
 import Link from "next/link";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
@@ -15,16 +17,7 @@ export default function DriverPortalPage() {
 
   return (
     <main className={`min-h-screen ${page}`}>
-      <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
-        <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4">
-          <div className="flex items-center gap-2">
-            <SiteMenu darkMode={darkMode} />
-            <AuthStatusButton darkMode={darkMode} />
-          </div>
-          <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="ml-auto" />
-        </div>
-      </header>
+      <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <section className="relative min-h-[520px] overflow-hidden md:min-h-[620px]">
         <img

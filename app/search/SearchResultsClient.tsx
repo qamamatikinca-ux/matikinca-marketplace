@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
@@ -89,13 +91,7 @@ export default function SearchResultsClient() {
 
   return (
     <main className={darkMode ? "min-h-screen bg-black text-white" : "min-h-screen bg-[#fffaf0] text-black"}>
-      <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
-        <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4">
-          <div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div>
-          <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="ml-auto" />
-        </div>
-      </header>
+      <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <section className="mx-auto max-w-6xl px-5 py-8 md:px-8 md:py-12">
         <h1 className="text-4xl font-black tracking-[-.055em] md:text-6xl">Search LoadLink</h1>

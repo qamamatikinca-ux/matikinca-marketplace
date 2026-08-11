@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -608,16 +610,7 @@ export default function ListYourVehiclePage() {
 
 function Header({ darkMode, sellerType, dealerPost, onToggleTheme, onToggleSellerType }: { darkMode: boolean; sellerType: SellerType; dealerPost: boolean; onToggleTheme: () => void; onToggleSellerType: () => void }) {
   return (
-    <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
-      <div className="relative flex h-20 items-center px-3 sm:px-4">
-        <div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div>
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"><HomeLogoLink theme={darkMode ? "dark" : "light"} /></div>
-        <div className="ml-auto flex items-center justify-end gap-2">
-          {!dealerPost ? <button type="button" onClick={onToggleSellerType} className={`max-w-[88px] text-right text-[9px] font-black leading-3 underline decoration-[#f6b800] decoration-2 underline-offset-4 sm:max-w-none sm:text-xs sm:leading-4 ${darkMode ? "text-white" : "text-black"}`}>{sellerType === "dealership" ? "List as a private seller" : "Are you a dealership?"}</button> : null}
-          <LoadLinkThemeToggle darkMode={darkMode} onToggle={onToggleTheme} />
-        </div>
-      </div>
-    </header>
+    <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={onToggleTheme} />
   );
 }
 function SectionHeading({ step, title, description }: { step: string; title: string; description: string }) { return <div className="border-b border-current/10 px-5 py-5 md:px-7"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#b88900]">{step}</p><h2 className="mt-2 text-3xl font-black tracking-[-0.04em]">{title}</h2><p className="mt-2 text-sm leading-6 opacity-55">{description}</p></div>; }

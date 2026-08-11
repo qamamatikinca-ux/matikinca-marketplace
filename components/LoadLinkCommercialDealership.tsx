@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+
 import Link from "next/link";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import AuthStatusButton from "@/components/AuthStatusButton";
@@ -193,16 +195,7 @@ export default function LoadLinkCommercialDealership() {
 
   return (
     <main className={`min-h-screen ${pageBg}`}>
-      <header className={`sticky top-0 z-50 border-b backdrop-blur ${darkMode ? "border-white/10 bg-black/95" : "border-black/10 bg-white/95"}`}>
-        <div className="grid h-20 grid-cols-[56px_1fr_auto] items-center gap-3 px-4 md:grid-cols-[150px_1fr_150px] md:px-7">
-          <SiteMenu darkMode={darkMode} className="text-3xl font-black" />
-          <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-          <div className="flex items-center justify-self-end gap-2">
-            <AuthStatusButton darkMode={darkMode} />
-            <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} />
-          </div>
-        </div>
-      </header>
+      <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <section className="relative min-h-[330px] overflow-hidden bg-black text-white md:min-h-[430px]">
         <img src={bannerImage} alt="Commercial trucks at LoadLink Commercial Centurion" className="absolute inset-0 h-full w-full object-cover opacity-68" />

@@ -74,7 +74,12 @@ export default function BusinessPlans({
 
   const muted = darkMode ? "text-white/55" : "text-black/55";
   const internal = String(state?.email || "").toLowerCase() === "loadlinksouthafrica@gmail.com";
-  const activePlan = state && entitled.has(String(state.plan_state)) && (state.plan === "pro" || state.plan === "dealer") ? state.plan : null;
+  const activePlan =
+    state?.plan === "dealer" && (entitled.has(String(state.plan_state)) || Boolean(state.capabilities?.dealer_tools) || Boolean(state.dealer_profile_id))
+      ? "dealer"
+      : state?.plan === "pro" && (entitled.has(String(state.plan_state)) || Boolean(state.capabilities?.analytics))
+        ? "pro"
+        : null;
   const showActiveDashboard = Boolean(enableRequests && !compact && !selectable && activePlan && !visiblePlans);
   const selectedCards = useMemo(() => plans.filter((plan) => !visiblePlans || visiblePlans.includes(plan.id)), [visiblePlans]);
   const showCards = !showActiveDashboard || compareOpen;

@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -62,9 +64,7 @@ export default function SharedDealerQuotePage() {
   const paper = darkMode ? "border-white/12 bg-[#111]" : "border-black/10 bg-white";
 
   return <main className={`min-h-screen ${bg}`}>
-    <header className={`border-b px-4 py-3 ${darkMode ? "border-white/10" : "border-black/10"}`}>
-      <div className="mx-auto flex max-w-4xl items-center justify-between gap-3"><HomeLogoLink /><LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} /></div>
-    </header>
+    <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} sticky={false} />
     <div className="mx-auto max-w-4xl px-4 py-8 sm:py-12">
       {loading ? <div className={`border p-6 ${paper}`}><div className="h-5 w-40 animate-pulse bg-current opacity-10" /><div className="mt-5 h-28 animate-pulse bg-current opacity-[.06]" /></div> : error || !quote ? <div className={`border p-6 sm:p-8 ${paper}`}><h1 className="text-2xl font-black">Quote unavailable</h1><p className="mt-2 text-sm opacity-60">{error || "The secure quote link can no longer be opened."}</p><Link href="/" className="mt-5 inline-flex min-h-11 items-center bg-black px-5 text-sm font-black text-white dark:bg-white dark:text-black">Open LoadLink</Link></div> : <article className={`border ${paper}`}>
         <div className="border-b border-current/10 px-5 py-5 sm:px-8 sm:py-7">

@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import HomeLogoLink from "@/components/HomeLogoLink";
@@ -106,13 +108,7 @@ export default function VerifyPage() {
   return (
     <main className={`min-h-screen ${page}`}>
       <SubmissionSuccess open={submissionSuccess} title="Verification sent" />
-      <header className={`sticky top-0 z-50 border-b ${darkMode ? "border-white/10 bg-black/95" : "border-black/10 bg-white/95"}`}>
-        <div className="relative mx-auto flex h-[76px] max-w-6xl items-center px-4 sm:px-5">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 sm:left-5"><SiteMenu darkMode={darkMode} /></div>
-          <HomeLogoLink theme="auto" showGlow={false} className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center" logoClassName="w-[132px] sm:w-[148px]" />
-          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="absolute right-4 top-1/2 -translate-y-1/2 sm:right-5" />
-        </div>
-      </header>
+      <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <section className="mx-auto max-w-3xl px-4 py-7 sm:px-5 md:py-10">
         <div className="mb-5 flex items-center justify-between gap-4">

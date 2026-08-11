@@ -96,6 +96,16 @@ function clean(value: string) {
   return value.trim().replace(/\s+/g, " ");
 }
 
+function ToolGlyph({ type }: { type: "quote" | "trip" | "incident" | "planning" | "documents" | "operations" }) {
+  const common = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", "aria-hidden": true } as const;
+  if (type === "quote") return <svg {...common}><path d="M6 3h9l3 3v15H6V3Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M9 9h6M9 13h6M9 17h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
+  if (type === "trip") return <svg {...common}><circle cx="6" cy="17" r="2.2" stroke="currentColor" strokeWidth="1.8"/><circle cx="18" cy="7" r="2.2" stroke="currentColor" strokeWidth="1.8"/><path d="M8 16c4 0 3-7 8-8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeDasharray="2.5 2.5"/></svg>;
+  if (type === "incident") return <svg {...common}><path d="M12 3 22 20H2L12 3Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M12 9v5M12 17.3v.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>;
+  if (type === "planning") return <svg {...common}><path d="M7 4h10v16H7V4Z" stroke="currentColor" strokeWidth="1.8"/><path d="M9 8h6M9 12h6M9 16h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
+  if (type === "documents") return <svg {...common}><path d="M6 3h8l4 4v14H6V3Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M14 3v5h5M9 12h6M9 16h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
+  return <svg {...common}><path d="M3 8h11v8H3V8Zm11 3h3.5L21 14v2h-7v-5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><circle cx="7" cy="18" r="1.8" stroke="currentColor" strokeWidth="1.8"/><circle cx="17" cy="18" r="1.8" stroke="currentColor" strokeWidth="1.8"/></svg>;
+}
+
 export default function LogisticsMessageTools({
   threadId,
   listingTitle,
@@ -370,9 +380,9 @@ export default function LogisticsMessageTools({
 
       {open && typeof document !== "undefined" ? createPortal(
         <>
-          <button type="button" className="fixed inset-0 z-[2147483600] bg-black/50" aria-label="Close logistics tools" onClick={closePanel} />
-          <section className={`loadlink-logistics-sheet fixed inset-x-0 bottom-0 z-[2147483640] max-h-[86dvh] overflow-y-auto rounded-t-[30px] border-t shadow-[0_-18px_50px_rgba(0,0,0,.30)] ${panel}`} aria-label="Logistics actions panel">
-          <div className="mx-auto max-w-3xl p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <button type="button" className="fixed inset-0 bg-black/70" style={{ zIndex: 2147483646 }} aria-label="Close logistics tools" onClick={closePanel} />
+          <section className={`loadlink-logistics-sheet fixed inset-0 overflow-y-auto overscroll-contain border-0 shadow-none ${panel}`} style={{ zIndex: 2147483647 }} aria-label="Logistics actions panel">
+          <div className="mx-auto min-h-full max-w-3xl p-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
             <div className="flex items-start justify-between gap-4">
               <div><p className={`text-[9px] font-black uppercase tracking-[.18em] ${darkMode ? "text-[#f6b800]" : "text-[#8b6800]"}`}>In conversation</p><h2 className="mt-1 text-xl font-black tracking-[-.025em]">Logistics tools</h2><p className={`mt-1 text-xs font-medium ${muted}`}>Use a tool without leaving this chat.</p></div>
               <button type="button" onClick={closePanel} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-xl ${control}`} aria-label="Close logistics actions">×</button>
@@ -393,11 +403,11 @@ export default function LogisticsMessageTools({
 
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 <button type="button" disabled={disabled} onClick={() => { setEditorTool(null); setEditorText(""); setQuoteOpen((current) => !current); }} className="min-h-[82px] rounded-2xl border border-[#f6b800]/55 bg-[#f6b800] px-4 py-3.5 text-left text-black shadow-[0_8px_24px_rgba(246,184,0,.12)] disabled:opacity-40">
-                  <span className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl bg-black text-[#f6b800]">R</span><span className="block text-[12px] font-black">Rate quote</span><span className="mt-1 block text-[9px] font-medium leading-4 text-black/60">Price, terms & saved vehicle info</span>
+                  <span className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl bg-black text-[#f6b800]"><ToolGlyph type="quote" /></span><span className="block text-[12px] font-black">Rate quote</span><span className="mt-1 block text-[9px] font-medium leading-4 text-black/60">Price, terms & saved vehicle info</span>
                 </button>
                 {workflowTools.filter((tool) => ["trip-brief", "incident-update"].includes(tool.id)).map((tool) => (
                   <button key={tool.id} type="button" disabled={disabled} onClick={() => openToolEditor(tool)} className={`min-h-[82px] rounded-2xl border px-4 py-3.5 text-left disabled:opacity-40 ${control}`}>
-                    <span className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl bg-black text-[#f6b800]">{tool.id === "trip-brief" ? "↗" : "!"}</span><span className="block text-[12px] font-black">{tool.label}</span><span className={`mt-1 block text-[9px] font-medium leading-4 ${muted}`}>{tool.id === "trip-brief" ? "Collection, delivery & cargo" : "Delay, breakdown or site issue"}</span>
+                    <span className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl bg-black text-[#f6b800]"><ToolGlyph type={tool.id === "trip-brief" ? "trip" : "incident"} /></span><span className="block text-[12px] font-black">{tool.label}</span><span className={`mt-1 block text-[9px] font-medium leading-4 ${muted}`}>{tool.id === "trip-brief" ? "Collection, delivery & cargo" : "Delay, breakdown or site issue"}</span>
                   </button>
                 ))}
               </div>
@@ -406,12 +416,12 @@ export default function LogisticsMessageTools({
                 {toolGroups.map((group) => (
                   <details key={group.id} className={`group overflow-hidden rounded-[20px] border ${control}`}>
                     <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black text-xs font-black text-[#f6b800]">{group.id === "planning" ? "P" : group.id === "documents" ? "D" : "O"}</span><span className="min-w-0 flex-1">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black text-[#f6b800]"><ToolGlyph type={group.id === "planning" ? "planning" : group.id === "documents" ? "documents" : "operations"} /></span><span className="min-w-0 flex-1">
                         <span className="block text-[11px] font-black">{group.title}</span>
                         <span className={`mt-0.5 block text-[9px] font-medium leading-4 ${muted}`}>{group.summary}</span>
                       </span>
                       <span className={`rounded-full px-2 py-1 text-[8px] font-bold ${darkMode ? "bg-white/[.06] text-white/55" : "bg-black/[.05] text-black/50"}`}>{group.tools.length}</span>
-                      <span className={`text-sm transition-transform group-open:rotate-180 ${muted}`}>⌄</span>
+                      <span className={`transition-transform group-open:rotate-180 ${muted}`}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m7 10 5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
                     </summary>
                     <div className={`grid grid-cols-2 gap-2 border-t p-3 ${darkMode ? "border-white/8" : "border-black/8"}`}>
                       {group.tools.map((tool) => (

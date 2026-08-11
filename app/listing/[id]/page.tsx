@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
@@ -95,13 +97,7 @@ export default function ListingStatePage() {
 
   return (
     <main className={`min-h-screen ${page}`}>
-      <header className={`sticky top-0 z-40 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
-        <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4 md:px-7">
-          <div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div>
-          <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="ml-auto" />
-        </div>
-      </header>
+      <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <section className="mx-auto flex min-h-[calc(100vh-80px)] max-w-3xl items-center px-4 py-10 md:px-7">
         <div className={`w-full overflow-hidden rounded-[28px] border ${surface}`}>

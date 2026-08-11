@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import HomeLogoLink from "@/components/HomeLogoLink";
@@ -53,9 +55,7 @@ export default function PackageStatusPage() {
   const analytics = activeSubscription ? "Included" : "Pro or Dealer";
 
   return <main className={darkMode ? "min-h-screen bg-black text-white" : "min-h-screen bg-[#f4efe3] text-black"}>
-    <header className={`sticky top-0 z-50 border-b ${darkMode?"border-white/10 bg-black":"border-black/10 bg-white"}`}>
-      <div className="relative mx-auto flex h-20 max-w-6xl items-center px-4"><SiteMenu darkMode={darkMode}/><HomeLogoLink theme={darkMode?"dark":"light"} className="absolute left-1/2 -translate-x-1/2"/><LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="ml-auto"/></div>
-    </header>
+    <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
     <section className="mx-auto max-w-4xl px-5 py-8 md:py-12">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

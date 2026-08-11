@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+
 import { useState, type ReactNode } from "react";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
@@ -21,7 +23,7 @@ export default function DealerShell({darkMode,toggleTheme,profile,context,sectio
   const go=(id:DealerSection)=>{setSection(id);setMoreOpen(false)};
   const surface=darkMode?"border-white/10 bg-[#0a0a0a]":"border-black/10 bg-white";
   return <main className={`min-h-screen ${darkMode?"bg-black text-white":"bg-[#f4f0e7] text-black"}`} data-loadlink-dealer-control-centre="v27-modern">
-    <header className={`sticky top-0 z-50 h-[64px] border-b backdrop-blur-xl ${darkMode?"border-white/10 bg-black/92":"border-black/10 bg-[#f7f4ec]/94"}`}><div className="relative mx-auto flex h-full max-w-[1500px] items-center px-3 sm:px-5"><div className="flex items-center"><SiteMenu darkMode={darkMode}/></div><div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"><div className="pointer-events-auto"><HomeLogoLink className="w-[108px] sm:w-[118px]"/></div></div><div className="ml-auto"><LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme}/></div></div></header>
+    <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
     <div className="mx-auto max-w-[1500px] px-3 pb-28 pt-4 sm:px-5 lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-5 lg:pb-10 lg:pt-5">
       <aside className={`hidden h-[calc(100vh-84px)] self-start overflow-y-auto rounded-[22px] border lg:sticky lg:top-[76px] lg:block ${surface}`}><div className="border-b border-current/10 p-4"><div className="truncate text-sm font-black">{profile.name}</div><div className="mt-1 text-[10px] font-semibold opacity-45">{statusText(context)}</div></div><nav className="p-2">{all.map(i=><Nav key={i.id} item={i} active={section===i.id} onClick={()=>go(i.id)}/>)}</nav></aside>
       <div className="min-w-0"><section className={`mb-4 rounded-[22px] border p-4 sm:p-5 ${surface}`}><div className="flex items-center gap-3"><div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-[#f6b800]/45 bg-current/[.04]">{profile.profile_image_url?<img src={profile.profile_image_url} alt="" className="h-full w-full object-cover"/>:<div className="flex h-full items-center justify-center text-sm font-black">{profile.name.slice(0,2).toUpperCase()}</div>}</div><div className="min-w-0 flex-1"><h1 className="truncate text-[20px] font-black tracking-[-.04em] sm:text-[24px]">{profile.name}</h1><div className="mt-1 text-[10px] font-semibold opacity-45">{statusText(context)}</div></div><div className="hidden gap-2 sm:flex"><PrimaryButton type="button" onClick={onAddVehicle}>Add vehicle</PrimaryButton><SecondaryButton darkMode={darkMode} type="button" onClick={()=>window.open(`/dealership/${profile.slug}`,"_blank")}>Dealer page</SecondaryButton></div></div><div className="mt-4 max-w-2xl"><DealerGlobalSearch darkMode={darkMode} setSection={setSection}/></div></section>{children}</div>

@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
@@ -351,7 +353,7 @@ export default function DriverProfileWizardV273() {
 }
 
 function Header({ darkMode, toggleTheme }: { darkMode: boolean; toggleTheme: () => void }) {
-  return <header className={`sticky top-0 z-50 h-[64px] border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}><div className="relative mx-auto flex h-full max-w-[1500px] items-center px-3 sm:px-5"><div className="flex items-center gap-1.5"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div><div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"><div className="pointer-events-auto"><HomeLogoLink theme={darkMode ? "dark" : "light"} /></div></div><div className="ml-auto"><LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} /></div></div></header>;
+  return <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />;
 }
 
 function StepTitle({ title, copy, muted }: { title: string; copy: string; muted: string }) {

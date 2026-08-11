@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -1591,20 +1593,7 @@ export default function MessagesPage() {
         darkMode ? "bg-[#050505] text-white" : "bg-[#eeeae0] text-black"
       }`}
     >
-      <header className={`relative h-[72px] shrink-0 border-b md:h-20 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"}`}>
-        <div data-loadlink-messages-account-cluster="v274-clean" className="absolute left-3 top-1/2 z-10 flex -translate-y-1/2 items-center md:left-5">
-          <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
-        </div>
-        <HomeLogoLink
-          theme={darkMode ? "dark" : "light"}
-          showGlow={false}
-          className="loadlink-official-header-logo pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
-          logoClassName="loadlink-messages-header-logo"
-        />
-        <div className="absolute right-3 top-1/2 z-10 -translate-y-1/2 md:right-5">
-          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} />
-        </div>
-      </header>
+      <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} sticky={false} />
 
       <div className="mx-auto grid min-h-0 w-full max-w-[1500px] flex-1 md:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)_300px]">
         <aside

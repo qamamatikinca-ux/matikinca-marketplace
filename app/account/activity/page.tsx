@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+
 import { useEffect, useMemo, useState } from "react";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
@@ -95,13 +97,7 @@ export default function AccountActivityPage() {
 
   return (
     <main className={`min-h-screen ${page}`}>
-      <header className={`sticky top-0 z-40 border-b ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
-        <div className="grid h-20 grid-cols-[92px_1fr_52px] items-center px-4 md:px-7">
-          <div className="flex items-center gap-2"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div>
-          <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-          <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="ml-auto" />
-        </div>
-      </header>
+      <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <section className="mx-auto max-w-6xl px-4 pb-20 pt-7 md:px-7 md:pt-11">
         <div><p className="text-xs font-black opacity-55">Account</p><h1 className="mt-2 text-4xl font-black tracking-[-.055em] md:text-6xl">Activity & access</h1><p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 md:text-base ${muted}`}>A clear record of account access, recent devices and LoadLink payments. Private to your signed-in account.</p></div>

@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import HomeLogoLink from "@/components/HomeLogoLink";
@@ -1109,18 +1111,7 @@ function EditJobModal({ job, ownerKey, onClose, onUpdated }: { job: JobListing; 
 
 function Header({ darkMode, toggleDarkMode }: { darkMode: boolean; toggleDarkMode: () => void }) {
   return (
-    <header className={`sticky top-0 z-50 border-b transition-colors duration-500 ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"}`}>
-      <div className="grid h-20 w-full grid-cols-[92px_1fr_52px] items-center px-4">
-        <div className="flex items-center gap-2">
-          <SiteMenu darkMode={darkMode} className={`text-3xl font-black ${darkMode ? "text-white" : "text-black"}`} />
-          <AuthStatusButton darkMode={darkMode} />
-        </div>
-
-        <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-
-        <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleDarkMode} className="ml-auto" />
-      </div>
-    </header>
+    <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleDarkMode} />
   );
 }
 

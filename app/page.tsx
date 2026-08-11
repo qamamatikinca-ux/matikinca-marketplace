@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+
 import HomeLogoLink from "@/components/HomeLogoLink";
 
 import Link from "next/link";
@@ -105,32 +107,7 @@ function HomeExperience() {
       }`}
     >
   {/* TOP MENU */}
-  <header
-    className={`sticky top-0 z-50 border-b transition-colors duration-300 ${
-      darkMode ? "border-white/10 bg-black" : "border-black/10 bg-white"
-    }`}
-  >
-    <div className="relative mx-auto flex h-20 w-full items-center px-4">
-      <div className="z-10 flex items-center">
-        <LoadLinkBoundary name="site menu">
-          <Suspense fallback={<span className="h-10 w-10" aria-hidden="true" />}>
-            <SiteMenu
-              darkMode={darkMode}
-              className={`text-3xl font-black ${darkMode ? "text-white" : "text-black"}`}
-            />
-          </Suspense>
-        </LoadLinkBoundary>
-      </div>
-
-      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-        <div className="pointer-events-auto">
-          <HomeLogoLink theme={darkMode ? "dark" : "light"} showGlow={false} logoClassName="loadlink-logo-dark-fix" />
-        </div>
-      </div>
-
-      <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleDarkMode} className="ml-auto" />
-    </div>
-  </header>
+  <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleDarkMode} />
 
       <LoadLinkBoundary name="marketplace search"><Suspense fallback={null}><MarketplaceDiscovery darkMode={darkMode} /></Suspense></LoadLinkBoundary>
 
