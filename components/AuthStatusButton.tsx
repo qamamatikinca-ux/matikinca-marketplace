@@ -11,8 +11,10 @@ export default function AuthStatusButton({ darkMode, className = "" }: { darkMod
   const account = useLoadLinkAccount();
   const base = `relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border transition active:scale-[0.97] ${className}`;
 
+  // Keep the header geometry stable while LoadLink resolves the session, but do not
+  // show a fake sign-in/profile control during the "checking sign-in" state.
   if (!account.ready) {
-    return <span aria-label="Checking sign-in status" className={`${base} ${darkMode ? "border-white/15 bg-white/5" : "border-black/10 bg-white"}`}><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent opacity-45" /></span>;
+    return <span aria-hidden="true" className={`block h-10 w-10 shrink-0 ${className}`} />;
   }
 
   if (account.user) {
