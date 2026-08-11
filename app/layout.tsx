@@ -2,6 +2,7 @@ import NetworkRecovery from "@/components/platform/NetworkRecovery";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
+import "./loadlink-logistics-modal.css";
 import GlobalLoading from "@/components/GlobalLoading";
 import ChatLauncher from "@/components/ChatLauncher";
 import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";
