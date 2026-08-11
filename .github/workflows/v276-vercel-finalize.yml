@@ -1,0 +1,24 @@
+name: V2.7.6 production handoff
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  handoff:
+    if: ${{ !contains(github.event.head_commit.message, '[vercel-v276]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Push validated V2.7.6 as a normal main update
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/v276-vercel-finalize.yml
+          git commit -m '[vercel-v276] Publish validated LoadLink V2.7.6'
+          git push origin main
