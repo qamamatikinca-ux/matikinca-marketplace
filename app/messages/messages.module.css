@@ -135,3 +135,26 @@
   min-width: 0;
   max-width: 100%;
 }
+
+/* LOADLINK V2.7.11 LOGISTICS WORKSPACE HARD BOUNDARY
+   Logistics Tools is a replacement workspace, never a layer beneath chat.
+   Kill every Messages paint source as soon as the tools-open flag exists. */
+:global(html[data-loadlink-logistics-open="true"]) .messageApp,
+:global(body[data-loadlink-logistics-open="true"]) .messageApp {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+:global(html[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-chat-wallpaper),
+:global(body[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-chat-wallpaper),
+:global(html[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-message-viewport),
+:global(body[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-message-viewport),
+:global(html[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-chat-composer),
+:global(body[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-chat-composer) {
+  display: none !important;
+  visibility: hidden !important;
+  background-image: none !important;
+  pointer-events: none !important;
+}
