@@ -24,7 +24,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
 
       - name: Install dependencies
@@ -36,12 +36,14 @@ jobs:
       - name: Create project zip
         run: |
           rm -rf .next node_modules
-          zip -r ../LoadLink-V2.7.3-Fixed.zip . -x '.git/*' '.github/workflows/loadlink-v273-package.yml'
+          rm -f LoadLink-V2.7.3-Fixed.zip
+          zip -r /tmp/LoadLink-V2.7.3-Fixed.zip . -x '.git/*' '.github/workflows/loadlink-v273-package.yml'
+          cp /tmp/LoadLink-V2.7.3-Fixed.zip ./LoadLink-V2.7.3-Fixed.zip
 
       - name: Upload project zip
         uses: actions/upload-artifact@v4
         with:
           name: LoadLink-V2.7.3-Fixed
-          path: ../LoadLink-V2.7.3-Fixed.zip
+          path: LoadLink-V2.7.3-Fixed.zip
           if-no-files-found: error
           retention-days: 7
