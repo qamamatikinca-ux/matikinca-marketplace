@@ -1,0 +1,41 @@
+name: LoadLink V2.7.12 Route Logistics Tools
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/loadlink-v2712-route-tools.yml'
+      - '.github/scripts/loadlink_v2712_route_tools.py'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply structural routing fix
+        run: python .github/scripts/loadlink_v2712_route_tools.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate production build
+        run: npm run build
+
+      - name: Commit fixed Messages flow
+        run: |
+          if git diff --quiet -- app/messages/page.tsx; then
+            echo 'No source change detected.'
+            exit 1
+          fi
+          git config user.name 'qamamatikinca-ux'
+          git config user.email 'qamamatikinca@icloud.com'
+          git add app/messages/page.tsx
+          git commit -m 'Route chat Logistics Tools to standalone workspace'
+          git push origin HEAD:main
