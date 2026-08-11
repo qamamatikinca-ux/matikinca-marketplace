@@ -49,6 +49,8 @@ if grep -Fq 'window.location.assign(`/tools?from=messages' app/messages/page.tsx
 fi
 grep -Fq 'if (mode === "checking") return null;' app/auth/mfa/page.tsx || die "MFA no-flash guard is missing."
 grep -Fq 'loadlink_security_code_status' lib/authSecurity.ts || die "Security-code status check is missing."
+grep -Fq 'https://cqmjgulfbbwxyecsnzed.supabase.co' lib/supabaseClient.ts || die "LoadLink Supabase URL fallback is missing."
+grep -Fq 'sb_publishable_jpBfLJ-DUl9-JVnYX-_7Hg_UIZ47EnP' lib/supabaseClient.ts || die "LoadLink Supabase publishable-key fallback is missing."
 
 export VERCEL_ORG_ID="team_ltBsujLbhqOPqX4dlpWDHial"
 export VERCEL_PROJECT_ID="prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt"
