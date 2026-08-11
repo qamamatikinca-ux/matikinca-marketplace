@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# V2.7.12: the chat must never own or underlay the Logistics Tools workspace.
 path = Path("app/messages/page.tsx")
 text = path.read_text()
 
