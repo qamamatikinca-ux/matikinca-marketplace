@@ -607,3 +607,100 @@ html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-quote-card button:
 html[data-loadlink-theme="dark"] .loadlink-logistics-sheet { background: #0b0b0b !important; }
 html[data-loadlink-theme="light"] .loadlink-logistics-sheet { background: #ffffff !important; }
 body:has(.loadlink-logistics-sheet) .loadlink-chat-wallpaper { visibility: hidden !important; }
+
+
+/* LOADLINK_V277_HEADER_TOOLS_LABELS_START */
+/* Exact shared top-bar geometry: this mirrors the original LoadLink homepage header. */
+[data-loadlink-site-header="locked-v277"] {
+  min-height: 80px;
+  overflow: visible;
+}
+[data-loadlink-site-header="locked-v277"] .loadlink-header-logo {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+[data-loadlink-site-header="locked-v277"] .loadlink-header-logo .loadlink-logo-wrap {
+  width: clamp(128px, 30vw, 162px) !important;
+  max-width: 100% !important;
+}
+@media (max-width: 360px) {
+  [data-loadlink-site-header="locked-v277"] > div {
+    grid-template-columns: 86px minmax(0, 1fr) 48px !important;
+    gap: 8px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  [data-loadlink-site-header="locked-v277"] .loadlink-header-logo .loadlink-logo-wrap {
+    width: min(116px, 100%) !important;
+  }
+}
+
+/* Chat Logistics Tools must be above every chat layer, including the fixed iOS composer. */
+.loadlink-logistics-sheet {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100dvw !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  max-width: none !important;
+  max-height: none !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+  z-index: 2147483647 !important;
+  isolation: isolate !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+html[data-loadlink-logistics-open="true"] .loadlink-chat-composer,
+body[data-loadlink-logistics-open="true"] .loadlink-chat-composer,
+body:has(.loadlink-logistics-sheet) .loadlink-chat-composer {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+html[data-loadlink-logistics-open="true"] .loadlink-chat-wallpaper,
+body[data-loadlink-logistics-open="true"] .loadlink-chat-wallpaper,
+body:has(.loadlink-logistics-sheet) .loadlink-chat-wallpaper {
+  visibility: hidden !important;
+}
+html[data-loadlink-logistics-open="true"],
+html[data-loadlink-logistics-open="true"] body {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+/* UI Design Tips-inspired labels: compact, contextual and accessible; LoadLink palette only. */
+.loadlink-ui-label {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+  border: 1px solid rgba(246, 184, 0, .30);
+  border-radius: 6px;
+  padding: 4px 7px;
+  background: rgba(246, 184, 0, .08);
+  color: #b98400;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: .025em;
+  text-transform: uppercase;
+}
+html[data-loadlink-theme="dark"] .loadlink-ui-label {
+  border-color: rgba(246, 184, 0, .34);
+  background: rgba(246, 184, 0, .08);
+  color: #f6b800;
+}
+.loadlink-ui-label--solid {
+  border-color: #f6b800 !important;
+  background: #f6b800 !important;
+  color: #050505 !important;
+}
+/* LOADLINK_V277_HEADER_TOOLS_LABELS_END */

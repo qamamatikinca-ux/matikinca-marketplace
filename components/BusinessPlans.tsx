@@ -186,7 +186,7 @@ export default function BusinessPlans({
                   <p className={`mt-2 max-w-xl text-xs font-semibold leading-5 ${muted}`}>{activePlan === "dealer" ? "Your Dealer plan is active. Manage billing or open your dealership workspace." : "Your Pro plan is active. Manage billing or upgrade when you need dealership tools."}</p>
                   <p className={`mt-2 text-[10px] font-semibold ${muted}`}>{renewalText()}</p>
                 </div>
-                <span className="rounded-full bg-[#f6b800] px-3 py-1.5 text-[9px] font-black uppercase tracking-[.12em] text-black">Active</span>
+                <span className="loadlink-ui-label loadlink-ui-label--solid">Active</span>
               </div>
               <div className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 <button type="button" onClick={() => void manage()} disabled={busy === "manage"} className="h-12 rounded-xl bg-[#f6b800] px-4 text-sm font-black text-black disabled:opacity-45">{busy === "manage" ? "Opening…" : `Manage ${activePlan === "dealer" ? "Dealer" : "Pro"} plan`}</button>
@@ -219,7 +219,7 @@ export default function BusinessPlans({
                 <article id={`${plan.id}-package`} key={plan.id} className={`rounded-[22px] border p-5 md:p-6 ${selected || active ? "border-[#f6b800]" : darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div><h3 className="text-2xl font-black tracking-[-.04em]">{plan.name}</h3><p className={`mt-1 text-xs font-semibold leading-5 ${muted}`}>{plan.description}</p></div>
-                    {active ? <span className="text-[9px] font-black uppercase tracking-[.08em] opacity-50">Current plan</span> : null}
+                    {active ? <span className="loadlink-ui-label">Current plan</span> : null}
                   </div>
                   <div className="mt-5 flex items-baseline gap-2"><span className="text-[42px] font-black leading-none tracking-[-.055em]">{plan.price}</span><span className={`text-[14px] font-extrabold ${darkMode ? "text-white/65" : "text-black/60"}`}>{plan.billing}</span></div>
                   <div className="my-5 h-px bg-current/10" />

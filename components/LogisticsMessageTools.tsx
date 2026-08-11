@@ -157,9 +157,13 @@ export default function LogisticsMessageTools({
     const previousHtmlOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
+    document.documentElement.dataset.loadlinkLogisticsOpen = "true";
+    document.body.dataset.loadlinkLogisticsOpen = "true";
     return () => {
       document.body.style.overflow = previousBodyOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
+      delete document.documentElement.dataset.loadlinkLogisticsOpen;
+      delete document.body.dataset.loadlinkLogisticsOpen;
     };
   }, [open]);
 
@@ -384,12 +388,12 @@ export default function LogisticsMessageTools({
           <section className={`loadlink-logistics-sheet fixed inset-0 isolate overflow-y-auto overscroll-contain border-0 shadow-none ${panel}`} style={{ zIndex: 2147483647, transform: "translateZ(0)" }} aria-label="Logistics actions panel">
           <div className="mx-auto min-h-full max-w-3xl p-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
             <div className="flex items-start justify-between gap-4">
-              <div><p className={`text-[9px] font-black uppercase tracking-[.18em] ${darkMode ? "text-[#f6b800]" : "text-[#8b6800]"}`}>In conversation</p><h2 className="mt-1 text-xl font-black tracking-[-.025em]">Logistics tools</h2><p className={`mt-1 text-xs font-medium ${muted}`}>Use a tool without leaving this chat.</p></div>
+              <div><p className="loadlink-ui-label">In conversation</p><h2 className="mt-1 text-xl font-black tracking-[-.025em]">Logistics tools</h2><p className={`mt-1 text-xs font-medium ${muted}`}>Use a tool without leaving this chat.</p></div>
               <button type="button" onClick={closePanel} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-xl ${control}`} aria-label="Close logistics actions">×</button>
             </div>
 
             <div className="mt-5">
-              <p className={`mb-2 text-[9px] font-bold uppercase tracking-[0.14em] ${muted}`}>Deal stage</p>
+              <p className="loadlink-ui-label mb-2">Deal stage</p>
               <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">{STAGES.map((item) => <button key={item} type="button" onClick={() => selectStage(item)} className={`shrink-0 rounded-full border px-3 py-2 text-[10px] font-bold ${stage === item ? "border-[#f6b800] bg-[#f6b800] text-black" : control}`}>{item}</button>)}</div>
             </div>
 
