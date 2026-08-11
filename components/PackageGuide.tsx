@@ -2,21 +2,91 @@
 
 import { useState } from "react";
 
-type Plan = "pro" | "dealer";
-export default function PackageGuide({ darkMode=false }: { darkMode?: boolean }) {
-  const [step,setStep]=useState(0); const [dealer,setDealer]=useState<boolean|null>(null); const [stock,setStock]=useState<"few"|"many"|null>(null); const [team,setTeam]=useState<boolean|null>(null);
-  const muted=darkMode?"text-white/50":"text-black/50"; const surface=darkMode?"border-white/10 bg-[#0b0b0b]":"border-black/10 bg-white";
-  const recommended:Plan = dealer || team || stock==="many" ? "dealer" : "pro";
-  const progress=Math.min(100,((step+1)/4)*100);
-  return <section className={`overflow-hidden rounded-[24px] border ${surface}`} data-loadlink-price-guide="v27-simple">
-    <div className="h-1 bg-current/5"><div className="h-full bg-[#f6b800] transition-all" style={{width:`${progress}%`}}/></div>
-    <div className="p-5 sm:p-7"><div className="text-[10px] font-black uppercase tracking-[.08em] opacity-35">Plan guide</div>
-      {step===0?<><h1 className="mt-2 text-[28px] font-black tracking-[-.05em] sm:text-[36px]">Are you a dealership?</h1><p className={`mt-2 text-xs font-semibold ${muted}`}>Choose the option that best describes how you sell vehicles.</p><div className="mt-5 grid grid-cols-2 gap-2"><Choice label="Yes" onClick={()=>{setDealer(true);setStep(1)}}/><Choice label="No" onClick={()=>{setDealer(false);setStep(1)}}/></div></>:null}
-      {step===1?<><h2 className="text-[26px] font-black tracking-[-.045em]">How much stock do you usually advertise?</h2><div className="mt-5 grid gap-2 sm:grid-cols-2"><Choice label="A few vehicles" detail="Individual owner or smaller operator" onClick={()=>{setStock('few');setStep(2)}}/><Choice label="A larger stock list" detail="Regular dealership or business inventory" onClick={()=>{setStock('many');setStep(2)}}/></div><Back onClick={()=>setStep(0)}/></>:null}
-      {step===2?<><h2 className="text-[26px] font-black tracking-[-.045em]">Do other people need to work on the account?</h2><div className="mt-5 grid grid-cols-2 gap-2"><Choice label="Yes" onClick={()=>{setTeam(true);setStep(3)}}/><Choice label="No" onClick={()=>{setTeam(false);setStep(3)}}/></div><Back onClick={()=>setStep(1)}/></>:null}
-      {step===3?<><div className="text-[10px] font-black uppercase tracking-[.08em] opacity-35">Recommended</div><h2 className="mt-2 text-[34px] font-black tracking-[-.055em]">{recommended==='dealer'?'Dealer':'Pro'}</h2><p className={`mt-2 max-w-lg text-xs font-semibold leading-5 ${muted}`}>{recommended==='dealer'?'Best for a dealership or business that needs a showroom, team tools, Status and sales workflow.':'Best for an individual owner or operator who needs better vehicle advertising and analytics.'}</p><div className="mt-5 flex gap-2"><button onClick={()=>document.getElementById(`${recommended}-package`)?.scrollIntoView({behavior:'smooth',block:'center'})} className="h-11 flex-1 rounded-xl bg-[#f6b800] px-4 text-sm font-black text-black">View {recommended==='dealer'?'Dealer':'Pro'}</button><button onClick={()=>setStep(0)} className="h-11 rounded-xl border border-current/10 px-4 text-xs font-black">Start again</button></div></>:null}
-    </div>
-  </section>;
+export type PackageRecommendation = "manual" | "pro" | "dealer";
+
+type Identity = "individual" | "operator" | "dealer";
+type Frequency = "occasional" | "regular";
+
+export default function PackageGuide({
+  darkMode = false,
+  onComplete,
+}: {
+  darkMode?: boolean;
+  onComplete: (plan: PackageRecommendation) => void;
+}) {
+  const [step, setStep] = useState(0);
+  const [identity, setIdentity] = useState<Identity | null>(null);
+  const [frequency, setFrequency] = useState<Frequency | null>(null);
+  const muted = darkMode ? "text-white/52" : "text-black/52";
+  const surface = darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white";
+  const progress = ((step + 1) / 3) * 100;
+
+  function finish(needsBusinessTools: boolean) {
+    const recommendation: PackageRecommendation =
+      identity === "dealer" || needsBusinessTools
+        ? "dealer"
+        : frequency === "regular"
+          ? "pro"
+          : "manual";
+    onComplete(recommendation);
+  }
+
+  return (
+    <section className={`overflow-hidden rounded-[26px] border ${surface}`} data-loadlink-package-questions="v275">
+      <div className="h-1 bg-current/5">
+        <div className="h-full bg-[#f6b800] transition-all duration-300" style={{ width: `${progress}%` }} />
+      </div>
+      <div className="p-5 sm:p-7">
+        <p className={`text-[10px] font-black uppercase tracking-[.12em] ${muted}`}>Find the right LoadLink option</p>
+
+        {step === 0 ? (
+          <>
+            <h1 className="mt-3 text-[30px] font-black tracking-[-.05em] sm:text-[38px]">Which best describes how you use vehicles?</h1>
+            <p className={`mt-2 max-w-xl text-sm font-semibold leading-6 ${muted}`}>This only changes the recommendation. You can still compare every LoadLink option afterwards.</p>
+            <div className="mt-6 grid gap-2 sm:grid-cols-3">
+              <Choice label="Individual owner" detail="I advertise my own vehicle when needed" onClick={() => { setIdentity("individual"); setStep(1); }} />
+              <Choice label="Transport operator" detail="I advertise vehicles as part of my business" onClick={() => { setIdentity("operator"); setStep(1); }} />
+              <Choice label="Dealership" detail="I sell or manage vehicle stock" onClick={() => { setIdentity("dealer"); setStep(1); }} />
+            </div>
+          </>
+        ) : null}
+
+        {step === 1 ? (
+          <>
+            <h2 className="text-[28px] font-black tracking-[-.045em]">How often do you expect to advertise vehicles?</h2>
+            <div className="mt-6 grid gap-2 sm:grid-cols-2">
+              <Choice label="Only when I need it" detail="Occasional or one-off advertising" onClick={() => { setFrequency("occasional"); setStep(2); }} />
+              <Choice label="Regularly" detail="Ongoing vehicle advertising" onClick={() => { setFrequency("regular"); setStep(2); }} />
+            </div>
+            <Back onClick={() => setStep(0)} />
+          </>
+        ) : null}
+
+        {step === 2 ? (
+          <>
+            <h2 className="text-[28px] font-black tracking-[-.045em]">Do you need dealership-style business tools?</h2>
+            <p className={`mt-2 max-w-xl text-sm font-semibold leading-6 ${muted}`}>This includes a public showroom, staff access, lead management and dealership sales tools.</p>
+            <div className="mt-6 grid grid-cols-2 gap-2">
+              <Choice label="Yes" onClick={() => finish(true)} />
+              <Choice label="No" onClick={() => finish(false)} />
+            </div>
+            <Back onClick={() => setStep(1)} />
+          </>
+        ) : null}
+      </div>
+    </section>
+  );
 }
-function Choice({label,detail,onClick}:{label:string;detail?:string;onClick:()=>void}){return <button type="button" onClick={onClick} className="min-h-[64px] rounded-[16px] border border-current/10 px-4 py-3 text-left transition hover:border-[#f6b800]/70"><span className="block text-sm font-black">{label}</span>{detail?<span className="mt-1 block text-[9px] font-semibold opacity-42">{detail}</span>:null}</button>}
-function Back({onClick}:{onClick:()=>void}){return <button type="button" onClick={onClick} className="mt-5 text-[10px] font-black opacity-45">Back</button>}
+
+function Choice({ label, detail, onClick }: { label: string; detail?: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="min-h-[82px] rounded-[18px] border border-current/10 px-4 py-4 text-left transition active:scale-[.99] hover:border-[#f6b800]/70">
+      <span className="block text-sm font-black">{label}</span>
+      {detail ? <span className="mt-1.5 block text-[10px] font-semibold leading-4 opacity-50">{detail}</span> : null}
+    </button>
+  );
+}
+
+function Back({ onClick }: { onClick: () => void }) {
+  return <button type="button" onClick={onClick} className="mt-5 text-[11px] font-black opacity-50">Back</button>;
+}
