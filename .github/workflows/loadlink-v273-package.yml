@@ -1,0 +1,47 @@
+name: LoadLink V2.7.3 Package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/loadlink-v273-package.yml'
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+jobs:
+  validate-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build validation
+        run: npm run build
+
+      - name: Create project zip
+        run: |
+          rm -rf .next node_modules
+          zip -r ../LoadLink-V2.7.3-Fixed.zip . -x '.git/*' '.github/workflows/loadlink-v273-package.yml'
+
+      - name: Upload project zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: LoadLink-V2.7.3-Fixed
+          path: ../LoadLink-V2.7.3-Fixed.zip
+          if-no-files-found: error
+          retention-days: 7
