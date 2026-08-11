@@ -1,0 +1,28 @@
+name: Force Vercel Production V2.7.7
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/force-vercel-production-v277.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  trigger:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Trigger Vercel from bot-authored main commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "Trigger LoadLink V2.7.7 Vercel production deployment"
+          git push origin HEAD:main
