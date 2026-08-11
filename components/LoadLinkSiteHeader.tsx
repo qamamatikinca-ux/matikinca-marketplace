@@ -1,5 +1,6 @@
 "use client";
 
+// V2.7.7 production: preserve the original LoadLink header geometry across customer-facing pages.
 import { Suspense } from "react";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
