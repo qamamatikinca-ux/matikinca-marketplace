@@ -1586,7 +1586,25 @@ export default function MessagesPage() {
   }
 
   return (
-    <main
+    <>
+      {selectedConversation ? (
+        <LogisticsMessageTools
+          threadId={selectedConversation.id}
+          listingTitle={selectedConversation.listing_title}
+          role={selectedConversation.role}
+          darkMode={darkMode}
+          disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
+          trigger="hidden"
+          onOpen={() => setComposerActionsOpen(false)}
+          onSendQuote={sendStructuredQuote}
+          quoteDefaults={quoteDefaults}
+          savedVehicles={quoteVehicles}
+          onInsert={(message) => updateTyping(text.trim() ? `${text.trim()}
+
+${message}` : message)}
+        />
+      ) : null}
+      <main
       data-theme={darkMode ? "dark" : "light"}
       style={{ height: "var(--loadlink-message-vh, 100dvh)", minHeight: "var(--loadlink-message-vh, 100svh)" }}
       className={`${styles.messageApp} loadlink-messages flex flex-col overflow-hidden ${
@@ -1991,21 +2009,20 @@ export default function MessagesPage() {
                     {composerActionsOpen ? (
                       <div className="absolute bottom-[calc(100%+.5rem)] left-0 z-[70] max-h-[min(68vh,520px)] w-[min(84vw,320px)] overflow-y-auto rounded-2xl border border-black/10 bg-white p-1.5 shadow-2xl">
                         <button type="button" onClick={() => { setComposerActionsOpen(false); fileInputRef.current?.click(); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-black/[.04]"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f3f0e8]"><PaperclipIcon /></span><span className="min-w-0"><span className="block text-xs font-semibold">Attach file</span><span className="mt-0.5 block text-[9px] font-medium text-black/40">Photos and documents</span></span></button>
-                        <LogisticsMessageTools
-                          threadId={selectedConversation.id}
-                          listingTitle={selectedConversation.listing_title}
-                          role={selectedConversation.role}
-                          darkMode={darkMode}
+                        <button
+                          type="button"
                           disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
-                          trigger="menu"
-                          onClose={() => setComposerActionsOpen(false)}
-                          onSendQuote={sendStructuredQuote}
-                          quoteDefaults={quoteDefaults}
-                          savedVehicles={quoteVehicles}
-                          onInsert={(message) => updateTyping(text.trim() ? `${text.trim()}
-
-${message}` : message)}
-                        />
+                          onClick={() => {
+                            setComposerActionsOpen(false);
+                            window.dispatchEvent(new Event("loadlink:open-logistics-tools"));
+                          }}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-bold hover:bg-black/[.04] disabled:opacity-40"
+                        >
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f6b800] text-black" aria-hidden="true">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 7h11v9H3V7Zm11 3h3.4L21 13.6V16h-7v-6Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /><circle cx="7" cy="17.5" r="1.7" stroke="currentColor" strokeWidth="1.8" /><circle cx="17.5" cy="17.5" r="1.7" stroke="currentColor" strokeWidth="1.8" /></svg>
+                          </span>
+                          <span className="min-w-0 flex-1"><span className="block">Logistics tools</span><span className="mt-0.5 block truncate text-[9px] font-semibold text-black/40">Open the full tool workspace</span></span>
+                        </button>
                       </div>
                     ) : null}
                   </div>
@@ -2083,7 +2100,8 @@ ${message}` : message)}
           ) : null}
         </aside>
       </div>
-    </main>
+      </main>
+    </>
   );
 }
 

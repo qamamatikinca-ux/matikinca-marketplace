@@ -59,7 +59,7 @@ type Props = {
   disabled?: boolean;
   onInsert: (message: string) => void;
   onSendQuote?: (quote: StructuredQuote) => Promise<void> | void;
-  trigger?: "bar" | "menu";
+  trigger?: "bar" | "menu" | "hidden";
   onOpen?: () => void;
   onClose?: () => void;
   quoteDefaults?: QuoteAutofillDefaults | null;
@@ -166,6 +166,13 @@ export default function LogisticsMessageTools({
       delete document.body.dataset.loadlinkLogisticsOpen;
     };
   }, [open]);
+
+  useEffect(() => {
+    if (trigger !== "hidden") return;
+    const openFromChat = () => openPanel();
+    window.addEventListener("loadlink:open-logistics-tools", openFromChat);
+    return () => window.removeEventListener("loadlink:open-logistics-tools", openFromChat);
+  }, [trigger, disabled, threadId]);
 
   const templates = useMemo(() => {
     const title = clean(listingTitle) || "this listing";
@@ -305,6 +312,7 @@ export default function LogisticsMessageTools({
 
 
   function openPanel() {
+    if (disabled) return;
     if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) document.activeElement.blur();
     onOpen?.();
     setOpen(true);
@@ -373,14 +381,14 @@ export default function LogisticsMessageTools({
           </span>
           <span className="min-w-0 flex-1"><span className="block">Logistics tools</span><span className={`mt-0.5 block truncate text-[9px] font-semibold ${muted}`}>{stage} · tools and updates</span></span>
         </button>
-      ) : (
+      ) : trigger === "bar" ? (
         <button type="button" onClick={openPanel} disabled={disabled} className={`flex h-10 items-center gap-2 rounded-xl border px-3 text-xs font-black disabled:opacity-40 ${control}`} aria-expanded={open}>
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#f6b800] text-black" aria-hidden="true">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 7h11v9H3V7Zm11 3h3.4L21 13.6V16h-7v-6Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /><circle cx="7" cy="17.5" r="1.7" stroke="currentColor" strokeWidth="1.8" /><circle cx="17.5" cy="17.5" r="1.7" stroke="currentColor" strokeWidth="1.8" /></svg>
           </span>
           Logistics
         </button>
-      )}
+      ) : null}
 
       {open && typeof document !== "undefined" ? createPortal(
         <>
