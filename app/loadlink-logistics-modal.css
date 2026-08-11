@@ -11,6 +11,23 @@ body:has(.loadlink-logistics-sheet) .loadlink-messages {
   pointer-events: none !important;
 }
 
+/* V2.7.10 defense-in-depth: the rotating chat sketch must never survive above
+   the dedicated Logistics Tools workspace, even for a single Safari paint. */
+html[data-loadlink-logistics-open="true"] .loadlink-chat-wallpaper,
+body[data-loadlink-logistics-open="true"] .loadlink-chat-wallpaper,
+body:has(.loadlink-logistics-sheet) .loadlink-chat-wallpaper,
+html[data-loadlink-logistics-open="true"] .loadlink-chat-panel,
+body[data-loadlink-logistics-open="true"] .loadlink-chat-panel,
+body:has(.loadlink-logistics-sheet) .loadlink-chat-panel,
+html[data-loadlink-logistics-open="true"] .loadlink-chat-composer,
+body[data-loadlink-logistics-open="true"] .loadlink-chat-composer,
+body:has(.loadlink-logistics-sheet) .loadlink-chat-composer {
+  display: none !important;
+  visibility: hidden !important;
+  background-image: none !important;
+  pointer-events: none !important;
+}
+
 html[data-loadlink-logistics-open="true"],
 html[data-loadlink-logistics-open="true"] body,
 body[data-loadlink-logistics-open="true"] {
