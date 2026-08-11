@@ -1,0 +1,325 @@
+name: LoadLink V2.7.4 Precision Repair
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/loadlink-v274-precision-repair.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair-build-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Apply precision repairs
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          def read(path):
+              return Path(path).read_text()
+
+          def write(path, text):
+              Path(path).write_text(text)
+
+          def must_replace(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f"Missing expected block: {label}")
+              return text.replace(old, new, 1)
+
+          # 1) Homepage header: remove profile avatar cluster and use true viewport centering.
+          p = Path('app/page.tsx')
+          t = p.read_text()
+          t = t.replace('const AuthStatusButton = lazy(() => import("@/components/AuthStatusButton"));\n', '')
+          pattern = re.compile(r'''    <div className="grid h-20 w-full grid-cols-\[92px_minmax\(0,1fr\)_60px\] items-center gap-3 px-4">.*?    </div>\n  </header>''', re.S)
+          replacement = '''    <div className="relative mx-auto flex h-20 w-full items-center px-4">
+      <div className="z-10 flex items-center">
+        <LoadLinkBoundary name="site menu">
+          <Suspense fallback={<span className="h-10 w-10" aria-hidden="true" />}>
+            <SiteMenu
+              darkMode={darkMode}
+              className={`text-3xl font-black ${darkMode ? "text-white" : "text-black"}`}
+            />
+          </Suspense>
+        </LoadLinkBoundary>
+      </div>
+
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        <div className="pointer-events-auto">
+          <HomeLogoLink theme={darkMode ? "dark" : "light"} showGlow={false} logoClassName="loadlink-logo-dark-fix" />
+        </div>
+      </div>
+
+      <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleDarkMode} className="ml-auto" />
+    </div>
+  </header>'''
+          t2, count = pattern.subn(replacement, t, count=1)
+          if count != 1:
+              raise SystemExit('Homepage header pattern was not found exactly once')
+          p.write_text(t2)
+
+          # 2) Messages: no account avatar in global header, explicit theme logo, restore a real inbox hero.
+          p = Path('app/messages/page.tsx')
+          t = p.read_text()
+          t = t.replace('import AuthStatusButton from "@/components/AuthStatusButton";\n', '')
+          t = must_replace(t,
+'''        <div data-loadlink-messages-account-cluster="v2619-fixed" className="absolute left-3 top-1/2 z-10 flex -translate-y-1/2 items-center gap-2 md:left-5">
+          <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
+          <AuthStatusButton darkMode={darkMode} />
+        </div>''',
+'''        <div data-loadlink-messages-account-cluster="v274-clean" className="absolute left-3 top-1/2 z-10 flex -translate-y-1/2 items-center md:left-5">
+          <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
+        </div>''', 'messages account cluster')
+          t = t.replace('          theme="auto"\n          showGlow={false}', '          theme={darkMode ? "dark" : "light"}\n          showGlow={false}', 1)
+          marker = '''        >
+          <div className="border-b border-black/10 p-5">'''
+          hero = '''        >
+          {!selectedId ? (
+            <div className={`loadlink-messages-hero relative min-h-[150px] overflow-hidden border-b px-5 py-6 ${darkMode ? "border-white/10 bg-[#0b0b0b] text-white" : "border-black/10 bg-[#f4efe3] text-black"}`}>
+              <div className="pointer-events-none absolute -right-5 top-1/2 w-[190px] -translate-y-1/2 text-[#f6b800] opacity-20" aria-hidden="true">
+                <svg viewBox="0 0 220 120" fill="none" className="h-auto w-full">
+                  <path d="M18 75h37l14-20h55v28H18V75Z" stroke="currentColor" strokeWidth="3" strokeLinejoin="round"/>
+                  <path d="M124 48h55l18 21v14h-73V48Z" stroke="currentColor" strokeWidth="3" strokeLinejoin="round"/>
+                  <circle cx="48" cy="89" r="10" stroke="currentColor" strokeWidth="3"/>
+                  <circle cx="102" cy="89" r="10" stroke="currentColor" strokeWidth="3"/>
+                  <circle cx="165" cy="89" r="10" stroke="currentColor" strokeWidth="3"/>
+                  <path d="M8 103h202M30 111h150" stroke="currentColor" strokeWidth="2" strokeDasharray="10 8"/>
+                </svg>
+              </div>
+              <div className="relative z-10 max-w-[270px]">
+                <p className={`text-[9px] font-black uppercase tracking-[.14em] ${darkMode ? "text-[#f6b800]" : "text-[#8a6800]"}`}>LoadLink Messages</p>
+                <h1 className="mt-2 text-[30px] font-black tracking-[-.045em]">Messages</h1>
+                <p className={`mt-2 text-xs font-semibold leading-5 ${darkMode ? "text-white/55" : "text-black/55"}`}>Jobs, contracts, quotes and trip updates — together in one private inbox.</p>
+              </div>
+            </div>
+          ) : null}
+          <div className="border-b border-black/10 p-5">'''
+          t = must_replace(t, marker, hero, 'messages inbox hero insertion')
+          t = t.replace('<h1 className="text-2xl font-bold tracking-[-.025em]">Messages</h1>', '<h2 className="text-2xl font-bold tracking-[-.025em]">Inbox</h2>', 1)
+          p.write_text(t)
+
+          # 3) Packages: do not ask paid users questions LoadLink already knows from the plan.
+          p = Path('app/packages/page.tsx')
+          t = p.read_text()
+          t = t.replace('"use client";\n\n', '"use client";\n\nimport { useEffect, useState } from "react";\n', 1)
+          t = t.replace('import AuthStatusButton from "@/components/AuthStatusButton";\n', '')
+          t = t.replace('import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";\n', 'import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";\nimport { getLoadLinkIntelligence, type LoadLinkIntelligenceState } from "@/lib/loadlinkIntelligence";\n')
+          t = must_replace(t,
+'''  const { darkMode, toggleTheme } = useLoadLinkTheme();
+
+  return (''',
+'''  const { darkMode, toggleTheme } = useLoadLinkTheme();
+  const [accountState, setAccountState] = useState<LoadLinkIntelligenceState | null | undefined>(undefined);
+
+  useEffect(() => {
+    void getLoadLinkIntelligence().then(setAccountState).catch(() => setAccountState(null));
+  }, []);
+
+  const entitled = new Set(["active", "trial", "trialing", "grace_period", "cancelled"]);
+  const hasPaidPlan = Boolean(accountState?.authenticated && (accountState.plan === "pro" || accountState.plan === "dealer") && entitled.has(String(accountState.plan_state)));
+
+  return (''', 'packages intelligence state')
+          t = t.replace('<div className="flex items-center gap-1.5"><SiteMenu darkMode={darkMode} /><AuthStatusButton darkMode={darkMode} /></div>', '<div className="flex items-center"><SiteMenu darkMode={darkMode} /></div>', 1)
+          t = must_replace(t,
+'''      <section className="mx-auto max-w-5xl px-4 pb-4 pt-6 md:px-6 md:pt-9">
+        <PackageGuide darkMode={darkMode} />
+      </section>''',
+'''      <section className="mx-auto max-w-5xl px-4 pb-4 pt-6 md:px-6 md:pt-9">
+        {accountState === undefined ? (
+          <div className={`h-28 animate-pulse rounded-[24px] border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`} />
+        ) : hasPaidPlan && accountState ? (
+          <div className={`rounded-[24px] border p-5 sm:p-7 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+            <div className="text-[10px] font-black uppercase tracking-[.08em] opacity-35">Current plan</div>
+            <h1 className="mt-2 text-[32px] font-black tracking-[-.05em]">{accountState.plan === "dealer" ? "Dealer" : "Pro"}</h1>
+            <p className={`mt-2 max-w-xl text-sm font-semibold leading-6 ${darkMode ? "text-white/55" : "text-black/55"}`}>{accountState.plan === "dealer" ? "Your dealership plan is already active. Manage the plan or compare features below — there is no need to answer dealership questions again." : "Your Pro plan is already active. Manage it, compare features or upgrade below."}</p>
+          </div>
+        ) : (
+          <PackageGuide darkMode={darkMode} />
+        )}
+      </section>''', 'packages guide gating')
+          p.write_text(t)
+
+          # 4) Dealer shell: clean header and move More tools well above navigation/chat layers.
+          p = Path('components/dealer/DealerShell.tsx')
+          t = p.read_text()
+          t = t.replace('import AuthStatusButton from "@/components/AuthStatusButton";\n', '')
+          t = t.replace('<div className="flex items-center gap-1.5"><SiteMenu darkMode={darkMode}/><AuthStatusButton darkMode={darkMode}/></div>', '<div className="flex items-center"><SiteMenu darkMode={darkMode}/></div>', 1)
+          t = t.replace('className="fixed inset-0 z-[60] bg-black/45 lg:hidden"', 'className="fixed inset-0 z-[110] bg-black/50 lg:hidden"', 1)
+          t = t.replace('bottom-[calc(68px+env(safe-area-inset-bottom))] z-[70]', 'bottom-[calc(68px+env(safe-area-inset-bottom))] z-[120]', 1)
+          p.write_text(t)
+
+          # 5) Floating chat must never sit over the dealer control centre.
+          p = Path('components/ChatLauncher.tsx')
+          t = p.read_text()
+          t = must_replace(t,
+'''  if (pathname.startsWith("/messages") || pathname.startsWith("/login") || pathname.startsWith("/list-your-vehicle") || pathname.startsWith("/list-your-truck") || !account.ready) return null;''',
+'''  const dealerWorkspace = pathname === "/dealer" || pathname.startsWith("/dealer/") || pathname.startsWith("/dealer-dashboard");
+  if (pathname.startsWith("/messages") || pathname.startsWith("/login") || pathname.startsWith("/list-your-vehicle") || pathname.startsWith("/list-your-truck") || dealerWorkspace || !account.ready) return null;''', 'chat launcher dealer exclusion')
+          p.write_text(t)
+
+          # 6) Logistics tools: portal the sheet to document.body so chat can never cover it.
+          p = Path('components/LogisticsMessageTools.tsx')
+          t = p.read_text()
+          t = t.replace('import { useEffect, useMemo, useState } from "react";\n', 'import { useEffect, useMemo, useState } from "react";\nimport { createPortal } from "react-dom";\n', 1)
+          t = must_replace(t,
+'''  }, [threadId]);
+
+  const templates = useMemo(() => {''',
+'''  }, [threadId]);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [open]);
+
+  const templates = useMemo(() => {''', 'logistics scroll lock')
+          t = must_replace(t,
+'''      {open ? (
+        <section className={`loadlink-logistics-sheet fixed inset-x-0 bottom-0 z-[90] max-h-[82dvh] overflow-y-auto rounded-t-[30px] border-t shadow-[0_-18px_50px_rgba(0,0,0,.24)] ${panel}`} aria-label="Logistics actions panel">''',
+'''      {open && typeof document !== "undefined" ? createPortal(
+        <>
+          <button type="button" className="fixed inset-0 z-[2147483600] bg-black/50" aria-label="Close logistics tools" onClick={closePanel} />
+          <section className={`loadlink-logistics-sheet fixed inset-x-0 bottom-0 z-[2147483640] max-h-[86dvh] overflow-y-auto rounded-t-[30px] border-t shadow-[0_-18px_50px_rgba(0,0,0,.30)] ${panel}`} aria-label="Logistics actions panel">''', 'logistics portal opening')
+          tail = '''        </section>
+      ) : null}
+    </>
+  );
+}'''
+          new_tail = '''          </section>
+        </>,
+        document.body,
+      ) : null}
+    </>
+  );
+}'''
+          if tail not in t:
+              raise SystemExit('Logistics portal closing block not found')
+          t = t.replace(tail, new_tail, 1)
+          p.write_text(t)
+
+          # 7) Remove the old mutation-based logo repositioner that caused visible drift.
+          Path('components/LoadLinkUiRepairV273.tsx').write_text('''"use client";
+
+import { useEffect } from "react";
+
+function repairContractLinks() {
+  document.querySelectorAll<HTMLAnchorElement>('a[href*="/jobs/list?mode=contract"]').forEach((link) => {
+    link.href = link.href.replace("mode=contract", "type=contract");
+  });
+}
+
+function ensureStyles() {
+  if (document.getElementById("loadlink-v274-ui-repair")) return;
+  const style = document.createElement("style");
+  style.id = "loadlink-v274-ui-repair";
+  style.textContent = `
+.loadlink-chat-header button[aria-label="View latest dealer update"] {
+  padding: 0 !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+.loadlink-chat-header button[aria-label="View latest dealer update"] > span {
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border-radius: 999px !important;
+}
+.loadlink-chat-header button[aria-label="View latest dealer update"] [aria-label$="profile picture"] {
+  width: 100% !important;
+  height: 100% !important;
+}
+[aria-label$="profile picture"] > span:has(img) {
+  background: transparent !important;
+}
+`;
+  document.head.appendChild(style);
+}
+
+export default function LoadLinkUiRepairV273() {
+  useEffect(() => {
+    ensureStyles();
+    repairContractLinks();
+    const observer = new MutationObserver(repairContractLinks);
+    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
+    return () => observer.disconnect();
+  }, []);
+  return null;
+}
+''')
+          PY
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate production build
+        run: npm run build
+
+      - name: Commit repaired files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/page.tsx app/messages/page.tsx app/packages/page.tsx components/dealer/DealerShell.tsx components/ChatLauncher.tsx components/LogisticsMessageTools.tsx components/LoadLinkUiRepairV273.tsx
+          git diff --cached --check
+          git commit -m "LoadLink V2.7.4 precision header messages dealer repair"
+          git push origin HEAD:main
+
+      - name: Package update only
+        run: |
+          rm -rf /tmp/loadlink-v274-update
+          mkdir -p /tmp/loadlink-v274-update
+          for f in \
+            app/page.tsx \
+            app/messages/page.tsx \
+            app/packages/page.tsx \
+            components/dealer/DealerShell.tsx \
+            components/ChatLauncher.tsx \
+            components/LogisticsMessageTools.tsx \
+            components/LoadLinkUiRepairV273.tsx; do
+            mkdir -p "/tmp/loadlink-v274-update/$(dirname "$f")"
+            cp "$f" "/tmp/loadlink-v274-update/$f"
+          done
+          cat > /tmp/loadlink-v274-update/README-V2.7.4.txt <<'EOF'
+          LoadLink V2.7.4 precision repair — UPDATE ONLY
+          - true-centred homepage/header logo
+          - signed-in profile avatar removed from compact headers
+          - Messages inbox hero restored
+          - paid Pro/Dealer accounts no longer get redundant Plan Guide questions
+          - Dealer More tools lifted above UI and floating chat hidden in dealer workspace
+          - Logistics tools portalled above chat with page scroll lock
+          - old mutation-based logo repositioning removed
+          EOF
+          cd /tmp/loadlink-v274-update
+          zip -r /tmp/LoadLink-V2.7.4-UPDATE-ONLY.zip .
+          cp /tmp/LoadLink-V2.7.4-UPDATE-ONLY.zip "$GITHUB_WORKSPACE/LoadLink-V2.7.4-UPDATE-ONLY.zip"
+
+      - name: Upload update-only ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: LoadLink-V2.7.4-UPDATE-ONLY
+          path: LoadLink-V2.7.4-UPDATE-ONLY.zip
+          if-no-files-found: error
+          retention-days: 7
