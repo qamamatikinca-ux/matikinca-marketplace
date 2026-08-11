@@ -1,0 +1,52 @@
+/* LoadLink chat logistics tools — hard rendering boundary.
+   When the tools sheet is open, the Messages surface is removed from layout entirely.
+   The tools portal is mounted directly under <body>, so it remains visible and cannot
+   be painted underneath the chat wallpaper, header or composer on iOS/Safari. */
+
+html[data-loadlink-logistics-open="true"] .loadlink-messages,
+body[data-loadlink-logistics-open="true"] .loadlink-messages,
+body:has(.loadlink-logistics-sheet) .loadlink-messages {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+html[data-loadlink-logistics-open="true"],
+html[data-loadlink-logistics-open="true"] body,
+body[data-loadlink-logistics-open="true"] {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+body[data-loadlink-logistics-open="true"] .loadlink-logistics-sheet,
+body:has(.loadlink-logistics-sheet) .loadlink-logistics-sheet {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  width: 100dvw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  margin: 0 !important;
+  z-index: 2147483647 !important;
+  isolation: isolate !important;
+  opacity: 1 !important;
+  transform: none !important;
+  -webkit-transform: none !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+html[data-loadlink-theme="dark"] body[data-loadlink-logistics-open="true"] .loadlink-logistics-sheet,
+html[data-loadlink-theme="dark"] body:has(.loadlink-logistics-sheet) .loadlink-logistics-sheet {
+  background: #0b0b0b !important;
+  color: #ffffff !important;
+}
+
+html[data-loadlink-theme="light"] body[data-loadlink-logistics-open="true"] .loadlink-logistics-sheet,
+html[data-loadlink-theme="light"] body:has(.loadlink-logistics-sheet) .loadlink-logistics-sheet {
+  background: #ffffff !important;
+  color: #050505 !important;
+}
