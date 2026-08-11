@@ -3,86 +3,61 @@ from pathlib import Path
 path = Path("app/messages/page.tsx")
 text = path.read_text()
 
-# The chat + menu only routes to /tools. Messages must not own a second
-# LogisticsMessageTools renderer at all, otherwise Safari can paint the tools
-# after/below the fullscreen chat surface.
-text = text.replace(
-    'import LogisticsMessageTools, { type QuoteAutofillDefaults, type QuoteVehicleOption, type StructuredQuote } from "@/components/LogisticsMessageTools";',
-    'import type { QuoteAutofillDefaults, QuoteVehicleOption, StructuredQuote } from "@/components/LogisticsMessageTools";',
-)
-text = text.replace(
-    '  const [logisticsWorkspaceOpen, setLogisticsWorkspaceOpen] = useState(false);\n',
-    '',
-)
+# Logistics Tools stays inside Messages, but it takes over the whole Messages render.
+# It must never navigate to /tools and it must never render beneath the chat.
 
-start_marker = '  if (selectedConversation && logisticsWorkspaceOpen) {'
-start = text.find(start_marker)
-if start != -1:
-    brace_start = text.find('{', start)
-    depth = 0
-    quote = None
-    escaped = False
-    line_comment = False
-    block_comment = False
-    i = brace_start
-    while i < len(text):
-        ch = text[i]
-        nxt = text[i + 1] if i + 1 < len(text) else ''
+old_import = 'import type { QuoteAutofillDefaults, QuoteVehicleOption, StructuredQuote } from "@/components/LogisticsMessageTools";'
+new_import = 'import LogisticsMessageTools, { type QuoteAutofillDefaults, type QuoteVehicleOption, type StructuredQuote } from "@/components/LogisticsMessageTools";'
+if old_import not in text:
+    raise SystemExit("Expected type-only LogisticsMessageTools import was not found")
+text = text.replace(old_import, new_import, 1)
 
-        if line_comment:
-            if ch == '\n':
-                line_comment = False
-            i += 1
-            continue
-        if block_comment:
-            if ch == '*' and nxt == '/':
-                block_comment = False
-                i += 2
-                continue
-            i += 1
-            continue
-        if quote:
-            if escaped:
-                escaped = False
-            elif ch == '\\':
-                escaped = True
-            elif ch == quote:
-                quote = None
-            i += 1
-            continue
-        if ch == '/' and nxt == '/':
-            line_comment = True
-            i += 2
-            continue
-        if ch == '/' and nxt == '*':
-            block_comment = True
-            i += 2
-            continue
-        if ch in ('"', "'", '`'):
-            quote = ch
-            i += 1
-            continue
-        if ch == '{':
-            depth += 1
-        elif ch == '}':
-            depth -= 1
-            if depth == 0:
-                end = i + 1
-                while end < len(text) and text[end] == '\n':
-                    end += 1
-                text = text[:start] + text[end:]
-                break
-        i += 1
-    else:
-        raise SystemExit('Could not find the end of the embedded Logistics Tools block')
+state_anchor = '  const [composerActionsOpen, setComposerActionsOpen] = useState(false);\n'
+state_line = '  const [logisticsWorkspaceOpen, setLogisticsWorkspaceOpen] = useState(false);\n'
+if state_line not in text:
+    if state_anchor not in text:
+        raise SystemExit("Composer actions state anchor not found")
+    text = text.replace(state_anchor, state_anchor + state_line, 1)
 
-route_handler = 'window.location.assign(`/tools?from=messages&thread=${encodeURIComponent(selectedConversation.id)}`);'
-if route_handler not in text:
-    raise SystemExit('Standalone /tools navigation handler is missing')
+old_click = '''onClick={() => {
+                            setComposerActionsOpen(false);
+                            window.location.assign(`/tools?from=messages&thread=${encodeURIComponent(selectedConversation.id)}`);
+                          }}'''
+new_click = '''onClick={() => {
+                            setComposerActionsOpen(false);
+                            setLogisticsWorkspaceOpen(true);
+                          }}'''
+if old_click not in text:
+    raise SystemExit("Standalone /tools navigation handler not found")
+text = text.replace(old_click, new_click, 1)
 
-for forbidden in ('logisticsWorkspaceOpen', 'setLogisticsWorkspaceOpen(', '<LogisticsMessageTools'):
-    if forbidden in text:
-        raise SystemExit(f'Embedded Logistics Tools reference still present: {forbidden}')
+# Insert the takeover render immediately after the loading return and before the normal Messages return.
+block = '''
+  if (selectedConversation && logisticsWorkspaceOpen) {
+    return (
+      <LogisticsMessageTools
+        threadId={selectedConversation.id}
+        listingTitle={selectedConversation.listing_title}
+        role={selectedConversation.role}
+        darkMode={darkMode}
+        disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
+        trigger="hidden"
+        forceOpen
+        onClose={() => setLogisticsWorkspaceOpen(false)}
+        onSendQuote={sendStructuredQuote}
+        quoteDefaults={quoteDefaults}
+        savedVehicles={quoteVehicles}
+        onInsert={(message) => updateTyping(text.trim() ? `${text.trim()}\n\n${message}` : message)}
+      />
+    );
+  }
+
+'''
+if 'if (selectedConversation && logisticsWorkspaceOpen)' not in text:
+    anchor = '''      </main>\n    );\n  }\n\n  return (\n    <main'''
+    if anchor not in text:
+        raise SystemExit("Could not find Messages render boundary for takeover insertion")
+    text = text.replace(anchor, '''      </main>\n    );\n  }\n\n''' + block + '''  return (\n    <main''', 1)
 
 path.write_text(text)
-print('Messages no longer contains any embedded Logistics Tools renderer. The + menu routes to standalone /tools only.')
+print("Restored in-chat Logistics Tools as a full Messages takeover. No /tools navigation remains.")
