@@ -20,7 +20,7 @@ import HomeLogoLink from "@/components/HomeLogoLink";
 import JobTimingToast from "@/components/JobTimingToast";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
-import MessageVisualScene from "@/components/MessageVisualScene";
+import LoadLinkLoading from "@/components/LoadLinkLoading";
 import LogisticsMessageTools, { type QuoteAutofillDefaults, type QuoteVehicleOption, type StructuredQuote } from "@/components/LogisticsMessageTools";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
@@ -1580,7 +1580,7 @@ export default function MessagesPage() {
           darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"
         }`}
       >
-        <MessageVisualScene mode="loading" darkMode={darkMode} />
+        <LoadLinkLoading />
       </main>
     );
   }
@@ -1600,23 +1600,7 @@ export default function MessagesPage() {
           className={`${selectedId ? "hidden md:flex" : "flex"} loadlink-inbox-panel min-h-0 flex-col border-r border-black/10 bg-white`}
         >
           {!selectedId ? (
-            <div className={`loadlink-messages-hero relative min-h-[150px] overflow-hidden border-b px-5 py-6 ${darkMode ? "border-white/10 bg-[#0b0b0b] text-white" : "border-black/10 bg-[#f4efe3] text-black"}`}>
-              <div className="pointer-events-none absolute -right-5 top-1/2 w-[190px] -translate-y-1/2 text-[#f6b800] opacity-20" aria-hidden="true">
-                <svg viewBox="0 0 220 120" fill="none" className="h-auto w-full">
-                  <path d="M18 75h37l14-20h55v28H18V75Z" stroke="currentColor" strokeWidth="3" strokeLinejoin="round"/>
-                  <path d="M124 48h55l18 21v14h-73V48Z" stroke="currentColor" strokeWidth="3" strokeLinejoin="round"/>
-                  <circle cx="48" cy="89" r="10" stroke="currentColor" strokeWidth="3"/>
-                  <circle cx="102" cy="89" r="10" stroke="currentColor" strokeWidth="3"/>
-                  <circle cx="165" cy="89" r="10" stroke="currentColor" strokeWidth="3"/>
-                  <path d="M8 103h202M30 111h150" stroke="currentColor" strokeWidth="2" strokeDasharray="10 8"/>
-                </svg>
-              </div>
-              <div className="relative z-10 max-w-[270px]">
-                <p className={`text-[9px] font-black uppercase tracking-[.14em] ${darkMode ? "text-[#f6b800]" : "text-[#8a6800]"}`}>LoadLink Messages</p>
-                <h1 className="mt-2 text-[30px] font-black tracking-[-.045em]">Messages</h1>
-                <p className={`mt-2 text-xs font-semibold leading-5 ${darkMode ? "text-white/55" : "text-black/55"}`}>Jobs, contracts, quotes and trip updates — together in one private inbox.</p>
-              </div>
-            </div>
+            <></>
           ) : null}
           <div className="border-b border-black/10 p-5">
             <div className="flex items-center justify-between gap-3">
@@ -1860,7 +1844,7 @@ export default function MessagesPage() {
                 className={`loadlink-message-viewport loadlink-chat-wallpaper relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-5 sm:px-5 md:px-8 ${darkMode ? "bg-[#090909]" : "bg-[#f6f3eb]"}`}
               >
                 {messagesLoading && messages.length === 0 ? (
-                  <MessageVisualScene mode="inline" darkMode={darkMode} />
+                  null
                 ) : searchedMessages.length ? (
                   <div className="mx-auto max-w-3xl space-y-3">
                     {searchedMessages.map((message, index) => {

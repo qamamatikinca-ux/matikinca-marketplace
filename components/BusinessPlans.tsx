@@ -22,7 +22,7 @@ const plans = [
     price: "R15",
     billing: "per vehicle / day",
     description: "For occasional vehicle advertising without a monthly subscription.",
-    features: ["1 active vehicle listing", "Up to 5 photos", "Standard marketplace placement", "50 messages per day"],
+    features: ["Up to 5 active vehicle listings at once", "Up to 5 photos per listing", "Standard marketplace placement", "50 messages per day"],
   },
   {
     id: "pro" as const,

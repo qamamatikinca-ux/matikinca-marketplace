@@ -61,7 +61,7 @@ export default function GlobalLoading() {
   useEffect(() => {
     if (!mountedRef.current) {
       mountedRef.current = true;
-      startLoading(INITIAL_MINIMUM_LOADING_TIME);
+      startLoading(pathname === "/messages" ? 220 : INITIAL_MINIMUM_LOADING_TIME);
       const releaseInitial = () => stopLoading();
       if (document.readyState === "complete") requestAnimationFrame(releaseInitial);
       else window.addEventListener("load", releaseInitial, { once: true });
@@ -83,7 +83,7 @@ export default function GlobalLoading() {
       const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
       const next = `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
       if (current === next) return;
-      startLoading();
+      startLoading(nextUrl.pathname === "/messages" ? 160 : ROUTE_MINIMUM_LOADING_TIME);
     }
 
     const release = () => stopLoading();

@@ -585,3 +585,25 @@ html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-quote-card button:
   border-color: rgba(17,17,17,.18) !important;
 }
 /* LOADLINK_V2619_FIXED_MESSAGE_UI_END */
+
+
+/* LoadLink V2.7.6 locked header + chat tools layering */
+[data-loadlink-site-header="locked-v276"] .loadlink-header-logo {
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  margin: 0 !important;
+}
+[data-loadlink-site-header="locked-v276"] .loadlink-header-logo .loadlink-logo-wrap {
+  width: clamp(128px, 30vw, 162px) !important;
+}
+.loadlink-logistics-sheet {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483647 !important;
+  isolation: isolate !important;
+  opacity: 1 !important;
+}
+html[data-loadlink-theme="dark"] .loadlink-logistics-sheet { background: #0b0b0b !important; }
+html[data-loadlink-theme="light"] .loadlink-logistics-sheet { background: #ffffff !important; }
+body:has(.loadlink-logistics-sheet) .loadlink-chat-wallpaper { visibility: hidden !important; }

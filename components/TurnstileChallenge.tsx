@@ -22,6 +22,18 @@ const SITE_KEY =
   DEFAULT_LOADLINK_TURNSTILE_SITE_KEY;
 const SCRIPT_ID = "loadlink-turnstile-script";
 const NETWORK_GRACE_MS = 12000;
+const LOADLINK_CANONICAL_HOST = "matikinca-marketplace.vercel.app";
+
+function redirectUnsupportedVercelHostname() {
+  if (typeof window === "undefined") return false;
+  const hostname = window.location.hostname.toLowerCase();
+  if (!hostname.endsWith(".vercel.app") || hostname === LOADLINK_CANONICAL_HOST) return false;
+  const target = new URL(window.location.href);
+  target.protocol = "https:";
+  target.host = LOADLINK_CANONICAL_HOST;
+  window.location.replace(target.toString());
+  return true;
+}
 
 export const loadLinkTurnstileConfigured = Boolean(SITE_KEY);
 
@@ -73,6 +85,7 @@ export default function TurnstileChallenge({
 
   useEffect(() => {
     if (!SITE_KEY) return;
+    if (redirectUnsupportedVercelHostname()) return;
 
     let active = true;
     let attempts = 0;

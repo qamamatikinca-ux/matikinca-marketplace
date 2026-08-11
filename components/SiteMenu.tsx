@@ -153,11 +153,11 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
 
   const accountLinks = useMemo<MenuLink[]>(() => {
     const dealer = account.dealer;
-    const dealerLink: MenuLink = dealer?.verification_status === "approved"
+    const dealerLink: MenuLink | null = dealer?.verification_status === "approved"
       ? { label: "Dealership centre", href: "/dealer", description: "Manage approved stock", icon: "dealer" }
       : dealer
         ? { label: "Dealership pending", href: "/dealer", description: "Review your application status", icon: "dealer" }
-        : { label: "Apply as a dealership", href: "/dealer", description: "Create a dealership application", icon: "dealer" };
+        : null;
     const essential: MenuLink[] = [
       { label: "Messages", href: "/messages", description: "Your conversations", icon: "messages" },
       { label: "My posts", href: "/my-posts", description: "Manage your listings", icon: "posts" },
@@ -169,11 +169,11 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
       { label: "Messages", href: "/messages", description: "Your conversations", icon: "messages" },
       { label: "Notifications", href: "/notifications", description: "Reviews, messages and account updates", icon: "notifications" },
       { label: "My posts", href: "/my-posts", description: "Manage your listings", icon: "posts" },
+      { label: "Packages", href: "/packages", description: "Manual, Pro and Dealer plans", icon: "packages" },
+      ...(account.driverProfile ? [{ label: "Driver profile", href: "/driver-profile", description: "Manage your driver profile", icon: "driver" as const }] : []),
+      ...(dealerLink ? [dealerLink] : []),
       { label: "Activity & access", href: "/account/activity", description: "Logins, devices and payments", icon: "activity" },
       { label: "Profile settings", href: "/account/settings", description: "Profile, account and alerts", icon: "settings" },
-      ...(account.driverProfile ? [{ label: "Driver profile", href: "/driver-profile", description: "Manage your driver profile", icon: "driver" as const }] : []),
-      dealerLink,
-      { label: "Packages", href: "/packages", description: "Manual, Pro and Dealer plans", icon: "packages" },
     ];
   }, [account.dealer, account.driverProfile, simpleMode]);
 

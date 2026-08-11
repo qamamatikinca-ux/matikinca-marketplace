@@ -381,7 +381,7 @@ export default function LogisticsMessageTools({
       {open && typeof document !== "undefined" ? createPortal(
         <>
           <button type="button" className="fixed inset-0 bg-black/70" style={{ zIndex: 2147483646 }} aria-label="Close logistics tools" onClick={closePanel} />
-          <section className={`loadlink-logistics-sheet fixed inset-0 overflow-y-auto overscroll-contain border-0 shadow-none ${panel}`} style={{ zIndex: 2147483647 }} aria-label="Logistics actions panel">
+          <section className={`loadlink-logistics-sheet fixed inset-0 isolate overflow-y-auto overscroll-contain border-0 shadow-none ${panel}`} style={{ zIndex: 2147483647, transform: "translateZ(0)" }} aria-label="Logistics actions panel">
           <div className="mx-auto min-h-full max-w-3xl p-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
             <div className="flex items-start justify-between gap-4">
               <div><p className={`text-[9px] font-black uppercase tracking-[.18em] ${darkMode ? "text-[#f6b800]" : "text-[#8b6800]"}`}>In conversation</p><h2 className="mt-1 text-xl font-black tracking-[-.025em]">Logistics tools</h2><p className={`mt-1 text-xs font-medium ${muted}`}>Use a tool without leaving this chat.</p></div>
@@ -393,46 +393,29 @@ export default function LogisticsMessageTools({
               <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">{STAGES.map((item) => <button key={item} type="button" onClick={() => selectStage(item)} className={`shrink-0 rounded-full border px-3 py-2 text-[10px] font-bold ${stage === item ? "border-[#f6b800] bg-[#f6b800] text-black" : control}`}>{item}</button>)}</div>
             </div>
 
-            <div className="mt-5">
-              <div className="mb-2 flex items-end justify-between gap-3">
-                <div>
-                  <p className={`text-[9px] font-bold uppercase tracking-[0.14em] ${muted}`}>Logistics tools</p>
-                  <p className={`mt-1 text-[10px] font-medium ${muted}`}>Start with a common action or open a grouped toolkit.</p>
-                </div>
+            <div className="mt-6">
+              <div>
+                <h3 className="text-2xl font-black tracking-[-.035em]">Tools</h3>
+                <p className={`mt-1 text-xs font-semibold leading-5 ${muted}`}>Choose a tool, complete the details, then place the result back into this conversation.</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                <button type="button" disabled={disabled} onClick={() => { setEditorTool(null); setEditorText(""); setQuoteOpen((current) => !current); }} className="min-h-[82px] rounded-2xl border border-[#f6b800]/55 bg-[#f6b800] px-4 py-3.5 text-left text-black shadow-[0_8px_24px_rgba(246,184,0,.12)] disabled:opacity-40">
-                  <span className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl bg-black text-[#f6b800]"><ToolGlyph type="quote" /></span><span className="block text-[12px] font-black">Rate quote</span><span className="mt-1 block text-[9px] font-medium leading-4 text-black/60">Price, terms & saved vehicle info</span>
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <button type="button" disabled={disabled} onClick={() => { setEditorTool(null); setEditorText(""); setQuoteOpen((current) => !current); }} className={`group min-h-[150px] rounded-[24px] border p-4 text-left transition disabled:opacity-40 ${quoteOpen ? "border-[#f6b800] bg-[#f6b800] text-black" : control}`}>
+                  <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${quoteOpen ? "bg-black text-[#f6b800]" : "bg-black text-[#f6b800]"}`}><ToolGlyph type="quote" /></span>
+                  <span className="mt-5 block text-base font-black tracking-[-.02em]">Rate quote</span>
+                  <span className={`mt-1 block text-xs font-semibold leading-5 ${quoteOpen ? "text-black/60" : muted}`}>Build a clean transport quote</span>
                 </button>
-                {workflowTools.filter((tool) => ["trip-brief", "incident-update"].includes(tool.id)).map((tool) => (
-                  <button key={tool.id} type="button" disabled={disabled} onClick={() => openToolEditor(tool)} className={`min-h-[82px] rounded-2xl border px-4 py-3.5 text-left disabled:opacity-40 ${control}`}>
-                    <span className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl bg-black text-[#f6b800]"><ToolGlyph type={tool.id === "trip-brief" ? "trip" : "incident"} /></span><span className="block text-[12px] font-black">{tool.label}</span><span className={`mt-1 block text-[9px] font-medium leading-4 ${muted}`}>{tool.id === "trip-brief" ? "Collection, delivery & cargo" : "Delay, breakdown or site issue"}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-3 grid gap-2">
-                {toolGroups.map((group) => (
-                  <details key={group.id} className={`group overflow-hidden rounded-[20px] border ${control}`}>
-                    <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black text-[#f6b800]"><ToolGlyph type={group.id === "planning" ? "planning" : group.id === "documents" ? "documents" : "operations"} /></span><span className="min-w-0 flex-1">
-                        <span className="block text-[11px] font-black">{group.title}</span>
-                        <span className={`mt-0.5 block text-[9px] font-medium leading-4 ${muted}`}>{group.summary}</span>
-                      </span>
-                      <span className={`rounded-full px-2 py-1 text-[8px] font-bold ${darkMode ? "bg-white/[.06] text-white/55" : "bg-black/[.05] text-black/50"}`}>{group.tools.length}</span>
-                      <span className={`transition-transform group-open:rotate-180 ${muted}`}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m7 10 5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
-                    </summary>
-                    <div className={`grid grid-cols-2 gap-2 border-t p-3 ${darkMode ? "border-white/8" : "border-black/8"}`}>
-                      {group.tools.map((tool) => (
-                        <button key={tool.id} type="button" disabled={disabled} onClick={() => openToolEditor(tool)} className={`min-h-[58px] rounded-xl border px-3 py-2.5 text-left disabled:opacity-40 ${control}`}>
-                          <span className="block text-[10px] font-black">{tool.label}</span>
-                          <span className={`mt-0.5 block text-[8px] font-medium leading-4 ${muted}`}>{tool.summary}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </details>
-                ))}
+                {workflowTools.map((tool) => {
+                  const active = editorTool?.id === tool.id;
+                  const glyph = tool.id === "trip-brief" ? "trip" : tool.id === "incident-update" ? "incident" : tool.id.includes("document") || tool.id.includes("pod") ? "documents" : tool.id.includes("checklist") || tool.id.includes("collection") || tool.id.includes("delivery") ? "planning" : "operations";
+                  return (
+                    <button key={tool.id} type="button" disabled={disabled} onClick={() => openToolEditor(tool)} className={`group min-h-[150px] rounded-[24px] border p-4 text-left transition disabled:opacity-40 ${active ? "border-[#f6b800] bg-[#f6b800] text-black" : control}`}>
+                      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-black text-[#f6b800]"><ToolGlyph type={glyph} /></span>
+                      <span className="mt-5 block text-base font-black tracking-[-.02em]">{tool.label}</span>
+                      <span className={`mt-1 block text-xs font-semibold leading-5 ${active ? "text-black/60" : muted}`}>{tool.summary}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
