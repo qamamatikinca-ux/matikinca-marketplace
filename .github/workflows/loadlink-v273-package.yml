@@ -1,16 +1,10 @@
-name: LoadLink V2.7.3 Package
+name: LoadLink V2.7.3 Update Only
 
 on:
   push:
     branches: [main]
     paths:
       - '.github/workflows/loadlink-v273-package.yml'
-      - 'app/**'
-      - 'components/**'
-      - 'lib/**'
-      - 'public/**'
-      - 'package.json'
-      - 'package-lock.json'
   workflow_dispatch:
 
 jobs:
@@ -33,17 +27,52 @@ jobs:
       - name: Build validation
         run: npm run build
 
-      - name: Create project zip
+      - name: Create update-only zip
         run: |
-          rm -rf .next node_modules
-          rm -f LoadLink-V2.7.3-Fixed.zip
-          zip -r /tmp/LoadLink-V2.7.3-Fixed.zip . -x '.git/*' '.github/workflows/loadlink-v273-package.yml'
-          cp /tmp/LoadLink-V2.7.3-Fixed.zip ./LoadLink-V2.7.3-Fixed.zip
+          rm -rf /tmp/loadlink-update-only
+          mkdir -p /tmp/loadlink-update-only/app/api/phase2/documents
+          mkdir -p /tmp/loadlink-update-only/app/driver-profile
+          mkdir -p /tmp/loadlink-update-only/app/jobs/list
+          mkdir -p /tmp/loadlink-update-only/app
+          mkdir -p /tmp/loadlink-update-only/components
+          cp app/api/phase2/documents/route.ts /tmp/loadlink-update-only/app/api/phase2/documents/route.ts
+          cp app/driver-profile/page.tsx /tmp/loadlink-update-only/app/driver-profile/page.tsx
+          cp app/jobs/list/page.tsx /tmp/loadlink-update-only/app/jobs/list/page.tsx
+          cp app/layout.tsx /tmp/loadlink-update-only/app/layout.tsx
+          cp components/BusinessPlans.tsx /tmp/loadlink-update-only/components/BusinessPlans.tsx
+          cp components/DriverProfileWizardV273.tsx /tmp/loadlink-update-only/components/DriverProfileWizardV273.tsx
+          cp components/LoadLinkUiRepairV273.tsx /tmp/loadlink-update-only/components/LoadLinkUiRepairV273.tsx
+          cat > /tmp/loadlink-update-only/UPDATE-ONLY-README.txt <<'EOF'
+          LoadLink V2.7.3 — UPDATE ONLY
 
-      - name: Upload project zip
+          Replace these files in your existing LoadLink project while preserving the folder structure.
+
+          Included changes:
+          - Job posting review/edit flow repaired.
+          - Contract posting uses the same step-by-step posting route.
+          - Driver profile rebuilt as a step-by-step wizard.
+          - Driver document upload validation and clearer upload errors repaired.
+          - Active Pro/Dealer plan screens show management/upgrade actions instead of repurchase state.
+          - LoadLink header logo centering and light/dark mode repair.
+          - Overlay/modal lock and logistics-tools stacking repair so chat does not cover tools.
+          - Photo-quality warnings identify the specific photo.
+
+          Files included:
+          app/api/phase2/documents/route.ts
+          app/driver-profile/page.tsx
+          app/jobs/list/page.tsx
+          app/layout.tsx
+          components/BusinessPlans.tsx
+          components/DriverProfileWizardV273.tsx
+          components/LoadLinkUiRepairV273.tsx
+          EOF
+          cd /tmp/loadlink-update-only
+          zip -r "$GITHUB_WORKSPACE/LoadLink-V2.7.3-UPDATE-ONLY.zip" .
+
+      - name: Upload update zip
         uses: actions/upload-artifact@v4
         with:
-          name: LoadLink-V2.7.3-Fixed
-          path: LoadLink-V2.7.3-Fixed.zip
+          name: LoadLink-V2.7.3-UPDATE-ONLY
+          path: LoadLink-V2.7.3-UPDATE-ONLY.zip
           if-no-files-found: error
           retention-days: 7
