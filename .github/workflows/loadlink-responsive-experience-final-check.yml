@@ -26,7 +26,7 @@ jobs:
           grep -q 'loadlink-responsive-experience.css' app/layout.tsx
           grep -q 'data-loadlink-datalist-menu' components/LoadLinkInteractionSystem.tsx
           grep -q 'data-loadlink-choice-sheet' components/LoadLinkInteractionSystem.tsx
-          grep -q 'data-loadlink-sheet-open' components/LoadLinkInteractionSystem.tsx
+          grep -q 'loadlinkSheetOpen' components/LoadLinkInteractionSystem.tsx
           grep -q 'loadlink-login-hero-hd.webp' components/AuthLandingShell.tsx
       - name: Install
         run: npm ci --no-audit --no-fund
