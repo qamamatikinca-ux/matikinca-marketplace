@@ -24,7 +24,7 @@ export default function AuthLandingShell({
       <div className="mx-auto min-h-[100svh] w-full max-w-[760px] lg:flex lg:max-w-none">
         <section className="loadlink-auth-hero relative h-[44svh] min-h-[320px] overflow-hidden sm:h-[48svh] lg:h-screen lg:min-h-screen lg:flex-1">
           <img
-            src="/images/loadlink-login-hero-hd.jpeg"
+            src="/images/loadlink-login-hero-hd.webp"
             alt="LoadLink logistics made easier"
             className="loadlink-auth-hero-image absolute inset-0 h-full w-full object-cover object-center"
             loading="eager"
