@@ -19,6 +19,7 @@ import LoadLinkRuntimeIntelligence from "@/components/LoadLinkRuntimeIntelligenc
 import LoadLinkUiRepairV273 from "@/components/LoadLinkUiRepairV273";
 import LoadLinkDeleteConfirmationLayer from "@/components/LoadLinkDeleteConfirmationLayer";
 import LoadLinkToastCenter from "@/components/LoadLinkToastCenter";
+import AccountSettingsGlassFix from "@/components/AccountSettingsGlassFix";
 
 export const metadata: Metadata = {
   title: "LoadLink",
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AuthMfaGate />
         <ProfileOnboardingGate />
         <MarketplaceRestrictionGuard />
+        <AccountSettingsGlassFix />
         <Suspense fallback={null}><GlobalLoading /></Suspense>
         <SwipeDotsEnhancer />
         <AuthBootstrap />
