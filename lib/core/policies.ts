@@ -27,7 +27,7 @@ export function resolveRole(input: {
 }
 
 export const packageLimits = {
-  manual: { photoLimit: 5, dailyMessageLimit: 50, analyticsEnabled: false, featuredEnabled: false },
-  pro: { photoLimit: 15, dailyMessageLimit: null, analyticsEnabled: true, featuredEnabled: true },
-  dealer: { photoLimit: 15, dailyMessageLimit: null, analyticsEnabled: true, featuredEnabled: true },
+  manual: { activeListingLimit: 5, photoLimit: 5, dailyMessageLimit: 50, analyticsEnabled: false, featuredEnabled: false },
+  pro: { activeListingLimit: null, photoLimit: 15, dailyMessageLimit: null, analyticsEnabled: true, featuredEnabled: true },
+  dealer: { activeListingLimit: null, photoLimit: 15, dailyMessageLimit: null, analyticsEnabled: true, featuredEnabled: true },
 } as const;
