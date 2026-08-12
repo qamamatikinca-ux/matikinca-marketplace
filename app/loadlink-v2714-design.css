@@ -79,6 +79,74 @@ body[data-loadlink-path="/account/settings"] main > section > div[class*="lg:gri
   }
 }
 
+/* Settings glass treatment: near-transparent panels with strong background blur,
+   restrained borders, and no opaque card blocks. */
+html.loadlink-settings-glass body[data-loadlink-path="/account/settings"] main {
+  background:
+    radial-gradient(circle at 12% 9%, rgba(246,184,0,.11), transparent 24%),
+    radial-gradient(circle at 88% 22%, rgba(255,255,255,.09), transparent 26%),
+    linear-gradient(145deg, rgba(244,239,227,.92), rgba(235,228,210,.78)) !important;
+  background-attachment: fixed !important;
+}
+html[data-loadlink-theme="dark"].loadlink-settings-glass body[data-loadlink-path="/account/settings"] main {
+  background:
+    radial-gradient(circle at 12% 9%, rgba(246,184,0,.11), transparent 24%),
+    radial-gradient(circle at 88% 22%, rgba(255,255,255,.045), transparent 26%),
+    linear-gradient(145deg, #050505, #0a0906 58%, #050505) !important;
+}
+html.loadlink-settings-glass body[data-loadlink-path="/account/settings"] main form,
+html.loadlink-settings-glass body[data-loadlink-path="/account/settings"] main aside,
+html.loadlink-settings-glass body[data-loadlink-path="/account/settings"] main section[id="message-privacy"],
+html.loadlink-settings-glass body[data-loadlink-path="/account/settings"] main > section > div[class*="grid"] > section,
+html.loadlink-settings-glass body[data-loadlink-path="/account/settings"] main > section > div:nth-of-type(2),
+html.loadlink-settings-glass body[data-loadlink-path="/account/settings"] main [role="status"] {
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  backdrop-filter: blur(24px) saturate(150%);
+  background: rgba(255,255,255,.34) !important;
+  border-color: rgba(255,255,255,.52) !important;
+  box-shadow: 0 18px 55px rgba(45,34,8,.10), inset 0 1px 0 rgba(255,255,255,.42) !important;
+}
+html[data-loadlink-theme="dark"].loadlink-settings-glass body[data-loadlink-path="/account/settings"] main form,
+html[data-loadlink-theme="dark"].loadlink-settings-glass body[data-loadlink-path="/account/settings"] main aside,
+html[data-loadlink-theme="dark"].loadlink-settings-glass body[data-loadlink-path="/account/settings"] main section[id="message-privacy"],
+html[data-loadlink-theme="dark"].loadlink-settings-glass body[data-loadlink-path="/account/settings"] main > section > div[class*="grid"] > section,
+html[data-loadlink-theme="dark"].loadlink-settings-glass body[data-loadlink-path="/account/settings"] main > section > div:nth-of-type(2),
+html[data-loadlink-theme="dark"].loadlink-settings-glass body[data-loadlink-path="/account/settings"] main [role="status"] {
+  background: rgba(18,18,18,.38) !important;
+  border-color: rgba(255,255,255,.12) !important;
+  box-shadow: 0 22px 65px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.07) !important;
+}
+html.loadlink-settings-glass body[data-loadlink-path="/account/settings"] main input,
+html.loadlink-settings-glass body[data-loadlink-path="/account/settings"] main select,
+html.loadlink-settings-glass body[data-loadlink-path="/account/settings"] main textarea,
+html.loadlink-settings-glass body[data-loadlink-path="/account/settings"] main button[role="switch"] {
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  background-color: rgba(255,255,255,.28) !important;
+  border-color: rgba(0,0,0,.10) !important;
+}
+html[data-loadlink-theme="dark"].loadlink-settings-glass body[data-loadlink-path="/account/settings"] main input,
+html[data-loadlink-theme="dark"].loadlink-settings-glass body[data-loadlink-path="/account/settings"] main select,
+html[data-loadlink-theme="dark"].loadlink-settings-glass body[data-loadlink-path="/account/settings"] main textarea,
+html[data-loadlink-theme="dark"].loadlink-settings-glass body[data-loadlink-path="/account/settings"] main button[role="switch"] {
+  background-color: rgba(255,255,255,.045) !important;
+  border-color: rgba(255,255,255,.12) !important;
+}
+html.loadlink-settings-glass .loadlink-account-neutral-action {
+  color: inherit !important;
+  border-color: rgba(127,127,127,.28) !important;
+  background: rgba(255,255,255,.08) !important;
+}
+html.loadlink-settings-glass .loadlink-account-danger-action {
+  color: #dc2626 !important;
+  border-color: rgba(220,38,38,.55) !important;
+  background: rgba(220,38,38,.055) !important;
+  box-shadow: inset 0 0 0 1px rgba(220,38,38,.04) !important;
+}
+html.loadlink-settings-glass .loadlink-account-danger-action:hover {
+  background: rgba(220,38,38,.10) !important;
+}
+
 /* Structured quotes/messages should read like professional LoadLink documents,
    not ordinary chat bubbles. */
 .loadlink-quote-card {
