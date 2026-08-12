@@ -5,6 +5,8 @@ import "./globals.css";
 import "./loadlink-logistics-modal.css";
 import "./loadlink-v2714-design.css";
 import "./loadlink-universal-ui.css";
+import "./loadlink-font-fix.css";
+import "./loadlink-final-foundation.css";
 import GlobalLoading from "@/components/GlobalLoading";
 import ChatLauncher from "@/components/ChatLauncher";
 import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";
