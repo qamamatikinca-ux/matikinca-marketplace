@@ -1,18 +1,18 @@
 /* LoadLink universal visual language.
-   Keep glass subtle on ordinary pages and stronger only for elevated UI. */
+   Glass is visible but restrained: transparent fill, blur, thin border, soft depth. */
 
 :root {
-  --ll-font: Arial, Helvetica, sans-serif;
+  --ll-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   --ll-control-radius: 14px;
   --ll-panel-radius: 24px;
-  --ll-glass-light: rgba(255, 255, 255, .44);
-  --ll-glass-light-strong: rgba(255, 255, 255, .62);
-  --ll-glass-dark: rgba(10, 10, 10, .48);
-  --ll-glass-dark-strong: rgba(10, 10, 10, .62);
-  --ll-glass-border-light: rgba(255, 255, 255, .72);
-  --ll-glass-border-dark: rgba(255, 255, 255, .14);
-  --ll-glass-shadow-light: 0 22px 70px rgba(39, 30, 10, .08);
-  --ll-glass-shadow-dark: 0 24px 78px rgba(0, 0, 0, .30);
+  --ll-glass-light: rgba(255, 255, 255, .34);
+  --ll-glass-light-strong: rgba(255, 255, 255, .52);
+  --ll-glass-dark: rgba(10, 10, 10, .38);
+  --ll-glass-dark-strong: rgba(10, 10, 10, .52);
+  --ll-glass-border-light: rgba(255, 255, 255, .78);
+  --ll-glass-border-dark: rgba(255, 255, 255, .18);
+  --ll-glass-shadow-light: 0 22px 64px rgba(39, 30, 10, .10), inset 0 1px 0 rgba(255, 255, 255, .52);
+  --ll-glass-shadow-dark: 0 24px 68px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255, 255, 255, .07);
 }
 
 html body,
@@ -21,8 +21,11 @@ html body a,
 html body input,
 html body textarea,
 html body select,
-html body option {
+html body option,
+html body .font-serif,
+html body [class*="font-serif"] {
   font-family: var(--ll-font) !important;
+  font-style: normal;
 }
 
 html,
@@ -60,7 +63,7 @@ input,
 textarea,
 select {
   transition-property: background-color, color, border-color, box-shadow, opacity, transform !important;
-  transition-duration: 150ms !important;
+  transition-duration: 140ms !important;
   transition-timing-function: ease-out !important;
 }
 
@@ -76,15 +79,24 @@ select {
   touch-action: pan-y !important;
 }
 
+/* LoadLink owns choice/date presentation. Hide browser arrows/calendar chrome. */
+select:not([data-loadlink-native-ui="true"]) {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background-image: none !important;
+}
+
 input[data-loadlink-future-date="true"],
-input[data-loadlink-custom-date="true"] {
+input[data-loadlink-custom-date="true"],
+input[data-loadlink-original-type="date"] {
   -webkit-appearance: none !important;
   appearance: none !important;
   cursor: pointer;
 }
 
 input[data-loadlink-future-date="true"]::-webkit-calendar-picker-indicator,
-input[data-loadlink-custom-date="true"]::-webkit-calendar-picker-indicator {
+input[data-loadlink-custom-date="true"]::-webkit-calendar-picker-indicator,
+input[data-loadlink-original-type="date"]::-webkit-calendar-picker-indicator {
   display: none !important;
   opacity: 0 !important;
   pointer-events: none !important;
@@ -95,38 +107,40 @@ input[data-loadlink-custom-date="true"]::-webkit-calendar-picker-indicator {
 [data-loadlink-confirmation-layer="true"] > section,
 [data-loadlink-calendar-sheet="true"] > section,
 [data-loadlink-choice-sheet="true"] > section,
+[data-loadlink-notification-panel="true"],
 body > div.pointer-events-none.fixed[class*="top-[76px]"] > div[role="status"],
 .loadlink-glass,
 .loadlink-job-timing-toast {
-  -webkit-backdrop-filter: blur(18px) saturate(135%) !important;
-  backdrop-filter: blur(18px) saturate(135%) !important;
+  -webkit-backdrop-filter: blur(21px) saturate(142%) !important;
+  backdrop-filter: blur(21px) saturate(142%) !important;
 }
 
-/* Toasts and destructive confirmations stay dark translucent glass so their existing white copy remains readable in both themes. */
 [data-loadlink-action-toast],
 [data-loadlink-toast-center] > section,
 [data-loadlink-confirmation-layer="true"] > section {
-  background: rgba(10, 10, 10, .62) !important;
-  border-color: rgba(255, 255, 255, .14) !important;
+  background: rgba(10, 10, 10, .54) !important;
+  border-color: rgba(255, 255, 255, .18) !important;
   box-shadow: var(--ll-glass-shadow-dark) !important;
 }
 
 html[data-loadlink-theme="light"] [data-loadlink-calendar-sheet="true"] > section,
 html[data-loadlink-theme="light"] [data-loadlink-choice-sheet="true"] > section,
+html[data-loadlink-theme="light"] [data-loadlink-notification-panel="true"],
 html[data-loadlink-theme="light"] body > div.pointer-events-none.fixed[class*="top-[76px]"] > div[role="status"],
 html[data-loadlink-theme="light"] .loadlink-glass,
 html[data-loadlink-theme="light"] .loadlink-job-timing-toast {
-  background: var(--ll-glass-light-strong) !important;
+  background: linear-gradient(135deg, rgba(255,255,255,.61), rgba(255,255,255,.42)) !important;
   border-color: var(--ll-glass-border-light) !important;
   box-shadow: var(--ll-glass-shadow-light) !important;
 }
 
 html[data-loadlink-theme="dark"] [data-loadlink-calendar-sheet="true"] > section,
 html[data-loadlink-theme="dark"] [data-loadlink-choice-sheet="true"] > section,
+html[data-loadlink-theme="dark"] [data-loadlink-notification-panel="true"],
 html[data-loadlink-theme="dark"] body > div.pointer-events-none.fixed[class*="top-[76px]"] > div[role="status"],
 html[data-loadlink-theme="dark"] .loadlink-glass,
 html[data-loadlink-theme="dark"] .loadlink-job-timing-toast {
-  background: var(--ll-glass-dark-strong) !important;
+  background: linear-gradient(135deg, rgba(18,18,18,.57), rgba(5,5,5,.43)) !important;
   border-color: var(--ll-glass-border-dark) !important;
   box-shadow: var(--ll-glass-shadow-dark) !important;
 }
@@ -137,10 +151,11 @@ html[data-loadlink-theme="light"] .loadlink-details-panel,
 html[data-loadlink-theme="light"] .loadlink-chat-header,
 html[data-loadlink-theme="light"] .loadlink-chat-composer,
 html[data-loadlink-theme="light"] .loadlink-logistics-sheet {
-  background: var(--ll-glass-light) !important;
+  background: linear-gradient(135deg, rgba(255,255,255,.43), rgba(255,255,255,.28)) !important;
   border-color: rgba(17, 17, 17, .10) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(130%) !important;
-  backdrop-filter: blur(16px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(136%) !important;
+  backdrop-filter: blur(18px) saturate(136%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.42);
 }
 
 html[data-loadlink-theme="dark"] [data-loadlink-menu-panel],
@@ -149,10 +164,11 @@ html[data-loadlink-theme="dark"] .loadlink-details-panel,
 html[data-loadlink-theme="dark"] .loadlink-chat-header,
 html[data-loadlink-theme="dark"] .loadlink-chat-composer,
 html[data-loadlink-theme="dark"] .loadlink-logistics-sheet {
-  background: var(--ll-glass-dark) !important;
-  border-color: rgba(255, 255, 255, .11) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(130%) !important;
-  backdrop-filter: blur(16px) saturate(130%) !important;
+  background: linear-gradient(135deg, rgba(16,16,16,.43), rgba(4,4,4,.31)) !important;
+  border-color: rgba(255, 255, 255, .14) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(136%) !important;
+  backdrop-filter: blur(18px) saturate(136%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055);
 }
 
 html.loadlink-settings-glass main form,
@@ -160,8 +176,8 @@ html.loadlink-settings-glass main aside,
 html.loadlink-settings-glass main section[id="message-privacy"],
 html.loadlink-settings-glass main [data-loadlink-account-access="true"],
 html.loadlink-settings-glass main > section > div[class*="grid"] > section {
-  -webkit-backdrop-filter: blur(18px) saturate(135%) !important;
-  backdrop-filter: blur(18px) saturate(135%) !important;
+  -webkit-backdrop-filter: blur(21px) saturate(142%) !important;
+  backdrop-filter: blur(21px) saturate(142%) !important;
 }
 
 html[data-loadlink-theme="light"].loadlink-settings-glass main form,
@@ -169,8 +185,8 @@ html[data-loadlink-theme="light"].loadlink-settings-glass main aside,
 html[data-loadlink-theme="light"].loadlink-settings-glass main section[id="message-privacy"],
 html[data-loadlink-theme="light"].loadlink-settings-glass main [data-loadlink-account-access="true"],
 html[data-loadlink-theme="light"].loadlink-settings-glass main > section > div[class*="grid"] > section {
-  background: var(--ll-glass-light) !important;
-  border-color: var(--ll-glass-border-light) !important;
+  background: linear-gradient(135deg, rgba(255,255,255,.43), rgba(255,255,255,.29)) !important;
+  border-color: rgba(255,255,255,.72) !important;
   box-shadow: var(--ll-glass-shadow-light) !important;
 }
 
@@ -179,34 +195,65 @@ html[data-loadlink-theme="dark"].loadlink-settings-glass main aside,
 html[data-loadlink-theme="dark"].loadlink-settings-glass main section[id="message-privacy"],
 html[data-loadlink-theme="dark"].loadlink-settings-glass main [data-loadlink-account-access="true"],
 html[data-loadlink-theme="dark"].loadlink-settings-glass main > section > div[class*="grid"] > section {
-  background: var(--ll-glass-dark) !important;
-  border-color: var(--ll-glass-border-dark) !important;
+  background: linear-gradient(135deg, rgba(15,15,15,.46), rgba(3,3,3,.31)) !important;
+  border-color: rgba(255,255,255,.15) !important;
   box-shadow: var(--ll-glass-shadow-dark) !important;
 }
 
-.loadlink-account-neutral-action {
+/* Switches use LoadLink gold as the unmistakable ON state. */
+button[role="switch"][aria-checked="true"],
+[role="switch"][aria-checked="true"] {
+  background: #f6b800 !important;
+  border-color: #f6b800 !important;
+  box-shadow: 0 0 0 1px rgba(246,184,0,.24), 0 7px 20px rgba(246,184,0,.13) !important;
+}
+
+button[role="switch"][aria-checked="true"] > span,
+[role="switch"][aria-checked="true"] > span {
+  background: #fff !important;
+}
+
+.loadlink-account-neutral-action,
+[data-loadlink-account-action="signout"] {
   color: inherit !important;
+  font-family: var(--ll-font) !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: .055em !important;
 }
 
-html[data-loadlink-theme="light"] .loadlink-account-neutral-action {
-  background: rgba(255, 255, 255, .28) !important;
-  border-color: rgba(17, 17, 17, .14) !important;
+html[data-loadlink-theme="light"] .loadlink-account-neutral-action,
+html[data-loadlink-theme="light"] [data-loadlink-account-action="signout"] {
+  background: rgba(255, 255, 255, .25) !important;
+  border-color: rgba(17, 17, 17, .15) !important;
 }
 
-html[data-loadlink-theme="dark"] .loadlink-account-neutral-action {
+html[data-loadlink-theme="dark"] .loadlink-account-neutral-action,
+html[data-loadlink-theme="dark"] [data-loadlink-account-action="signout"] {
   background: rgba(255, 255, 255, .045) !important;
-  border-color: rgba(255, 255, 255, .15) !important;
+  border-color: rgba(255, 255, 255, .16) !important;
 }
 
-.loadlink-account-danger-action {
+.loadlink-account-danger-action,
+[data-loadlink-account-action="delete"] {
   background: rgba(220, 38, 38, .055) !important;
   border-color: rgba(220, 38, 38, .48) !important;
   color: rgb(220 38 38) !important;
+  font-family: var(--ll-font) !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: .055em !important;
 }
 
-html[data-loadlink-theme="dark"] .loadlink-account-danger-action {
+html[data-loadlink-theme="dark"] .loadlink-account-danger-action,
+html[data-loadlink-theme="dark"] [data-loadlink-account-action="delete"] {
   color: rgb(252 165 165) !important;
   border-color: rgba(248, 113, 113, .46) !important;
+}
+
+[data-loadlink-confirmation-layer="true"] button {
+  font-family: var(--ll-font) !important;
+  font-weight: 800 !important;
 }
 
 .loadlink-portal-action,
@@ -223,12 +270,13 @@ main a.group[href="/list-your-vehicle"] div[class*="mt-6"][class*="border"][clas
   [data-loadlink-confirmation-layer="true"] > section,
   [data-loadlink-calendar-sheet="true"] > section,
   [data-loadlink-choice-sheet="true"] > section,
+  [data-loadlink-notification-panel="true"],
   body > div.pointer-events-none.fixed[class*="top-[76px]"] > div[role="status"],
   [data-loadlink-menu-panel],
   .loadlink-glass,
   .loadlink-job-timing-toast {
-    -webkit-backdrop-filter: blur(14px) saturate(125%) !important;
-    backdrop-filter: blur(14px) saturate(125%) !important;
+    -webkit-backdrop-filter: blur(17px) saturate(132%) !important;
+    backdrop-filter: blur(17px) saturate(132%) !important;
   }
 }
 
