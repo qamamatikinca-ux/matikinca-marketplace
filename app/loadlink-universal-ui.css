@@ -1,0 +1,232 @@
+/* LoadLink universal visual language.
+   Keep glass subtle on ordinary pages and stronger only for elevated UI. */
+
+:root {
+  --ll-font: Arial, Helvetica, sans-serif;
+  --ll-control-radius: 14px;
+  --ll-panel-radius: 24px;
+  --ll-glass-light: rgba(255, 255, 255, .44);
+  --ll-glass-light-strong: rgba(255, 255, 255, .62);
+  --ll-glass-dark: rgba(10, 10, 10, .48);
+  --ll-glass-dark-strong: rgba(10, 10, 10, .62);
+  --ll-glass-border-light: rgba(255, 255, 255, .72);
+  --ll-glass-border-dark: rgba(255, 255, 255, .14);
+  --ll-glass-shadow-light: 0 22px 70px rgba(39, 30, 10, .08);
+  --ll-glass-shadow-dark: 0 24px 78px rgba(0, 0, 0, .30);
+}
+
+html body,
+html body button,
+html body a,
+html body input,
+html body textarea,
+html body select,
+html body option {
+  font-family: var(--ll-font) !important;
+}
+
+/* Containers must not animate on every state change. This was expensive on iOS. */
+html,
+body,
+main,
+header,
+section,
+article,
+footer {
+  transition: none !important;
+}
+
+button,
+a,
+input,
+textarea,
+select,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+[role="button"] {
+  border-radius: var(--ll-control-radius);
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  transition-property: background-color, color, border-color, box-shadow, opacity, transform !important;
+  transition-duration: 150ms !important;
+  transition-timing-function: ease-out !important;
+}
+
+/* Circular controls remain circular; this wins over the generic rounded control rule. */
+.rounded-full,
+[class~="rounded-full"] {
+  border-radius: 9999px !important;
+}
+
+/* Never expose native mobile date chrome on a LoadLink custom date field. */
+input[data-loadlink-future-date="true"],
+input[data-loadlink-custom-date="true"] {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  cursor: pointer;
+}
+
+input[data-loadlink-future-date="true"]::-webkit-calendar-picker-indicator,
+input[data-loadlink-custom-date="true"]::-webkit-calendar-picker-indicator {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Elevated LoadLink UI: same transparent glass recipe everywhere. */
+[data-loadlink-action-toast],
+[data-loadlink-toast-center] > section,
+[data-loadlink-confirmation-layer="true"] > section,
+[data-loadlink-calendar-sheet="true"] > section,
+[data-loadlink-choice-sheet="true"] > section,
+.loadlink-glass,
+.loadlink-job-timing-toast {
+  -webkit-backdrop-filter: blur(18px) saturate(135%) !important;
+  backdrop-filter: blur(18px) saturate(135%) !important;
+}
+
+html[data-loadlink-theme="light"] [data-loadlink-action-toast],
+html[data-loadlink-theme="light"] [data-loadlink-toast-center] > section,
+html[data-loadlink-theme="light"] [data-loadlink-confirmation-layer="true"] > section,
+html[data-loadlink-theme="light"] [data-loadlink-calendar-sheet="true"] > section,
+html[data-loadlink-theme="light"] [data-loadlink-choice-sheet="true"] > section,
+html[data-loadlink-theme="light"] .loadlink-glass,
+html[data-loadlink-theme="light"] .loadlink-job-timing-toast {
+  background: var(--ll-glass-light-strong) !important;
+  border-color: var(--ll-glass-border-light) !important;
+  box-shadow: var(--ll-glass-shadow-light) !important;
+}
+
+html[data-loadlink-theme="dark"] [data-loadlink-action-toast],
+html[data-loadlink-theme="dark"] [data-loadlink-toast-center] > section,
+html[data-loadlink-theme="dark"] [data-loadlink-confirmation-layer="true"] > section,
+html[data-loadlink-theme="dark"] [data-loadlink-calendar-sheet="true"] > section,
+html[data-loadlink-theme="dark"] [data-loadlink-choice-sheet="true"] > section,
+html[data-loadlink-theme="dark"] .loadlink-glass,
+html[data-loadlink-theme="dark"] .loadlink-job-timing-toast {
+  background: var(--ll-glass-dark-strong) !important;
+  border-color: var(--ll-glass-border-dark) !important;
+  box-shadow: var(--ll-glass-shadow-dark) !important;
+}
+
+/* Menu and messaging use the same language, but with a restrained amount of glass. */
+html[data-loadlink-theme="light"] [data-loadlink-menu-panel],
+html[data-loadlink-theme="light"] .loadlink-inbox-panel,
+html[data-loadlink-theme="light"] .loadlink-details-panel,
+html[data-loadlink-theme="light"] .loadlink-chat-header,
+html[data-loadlink-theme="light"] .loadlink-chat-composer,
+html[data-loadlink-theme="light"] .loadlink-logistics-sheet {
+  background: var(--ll-glass-light) !important;
+  border-color: rgba(17, 17, 17, .10) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(130%) !important;
+  backdrop-filter: blur(16px) saturate(130%) !important;
+}
+
+html[data-loadlink-theme="dark"] [data-loadlink-menu-panel],
+html[data-loadlink-theme="dark"] .loadlink-inbox-panel,
+html[data-loadlink-theme="dark"] .loadlink-details-panel,
+html[data-loadlink-theme="dark"] .loadlink-chat-header,
+html[data-loadlink-theme="dark"] .loadlink-chat-composer,
+html[data-loadlink-theme="dark"] .loadlink-logistics-sheet {
+  background: var(--ll-glass-dark) !important;
+  border-color: rgba(255, 255, 255, .11) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(130%) !important;
+  backdrop-filter: blur(16px) saturate(130%) !important;
+}
+
+/* Account settings inherits the same system without a permanent DOM observer. */
+html.loadlink-settings-glass main form,
+html.loadlink-settings-glass main aside,
+html.loadlink-settings-glass main section[id="message-privacy"],
+html.loadlink-settings-glass main [data-loadlink-account-access="true"],
+html.loadlink-settings-glass main > section > div[class*="grid"] > section {
+  -webkit-backdrop-filter: blur(18px) saturate(135%) !important;
+  backdrop-filter: blur(18px) saturate(135%) !important;
+}
+
+html[data-loadlink-theme="light"].loadlink-settings-glass main form,
+html[data-loadlink-theme="light"].loadlink-settings-glass main aside,
+html[data-loadlink-theme="light"].loadlink-settings-glass main section[id="message-privacy"],
+html[data-loadlink-theme="light"].loadlink-settings-glass main [data-loadlink-account-access="true"],
+html[data-loadlink-theme="light"].loadlink-settings-glass main > section > div[class*="grid"] > section {
+  background: var(--ll-glass-light) !important;
+  border-color: var(--ll-glass-border-light) !important;
+  box-shadow: var(--ll-glass-shadow-light) !important;
+}
+
+html[data-loadlink-theme="dark"].loadlink-settings-glass main form,
+html[data-loadlink-theme="dark"].loadlink-settings-glass main aside,
+html[data-loadlink-theme="dark"].loadlink-settings-glass main section[id="message-privacy"],
+html[data-loadlink-theme="dark"].loadlink-settings-glass main [data-loadlink-account-access="true"],
+html[data-loadlink-theme="dark"].loadlink-settings-glass main > section > div[class*="grid"] > section {
+  background: var(--ll-glass-dark) !important;
+  border-color: var(--ll-glass-border-dark) !important;
+  box-shadow: var(--ll-glass-shadow-dark) !important;
+}
+
+.loadlink-account-neutral-action {
+  color: inherit !important;
+}
+
+html[data-loadlink-theme="light"] .loadlink-account-neutral-action {
+  background: rgba(255, 255, 255, .28) !important;
+  border-color: rgba(17, 17, 17, .14) !important;
+}
+
+html[data-loadlink-theme="dark"] .loadlink-account-neutral-action {
+  background: rgba(255, 255, 255, .045) !important;
+  border-color: rgba(255, 255, 255, .15) !important;
+}
+
+.loadlink-account-danger-action {
+  background: rgba(220, 38, 38, .055) !important;
+  border-color: rgba(220, 38, 38, .48) !important;
+  color: rgb(220 38 38) !important;
+}
+
+html[data-loadlink-theme="dark"] .loadlink-account-danger-action {
+  color: rgb(252 165 165) !important;
+  border-color: rgba(248, 113, 113, .46) !important;
+}
+
+/* Homepage portal call-to-action keeps its size; only the hard corners are softened. */
+.loadlink-portal-action {
+  border-radius: 16px !important;
+}
+
+@media (max-width: 767px) {
+  [data-loadlink-action-toast],
+  [data-loadlink-toast-center] > section,
+  [data-loadlink-confirmation-layer="true"] > section,
+  [data-loadlink-calendar-sheet="true"] > section,
+  [data-loadlink-choice-sheet="true"] > section,
+  [data-loadlink-menu-panel],
+  .loadlink-glass,
+  .loadlink-job-timing-toast {
+    -webkit-backdrop-filter: blur(14px) saturate(125%) !important;
+    backdrop-filter: blur(14px) saturate(125%) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
