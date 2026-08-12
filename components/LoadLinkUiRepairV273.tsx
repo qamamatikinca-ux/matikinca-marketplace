@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 function repairContractLinks() {
   document.querySelectorAll<HTMLAnchorElement>('a[href*="/jobs/list?mode=contract"]').forEach((link) => {
@@ -37,6 +38,8 @@ function ensureStyles() {
 }
 
 export default function LoadLinkUiRepairV273() {
+  const pathname = usePathname();
+
   useEffect(() => {
     ensureStyles();
     repairContractLinks();
@@ -49,5 +52,16 @@ export default function LoadLinkUiRepairV273() {
     });
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    const body = document.body;
+    const previous = body.dataset.loadlinkPath;
+    body.dataset.loadlinkPath = pathname || "/";
+    return () => {
+      if (previous) body.dataset.loadlinkPath = previous;
+      else delete body.dataset.loadlinkPath;
+    };
+  }, [pathname]);
+
   return null;
 }
