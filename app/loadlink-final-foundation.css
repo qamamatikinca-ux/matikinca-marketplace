@@ -1,0 +1,39 @@
+/* LoadLink foundation lock.
+   Keep the existing LoadLink type family and consistent safe page gutters. */
+
+:root {
+  --ll-font: Arial, Helvetica, sans-serif;
+  --ll-page-gutter: clamp(16px, 4vw, 32px);
+}
+
+html body,
+html body * {
+  font-family: Arial, Helvetica, sans-serif !important;
+}
+
+html body .font-serif,
+html body [class*="font-serif"] {
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-style: normal !important;
+}
+
+/* Standard LoadLink content shells keep breathing room from device edges.
+   Full-bleed homepage portal media is intentionally excluded. */
+main > section[class*="mx-auto"][class*="max-w-"],
+main > div[class*="mx-auto"][class*="max-w-"] {
+  box-sizing: border-box;
+  padding-left: max(var(--ll-page-gutter), env(safe-area-inset-left)) !important;
+  padding-right: max(var(--ll-page-gutter), env(safe-area-inset-right)) !important;
+}
+
+.loadlink-page-gutter {
+  box-sizing: border-box;
+  padding-left: max(var(--ll-page-gutter), env(safe-area-inset-left));
+  padding-right: max(var(--ll-page-gutter), env(safe-area-inset-right));
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --ll-page-gutter: 32px;
+  }
+}
