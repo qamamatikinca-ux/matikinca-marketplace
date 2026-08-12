@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import AuthShell from "@/components/AuthShell";
+import AuthLandingShell from "@/components/AuthLandingShell";
 import TurnstileChallenge, { loadLinkTurnstileConfigured } from "@/components/TurnstileChallenge";
 import { clearActiveAccountState, syncAccountState } from "@/lib/accountState";
 import { isAuthenticatedUser, safeNextPath } from "@/lib/auth";
@@ -73,15 +73,18 @@ export default function LoginPage() {
     }
   }
 
-  async function handleGoogleOAuth() {
+  async function handleOAuth(provider: "google" | "apple") {
     if (busy) return;
     setMessage("");
     if (!isSupabaseConfigured) { setMessage("Secure sign-in is temporarily unavailable."); return; }
     setBusy(true);
     const next = getNextPath();
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
-    if (error) { setBusy(false); setMessage("Google sign-in could not start. Try again."); }
+    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } });
+    if (error) {
+      setBusy(false);
+      setMessage(`${provider === "google" ? "Google" : "Apple"} sign-in could not start. Try again.`);
+    }
   }
 
   async function handleSignOut() {
@@ -93,36 +96,57 @@ export default function LoginPage() {
     setMessage("Signed out.");
   }
 
-  const input = `h-13 w-full rounded-2xl border px-4 text-[15px] font-semibold outline-none transition focus:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.045] text-white placeholder:text-white/28" : "border-black/12 bg-[#fffdf8] text-black placeholder:text-black/30"}`;
+  const input = `h-12 w-full rounded-[18px] border px-4 text-[15px] font-semibold outline-none transition focus:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.045] text-white placeholder:text-white/28" : "border-black/12 bg-[#fffdf8] text-black placeholder:text-black/30"}`;
+  const socialButton = `flex h-12 w-full items-center justify-center gap-3 rounded-full border px-4 text-sm font-black shadow-sm transition active:scale-[.99] disabled:opacity-50 ${darkMode ? "border-white/12 bg-white/[.045] text-white" : "border-black/12 bg-white text-black"}`;
 
   return (
-    <AuthShell title="Welcome back" description="Sign in to manage posts, messages, quotes and your LoadLink account.">
+    <AuthLandingShell
+      darkMode={darkMode}
+      title="Welcome to LoadLink"
+      subtitle="Logistics made easier"
+      footer={<>New to LoadLink? <Link href="/signup" className="font-black text-[#c38e00]">Create an account</Link></>}
+    >
       {signedInEmail ? (
-        <div className={`mb-6 rounded-2xl border p-4 ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-black/[.02]"}`}>
-          <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/12 text-lg font-black text-emerald-500">✓</span><div className="min-w-0"><p className="text-sm font-black">Already signed in</p><p className={`mt-0.5 truncate text-xs ${darkMode ? "text-white/48" : "text-black/48"}`}>{signedInEmail}</p></div></div>
-          <div className="mt-4 grid grid-cols-2 gap-2"><button type="button" onClick={() => void finishSignIn()} className="h-11 rounded-xl bg-[#f6b800] text-xs font-black text-black">Continue</button><button type="button" onClick={() => void handleSignOut()} disabled={busy} className="h-11 rounded-xl border border-current/15 text-xs font-bold disabled:opacity-50">Sign out</button></div>
+        <div className={`mb-5 rounded-[20px] border p-4 ${darkMode ? "border-[#f6b800]/30 bg-[#f6b800]/[.06]" : "border-[#b88900]/20 bg-[#fff7d8]"}`}>
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f6b800] text-lg font-black text-black">✓</span>
+            <div className="min-w-0 flex-1"><p className="text-sm font-black">Already signed in</p><p className="mt-0.5 truncate text-xs opacity-50">{signedInEmail}</p></div>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => void finishSignIn()} className="h-10 rounded-xl bg-[#f6b800] text-xs font-black text-black">Continue</button>
+            <button type="button" onClick={() => void handleSignOut()} disabled={busy} className="h-10 rounded-xl border border-current/15 text-xs font-bold disabled:opacity-50">Sign out</button>
+          </div>
         </div>
       ) : null}
 
-      <button type="button" onClick={() => void handleGoogleOAuth()} disabled={busy} className="flex h-13 w-full items-center justify-center gap-3 rounded-2xl border border-black/10 bg-white px-4 text-sm font-black text-black shadow-sm transition active:scale-[.99] disabled:opacity-50"><GoogleLogo />Continue with Google</button>
+      <div className="grid gap-2.5">
+        <button type="button" onClick={() => void handleOAuth("google")} disabled={busy} className={socialButton}><GoogleLogo />Continue with Google</button>
+        <button type="button" onClick={() => void handleOAuth("apple")} disabled={busy} className={socialButton}><AppleLogo />Continue with Apple</button>
+      </div>
 
-      <div className={`my-6 flex items-center gap-3 text-xs font-semibold ${darkMode ? "text-white/35" : "text-black/35"}`}><span className="h-px flex-1 bg-current opacity-30" />or sign in with email<span className="h-px flex-1 bg-current opacity-30" /></div>
+      <div className={`my-5 flex items-center gap-3 text-xs font-semibold ${darkMode ? "text-white/35" : "text-black/35"}`}><span className="h-px flex-1 bg-current opacity-30" />or sign in with email<span className="h-px flex-1 bg-current opacity-30" /></div>
 
-      <form onSubmit={handleLogin} className="grid gap-4" noValidate>
-        <label className="grid gap-2"><span className="text-sm font-bold">Email address</span><input className={input} type="email" inputMode="email" autoCapitalize="none" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" maxLength={254} required /></label>
-        <label className="grid gap-2"><span className="flex items-center justify-between gap-3 text-sm font-bold"><span>Password</span><Link href="/forgot-password" className={`text-xs font-bold underline-offset-4 hover:underline ${darkMode ? "text-white/58" : "text-black/58"}`}>Forgot password?</Link></span><span className="relative block"><input className={`${input} pr-16`} type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Your password" maxLength={128} required /><button type="button" onClick={() => setShowPassword((value) => !value)} className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-xl px-3 py-2 text-[11px] font-black ${darkMode ? "text-white/48" : "text-black/48"}`}>{showPassword ? "Hide" : "Show"}</button></span></label>
+      <form onSubmit={handleLogin} className="grid gap-3.5" noValidate>
+        <label className="grid gap-1.5"><span className="text-xs font-bold">Email address</span><input className={input} type="email" inputMode="email" autoCapitalize="none" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" maxLength={254} required /></label>
+        <label className="grid gap-1.5">
+          <span className="flex items-center justify-between gap-3 text-xs font-bold"><span>Password</span><Link href="/forgot-password" className="text-[11px] font-bold opacity-55 underline-offset-4 hover:underline">Forgot password?</Link></span>
+          <span className="relative block"><input className={`${input} pr-16`} type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Your password" maxLength={128} required /><button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl px-3 py-2 text-[10px] font-black opacity-50">{showPassword ? "Hide" : "Show"}</button></span>
+        </label>
 
         <TurnstileChallenge onToken={setCaptchaToken} resetKey={captchaResetKey} darkMode={darkMode} />
-        <button type="submit" disabled={busy || !email.trim() || !password} className="mt-1 h-13 rounded-2xl bg-[#f6b800] px-5 text-sm font-black text-black shadow-[0_12px_30px_rgba(246,184,0,.18)] transition active:scale-[.99] disabled:opacity-45">{busy ? "Checking securely…" : "Sign in"}</button>
+
+        <button type="submit" disabled={busy || !email.trim() || !password} className="h-12 rounded-full bg-[#f6b800] px-5 text-sm font-black text-black shadow-[0_12px_30px_rgba(246,184,0,.2)] transition active:scale-[.99] disabled:opacity-45">{busy ? "Checking securely…" : "Sign in"}</button>
       </form>
 
-      {message ? <p role="status" aria-live="polite" className={`mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold leading-5 ${darkMode ? "border-white/10 bg-white/[.03] text-white/68" : "border-black/10 bg-black/[.02] text-black/68"}`}>{message}</p> : null}
-
-      <p className={`mt-5 text-center text-[11px] font-semibold leading-5 ${darkMode ? "text-white/38" : "text-black/38"}`}>LoadLink will never ask for your password in a message, listing or quote.</p>
-    </AuthShell>
+      {message ? <p role="status" aria-live="polite" className={`mt-4 rounded-[16px] border px-4 py-3 text-sm font-semibold leading-5 ${darkMode ? "border-white/10 bg-white/[.03] text-white/68" : "border-black/10 bg-black/[.02] text-black/68"}`}>{message}</p> : null}
+    </AuthLandingShell>
   );
 }
 
 function GoogleLogo() {
-  return <svg aria-hidden="true" width="21" height="21" viewBox="0 0 48 48" className="shrink-0"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7A19.9 19.9 0 0 0 24 4C12.9 4 4 12.9 4 24s8.9 20 20 20c11.5 0 19.1-8.1 19.1-19.5 0-1.3-.1-2.7-.4-4Z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8A12 12 0 0 1 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7A19.9 19.9 0 0 0 24 4c-7.7 0-14.3 4.3-17.7 10.7Z"/><path fill="#4CAF50" d="M24 44c5 0 9.6-1.9 13-5l-6-5.1A11.9 11.9 0 0 1 12.9 28.5l-6.5 5A20 20 0 0 0 24 44Z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3a12 12 0 0 1-4.3 5.9l6 5.1c-.4.4 6.1-4.5 6.1-14.5 0-1.3-.1-2.7-.4-4Z"/></svg>;
+  return <svg aria-hidden="true" width="20" height="20" viewBox="0 0 48 48" className="shrink-0"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7A19.9 19.9 0 0 0 24 4C12.9 4 4 12.9 4 24s8.9 20 20 20c11.5 0 19.1-8.1 19.1-19.5 0-1.3-.1-2.7-.4-4Z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8A12 12 0 0 1 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7A19.9 19.9 0 0 0 24 4c-7.7 0-14.3 4.3-17.7 10.7Z"/><path fill="#4CAF50" d="M24 44c5 0 9.6-1.9 13-5l-6-5.1A11.9 11.9 0 0 1 12.9 28.5l-6.5 5A20 20 0 0 0 24 44Z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3a12 12 0 0 1-4.3 5.9l6 5.1c-.4.4 6.1-4.5 6.1-14.5 0-1.3-.1-2.7-.4-4Z"/></svg>;
+}
+
+function AppleLogo() {
+  return <svg aria-hidden="true" width="18" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.54c.02-2.28 1.86-3.37 1.94-3.42-1.06-1.55-2.71-1.76-3.3-1.78-1.39-.15-2.74.83-3.45.83-.72 0-1.8-.82-2.97-.8-1.5.02-2.91.9-3.68 2.27-1.6 2.77-.41 6.84 1.13 9.08.77 1.09 1.66 2.3 2.83 2.26 1.14-.05 1.57-.73 2.95-.73 1.36 0 1.77.73 2.96.7 1.23-.02 2-1.09 2.75-2.19.89-1.25 1.25-2.48 1.26-2.54-.03-.01-2.4-.92-2.42-3.68ZM14.78 5.86c.62-.78 1.05-1.84.93-2.9-.9.04-2.02.62-2.67 1.38-.58.67-1.1 1.77-.96 2.79 1.02.08 2.07-.52 2.7-1.27Z"/></svg>;
 }
