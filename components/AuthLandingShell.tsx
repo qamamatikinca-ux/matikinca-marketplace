@@ -24,7 +24,7 @@ export default function AuthLandingShell({
       <div className="mx-auto min-h-[100svh] w-full max-w-[760px] lg:flex lg:max-w-none">
         <section className="relative h-[36svh] min-h-[250px] overflow-hidden bg-[#16110a] sm:h-[42svh] lg:h-screen lg:min-h-screen lg:flex-1">
           <img
-            src="/images/find-jobs.jpg"
+            src="/images/jobs-1.jpg"
             alt=""
             className="absolute inset-0 h-full w-full object-cover object-center"
             loading="eager"
