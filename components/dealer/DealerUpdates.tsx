@@ -15,18 +15,149 @@ const TYPES: Array<{ value: DealerUpdate["update_type"]; label: string }> = [
 type Draft = { update_type: DealerUpdate["update_type"]; title: string; body: string; listing_id: string; publication_status: "draft" | "scheduled" | "published"; scheduled_at: string; expires_at: string; image_url: string };
 const EMPTY: Draft = { update_type: "new_arrival", title: "", body: "", listing_id: "", publication_status: "draft", scheduled_at: "", expires_at: "", image_url: "" };
 
+function freshDraft(publicShowroom: boolean): Draft {
+  return { ...EMPTY, publication_status: publicShowroom ? "published" : "draft" };
+}
+
 export default function DealerUpdates({ darkMode, context, inventory, onChanged }: { darkMode: boolean; context: DealerWorkspaceState; inventory: DealerInventoryItem[]; onChanged?: (items: DealerUpdate[]) => void }) {
-  const [items, setItems] = useState<DealerUpdate[]>([]); const [open, setOpen] = useState(false); const [draft, setDraft] = useState<Draft>(EMPTY); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
-  async function load() { try { const r = await dealerFetch<{items:DealerUpdate[]}>("/api/dealer/updates"); setItems(r.items || []); onChanged?.(r.items || []); } catch (e) { setError(e instanceof Error ? e.message : "Updates could not be loaded."); } }
+  const testShowroom = context.slug === "loadlink-test-dealership";
+  const [items, setItems] = useState<DealerUpdate[]>([]);
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<Draft>(() => freshDraft(testShowroom));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function load() {
+    try {
+      const response = await dealerFetch<{items:DealerUpdate[]}>("/api/dealer/updates");
+      setItems(response.items || []);
+      onChanged?.(response.items || []);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Updates could not be loaded.");
+    }
+  }
+
   useEffect(() => { void load(); }, []);
-  async function create() { if (!draft.title.trim()) return; setBusy(true); setError(""); try { await dealerFetch("/api/dealer/updates", { method: "POST", body: JSON.stringify({ action: "create", ...draft, scheduled_at: draft.scheduled_at ? new Date(draft.scheduled_at).toISOString() : null, expires_at: draft.expires_at ? new Date(draft.expires_at).toISOString() : null }) }); setDraft(EMPTY); setOpen(false); await load(); } catch (e) { setError(e instanceof Error ? e.message : "Update could not be saved."); } finally { setBusy(false); } }
-  async function mutate(action: "publish" | "remove", update_id: string) { setError(""); try { await dealerFetch("/api/dealer/updates", { method: "POST", body: JSON.stringify({ action, update_id }) }); await load(); } catch (e) { setError(e instanceof Error ? e.message : "Update could not be changed."); } }
-  const counts = useMemo(() => ({ published: items.filter(x=>x.publication_status==="published").length, scheduled: items.filter(x=>x.publication_status==="scheduled").length, drafts: items.filter(x=>x.publication_status==="draft").length }), [items]);
+  useEffect(() => {
+    if (!open) setDraft(freshDraft(testShowroom));
+  }, [testShowroom]);
+
+  function openComposer() {
+    setError("");
+    setDraft(freshDraft(testShowroom));
+    setOpen(true);
+  }
+
+  async function create() {
+    if (!draft.title.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      await dealerFetch("/api/dealer/updates", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "create",
+          ...draft,
+          publication_status: testShowroom && draft.publication_status === "draft" ? "published" : draft.publication_status,
+          scheduled_at: draft.scheduled_at ? new Date(draft.scheduled_at).toISOString() : null,
+          expires_at: draft.expires_at ? new Date(draft.expires_at).toISOString() : null,
+        }),
+      });
+      setDraft(freshDraft(testShowroom));
+      setOpen(false);
+      await load();
+      window.dispatchEvent(new CustomEvent("loadlink:toast", {
+        detail: {
+          id: "loadlink-dealer-update",
+          kind: draft.publication_status === "scheduled" ? "info" : "success",
+          title: draft.publication_status === "scheduled" ? "Update scheduled" : "Update published",
+          message: testShowroom && draft.publication_status !== "scheduled"
+            ? "This update is now visible on the Centurion Dealership public showroom."
+            : "Your dealership update has been saved.",
+          duration: 5200,
+        },
+      }));
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : "Update could not be saved.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function mutate(action: "publish" | "remove", update_id: string) {
+    setError("");
+    try {
+      await dealerFetch("/api/dealer/updates", { method: "POST", body: JSON.stringify({ action, update_id }) });
+      await load();
+    } catch (mutationError) {
+      setError(mutationError instanceof Error ? mutationError.message : "Update could not be changed.");
+    }
+  }
+
+  const counts = useMemo(() => ({
+    published: items.filter((item) => item.publication_status === "published").length,
+    scheduled: items.filter((item) => item.publication_status === "scheduled").length,
+    drafts: items.filter((item) => item.publication_status === "draft").length,
+  }), [items]);
+
   return <>
     <Surface darkMode={darkMode} className="overflow-hidden">
-      <div className="border-b border-current/10 p-4 sm:p-5"><SectionHeading title="Dealership updates" detail="Persistent dealership news for followers and your public showroom." action={context.permissions.includes("marketing.write") ? <PrimaryButton type="button" onClick={()=>setOpen(true)}>New update</PrimaryButton> : undefined}/><div className="mt-4 flex gap-5 text-xs"><span><b>{counts.published}</b> <span className="opacity-45">published</span></span><span><b>{counts.scheduled}</b> <span className="opacity-45">scheduled</span></span><span><b>{counts.drafts}</b> <span className="opacity-45">drafts</span></span></div>{error ? <p className="mt-3 text-sm font-bold text-red-500">{error}</p> : null}</div>
-      {items.length ? <div className="divide-y divide-current/10">{items.map(item => <article key={item.id} className="grid gap-3 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:px-5"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-black">{item.title}</h3><span className="text-[10px] font-bold uppercase opacity-45">{item.update_type.replaceAll("_"," ")}</span></div><p className="mt-1 line-clamp-2 text-sm opacity-55">{item.body}</p><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] opacity-45"><span>{item.publication_status.replaceAll("_"," ")}</span>{item.listing_title ? <span>{item.listing_title}</span> : null}{item.scheduled_at ? <span>{new Date(item.scheduled_at).toLocaleString("en-ZA", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" })}</span> : null}{item.moderation_reason ? <span className="text-red-500 opacity-100">{item.moderation_reason}</span> : null}</div></div><div className="flex items-center gap-2">{item.publication_status !== "published" && item.publication_status !== "removed" && context.permissions.includes("marketing.publish") ? <SecondaryButton darkMode={darkMode} type="button" onClick={()=>void mutate("publish",item.id)}>Publish</SecondaryButton> : null}{item.publication_status !== "removed" ? <button type="button" onClick={()=>void mutate("remove",item.id)} className="px-2 py-2 text-xs font-black opacity-50 hover:opacity-100">Remove</button> : null}</div></article>)}</div> : <EmptyState title="No dealership updates" detail="Use updates for lasting announcements. Use Dealer Status for 24-hour content." />}
+      <div className="border-b border-current/10 p-4 sm:p-5">
+        <SectionHeading
+          title="Dealership updates"
+          detail={testShowroom ? "Updates publish directly to your live Centurion Dealership showroom." : "Persistent dealership news for followers and your public showroom."}
+          action={context.permissions.includes("marketing.write") ? <PrimaryButton type="button" onClick={openComposer}>New update</PrimaryButton> : undefined}
+        />
+        <div className="mt-4 flex gap-5 text-xs">
+          <span><b>{counts.published}</b> <span className="opacity-45">published</span></span>
+          <span><b>{counts.scheduled}</b> <span className="opacity-45">scheduled</span></span>
+          {!testShowroom ? <span><b>{counts.drafts}</b> <span className="opacity-45">drafts</span></span> : null}
+        </div>
+        {error ? <p className="mt-3 text-sm font-bold text-red-500">{error}</p> : null}
+      </div>
+
+      {items.length ? (
+        <div className="divide-y divide-current/10">
+          {items.map((item) => (
+            <article key={item.id} className="grid gap-3 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:px-5">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-black">{item.title}</h3>
+                  <span className="text-[10px] font-bold uppercase opacity-45">{item.update_type.replaceAll("_", " ")}</span>
+                </div>
+                <p className="mt-1 line-clamp-2 text-sm opacity-55">{item.body}</p>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] opacity-45">
+                  <span>{item.publication_status.replaceAll("_", " ")}</span>
+                  {item.listing_title ? <span>{item.listing_title}</span> : null}
+                  {item.scheduled_at ? <span>{new Date(item.scheduled_at).toLocaleString("en-ZA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span> : null}
+                  {item.moderation_reason ? <span className="text-red-500 opacity-100">{item.moderation_reason}</span> : null}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {item.publication_status !== "published" && item.publication_status !== "removed" && context.permissions.includes("marketing.publish") ? <SecondaryButton darkMode={darkMode} type="button" onClick={() => void mutate("publish", item.id)}>Publish</SecondaryButton> : null}
+                {item.publication_status !== "removed" ? <button type="button" onClick={() => void mutate("remove", item.id)} className="px-2 py-2 text-xs font-black opacity-50 hover:opacity-100">Remove</button> : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : <EmptyState title="No dealership updates" detail="Create an update and it will appear on your public showroom." />}
     </Surface>
-    <Modal open={open} onClose={()=>setOpen(false)} darkMode={darkMode} title="Create dealership update"><div className="grid gap-3"><label className="text-xs font-black">Type<Select darkMode={darkMode} className="mt-1" value={draft.update_type} onChange={e=>setDraft({...draft,update_type:e.target.value as Draft["update_type"]})}>{TYPES.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</Select></label><label className="text-xs font-black">Headline<Input darkMode={darkMode} className="mt-1" value={draft.title} maxLength={90} onChange={e=>setDraft({...draft,title:e.target.value})}/></label><label className="text-xs font-black">Update<Textarea darkMode={darkMode} className="mt-1" value={draft.body} maxLength={700} onChange={e=>setDraft({...draft,body:e.target.value})}/></label><label className="text-xs font-black">Vehicle (optional)<Select darkMode={darkMode} className="mt-1" value={draft.listing_id} onChange={e=>setDraft({...draft,listing_id:e.target.value})}><option value="">No vehicle attached</option>{inventory.map(v=><option key={v.id} value={v.id}>{v.title}</option>)}</Select></label><label className="text-xs font-black">Publish<Select darkMode={darkMode} className="mt-1" value={draft.publication_status} onChange={e=>setDraft({...draft,publication_status:e.target.value as Draft["publication_status"]})}><option value="draft">Save draft</option><option value="scheduled">Schedule</option><option value="published">Publish now</option></Select></label>{draft.publication_status === "scheduled" ? <label className="text-xs font-black">Scheduled time<Input darkMode={darkMode} className="mt-1" type="datetime-local" value={draft.scheduled_at} onChange={e=>setDraft({...draft,scheduled_at:e.target.value})}/></label> : null}<label className="text-xs font-black">End date (optional)<Input darkMode={darkMode} className="mt-1" type="datetime-local" value={draft.expires_at} onChange={e=>setDraft({...draft,expires_at:e.target.value})}/></label></div><div className="mt-5 flex justify-end gap-2"><SecondaryButton darkMode={darkMode} type="button" onClick={()=>setOpen(false)}>Cancel</SecondaryButton><PrimaryButton type="button" disabled={busy || !draft.title.trim()} onClick={()=>void create()}>{busy ? "Saving…" : draft.publication_status === "published" ? "Publish" : "Save"}</PrimaryButton></div></Modal>
+
+    <Modal open={open} onClose={() => setOpen(false)} darkMode={darkMode} title="Create dealership update">
+      <div className="grid gap-3">
+        {testShowroom ? <div className={`rounded-xl border px-3 py-2 text-[11px] font-semibold ${darkMode ? "border-[#f6b800]/25 bg-[#f6b800]/[.06] text-white/70" : "border-[#b88900]/20 bg-[#f6b800]/[.08] text-black/60"}`}>This test dealership is live. New updates publish to the public showroom by default.</div> : null}
+        <label className="text-xs font-black">Type<Select darkMode={darkMode} className="mt-1" value={draft.update_type} onChange={(event) => setDraft({ ...draft, update_type: event.target.value as Draft["update_type"] })}>{TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</Select></label>
+        <label className="text-xs font-black">Headline<Input darkMode={darkMode} className="mt-1" value={draft.title} maxLength={90} onChange={(event) => setDraft({ ...draft, title: event.target.value })}/></label>
+        <label className="text-xs font-black">Update<Textarea darkMode={darkMode} className="mt-1" value={draft.body} maxLength={700} onChange={(event) => setDraft({ ...draft, body: event.target.value })}/></label>
+        <label className="text-xs font-black">Vehicle (optional)<Select darkMode={darkMode} className="mt-1" value={draft.listing_id} onChange={(event) => setDraft({ ...draft, listing_id: event.target.value })}><option value="">No vehicle attached</option>{inventory.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.title}</option>)}</Select></label>
+        <label className="text-xs font-black">Publish<Select darkMode={darkMode} className="mt-1" value={draft.publication_status} onChange={(event) => setDraft({ ...draft, publication_status: event.target.value as Draft["publication_status"] })}>{!testShowroom ? <option value="draft">Save draft</option> : null}<option value="published">Publish now</option><option value="scheduled">Schedule</option></Select></label>
+        {draft.publication_status === "scheduled" ? <label className="text-xs font-black">Scheduled time<Input darkMode={darkMode} className="mt-1" type="datetime-local" value={draft.scheduled_at} onChange={(event) => setDraft({ ...draft, scheduled_at: event.target.value })}/></label> : null}
+        <label className="text-xs font-black">End date (optional)<Input darkMode={darkMode} className="mt-1" type="datetime-local" value={draft.expires_at} onChange={(event) => setDraft({ ...draft, expires_at: event.target.value })}/></label>
+      </div>
+      <div className="mt-5 flex justify-end gap-2">
+        <SecondaryButton darkMode={darkMode} type="button" onClick={() => setOpen(false)}>Cancel</SecondaryButton>
+        <PrimaryButton type="button" disabled={busy || !draft.title.trim()} onClick={() => void create()}>{busy ? "Saving…" : draft.publication_status === "published" ? "Publish" : "Schedule"}</PrimaryButton>
+      </div>
+    </Modal>
   </>;
 }
