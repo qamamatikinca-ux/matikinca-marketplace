@@ -1,0 +1,55 @@
+name: LoadLink Clean Project Export
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/loadlink-export-clean-project.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout validated LoadLink source
+        uses: actions/checkout@v4
+        with:
+          ref: 710a3ab987b1848bcf1b364a69186ed229dfac18
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci
+
+      - name: Production build validation
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: npm run build
+
+      - name: Create clean project zip
+        run: |
+          rm -rf node_modules .next
+          zip -r LoadLink-Clean-Project-2026-08-12.zip . \
+            -x '.git/*' \
+               '.git/**' \
+               'node_modules/*' \
+               'node_modules/**' \
+               '.next/*' \
+               '.next/**' \
+               '*.zip' \
+               '.env*'
+
+      - name: Upload project files
+        uses: actions/upload-artifact@v4
+        with:
+          name: LoadLink-Clean-Project-2026-08-12
+          path: LoadLink-Clean-Project-2026-08-12.zip
+          if-no-files-found: error
+          retention-days: 7
