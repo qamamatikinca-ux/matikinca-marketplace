@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import "./globals.css";
 import "./loadlink-logistics-modal.css";
 import "./loadlink-v2714-design.css";
+import "./loadlink-universal-ui.css";
 import GlobalLoading from "@/components/GlobalLoading";
 import ChatLauncher from "@/components/ChatLauncher";
 import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";
