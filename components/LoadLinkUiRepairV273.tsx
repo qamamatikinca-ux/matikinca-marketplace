@@ -30,7 +30,7 @@ function ensureStyles() {
   width: 100% !important;
   height: 100% !important;
 }
-[aria-label$="profile picture"] > span:has(img) {
+[aria-label$="profile picture"] > span {
   background: transparent !important;
 }
 `;
@@ -43,23 +43,21 @@ export default function LoadLinkUiRepairV273() {
   useEffect(() => {
     ensureStyles();
     repairContractLinks();
-    const observer = new MutationObserver(repairContractLinks);
-    observer.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["href"],
-    });
-    return () => observer.disconnect();
-  }, []);
+    const frame = window.requestAnimationFrame(repairContractLinks);
+    const shortTimer = window.setTimeout(repairContractLinks, 180);
+    const longTimer = window.setTimeout(repairContractLinks, 700);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(shortTimer);
+      window.clearTimeout(longTimer);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     const body = document.body;
-    const previous = body.dataset.loadlinkPath;
     body.dataset.loadlinkPath = pathname || "/";
     return () => {
-      if (previous) body.dataset.loadlinkPath = previous;
-      else delete body.dataset.loadlinkPath;
+      delete body.dataset.loadlinkPath;
     };
   }, [pathname]);
 
