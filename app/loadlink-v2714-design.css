@@ -1,0 +1,132 @@
+/* LoadLink V2.7.14 — visual system only. No feature removal/addition. */
+
+/* Account settings: preserve every existing control, reorganise visually into the
+   quieter side-navigation / form hierarchy requested for desktop and mobile. */
+body[data-loadlink-path="/account/settings"] main > section {
+  max-width: 1240px !important;
+}
+body[data-loadlink-path="/account/settings"] main > section > div:first-child {
+  max-width: none !important;
+}
+body[data-loadlink-path="/account/settings"] main > section > div:nth-of-type(2) {
+  max-width: 320px !important;
+  border-radius: 18px !important;
+}
+body[data-loadlink-path="/account/settings"] main > section > div:nth-of-type(2) button {
+  min-height: 44px;
+  border-radius: 13px !important;
+}
+body[data-loadlink-path="/account/settings"] main form,
+body[data-loadlink-path="/account/settings"] main section[id="message-privacy"],
+body[data-loadlink-path="/account/settings"] main > section > div[class*="grid"] > section {
+  box-shadow: 0 18px 48px rgba(0,0,0,.08);
+}
+html[data-loadlink-theme="dark"] body[data-loadlink-path="/account/settings"] main form,
+html[data-loadlink-theme="dark"] body[data-loadlink-path="/account/settings"] main section[id="message-privacy"] {
+  background-image: radial-gradient(circle at 94% 0%, rgba(246,184,0,.07), transparent 28%);
+  box-shadow: 0 24px 70px rgba(0,0,0,.3);
+}
+body[data-loadlink-path="/account/settings"] main input,
+body[data-loadlink-path="/account/settings"] main select,
+body[data-loadlink-path="/account/settings"] main textarea {
+  border-radius: 14px !important;
+}
+body[data-loadlink-path="/account/settings"] main button[role="switch"] {
+  box-shadow: inset 0 0 0 1px rgba(246,184,0,.06);
+}
+@media (min-width: 1024px) {
+  body[data-loadlink-path="/account/settings"] main > section {
+    position: relative;
+  }
+  body[data-loadlink-path="/account/settings"] main > section > div:nth-of-type(2) {
+    position: sticky;
+    top: 96px;
+    z-index: 3;
+  }
+  body[data-loadlink-path="/account/settings"] main > section > div[class*="lg:grid-cols-[250px_1fr]"] {
+    grid-template-columns: 270px minmax(0,1fr) !important;
+    gap: 20px !important;
+  }
+}
+@media (max-width: 639px) {
+  body[data-loadlink-path="/account/settings"] main > section {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+  body[data-loadlink-path="/account/settings"] main > section > div:nth-of-type(2) {
+    max-width: none !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+}
+
+/* Structured quotes/messages should read like professional LoadLink documents,
+   not ordinary chat bubbles. */
+.loadlink-quote-card {
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  box-shadow: 0 16px 42px rgba(0,0,0,.13);
+}
+.loadlink-quote-card > div:first-child {
+  min-height: 52px;
+}
+html[data-loadlink-theme="light"] .loadlink-quote-card {
+  background: #fff !important;
+  border-color: rgba(0,0,0,.1) !important;
+}
+html[data-loadlink-theme="dark"] .loadlink-quote-card {
+  background: linear-gradient(180deg,#111,#090909) !important;
+  border-color: rgba(246,184,0,.18) !important;
+}
+.loadlink-quote-card img[alt="LoadLink"] {
+  object-fit: contain !important;
+}
+.loadlink-quote-card strong {
+  letter-spacing: -.01em;
+}
+
+/* In-chat Logistics Tools owns its own fixed rendering layer. Do not allow any
+   chat wallpaper, rotating sketch or composer stacking context to contain it. */
+body[data-loadlink-path="/messages"] .loadlink-logistics-sheet {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100dvw !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  transform: none !important;
+  contain: paint !important;
+  isolation: isolate !important;
+  z-index: 2147483647 !important;
+}
+body[data-loadlink-path="/messages"]:has(.loadlink-logistics-sheet) .loadlink-chat-wallpaper,
+body[data-loadlink-path="/messages"]:has(.loadlink-logistics-sheet) .loadlink-chat-composer,
+body[data-loadlink-path="/messages"]:has(.loadlink-logistics-sheet) .loadlink-chat-panel {
+  display: none !important;
+}
+
+/* Dealership workspace polish: restrained gold edge light; controls remain the
+   same functional sections and permissions. */
+[data-loadlink-dealer-control-centre="v2714-dashboard"] {
+  background-image: radial-gradient(circle at 100% 14%, rgba(246,184,0,.07), transparent 30%);
+}
+[data-loadlink-dealer-control-centre="v2714-dashboard"] [data-loadlink-dealer-topbar="true"] {
+  min-height: 46px;
+}
+
+/* Auth landing: make the hero image look like the homepage portal language. */
+[data-loadlink-auth-landing="v2714"] > section:first-child::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 -70px 80px rgba(0,0,0,.18);
+}
+
+/* Mobile tap targets remain practical without inflating the overall layout. */
+@media (max-width: 640px) {
+  .loadlink-logistics-sheet button,
+  [data-loadlink-dealer-control-centre="v2714-dashboard"] button,
+  [data-loadlink-auth-landing="v2714"] button {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
