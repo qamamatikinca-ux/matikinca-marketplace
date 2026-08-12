@@ -25,7 +25,6 @@ html body option {
   font-family: var(--ll-font) !important;
 }
 
-/* Containers must not animate on every state change. This was expensive on iOS. */
 html,
 body,
 main,
@@ -65,13 +64,11 @@ select {
   transition-timing-function: ease-out !important;
 }
 
-/* Circular controls remain circular; this wins over the generic rounded control rule. */
 .rounded-full,
 [class~="rounded-full"] {
   border-radius: 9999px !important;
 }
 
-/* The menu may own scrolling while open, but its overlay must never cancel normal taps. */
 [data-loadlink-menu-overlay] {
   touch-action: auto !important;
 }
@@ -79,7 +76,6 @@ select {
   touch-action: pan-y !important;
 }
 
-/* Never expose native mobile date chrome on a LoadLink custom date field. */
 input[data-loadlink-future-date="true"],
 input[data-loadlink-custom-date="true"] {
   -webkit-appearance: none !important;
@@ -94,7 +90,6 @@ input[data-loadlink-custom-date="true"]::-webkit-calendar-picker-indicator {
   pointer-events: none !important;
 }
 
-/* Elevated LoadLink UI: same transparent glass recipe everywhere. */
 [data-loadlink-action-toast],
 [data-loadlink-toast-center] > section,
 [data-loadlink-confirmation-layer="true"] > section,
@@ -106,9 +101,15 @@ input[data-loadlink-custom-date="true"]::-webkit-calendar-picker-indicator {
   backdrop-filter: blur(18px) saturate(135%) !important;
 }
 
-html[data-loadlink-theme="light"] [data-loadlink-action-toast],
-html[data-loadlink-theme="light"] [data-loadlink-toast-center] > section,
-html[data-loadlink-theme="light"] [data-loadlink-confirmation-layer="true"] > section,
+/* Toasts and destructive confirmations stay dark translucent glass so their existing white copy remains readable in both themes. */
+[data-loadlink-action-toast],
+[data-loadlink-toast-center] > section,
+[data-loadlink-confirmation-layer="true"] > section {
+  background: rgba(10, 10, 10, .62) !important;
+  border-color: rgba(255, 255, 255, .14) !important;
+  box-shadow: var(--ll-glass-shadow-dark) !important;
+}
+
 html[data-loadlink-theme="light"] [data-loadlink-calendar-sheet="true"] > section,
 html[data-loadlink-theme="light"] [data-loadlink-choice-sheet="true"] > section,
 html[data-loadlink-theme="light"] .loadlink-glass,
@@ -118,9 +119,6 @@ html[data-loadlink-theme="light"] .loadlink-job-timing-toast {
   box-shadow: var(--ll-glass-shadow-light) !important;
 }
 
-html[data-loadlink-theme="dark"] [data-loadlink-action-toast],
-html[data-loadlink-theme="dark"] [data-loadlink-toast-center] > section,
-html[data-loadlink-theme="dark"] [data-loadlink-confirmation-layer="true"] > section,
 html[data-loadlink-theme="dark"] [data-loadlink-calendar-sheet="true"] > section,
 html[data-loadlink-theme="dark"] [data-loadlink-choice-sheet="true"] > section,
 html[data-loadlink-theme="dark"] .loadlink-glass,
@@ -130,7 +128,6 @@ html[data-loadlink-theme="dark"] .loadlink-job-timing-toast {
   box-shadow: var(--ll-glass-shadow-dark) !important;
 }
 
-/* Menu and messaging use the same language, but with a restrained amount of glass. */
 html[data-loadlink-theme="light"] [data-loadlink-menu-panel],
 html[data-loadlink-theme="light"] .loadlink-inbox-panel,
 html[data-loadlink-theme="light"] .loadlink-details-panel,
@@ -155,7 +152,6 @@ html[data-loadlink-theme="dark"] .loadlink-logistics-sheet {
   backdrop-filter: blur(16px) saturate(130%) !important;
 }
 
-/* Account settings inherits the same system without a permanent DOM observer. */
 html.loadlink-settings-glass main form,
 html.loadlink-settings-glass main aside,
 html.loadlink-settings-glass main section[id="message-privacy"],
@@ -210,7 +206,6 @@ html[data-loadlink-theme="dark"] .loadlink-account-danger-action {
   border-color: rgba(248, 113, 113, .46) !important;
 }
 
-/* Homepage portal call-to-action keeps its exact footprint; only its hard edges soften. */
 .loadlink-portal-action,
 main a.group[href="/jobs"] div[class*="mt-6"][class*="border"][class*="px-8"],
 main a.group[href="/contracts"] div[class*="mt-6"][class*="border"][class*="px-8"],
