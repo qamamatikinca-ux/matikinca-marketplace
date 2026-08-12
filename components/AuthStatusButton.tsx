@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { loginHref } from "@/lib/auth";
 import { useLoadLinkAccount } from "@/lib/loadLinkAccountStore";
-import LoadLinkIcon from "@/components/LoadLinkIcon";
+import LoadLinkGearIcon from "@/components/LoadLinkGearIcon";
 
 export default function AuthStatusButton({ darkMode, className = "" }: { darkMode: boolean; className?: string }) {
   const pathname = usePathname();
@@ -28,7 +28,7 @@ export default function AuthStatusButton({ darkMode, className = "" }: { darkMod
           <span className="absolute inset-[2px] overflow-hidden rounded-full bg-black">
             <img src={account.profile.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
           </span>
-        ) : <LoadLinkIcon name="user" size={20} strokeWidth={1.9} />}
+        ) : <LoadLinkGearIcon />}
       </Link>
     );
   }
@@ -38,9 +38,9 @@ export default function AuthStatusButton({ darkMode, className = "" }: { darkMod
       href={loginHref(pathname || "/")}
       aria-label="Log in or sign up"
       title="Log in / Sign up"
-      className={`${base} ${darkMode ? "border-[#f6b800]/55 bg-[#f6b800]/[.08] text-[#f6b800]" : "border-black/12 bg-white text-black shadow-[0_8px_18px_rgba(0,0,0,.07)]"}`}
+      className={`${base} ${darkMode ? "border-yellow-400/60 bg-yellow-400 text-black" : "border-black/10 bg-white text-black shadow-[0_8px_18px_rgba(0,0,0,.08)]"}`}
     >
-      <LoadLinkIcon name="user" size={20} strokeWidth={1.9} />
+      <img src="/images/auth-icon.png" alt="" className="h-6 w-6 object-contain" />
     </Link>
   );
 }
