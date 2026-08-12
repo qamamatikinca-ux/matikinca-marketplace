@@ -211,6 +211,7 @@ export default function DriverProfileWizardV273() {
       setMessageType("error"); setMessage(`${label}: the file must be smaller than 8 MB.`); return;
     }
     setUploadingType(type);
+    window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: `loadlink-driver-doc-${type}`, kind: "progress", title: `Uploading ${label}`, message: "LoadLink is securing and attaching this document.", progress: 38 } }));
     try {
       await saveProfile(false);
       const token = await authToken();
@@ -223,11 +224,12 @@ export default function DriverProfileWizardV273() {
       if (!response.ok) throw new Error(result.error || `${label} could not be uploaded.`);
       setMessageType("success");
       setMessage(`${label} uploaded successfully.`);
-      window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { kind: "success", title: `${label} uploaded`, message: "The document is attached to your LoadLink driver profile.", duration: 4800 } }));
+      window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: `loadlink-driver-doc-${type}`, kind: "success", title: `${label} uploaded`, message: "The document is attached to your LoadLink driver profile.", duration: 4800 } }));
       await load(false);
     } catch (error) {
       setMessageType("error");
       setMessage(`${label}: ${cleanMessage(error, "upload failed.")}`);
+      window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: `loadlink-driver-doc-${type}`, kind: "error", title: `${label} not uploaded`, message: "The file was not attached. Check the document and try again.", duration: 6500 } }));
     } finally {
       setUploadingType("");
     }

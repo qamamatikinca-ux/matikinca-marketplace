@@ -155,6 +155,7 @@ export default function ListJobPage() {
     if (saving) return;
     setSaving(true);
     setMessage("");
+    window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: "loadlink-post-submit", kind: "progress", title: `Submitting ${postName}`, message: "LoadLink is publishing your details securely.", progress: 42 } }));
     try {
       const intelligence = await getLoadLinkIntelligence();
       if (!intelligence.authenticated) throw new Error(`Sign in to post this ${postName}.`);
@@ -171,11 +172,12 @@ export default function ListJobPage() {
       localStorage.removeItem(`${draftVersion}:${auth.user.id}`);
       localStorage.removeItem(`${submissionKeyPrefix}:${auth.user.id}`);
       setSuccess(true);
-      window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { kind: "success", title: `${postNameTitle} submitted`, message: `LoadLink received your ${postName}. You can manage or edit it from My Posts.`, duration: 5200 } }));
+      window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: "loadlink-post-submit", kind: "success", title: `${postNameTitle} submitted`, message: `LoadLink received your ${postName}. You can manage or edit it from My Posts.`, duration: 5200 } }));
       window.dispatchEvent(new Event("loadlink-account-state-changed"));
     } catch (error) {
       const raw = readablePostError(error);
       setMessage(/postgres|supabase|row level security|pgrst/i.test(raw) ? `LoadLink could not publish this ${postName} right now. Your information is still saved.` : raw);
+      window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: "loadlink-post-submit", kind: "error", title: `${postNameTitle} not submitted`, message: "Your information is still saved. Review the message on this page and try again.", duration: 6500 } }));
     } finally {
       setSaving(false);
     }
