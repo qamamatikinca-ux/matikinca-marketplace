@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 const READY_ATTRIBUTE = "data-loadlink-swipe-dots-ready";
 const DOTS_ATTRIBUTE = "data-loadlink-swipe-dots";
@@ -8,7 +9,10 @@ const DOTS_ATTRIBUTE = "data-loadlink-swipe-dots";
 type EnhancedRail = HTMLElement & { __loadlinkSwipeCleanup?: () => void };
 
 function contextText(rail: HTMLElement) {
-  return (rail.closest("section, article, main, div[data-section]")?.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+  return (rail.closest("section, article, main, div[data-section]")?.textContent || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
 function shouldEnhance(rail: HTMLElement) {
@@ -29,7 +33,14 @@ function enhance(rail: EnhancedRail) {
   const dots = document.createElement("div");
   dots.className = "loadlink-swipe-dots";
   dots.setAttribute("aria-label", "Slider pages");
-  Object.assign(dots.style, { display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", padding: "14px 12px 10px", width: "100%" });
+  Object.assign(dots.style, {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "10px",
+    padding: "14px 12px 10px",
+    width: "100%",
+  });
 
   let buttons: HTMLButtonElement[] = [];
   let frame = 0;
@@ -52,7 +63,15 @@ function enhance(rail: EnhancedRail) {
       const button = document.createElement("button");
       button.type = "button";
       button.setAttribute("aria-label", `Go to slider page ${index + 1}`);
-      Object.assign(button.style, { height: "9px", width: "9px", border: "0", padding: "0", borderRadius: "999px", cursor: "pointer", transition: "width 180ms ease, background-color 180ms ease" });
+      Object.assign(button.style, {
+        height: "9px",
+        width: "9px",
+        border: "0",
+        padding: "0",
+        borderRadius: "999px",
+        cursor: "pointer",
+        transition: "width 160ms ease, background-color 160ms ease",
+      });
       button.addEventListener("click", () => {
         const max = Math.max(0, rail.scrollWidth - rail.clientWidth);
         const left = count <= 1 ? 0 : (index / (count - 1)) * max;
@@ -77,48 +96,67 @@ function enhance(rail: EnhancedRail) {
   rebuild();
   rail.insertAdjacentElement("afterend", dots);
   rail.setAttribute(READY_ATTRIBUTE, "true");
-  const observer = new ResizeObserver(update);
-  observer.observe(rail);
-  const mutation = new MutationObserver(update);
-  mutation.observe(rail, { childList: true });
+
+  const resizeObserver = new ResizeObserver(update);
+  resizeObserver.observe(rail);
+  const childObserver = new MutationObserver(update);
+  childObserver.observe(rail, { childList: true });
   rail.addEventListener("scroll", update, { passive: true });
-  window.addEventListener("resize", update);
   update();
 
   rail.__loadlinkSwipeCleanup = () => {
     cancelAnimationFrame(frame);
-    observer.disconnect();
-    mutation.disconnect();
+    resizeObserver.disconnect();
+    childObserver.disconnect();
     rail.removeEventListener("scroll", update);
-    window.removeEventListener("resize", update);
     dots.remove();
     rail.removeAttribute(READY_ATTRIBUTE);
     delete rail.__loadlinkSwipeCleanup;
   };
 }
 
+function scanRails() {
+  document
+    .querySelectorAll<EnhancedRail>("[data-loadlink-swipe-dots='true'], .snap-x.overflow-x-auto, .overflow-x-auto.snap-x")
+    .forEach(enhance);
+
+  document.querySelectorAll<EnhancedRail>(`[${READY_ATTRIBUTE}='true']`).forEach((rail) => {
+    if (!document.body.contains(rail) || !shouldEnhance(rail)) rail.__loadlinkSwipeCleanup?.();
+  });
+}
+
 export default function SwipeDotsEnhancer() {
+  const pathname = usePathname();
+
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const scan = () => {
-      document.querySelectorAll<EnhancedRail>("[data-loadlink-swipe-dots='true'], .snap-x.overflow-x-auto, .overflow-x-auto.snap-x").forEach(enhance);
-      document.querySelectorAll<EnhancedRail>(`[${READY_ATTRIBUTE}='true']`).forEach((rail) => {
-        if (!document.body.contains(rail) || !shouldEnhance(rail)) rail.__loadlinkSwipeCleanup?.();
-      });
+    let timer = 0;
+    const schedule = (delay = 0) => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(scanRails, delay);
     };
-    const schedule = () => { if (timer) clearTimeout(timer); timer = setTimeout(scan, 80); };
-    scan();
-    const observer = new MutationObserver(schedule);
-    observer.observe(document.body, { childList: true, subtree: true });
-    window.addEventListener("resize", schedule);
-    window.addEventListener("popstate", schedule);
+
+    scanRails();
+    const frame = window.requestAnimationFrame(scanRails);
+    const delayed = window.setTimeout(scanRails, 400);
+
+    const onResize = () => schedule(80);
+    const onContent = () => schedule(80);
+    window.addEventListener("resize", onResize, { passive: true });
+    window.addEventListener("pageshow", onContent);
+    window.addEventListener("loadlink:content-updated", onContent);
+
     return () => {
-      observer.disconnect();
-      if (timer) clearTimeout(timer);
-      window.removeEventListener("resize", schedule);
-      window.removeEventListener("popstate", schedule);
-      document.querySelectorAll<EnhancedRail>(`[${READY_ATTRIBUTE}='true']`).forEach((rail) => rail.__loadlinkSwipeCleanup?.());
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+      window.clearTimeout(delayed);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("pageshow", onContent);
+      window.removeEventListener("loadlink:content-updated", onContent);
+      document
+        .querySelectorAll<EnhancedRail>(`[${READY_ATTRIBUTE}='true']`)
+        .forEach((rail) => rail.__loadlinkSwipeCleanup?.());
     };
-  }, []);
+  }, [pathname]);
+
   return null;
 }
