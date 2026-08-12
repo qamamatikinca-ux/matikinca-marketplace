@@ -1,0 +1,31 @@
+name: LoadLink Manual Deploy Package
+
+on:
+  push:
+    branches:
+      - loadlink-manual-package-20260812
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Prepare source package
+        run: |
+          mkdir -p /tmp/loadlink-manual-deploy
+          rsync -a ./ /tmp/loadlink-manual-deploy/ \
+            --exclude='.git' \
+            --exclude='.github/workflows/loadlink-manual-deploy-package.yml' \
+            --exclude='node_modules' \
+            --exclude='.next'
+      - name: Upload project
+        uses: actions/upload-artifact@v4
+        with:
+          name: LoadLink-Manual-Deploy-Latest
+          path: /tmp/loadlink-manual-deploy
+          include-hidden-files: true
+          compression-level: 6
