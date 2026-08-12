@@ -1,0 +1,25 @@
+name: LoadLink Stability UI Check
+
+on:
+  push:
+    branches:
+      - loadlink-stability-universal-ui-20260812
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Use Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Production build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+        run: npm run build
