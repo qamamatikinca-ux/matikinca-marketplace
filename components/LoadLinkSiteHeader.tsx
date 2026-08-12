@@ -1,6 +1,5 @@
 "use client";
 
-// V2.7.7 production: preserve the original LoadLink header geometry across customer-facing pages.
 import { Suspense } from "react";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
@@ -20,10 +19,10 @@ export default function LoadLinkSiteHeader({
 }) {
   return (
     <header
-      data-loadlink-site-header="locked-v277"
+      data-loadlink-site-header="centered-v282"
       className={`${sticky ? "sticky top-0" : "relative"} z-[80] shrink-0 border-b transition-colors duration-300 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"} ${className}`}
     >
-      <div className="grid h-20 w-full grid-cols-[92px_minmax(0,1fr)_60px] items-center gap-3 px-4">
+      <div className="grid h-20 w-full grid-cols-[104px_minmax(0,1fr)_104px] items-center px-3 sm:px-4">
         <div className="flex min-w-0 items-center gap-2">
           <Suspense fallback={<span className="h-10 w-10" aria-hidden="true" />}>
             <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
@@ -40,7 +39,9 @@ export default function LoadLinkSiteHeader({
           logoClassName="loadlink-logo-dark-fix"
         />
 
-        <LoadLinkThemeToggle darkMode={darkMode} onToggle={onToggleTheme} className="ml-auto" />
+        <div className="flex justify-end">
+          <LoadLinkThemeToggle darkMode={darkMode} onToggle={onToggleTheme} />
+        </div>
       </div>
     </header>
   );
