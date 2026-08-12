@@ -1,5 +1,5 @@
-import LoadLinkCommercialDealership from "@/components/LoadLinkCommercialDealership";
+import { redirect } from "next/navigation";
 
 export default function LoadLinkCommercialCenturionPage() {
-  return <LoadLinkCommercialDealership />;
+  redirect("/dealership/loadlink-test-dealership");
 }
