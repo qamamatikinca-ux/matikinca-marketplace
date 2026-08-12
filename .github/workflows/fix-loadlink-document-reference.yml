@@ -1,0 +1,31 @@
+name: Stabilize LoadLink document references
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/fix-loadlink-document-reference.yml']
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - shell: python
+        run: |
+          from pathlib import Path
+          p=Path('components/LoadLinkDocumentPreview.tsx')
+          s=p.read_text()
+          old='  const docReference = reference || `LL-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;'
+          new='''  const docReference = useMemo(() => {\n    if (reference) return reference;\n    const source = `${documentType}|${vehicle}|${route}|${amount}|${unit}|${availability}|${vat}|${terms}`;\n    let hash = 2166136261;\n    for (let index = 0; index < source.length; index += 1) {\n      hash ^= source.charCodeAt(index);\n      hash = Math.imul(hash, 16777619);\n    }\n    return `LL-${(hash >>> 0).toString(36).toUpperCase().padStart(7, "0").slice(0, 7)}`;\n  }, [amount, availability, documentType, reference, route, terms, unit, vat, vehicle]);'''
+          if old not in s: raise SystemExit('Document reference line not found')
+          p.write_text(s.replace(old,new,1))
+          Path('.github/workflows/fix-loadlink-document-reference.yml').unlink()
+      - run: |
+          git config user.name "LoadLink Release Bot"
+          git config user.email "loadlinksouthafrica@gmail.com"
+          git add -A
+          git commit -m "Keep LoadLink document references stable"
+          git push origin HEAD:main
