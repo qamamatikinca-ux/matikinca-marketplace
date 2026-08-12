@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 export type LoadLinkToastTone = "progress" | "success" | "error" | "info";
 
@@ -51,15 +52,15 @@ export default function LoadLinkActionToast({
           {safeProgress !== null ? <div className="mt-3 flex items-center gap-3"><div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full transition-[width] duration-200" style={{ width: `${safeProgress}%`, backgroundColor: accent }} /></div><strong className="text-[10px]" style={{ color: accent }}>{Math.round(safeProgress)}%</strong></div> : null}
           {primaryLabel || secondaryLabel ? <div className="mt-3 flex flex-wrap gap-2">{secondaryLabel ? <button type="button" onClick={onSecondary} className="h-9 rounded-xl border border-white/12 px-3 text-[10px] font-black text-white/72">{secondaryLabel}</button> : null}{primaryLabel ? <button type="button" onClick={onPrimary} className="h-9 rounded-xl border px-3 text-[10px] font-black" style={{ borderColor: accent, color: tone === "success" || tone === "progress" ? "#050505" : accent, backgroundColor: tone === "success" || tone === "progress" ? accent : "transparent" }}>{primaryLabel}</button> : null}</div> : null}
         </div>
-        {onClose ? <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 text-lg text-white/48" aria-label="Dismiss">×</button> : null}
+        {onClose ? <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 text-white/48" aria-label="Dismiss"><LoadLinkIcon name="close" size={16} /></button> : null}
       </div>
     </section>
   );
 }
 
 function ToneIcon({ tone }: { tone: LoadLinkToastTone }) {
-  if (tone === "success") return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 4 4 10-10"/></svg>;
-  if (tone === "error") return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>;
-  if (tone === "progress") return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M7 10l5-5 5 5"/></svg>;
-  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7h.01"/></svg>;
+  if (tone === "success") return <LoadLinkIcon name="check" size={20} strokeWidth={2.2} />;
+  if (tone === "error") return <LoadLinkIcon name="close" size={20} strokeWidth={2.2} />;
+  if (tone === "progress") return <LoadLinkIcon name="send" size={20} />;
+  return <LoadLinkIcon name="message" size={20} />;
 }
