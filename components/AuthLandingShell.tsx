@@ -29,8 +29,7 @@ export default function AuthLandingShell({
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage:
-              'linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,.22)),url("/images/loadlink-auth-hero.jpg"),url("/images/find-jobs.jpg")',
+            backgroundImage: `linear-gradient(180deg,${darkMode ? "rgba(0,0,0,.18),rgba(0,0,0,.46)" : "rgba(255,248,229,.02),rgba(0,0,0,.22)"}),url("/images/loadlink-auth-hero.svg")`,
           }}
           aria-hidden="true"
         />
@@ -38,16 +37,17 @@ export default function AuthLandingShell({
           className="absolute inset-0"
           aria-hidden="true"
           style={{
-            background:
-              "radial-gradient(circle at 18% 24%, rgba(246,184,0,.24), transparent 24%), radial-gradient(circle at 78% 58%, rgba(246,184,0,.18), transparent 28%), linear-gradient(180deg, transparent 46%, rgba(0,0,0,.24) 100%)",
+            background: darkMode
+              ? "radial-gradient(circle at 18% 24%, rgba(246,184,0,.25), transparent 24%), radial-gradient(circle at 78% 58%, rgba(246,184,0,.16), transparent 28%), linear-gradient(180deg, rgba(0,0,0,.08) 40%, rgba(0,0,0,.48) 100%)"
+              : "radial-gradient(circle at 18% 24%, rgba(246,184,0,.22), transparent 24%), radial-gradient(circle at 78% 58%, rgba(246,184,0,.14), transparent 28%), linear-gradient(180deg, transparent 46%, rgba(0,0,0,.20) 100%)",
           }}
         />
         <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between p-5 sm:p-7 lg:p-9">
-          <Link href="/" aria-label="LoadLink home" className="inline-flex items-center">
+          <Link href="/" aria-label="LoadLink home" className="inline-flex items-center rounded-full bg-black/10 px-2.5 py-2 backdrop-blur-sm">
             <img
               src={darkMode ? "/images/loadlink-logo-dark.png?v=universal-theme-v1" : "/images/loadlink-logo-light.png?v=universal-theme-v1"}
               alt="LoadLink"
-              className="h-[18px] w-auto max-w-[92px] object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,.28)] sm:h-5"
+              className="h-[16px] w-auto max-w-[82px] object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,.28)] sm:h-[18px]"
             />
           </Link>
         </div>
