@@ -10,6 +10,8 @@ export type PackageAccess = {
   subscriptionStatus?: string | null;
   expiresAt?: string | null;
   accessPeriodId?: string | null;
+  activeListingLimit: number | null;
+  activeManualListings: number;
   photoLimit: number;
   dailyMessageLimit: number | null;
   analyticsEnabled: boolean;
@@ -21,6 +23,8 @@ const lockedAccess: PackageAccess = {
   allowed: false,
   plan: null,
   source: null,
+  activeListingLimit: 0,
+  activeManualListings: 0,
   photoLimit: 0,
   dailyMessageLimit: 0,
   analyticsEnabled: false,
@@ -42,10 +46,12 @@ export async function getVehicleListingAccess(): Promise<PackageAccess> {
   return {
     allowed: Boolean(value.allowed),
     plan,
-    source: value.source === "subscription" || value.source === "manual_access" ? value.source : null,
+    source: value.source === "subscription" || value.source === "manual_access" || value.source === "manual" ? (value.source === "manual" ? "manual_access" : value.source) : null,
     subscriptionStatus: typeof value.subscription_status === "string" ? value.subscription_status : null,
     expiresAt: typeof value.expires_at === "string" ? value.expires_at : null,
     accessPeriodId: typeof value.access_period_id === "string" ? value.access_period_id : null,
+    activeListingLimit: value.manual_listing_limit === undefined ? (defaults?.activeListingLimit ?? null) : Number(value.manual_listing_limit),
+    activeManualListings: Number(value.active_manual_listings ?? 0),
     photoLimit: Number(value.photo_limit ?? defaults?.photoLimit ?? 0),
     dailyMessageLimit: value.daily_message_limit === undefined ? (defaults?.dailyMessageLimit ?? 0) : value.daily_message_limit === null ? null : Number(value.daily_message_limit),
     analyticsEnabled: value.analytics_enabled === undefined ? Boolean(defaults?.analyticsEnabled) : Boolean(value.analytics_enabled),
@@ -66,7 +72,6 @@ export async function requestSubscription(plan: "pro" | "dealer") {
   if (error) throw error;
   return data as { payment_id: string; reference: string; plan: string; amount_cents: number; status: string };
 }
-
 
 export async function requestListingRenewal(listingId: string, days: number) {
   const safeDays = safePositiveInteger(days);
