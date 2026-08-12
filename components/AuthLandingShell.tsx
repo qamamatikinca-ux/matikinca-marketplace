@@ -55,20 +55,20 @@ export default function AuthLandingShell({
         </section>
 
         <section
-          className={`relative z-20 -mt-8 rounded-t-[34px] border-t px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-7 shadow-[0_-18px_55px_rgba(0,0,0,.15)] backdrop-blur-3xl sm:px-8 sm:pt-9 lg:mt-0 lg:flex lg:w-[min(46vw,600px)] lg:flex-col lg:justify-center lg:rounded-none lg:border-l lg:border-t-0 lg:px-12 ${
+          className={`relative z-20 -mt-8 rounded-t-[34px] border-t px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-7 shadow-[0_-18px_55px_rgba(0,0,0,.15)] backdrop-blur-3xl backdrop-saturate-150 sm:px-8 sm:pt-9 lg:mt-0 lg:flex lg:w-[min(46vw,600px)] lg:flex-col lg:justify-center lg:rounded-none lg:border-l lg:border-t-0 lg:px-12 ${
             darkMode
-              ? "border-white/12 bg-black/[.82] text-white"
-              : "border-white/70 bg-white/[.88] text-black"
+              ? "border-white/14 bg-black/[.66] text-white"
+              : "border-white/80 bg-white/[.74] text-black"
           }`}
         >
           <div className="mx-auto w-full max-w-[420px]">
             <div className="text-center">
               <h1 className="text-[29px] font-black tracking-[-.045em] sm:text-[34px]">{title}</h1>
-              <p className={`mt-2 text-sm font-semibold ${darkMode ? "text-white/56" : "text-black/52"}`}>{subtitle}</p>
+              <p className={`mt-2 text-sm font-semibold ${darkMode ? "text-white/64" : "text-black/58"}`}>{subtitle}</p>
             </div>
             <div className="mt-6">{children}</div>
-            {footer ? <div className={`mt-6 text-center text-sm font-semibold ${darkMode ? "text-white/68" : "text-black/64"}`}>{footer}</div> : null}
-            <p className={`mt-5 text-center text-[10px] font-semibold leading-5 ${darkMode ? "text-white/34" : "text-black/38"}`}>
+            {footer ? <div className={`mt-6 text-center text-sm font-semibold ${darkMode ? "text-white/74" : "text-black/68"}`}>{footer}</div> : null}
+            <p className={`mt-5 text-center text-[10px] font-semibold leading-5 ${darkMode ? "text-white/42" : "text-black/44"}`}>
               Never share your password, PIN or OTP in a LoadLink message, listing or quote.
             </p>
           </div>
