@@ -25,13 +25,9 @@ export default function AuthStatusButton({ darkMode, className = "" }: { darkMod
         className={`${base} border-[#f6b800]/70 bg-black text-[#f6b800] shadow-none`}
       >
         {account.profile.avatar_url ? (
-          <img
-            src={account.profile.avatar_url}
-            alt=""
-            className="absolute inset-[2px] h-[calc(100%-4px)] w-[calc(100%-4px)] rounded-full object-cover"
-          />
+          <img src={account.profile.avatar_url} alt="" className="absolute inset-[2px] block rounded-full object-cover" />
         ) : (
-          <span className="flex h-full w-full items-center justify-center bg-black text-[#f6b800]">
+          <span className="absolute inset-[2px] flex items-center justify-center rounded-full bg-black text-[#f6b800]">
             <LoadLinkGearIcon />
           </span>
         )}
