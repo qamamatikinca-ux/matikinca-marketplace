@@ -1,0 +1,118 @@
+name: Package LoadLink V2.7.14 Update
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/package-loadlink-v2714-update.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout final source
+        uses: actions/checkout@v4
+        with:
+          ref: 4771231c3252bf0f7ab6c0c431901cd26ca082dd
+
+      - name: Build update-only package
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$RUNNER_TEMP/LoadLink-V2.7.14-UPDATE-ONLY"
+          mkdir -p "$ROOT/app/jobs/list" "$ROOT/app/tools" "$ROOT/components" "$ROOT/public/images"
+
+          cp app/jobs/list/page.tsx "$ROOT/app/jobs/list/page.tsx"
+          cp app/layout.tsx "$ROOT/app/layout.tsx"
+          cp app/loadlink-v2714-design.css "$ROOT/app/loadlink-v2714-design.css"
+          cp app/tools/page.tsx "$ROOT/app/tools/page.tsx"
+          cp components/AuthLandingShell.tsx "$ROOT/components/AuthLandingShell.tsx"
+          cp components/DriverProfileWizardV273.tsx "$ROOT/components/DriverProfileWizardV273.tsx"
+          cp components/LoadLinkDocumentPreview.tsx "$ROOT/components/LoadLinkDocumentPreview.tsx"
+          cp components/LoadLinkToastCenter.tsx "$ROOT/components/LoadLinkToastCenter.tsx"
+          cp components/LogisticsMessageTools.tsx "$ROOT/components/LogisticsMessageTools.tsx"
+          cp public/images/loadlink-auth-hero.svg "$ROOT/public/images/loadlink-auth-hero.svg"
+
+          cat > "$ROOT/APPLY-LOADLINK-V2.7.14.sh" <<'SCRIPT'
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          REPO="${1:-$PWD}"
+          UPDATE_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+          if [ ! -d "$REPO/.git" ]; then
+            echo "ERROR: Run this inside your matikinca-marketplace repository, or pass the repo path as the first argument."
+            exit 1
+          fi
+
+          cd "$REPO"
+          git checkout main
+          git pull --ff-only origin main
+
+          mkdir -p app/jobs/list app/tools components public/images
+          cp "$UPDATE_DIR/app/jobs/list/page.tsx" app/jobs/list/page.tsx
+          cp "$UPDATE_DIR/app/layout.tsx" app/layout.tsx
+          cp "$UPDATE_DIR/app/loadlink-v2714-design.css" app/loadlink-v2714-design.css
+          cp "$UPDATE_DIR/app/tools/page.tsx" app/tools/page.tsx
+          cp "$UPDATE_DIR/components/AuthLandingShell.tsx" components/AuthLandingShell.tsx
+          cp "$UPDATE_DIR/components/DriverProfileWizardV273.tsx" components/DriverProfileWizardV273.tsx
+          cp "$UPDATE_DIR/components/LoadLinkDocumentPreview.tsx" components/LoadLinkDocumentPreview.tsx
+          cp "$UPDATE_DIR/components/LoadLinkToastCenter.tsx" components/LoadLinkToastCenter.tsx
+          cp "$UPDATE_DIR/components/LogisticsMessageTools.tsx" components/LogisticsMessageTools.tsx
+          cp "$UPDATE_DIR/public/images/loadlink-auth-hero.svg" public/images/loadlink-auth-hero.svg
+
+          npm ci
+          npm run build
+          git add app/jobs/list/page.tsx app/layout.tsx app/loadlink-v2714-design.css app/tools/page.tsx components/AuthLandingShell.tsx components/DriverProfileWizardV273.tsx components/LoadLinkDocumentPreview.tsx components/LoadLinkToastCenter.tsx components/LogisticsMessageTools.tsx public/images/loadlink-auth-hero.svg
+
+          if git diff --cached --quiet; then
+            echo "LoadLink V2.7.14 files already match this update. Nothing to commit."
+            exit 0
+          fi
+
+          git commit -m "Apply LoadLink V2.7.14 update"
+          git push origin main
+          echo "LoadLink V2.7.14 pushed to GitHub successfully."
+          SCRIPT
+          chmod +x "$ROOT/APPLY-LOADLINK-V2.7.14.sh"
+
+          cat > "$ROOT/README-UPLOAD.txt" <<'TXT'
+          LOADLINK V2.7.14 — UPDATE ONLY
+
+          This package contains only the files changed between:
+          Base: fb0bce79eafd16e34aaf68b9f721761dd6e64e78
+          Final validated source: 4771231c3252bf0f7ab6c0c431901cd26ca082dd
+
+          Copy these folders over the root of the existing matikinca-marketplace repository.
+          Do NOT upload this as a new standalone repository.
+
+          Included source files:
+          - app/jobs/list/page.tsx
+          - app/layout.tsx
+          - app/loadlink-v2714-design.css
+          - app/tools/page.tsx
+          - components/AuthLandingShell.tsx
+          - components/DriverProfileWizardV273.tsx
+          - components/LoadLinkDocumentPreview.tsx
+          - components/LoadLinkToastCenter.tsx
+          - components/LogisticsMessageTools.tsx
+          - public/images/loadlink-auth-hero.svg
+
+          The included APPLY-LOADLINK-V2.7.14.sh script copies the files, runs npm ci + npm run build, commits and pushes to main.
+          TXT
+
+          cd "$RUNNER_TEMP"
+          zip -r "LoadLink-V2.7.14-UPDATE-ONLY.zip" "LoadLink-V2.7.14-UPDATE-ONLY"
+          mkdir -p "$GITHUB_WORKSPACE/package-output"
+          cp "LoadLink-V2.7.14-UPDATE-ONLY.zip" "$GITHUB_WORKSPACE/package-output/"
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: LoadLink-V2.7.14-UPDATE-ONLY
+          path: package-output/LoadLink-V2.7.14-UPDATE-ONLY.zip
+          if-no-files-found: error
+          retention-days: 7
