@@ -1,27 +1,20 @@
-/* LoadLink chat logistics tools — hard rendering boundary.
-   When the tools sheet is open, the Messages surface is removed from layout entirely.
-   The tools portal is mounted directly under <body>, so it remains visible and cannot
-   be painted underneath the chat wallpaper, header or composer on iOS/Safari. */
+/* LoadLink chat logistics tools — explicit rendering boundary.
+   The tools component owns the data-loadlink-logistics-open attribute while open.
+   Avoid :has() here because Safari repeatedly recalculates it during chat updates. */
 
 html[data-loadlink-logistics-open="true"] .loadlink-messages,
-body[data-loadlink-logistics-open="true"] .loadlink-messages,
-body:has(.loadlink-logistics-sheet) .loadlink-messages {
+body[data-loadlink-logistics-open="true"] .loadlink-messages {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
 }
 
-/* V2.7.10 defense-in-depth: the rotating chat sketch must never survive above
-   the dedicated Logistics Tools workspace, even for a single Safari paint. */
 html[data-loadlink-logistics-open="true"] .loadlink-chat-wallpaper,
 body[data-loadlink-logistics-open="true"] .loadlink-chat-wallpaper,
-body:has(.loadlink-logistics-sheet) .loadlink-chat-wallpaper,
 html[data-loadlink-logistics-open="true"] .loadlink-chat-panel,
 body[data-loadlink-logistics-open="true"] .loadlink-chat-panel,
-body:has(.loadlink-logistics-sheet) .loadlink-chat-panel,
 html[data-loadlink-logistics-open="true"] .loadlink-chat-composer,
-body[data-loadlink-logistics-open="true"] .loadlink-chat-composer,
-body:has(.loadlink-logistics-sheet) .loadlink-chat-composer {
+body[data-loadlink-logistics-open="true"] .loadlink-chat-composer {
   display: none !important;
   visibility: hidden !important;
   background-image: none !important;
@@ -35,8 +28,7 @@ body[data-loadlink-logistics-open="true"] {
   overscroll-behavior: none !important;
 }
 
-body[data-loadlink-logistics-open="true"] .loadlink-logistics-sheet,
-body:has(.loadlink-logistics-sheet) .loadlink-logistics-sheet {
+body[data-loadlink-logistics-open="true"] .loadlink-logistics-sheet {
   position: fixed !important;
   inset: 0 !important;
   width: 100vw !important;
@@ -53,17 +45,16 @@ body:has(.loadlink-logistics-sheet) .loadlink-logistics-sheet {
   overflow-x: hidden !important;
   overflow-y: auto !important;
   overscroll-behavior: contain !important;
+  touch-action: pan-y !important;
   -webkit-overflow-scrolling: touch;
 }
 
-html[data-loadlink-theme="dark"] body[data-loadlink-logistics-open="true"] .loadlink-logistics-sheet,
-html[data-loadlink-theme="dark"] body:has(.loadlink-logistics-sheet) .loadlink-logistics-sheet {
+html[data-loadlink-theme="dark"] body[data-loadlink-logistics-open="true"] .loadlink-logistics-sheet {
   background: #0b0b0b !important;
   color: #ffffff !important;
 }
 
-html[data-loadlink-theme="light"] body[data-loadlink-logistics-open="true"] .loadlink-logistics-sheet,
-html[data-loadlink-theme="light"] body:has(.loadlink-logistics-sheet) .loadlink-logistics-sheet {
+html[data-loadlink-theme="light"] body[data-loadlink-logistics-open="true"] .loadlink-logistics-sheet {
   background: #ffffff !important;
   color: #050505 !important;
 }
