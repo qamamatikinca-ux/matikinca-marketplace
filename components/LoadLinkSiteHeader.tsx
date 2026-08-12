@@ -19,10 +19,10 @@ export default function LoadLinkSiteHeader({
 }) {
   return (
     <header
-      data-loadlink-site-header="centered-v282"
+      data-loadlink-site-header="centered-v286"
       className={`${sticky ? "sticky top-0" : "relative"} z-[80] shrink-0 border-b transition-colors duration-300 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"} ${className}`}
     >
-      <div className="grid h-20 w-full grid-cols-[104px_minmax(0,1fr)_104px] items-center px-3 sm:px-4">
+      <div className="mx-auto grid h-20 w-full max-w-[1600px] grid-cols-[104px_minmax(0,1fr)_104px] items-center px-4 sm:px-5 md:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-2">
           <Suspense fallback={<span className="h-10 w-10" aria-hidden="true" />}>
             <SiteMenu darkMode={darkMode} className={darkMode ? "text-white" : "text-black"} />
