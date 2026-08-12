@@ -3,6 +3,30 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
+function applyAccountAccessStyles() {
+  const headings = Array.from(document.querySelectorAll("h2"));
+  const heading = headings.find((node) => node.textContent?.trim().toLowerCase() === "account access");
+  const section = heading?.closest("section");
+  if (!section) return;
+  section.setAttribute("data-loadlink-account-access", "true");
+
+  const buttons = Array.from(section.querySelectorAll("button"));
+  for (const button of buttons) {
+    const label = button.textContent?.trim().toLowerCase() || "";
+    if (label === "sign out") {
+      button.classList.remove("border-red-500", "text-red-500", "loadlink-account-danger-action");
+      button.classList.add("loadlink-account-neutral-action");
+      button.setAttribute("data-loadlink-account-action", "signout");
+    }
+    if (label === "request deletion" || label === "request account deletion") {
+      button.textContent = "Request account deletion";
+      button.classList.remove("loadlink-account-neutral-action");
+      button.classList.add("loadlink-account-danger-action");
+      button.setAttribute("data-loadlink-account-action", "delete");
+    }
+  }
+}
+
 export default function AccountSettingsGlassFix() {
   const pathname = usePathname();
 
@@ -11,35 +35,23 @@ export default function AccountSettingsGlassFix() {
     document.documentElement.classList.toggle("loadlink-settings-glass", active);
     if (!active) return;
 
-    const applyAccountAccessStyles = () => {
-      const headings = Array.from(document.querySelectorAll("h2"));
-      const heading = headings.find((node) => node.textContent?.trim().toLowerCase() === "account access");
-      const section = heading?.closest("section");
-      if (!section) return;
-      section.setAttribute("data-loadlink-account-access", "true");
-
-      const buttons = Array.from(section.querySelectorAll("button"));
-      for (const button of buttons) {
-        const label = button.textContent?.trim().toLowerCase() || "";
-        if (label === "sign out") {
-          button.classList.remove("border-red-500", "text-red-500", "loadlink-account-danger-action");
-          button.classList.add("loadlink-account-neutral-action");
-          button.setAttribute("data-loadlink-account-action", "signout");
-        }
-        if (label === "request deletion" || label === "request account deletion") {
-          button.textContent = "Request account deletion";
-          button.classList.remove("loadlink-account-neutral-action");
-          button.classList.add("loadlink-account-danger-action");
-          button.setAttribute("data-loadlink-account-action", "delete");
-        }
-      }
-    };
-
     applyAccountAccessStyles();
-    const observer = new MutationObserver(applyAccountAccessStyles);
-    observer.observe(document.body, { childList: true, subtree: true });
+    const frame = window.requestAnimationFrame(applyAccountAccessStyles);
+    const shortTimer = window.setTimeout(applyAccountAccessStyles, 200);
+    const longTimer = window.setTimeout(applyAccountAccessStyles, 700);
+
+    const afterInteraction = () => {
+      window.requestAnimationFrame(applyAccountAccessStyles);
+    };
+    document.addEventListener("click", afterInteraction);
+    window.addEventListener("hashchange", afterInteraction);
+
     return () => {
-      observer.disconnect();
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(shortTimer);
+      window.clearTimeout(longTimer);
+      document.removeEventListener("click", afterInteraction);
+      window.removeEventListener("hashchange", afterInteraction);
       document.documentElement.classList.remove("loadlink-settings-glass");
     };
   }, [pathname]);
@@ -52,7 +64,7 @@ export default function AccountSettingsGlassFix() {
         background-image:
           radial-gradient(circle at 92% 10%, rgba(246,184,0,.10), transparent 24%),
           radial-gradient(circle at 8% 36%, rgba(255,255,255,.65), transparent 28%) !important;
-        background-attachment: fixed !important;
+        background-attachment: scroll !important;
       }
       html.dark.loadlink-settings-glass body { background: #030303; }
       html.dark.loadlink-settings-glass main {
@@ -70,8 +82,8 @@ export default function AccountSettingsGlassFix() {
         background: rgba(255,255,255,.42) !important;
         border-color: rgba(255,255,255,.72) !important;
         box-shadow: 0 22px 70px rgba(39,30,10,.08) !important;
-        -webkit-backdrop-filter: blur(26px) saturate(145%) !important;
-        backdrop-filter: blur(26px) saturate(145%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+        backdrop-filter: blur(20px) saturate(140%) !important;
       }
       html.dark.loadlink-settings-glass main form,
       html.dark.loadlink-settings-glass main aside,
@@ -86,8 +98,8 @@ export default function AccountSettingsGlassFix() {
       html.loadlink-settings-glass main > section > div:nth-of-type(2) {
         background: rgba(255,255,255,.34) !important;
         border-color: rgba(255,255,255,.66) !important;
-        -webkit-backdrop-filter: blur(22px) saturate(140%) !important;
-        backdrop-filter: blur(22px) saturate(140%) !important;
+        -webkit-backdrop-filter: blur(18px) saturate(135%) !important;
+        backdrop-filter: blur(18px) saturate(135%) !important;
       }
       html.dark.loadlink-settings-glass main > section > div:nth-of-type(2) {
         background: rgba(13,13,13,.42) !important;
@@ -99,8 +111,8 @@ export default function AccountSettingsGlassFix() {
       html.loadlink-settings-glass main textarea,
       html.loadlink-settings-glass main [role="switch"] {
         background-color: rgba(255,255,255,.36) !important;
-        -webkit-backdrop-filter: blur(14px) !important;
-        backdrop-filter: blur(14px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        backdrop-filter: blur(10px) !important;
       }
       html.dark.loadlink-settings-glass main input,
       html.dark.loadlink-settings-glass main select,
