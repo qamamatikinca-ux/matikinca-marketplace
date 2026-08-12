@@ -1,0 +1,57 @@
+name: LoadLink Responsive Experience Final Check 2
+
+on:
+  push:
+    branches:
+      - loadlink-responsive-experience-final-check2-20260813
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Verify responsive source files
+        run: |
+          set -euxo pipefail
+          test -f app/loadlink-responsive-experience.css
+          test -f components/LoadLinkInteractionSystem.tsx
+          test -f components/AuthLandingShell.tsx
+          grep -q 'loadlink-responsive-experience.css' app/layout.tsx
+          grep -q 'data-loadlink-datalist-menu' components/LoadLinkInteractionSystem.tsx
+          grep -q 'data-loadlink-choice-sheet' components/LoadLinkInteractionSystem.tsx
+          grep -q 'loadlinkSheetOpen' components/LoadLinkInteractionSystem.tsx
+          grep -q 'loadlink-login-hero-hd.webp' components/AuthLandingShell.tsx
+      - name: Verify login artwork binary
+        run: |
+          set -euxo pipefail
+          test -f public/images/loadlink-login-hero-hd.webp
+          test ! -e public/images/loadlink-login-hero-hd.jpeg
+          SIZE="$(wc -c < public/images/loadlink-login-hero-hd.webp)"
+          echo "hero_bytes=$SIZE"
+          test "$SIZE" -gt 10000
+          file public/images/loadlink-login-hero-hd.webp
+          file public/images/loadlink-login-hero-hd.webp | grep -qi 'Web/P image'
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Production build
+        run: npm run build
+      - name: Create update-only ZIP
+        run: |
+          rm -rf /tmp/loadlink-update
+          mkdir -p /tmp/loadlink-update/app /tmp/loadlink-update/components /tmp/loadlink-update/public/images
+          cp app/layout.tsx /tmp/loadlink-update/app/layout.tsx
+          cp app/loadlink-responsive-experience.css /tmp/loadlink-update/app/loadlink-responsive-experience.css
+          cp components/AuthLandingShell.tsx /tmp/loadlink-update/components/AuthLandingShell.tsx
+          cp components/LoadLinkInteractionSystem.tsx /tmp/loadlink-update/components/LoadLinkInteractionSystem.tsx
+          cp public/images/loadlink-login-hero-hd.webp /tmp/loadlink-update/public/images/loadlink-login-hero-hd.webp
+          cd /tmp/loadlink-update
+          zip -9 -r "$GITHUB_WORKSPACE/LoadLink-Marketplace-UPDATE-ONLY-responsive-experience.zip" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LoadLink-Marketplace-UPDATE-ONLY-responsive-experience
+          path: LoadLink-Marketplace-UPDATE-ONLY-responsive-experience.zip
+          retention-days: 1
