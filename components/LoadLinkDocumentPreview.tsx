@@ -43,7 +43,16 @@ export default function LoadLinkDocumentPreview({
   }, []);
 
   const stamp = useMemo(() => new Intl.DateTimeFormat("en-ZA", { day: "2-digit", month: "short", year: "numeric" }).format(new Date()), []);
-  const docReference = reference || `LL-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+  const docReference = useMemo(() => {
+    if (reference) return reference;
+    const source = `${documentType}|${vehicle}|${route}|${amount}|${unit}|${availability}|${vat}|${terms}`;
+    let hash = 2166136261;
+    for (let index = 0; index < source.length; index += 1) {
+      hash ^= source.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return `LL-${(hash >>> 0).toString(36).toUpperCase().padStart(7, "0").slice(0, 7)}`;
+  }, [amount, availability, documentType, reference, route, terms, unit, vat, vehicle]);
   const rateUnit = unit === "km" ? "per km" : unit === "ton" ? "per ton" : unit === "day" ? "per day" : "total";
 
   async function uploadBusinessLogo(event: ChangeEvent<HTMLInputElement>) {
