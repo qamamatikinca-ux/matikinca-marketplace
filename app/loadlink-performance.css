@@ -1,0 +1,50 @@
+/* LoadLink interaction performance guardrails.
+   Structural containers should not animate on every state/theme change.
+   Controls keep a short tactile transition without delaying taps or scroll. */
+
+html,
+body,
+main,
+header,
+section,
+article,
+footer {
+  transition: none !important;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  transition-duration: 150ms !important;
+  transition-timing-function: ease-out !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,[role="button"] {
+  touch-action: manipulation;
+}
+
+html,
+body {
+  overscroll-behavior-y: auto;
+}
+
+@media (max-width: 767px) {
+  body {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Full-screen blur is costly on iOS. Keep the glass language while capping GPU work. */
+  [role="dialog"] {
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+}
+
+/* Never leave a stale logistics lock active without the actual tools sheet. */
+body:not([data-loadlink-logistics-open="true"]) .loadlink-logistics-sheet {
+  pointer-events: auto;
+}
