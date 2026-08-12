@@ -50,7 +50,8 @@ button,
 input[type="button"],
 input[type="submit"],
 input[type="reset"],
-[role="button"] {
+[role="button"],
+a[class*="flex"][class*="items-center"][class*="justify-center"] {
   border-radius: var(--ll-control-radius);
 }
 
@@ -68,6 +69,14 @@ select {
 .rounded-full,
 [class~="rounded-full"] {
   border-radius: 9999px !important;
+}
+
+/* The menu may own scrolling while open, but its overlay must never cancel normal taps. */
+[data-loadlink-menu-overlay] {
+  touch-action: auto !important;
+}
+[data-loadlink-menu-panel] {
+  touch-action: pan-y !important;
 }
 
 /* Never expose native mobile date chrome on a LoadLink custom date field. */
@@ -201,8 +210,12 @@ html[data-loadlink-theme="dark"] .loadlink-account-danger-action {
   border-color: rgba(248, 113, 113, .46) !important;
 }
 
-/* Homepage portal call-to-action keeps its size; only the hard corners are softened. */
-.loadlink-portal-action {
+/* Homepage portal call-to-action keeps its exact footprint; only its hard edges soften. */
+.loadlink-portal-action,
+main a.group[href="/jobs"] div[class*="mt-6"][class*="border"][class*="px-8"],
+main a.group[href="/contracts"] div[class*="mt-6"][class*="border"][class*="px-8"],
+main a.group[href="/driver-portal"] div[class*="mt-6"][class*="border"][class*="px-8"],
+main a.group[href="/list-your-vehicle"] div[class*="mt-6"][class*="border"][class*="px-8"] {
   border-radius: 16px !important;
 }
 
