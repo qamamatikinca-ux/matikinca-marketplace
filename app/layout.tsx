@@ -17,6 +17,7 @@ import ProfileOnboardingGate from "@/components/ProfileOnboardingGate";
 import MarketplaceRestrictionGuard from "@/components/phase2/MarketplaceRestrictionGuard";
 import LoadLinkRuntimeIntelligence from "@/components/LoadLinkRuntimeIntelligence";
 import LoadLinkUiRepairV273 from "@/components/LoadLinkUiRepairV273";
+import LoadLinkDeleteConfirmationLayer from "@/components/LoadLinkDeleteConfirmationLayer";
 
 export const metadata: Metadata = {
   title: "LoadLink",
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AuthBootstrap />
         <NotificationCenter />
         <ChatLauncher />
+        <LoadLinkDeleteConfirmationLayer />
         <NetworkRecovery />
         {children}
         <LoadLinkRuntimeIntelligence />
