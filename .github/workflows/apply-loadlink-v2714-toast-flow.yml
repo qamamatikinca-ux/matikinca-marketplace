@@ -1,0 +1,50 @@
+name: Apply LoadLink V2.7.14 Toast Flow
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/apply-loadlink-v2714-toast-flow.yml']
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - shell: python
+        run: |
+          from pathlib import Path
+          def rep(path, old, new):
+              p=Path(path); s=p.read_text()
+              if old not in s: raise SystemExit(f'missing block: {path}: {old[:80]}')
+              p.write_text(s.replace(old,new,1))
+
+          rep('app/jobs/list/page.tsx',
+              '    setSaving(true);\n    setMessage("");\n    try {',
+              '    setSaving(true);\n    setMessage("");\n    window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: "loadlink-post-submit", kind: "progress", title: `Submitting ${postName}`, message: "LoadLink is publishing your details securely.", progress: 42 } }));\n    try {')
+          rep('app/jobs/list/page.tsx',
+              'window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { kind: "success", title: `${postNameTitle} submitted`, message: `LoadLink received your ${postName}. You can manage or edit it from My Posts.`, duration: 5200 } }));',
+              'window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: "loadlink-post-submit", kind: "success", title: `${postNameTitle} submitted`, message: `LoadLink received your ${postName}. You can manage or edit it from My Posts.`, duration: 5200 } }));')
+          rep('app/jobs/list/page.tsx',
+              '      setMessage(/postgres|supabase|row level security|pgrst/i.test(raw) ? `LoadLink could not publish this ${postName} right now. Your information is still saved.` : raw);',
+              '      setMessage(/postgres|supabase|row level security|pgrst/i.test(raw) ? `LoadLink could not publish this ${postName} right now. Your information is still saved.` : raw);\n      window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: "loadlink-post-submit", kind: "error", title: `${postNameTitle} not submitted`, message: "Your information is still saved. Review the message on this page and try again.", duration: 6500 } }));')
+
+          rep('components/DriverProfileWizardV273.tsx',
+              '    setUploadingType(type);\n    try {',
+              '    setUploadingType(type);\n    window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: `loadlink-driver-doc-${type}`, kind: "progress", title: `Uploading ${label}`, message: "LoadLink is securing and attaching this document.", progress: 38 } }));\n    try {')
+          rep('components/DriverProfileWizardV273.tsx',
+              'window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { kind: "success", title: `${label} uploaded`, message: "The document is attached to your LoadLink driver profile.", duration: 4800 } }));',
+              'window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: `loadlink-driver-doc-${type}`, kind: "success", title: `${label} uploaded`, message: "The document is attached to your LoadLink driver profile.", duration: 4800 } }));')
+          rep('components/DriverProfileWizardV273.tsx',
+              '      setMessage(`${label}: ${cleanMessage(error, "upload failed.")}`);',
+              '      setMessage(`${label}: ${cleanMessage(error, "upload failed.")}`);\n      window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: `loadlink-driver-doc-${type}`, kind: "error", title: `${label} not uploaded`, message: "The file was not attached. Check the document and try again.", duration: 6500 } }));')
+
+          Path('.github/workflows/apply-loadlink-v2714-toast-flow.yml').unlink()
+      - run: |
+          git config user.name "LoadLink Release Bot"
+          git config user.email "loadlinksouthafrica@gmail.com"
+          git add -A
+          git commit -m "Complete LoadLink V2.7.14 toast states"
+          git push origin HEAD:main
