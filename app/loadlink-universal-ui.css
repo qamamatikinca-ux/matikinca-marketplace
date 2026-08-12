@@ -95,6 +95,7 @@ input[data-loadlink-custom-date="true"]::-webkit-calendar-picker-indicator {
 [data-loadlink-confirmation-layer="true"] > section,
 [data-loadlink-calendar-sheet="true"] > section,
 [data-loadlink-choice-sheet="true"] > section,
+body > div.pointer-events-none.fixed[class*="top-[76px]"] > div[role="status"],
 .loadlink-glass,
 .loadlink-job-timing-toast {
   -webkit-backdrop-filter: blur(18px) saturate(135%) !important;
@@ -112,6 +113,7 @@ input[data-loadlink-custom-date="true"]::-webkit-calendar-picker-indicator {
 
 html[data-loadlink-theme="light"] [data-loadlink-calendar-sheet="true"] > section,
 html[data-loadlink-theme="light"] [data-loadlink-choice-sheet="true"] > section,
+html[data-loadlink-theme="light"] body > div.pointer-events-none.fixed[class*="top-[76px]"] > div[role="status"],
 html[data-loadlink-theme="light"] .loadlink-glass,
 html[data-loadlink-theme="light"] .loadlink-job-timing-toast {
   background: var(--ll-glass-light-strong) !important;
@@ -121,6 +123,7 @@ html[data-loadlink-theme="light"] .loadlink-job-timing-toast {
 
 html[data-loadlink-theme="dark"] [data-loadlink-calendar-sheet="true"] > section,
 html[data-loadlink-theme="dark"] [data-loadlink-choice-sheet="true"] > section,
+html[data-loadlink-theme="dark"] body > div.pointer-events-none.fixed[class*="top-[76px]"] > div[role="status"],
 html[data-loadlink-theme="dark"] .loadlink-glass,
 html[data-loadlink-theme="dark"] .loadlink-job-timing-toast {
   background: var(--ll-glass-dark-strong) !important;
@@ -220,6 +223,7 @@ main a.group[href="/list-your-vehicle"] div[class*="mt-6"][class*="border"][clas
   [data-loadlink-confirmation-layer="true"] > section,
   [data-loadlink-calendar-sheet="true"] > section,
   [data-loadlink-choice-sheet="true"] > section,
+  body > div.pointer-events-none.fixed[class*="top-[76px]"] > div[role="status"],
   [data-loadlink-menu-panel],
   .loadlink-glass,
   .loadlink-job-timing-toast {
