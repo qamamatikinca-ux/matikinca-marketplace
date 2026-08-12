@@ -14,20 +14,27 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - name: Verify exact update files
+      - name: Verify responsive source files
         run: |
+          set -euxo pipefail
           test -f app/loadlink-responsive-experience.css
           test -f components/LoadLinkInteractionSystem.tsx
           test -f components/AuthLandingShell.tsx
-          test -f public/images/loadlink-login-hero-hd.webp
-          test ! -e public/images/loadlink-login-hero-hd.jpeg
-          test "$(wc -c < public/images/loadlink-login-hero-hd.webp)" -gt 40000
-          file public/images/loadlink-login-hero-hd.webp | grep -qi 'Web/P image'
           grep -q 'loadlink-responsive-experience.css' app/layout.tsx
           grep -q 'data-loadlink-datalist-menu' components/LoadLinkInteractionSystem.tsx
           grep -q 'data-loadlink-choice-sheet' components/LoadLinkInteractionSystem.tsx
           grep -q 'loadlinkSheetOpen' components/LoadLinkInteractionSystem.tsx
           grep -q 'loadlink-login-hero-hd.webp' components/AuthLandingShell.tsx
+      - name: Verify HD login artwork
+        run: |
+          set -euxo pipefail
+          test -f public/images/loadlink-login-hero-hd.webp
+          test ! -e public/images/loadlink-login-hero-hd.jpeg
+          SIZE="$(wc -c < public/images/loadlink-login-hero-hd.webp)"
+          echo "hero_bytes=$SIZE"
+          test "$SIZE" -gt 40000
+          file public/images/loadlink-login-hero-hd.webp
+          file public/images/loadlink-login-hero-hd.webp | grep -qi 'Web/P image'
       - name: Install
         run: npm ci --no-audit --no-fund
       - name: Production build
