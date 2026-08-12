@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import AuthLandingShell from "@/components/AuthLandingShell";
+import LoadLinkIcon from "@/components/LoadLinkIcon";
 import TurnstileChallenge, { loadLinkTurnstileConfigured } from "@/components/TurnstileChallenge";
 import { clearActiveAccountState, syncAccountState } from "@/lib/accountState";
 import { isAuthenticatedUser, safeNextPath } from "@/lib/auth";
@@ -73,17 +74,17 @@ export default function LoginPage() {
     }
   }
 
-  async function handleOAuth(provider: "google" | "apple") {
+  async function handleGoogleSignIn() {
     if (busy) return;
     setMessage("");
     if (!isSupabaseConfigured) { setMessage("Secure sign-in is temporarily unavailable."); return; }
     setBusy(true);
     const next = getNextPath();
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } });
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
     if (error) {
       setBusy(false);
-      setMessage(`${provider === "google" ? "Google" : "Apple"} sign-in could not start. Try again.`);
+      setMessage("Google sign-in could not start. Try again.");
     }
   }
 
@@ -96,20 +97,20 @@ export default function LoginPage() {
     setMessage("Signed out.");
   }
 
-  const input = `h-12 w-full rounded-[18px] border px-4 text-[15px] font-semibold outline-none transition focus:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.045] text-white placeholder:text-white/28" : "border-black/12 bg-[#fffdf8] text-black placeholder:text-black/30"}`;
-  const socialButton = `flex h-12 w-full items-center justify-center gap-3 rounded-full border px-4 text-sm font-black shadow-sm transition active:scale-[.99] disabled:opacity-50 ${darkMode ? "border-white/12 bg-white/[.045] text-white" : "border-black/12 bg-white text-black"}`;
+  const input = `h-12 w-full rounded-[16px] border px-4 text-[15px] font-semibold outline-none transition focus:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.035] text-white placeholder:text-white/28" : "border-black/12 bg-white text-black placeholder:text-black/30"}`;
+  const socialButton = `flex h-12 w-full items-center justify-center gap-3 rounded-full border px-4 text-sm font-black transition active:scale-[.99] disabled:opacity-50 ${darkMode ? "border-white/14 bg-white/[.035] text-white" : "border-black/12 bg-white text-black"}`;
 
   return (
     <AuthLandingShell
       darkMode={darkMode}
       title="Welcome to LoadLink"
       subtitle="Logistics made easier"
-      footer={<>New to LoadLink? <Link href="/signup" className="font-black text-[#c38e00]">Create an account</Link></>}
+      footer={<>New to LoadLink? <Link href="/signup" className="font-black text-[#b88900]">Create an account</Link></>}
     >
       {signedInEmail ? (
-        <div className={`mb-5 rounded-[20px] border p-4 ${darkMode ? "border-[#f6b800]/30 bg-[#f6b800]/[.06]" : "border-[#b88900]/20 bg-[#fff7d8]"}`}>
+        <div className={`mb-5 rounded-[18px] border p-4 ${darkMode ? "border-white/10 bg-white/[.03]" : "border-black/10 bg-black/[.02]"}`}>
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f6b800] text-lg font-black text-black">✓</span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f6b800] text-black"><LoadLinkIcon name="check" size={20} strokeWidth={2.2} /></span>
             <div className="min-w-0 flex-1"><p className="text-sm font-black">Already signed in</p><p className="mt-0.5 truncate text-xs opacity-50">{signedInEmail}</p></div>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
@@ -119,10 +120,7 @@ export default function LoginPage() {
         </div>
       ) : null}
 
-      <div className="grid gap-2.5">
-        <button type="button" onClick={() => void handleOAuth("google")} disabled={busy} className={socialButton}><GoogleLogo />Continue with Google</button>
-        <button type="button" onClick={() => void handleOAuth("apple")} disabled={busy} className={socialButton}><AppleLogo />Continue with Apple</button>
-      </div>
+      <button type="button" onClick={() => void handleGoogleSignIn()} disabled={busy} className={socialButton}><GoogleLogo />Continue with Google</button>
 
       <div className={`my-5 flex items-center gap-3 text-xs font-semibold ${darkMode ? "text-white/35" : "text-black/35"}`}><span className="h-px flex-1 bg-current opacity-30" />or sign in with email<span className="h-px flex-1 bg-current opacity-30" /></div>
 
@@ -135,7 +133,7 @@ export default function LoginPage() {
 
         <TurnstileChallenge onToken={setCaptchaToken} resetKey={captchaResetKey} darkMode={darkMode} />
 
-        <button type="submit" disabled={busy || !email.trim() || !password} className="h-12 rounded-full bg-[#f6b800] px-5 text-sm font-black text-black shadow-[0_12px_30px_rgba(246,184,0,.2)] transition active:scale-[.99] disabled:opacity-45">{busy ? "Checking securely…" : "Sign in"}</button>
+        <button type="submit" disabled={busy || !email.trim() || !password} className="h-12 rounded-full bg-[#f6b800] px-5 text-sm font-black text-black transition active:scale-[.99] disabled:opacity-45">{busy ? "Checking securely…" : "Sign in"}</button>
       </form>
 
       {message ? <p role="status" aria-live="polite" className={`mt-4 rounded-[16px] border px-4 py-3 text-sm font-semibold leading-5 ${darkMode ? "border-white/10 bg-white/[.03] text-white/68" : "border-black/10 bg-black/[.02] text-black/68"}`}>{message}</p> : null}
@@ -145,8 +143,4 @@ export default function LoginPage() {
 
 function GoogleLogo() {
   return <svg aria-hidden="true" width="20" height="20" viewBox="0 0 48 48" className="shrink-0"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7A19.9 19.9 0 0 0 24 4C12.9 4 4 12.9 4 24s8.9 20 20 20c11.5 0 19.1-8.1 19.1-19.5 0-1.3-.1-2.7-.4-4Z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8A12 12 0 0 1 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7A19.9 19.9 0 0 0 24 4c-7.7 0-14.3 4.3-17.7 10.7Z"/><path fill="#4CAF50" d="M24 44c5 0 9.6-1.9 13-5l-6-5.1A11.9 11.9 0 0 1 12.9 28.5l-6.5 5A20 20 0 0 0 24 44Z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3a12 12 0 0 1-4.3 5.9l6 5.1c-.4.4 6.1-4.5 6.1-14.5 0-1.3-.1-2.7-.4-4Z"/></svg>;
-}
-
-function AppleLogo() {
-  return <svg aria-hidden="true" width="18" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.54c.02-2.28 1.86-3.37 1.94-3.42-1.06-1.55-2.71-1.76-3.3-1.78-1.39-.15-2.74.83-3.45.83-.72 0-1.8-.82-2.97-.8-1.5.02-2.91.9-3.68 2.27-1.6 2.77-.41 6.84 1.13 9.08.77 1.09 1.66 2.3 2.83 2.26 1.14-.05 1.57-.73 2.95-.73 1.36 0 1.77.73 2.96.7 1.23-.02 2-1.09 2.75-2.19.89-1.25 1.25-2.48 1.26-2.54-.03-.01-2.4-.92-2.42-3.68ZM14.78 5.86c.62-.78 1.05-1.84.93-2.9-.9.04-2.02.62-2.67 1.38-.58.67-1.1 1.77-.96 2.79 1.02.08 2.07-.52 2.7-1.27Z"/></svg>;
 }
