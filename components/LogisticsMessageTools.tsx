@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import LoadLinkDocumentPreview from "@/components/LoadLinkDocumentPreview";
 
 type DealStage =
   | "Enquiry"
@@ -507,6 +508,7 @@ export default function LogisticsMessageTools({
                 <label className="text-[10px] font-semibold">Availability<input value={availability} onChange={(event) => setAvailability(event.target.value)} placeholder="Monday, Gauteng" className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-[#f6b800] ${control}`} /></label>
                 <label className="text-[10px] font-semibold">VAT<select value={vat} onChange={(event) => setVat(event.target.value as StructuredQuote["vat"])} className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-[#f6b800] ${control}`}><option value="included">Included</option><option value="excluded">Excluded</option><option value="not_applicable">Not applicable</option></select></label>
                 <label className="text-[10px] font-semibold sm:col-span-2">Terms<input value={terms} onChange={(event) => setTerms(event.target.value)} placeholder="Payment within 7 days of signed POD" className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-[#f6b800] ${control}`} /></label>
+                <div className="sm:col-span-2"><LoadLinkDocumentPreview darkMode={darkMode} documentType="Rate quote" amount={amount} unit={unit} vehicle={vehicle} route={route} availability={availability} vat={vat} terms={terms} compact /></div>
                 <button type="button" disabled={!amount.trim() || disabled || quoteBusy} onClick={() => void submitQuote()} className="h-11 rounded-xl bg-[#f6b800] text-[10px] font-bold uppercase tracking-wide text-black disabled:opacity-40 sm:col-span-2">{quoteBusy ? "Sending quote…" : "Send structured quote"}</button>
               </div>
             ) : null}

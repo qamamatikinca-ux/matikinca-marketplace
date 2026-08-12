@@ -223,6 +223,7 @@ export default function DriverProfileWizardV273() {
       if (!response.ok) throw new Error(result.error || `${label} could not be uploaded.`);
       setMessageType("success");
       setMessage(`${label} uploaded successfully.`);
+      window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { kind: "success", title: `${label} uploaded`, message: "The document is attached to your LoadLink driver profile.", duration: 4800 } }));
       await load(false);
     } catch (error) {
       setMessageType("error");
@@ -255,6 +256,7 @@ export default function DriverProfileWizardV273() {
       setForm((current) => ({ ...current, status: "pending", profile_status: "submitted", review_reason: "", missing_document_type: "" }));
       setMessageType("success");
       setMessage("Profile submitted. LoadLink has received it for review.");
+      window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { kind: "success", title: "Driver profile submitted", message: "LoadLink received your profile and documents for review.", duration: 5200 } }));
     } catch (error) {
       setMessageType("error");
       setMessage(cleanMessage(error, "The driver profile could not be submitted."));

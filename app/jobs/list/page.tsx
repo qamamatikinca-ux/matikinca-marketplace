@@ -171,6 +171,7 @@ export default function ListJobPage() {
       localStorage.removeItem(`${draftVersion}:${auth.user.id}`);
       localStorage.removeItem(`${submissionKeyPrefix}:${auth.user.id}`);
       setSuccess(true);
+      window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { kind: "success", title: `${postNameTitle} submitted`, message: `LoadLink received your ${postName}. You can manage or edit it from My Posts.`, duration: 5200 } }));
       window.dispatchEvent(new Event("loadlink-account-state-changed"));
     } catch (error) {
       const raw = readablePostError(error);

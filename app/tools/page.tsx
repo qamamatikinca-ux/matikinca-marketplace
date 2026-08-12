@@ -1,6 +1,7 @@
 "use client";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+import LoadLinkDocumentPreview from "@/components/LoadLinkDocumentPreview";
 
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import AuthStatusButton from "@/components/AuthStatusButton";
@@ -159,7 +160,7 @@ export default function ToolsPage() {
             <label className="text-xs font-black">VAT<select value={vat} onChange={(e: ChangeEvent<HTMLSelectElement>)=>setVat(e.target.value as typeof vat)} className={`mt-2 ${input}`}><option value="included">Included</option><option value="excluded">Excluded</option><option value="not_applicable">Not applicable</option></select></label>
             <label className="text-xs font-black">Terms<textarea value={terms} onChange={(e: ChangeEvent<HTMLTextAreaElement>)=>setTerms(e.target.value)} rows={3} className={`mt-2 min-h-24 py-3 ${input}`}/></label>
           </div>
-          <ToolOutput value={quoteText} darkMode={darkMode} onCopy={()=>void copy(quoteText)} onShare={()=>void share(quoteText)}/>
+          <div className="grid gap-3"><LoadLinkDocumentPreview darkMode={darkMode} documentType="Rate quote" amount={amount} unit="total" vehicle={vehicle} route={route} availability={availability} vat={vat} terms={terms} /><ToolOutput value={quoteText} darkMode={darkMode} onCopy={()=>void copy(quoteText)} onShare={()=>void share(quoteText)}/></div>
         </div> : <div className="grid gap-5 p-5 md:grid-cols-[1fr_.8fr] md:p-6">
           <textarea value={text} onChange={(e: ChangeEvent<HTMLTextAreaElement>)=>setText(e.target.value)} className={`min-h-[380px] resize-y rounded-2xl border p-4 font-mono text-sm leading-6 outline-none focus:border-[#f6b800] ${darkMode?"border-white/10 bg-black":"border-black/10 bg-[#faf9f5]"}`}/>
           <div><ToolOutput value={text} darkMode={darkMode} onCopy={()=>void copy(text)} onShare={()=>void share(text)}/><button type="button" onClick={save} className="mt-3 h-11 w-full rounded-xl border border-current/10 text-xs font-black">Save draft on this device</button></div>
