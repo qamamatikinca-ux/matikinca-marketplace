@@ -2,7 +2,7 @@
 
 export default function LoadLinkLoading() {
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-black/70 backdrop-blur-md">
+    <div className="pointer-events-none fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-black/82">
       <div className="relative h-36 w-full">
         <div className="absolute left-0 top-1/2 h-[2px] w-full -translate-y-1/2 bg-yellow-400/20" />
 
@@ -32,6 +32,7 @@ export default function LoadLinkLoading() {
           height: 84px;
           transform: translateY(-50%);
           animation: truck-drive 1.65s linear infinite;
+          will-change: transform;
         }
 
         .truck-body {
@@ -84,13 +85,8 @@ export default function LoadLinkLoading() {
           animation: wheel-spin 0.35s linear infinite;
         }
 
-        .wheel-one {
-          left: 26px;
-        }
-
-        .wheel-two {
-          right: 16px;
-        }
+        .wheel-one { left: 26px; }
+        .wheel-two { right: 16px; }
 
         .track-mark {
           position: absolute;
@@ -98,56 +94,35 @@ export default function LoadLinkLoading() {
           width: 170px;
           height: 8px;
           opacity: 0.8;
-          background:
-            repeating-linear-gradient(
-              90deg,
-              transparent 0 9px,
-              #f6b800 9px 15px,
-              transparent 15px 24px
-            );
+          background: repeating-linear-gradient(90deg, transparent 0 9px, #f6b800 9px 15px, transparent 15px 24px);
           transform: skewX(-22deg);
           animation: track-fade 1.65s linear infinite;
         }
 
-        .track-one {
-          bottom: 5px;
-        }
-
-        .track-two {
-          bottom: -7px;
-        }
+        .track-one { bottom: 5px; }
+        .track-two { bottom: -7px; }
 
         @keyframes truck-drive {
-          from {
-            transform: translate(-260px, -50%);
-          }
-          to {
-            transform: translate(120vw, -50%);
-          }
+          from { transform: translate(-260px, -50%); }
+          to { transform: translate(120vw, -50%); }
         }
 
         @keyframes wheel-spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
 
         @keyframes track-fade {
-          0% {
-            opacity: 0;
-          }
-          10% {
-            opacity: 0.9;
-          }
-          80% {
-            opacity: 0.55;
-          }
-          100% {
-            opacity: 0;
-          }
+          0% { opacity: 0; }
+          10% { opacity: 0.9; }
+          80% { opacity: 0.55; }
+          100% { opacity: 0; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .loadlink-truck,
+          .wheel,
+          .track-mark { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
         }
       `}</style>
     </div>
