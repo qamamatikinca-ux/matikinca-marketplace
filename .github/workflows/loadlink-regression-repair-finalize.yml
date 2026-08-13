@@ -1,0 +1,45 @@
+name: Finalize LoadLink Regression Repair
+
+on:
+  push:
+    branches:
+      - loadlink-regression-repair-20260813
+    paths:
+      - ".github/workflows/loadlink-regression-repair-finalize.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore stable package page and remove temporary staging files
+        run: |
+          cp app/packages/page-restored-v2619.tsx app/packages/page.tsx
+          rm -f app/packages/page-restored-v2619.tsx
+          rm -f app/packages/restored-page.txt
+      - name: Validate repair source
+        run: |
+          grep -q 'loadlink-regression-repair.css' app/layout.tsx
+          grep -q 'PackageGuide darkMode' app/packages/page.tsx
+          grep -q 'BusinessPlans darkMode' app/packages/page.tsx
+          grep -q 'button\[aria-label="Open message actions"\]' app/loadlink-regression-repair.css
+          grep -q 'height: auto !important' app/loadlink-regression-repair.css
+          grep -q 'a\[aria-label="LoadLink home"\]' app/loadlink-regression-repair.css
+          ! grep -q 'showEveryOption' app/packages/page.tsx
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Production build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+      - name: Commit finalized repair
+        run: |
+          rm -f .github/workflows/loadlink-regression-repair-finalize.yml
+          git config user.name "qamamatikinca-ux"
+          git config user.email "qamamatikinca@icloud.com"
+          git add -A app/layout.tsx app/loadlink-regression-repair.css app/packages/page.tsx app/packages/page-restored-v2619.tsx app/packages/restored-page.txt .github/workflows/loadlink-regression-repair-finalize.yml
+          git commit -m "Restore stable packages and repair mobile regressions" || exit 0
+          git push
