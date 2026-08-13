@@ -2,186 +2,64 @@
 :root { --ll-page-gutter: clamp(8px, 2.2vw, 20px); }
 html, body { width: 100%; max-width: 100%; overflow-x: clip; }
 
-/* Physical header/logo centring independent of side controls. */
-[data-loadlink-site-header="centered-v286"] > div {
-  position: relative !important;
-  display: flex !important;
-  width: 100% !important;
-  max-width: none !important;
-  padding-left: max(12px, env(safe-area-inset-left)) !important;
-  padding-right: max(12px, env(safe-area-inset-right)) !important;
-}
-[data-loadlink-site-header="centered-v286"] .loadlink-header-logo {
-  position: absolute !important;
-  left: 50% !important;
-  top: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  width: min(44vw, 190px) !important;
-  margin: 0 !important;
-  z-index: 2 !important;
-}
-[data-loadlink-site-header="centered-v286"] > div > :first-child { position: relative; z-index: 3; }
-[data-loadlink-site-header="centered-v286"] > div > :last-child { position: relative; z-index: 3; margin-left: auto !important; }
+/* Keep the LoadLink mark physically centred regardless of avatar/menu widths. */
+[data-loadlink-site-header="centered-v286"] > div { position:relative!important;display:flex!important;width:100%!important;max-width:none!important;padding-left:max(12px,env(safe-area-inset-left))!important;padding-right:max(12px,env(safe-area-inset-right))!important; }
+[data-loadlink-site-header="centered-v286"] .loadlink-header-logo { position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;width:min(44vw,190px)!important;margin:0!important;z-index:2!important; }
+[data-loadlink-site-header="centered-v286"] > div > :first-child { position:relative;z-index:3; }
+[data-loadlink-site-header="centered-v286"] > div > :last-child { position:relative;z-index:3;margin-left:auto!important; }
 
-/* Menus: full rounded border, centred, properly scrollable on touch. */
-[data-loadlink-choice-sheet="true"] > section,
-[data-loadlink-calendar-sheet="true"] > section {
-  width: min(calc(100vw - 20px), 560px) !important;
-  max-height: min(78dvh, 680px) !important;
-  border-radius: 26px !important;
-  overflow: hidden !important;
-}
-[data-loadlink-choice-sheet="true"] [role="listbox"],
-[data-loadlink-datalist-menu="true"],
-[role="listbox"] {
-  touch-action: pan-y !important;
-  overscroll-behavior: contain !important;
-  -webkit-overflow-scrolling: touch;
-}
-[data-loadlink-choice-sheet="true"] button,
-[data-loadlink-datalist-menu="true"] button,
-[role="listbox"] button { touch-action: pan-y !important; }
+/* Choice sheets stay fully bordered, centred and finger-scrollable. */
+[data-loadlink-choice-sheet="true"] > section,[data-loadlink-calendar-sheet="true"] > section{width:min(calc(100vw - 20px),560px)!important;max-height:min(78dvh,680px)!important;border-radius:26px!important;overflow:hidden!important}
+[data-loadlink-choice-sheet="true"] [role="listbox"],[data-loadlink-datalist-menu="true"],[role="listbox"]{touch-action:pan-y!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch}
+[data-loadlink-choice-sheet="true"] button,[data-loadlink-datalist-menu="true"] button,[role="listbox"] button{touch-action:pan-y!important}
 
-/* Subtle but clearly visible LoadLink glass. */
-html[data-loadlink-theme="light"] :is(
-  .loadlink-glass,
-  [data-loadlink-menu-panel],
-  .loadlink-inbox-panel,
-  .loadlink-details-panel,
-  .loadlink-chat-header,
-  .loadlink-chat-composer,
-  .loadlink-logistics-sheet,
-  [data-loadlink-packages-page] article,
-  [data-loadlink-document-preview="v2714"]
-) {
-  background:
-    radial-gradient(circle at 10% 0%, rgba(246,184,0,.11), transparent 32%),
-    linear-gradient(145deg, rgba(255,255,255,.62), rgba(246,241,227,.36)) !important;
-  border-color: rgba(255,255,255,.74) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(148%) !important;
-  backdrop-filter: blur(24px) saturate(148%) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.88), 0 18px 52px rgba(42,31,8,.08) !important;
-}
-html[data-loadlink-theme="dark"] :is(
-  .loadlink-glass,
-  [data-loadlink-menu-panel],
-  .loadlink-inbox-panel,
-  .loadlink-details-panel,
-  .loadlink-chat-header,
-  .loadlink-chat-composer,
-  .loadlink-logistics-sheet,
-  [data-loadlink-packages-page] article,
-  [data-loadlink-document-preview="v2714"]
-) {
-  background:
-    radial-gradient(circle at 10% 0%, rgba(246,184,0,.075), transparent 32%),
-    linear-gradient(145deg, rgba(27,27,27,.61), rgba(3,3,3,.37)) !important;
-  border-color: rgba(255,255,255,.15) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(148%) !important;
-  backdrop-filter: blur(24px) saturate(148%) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 20px 58px rgba(0,0,0,.24) !important;
-}
+/* Subtle glass that is actually visible in both themes. */
+html[data-loadlink-theme="light"] :is(.loadlink-glass,[data-loadlink-menu-panel],.loadlink-inbox-panel,.loadlink-details-panel,.loadlink-chat-header,.loadlink-chat-composer,.loadlink-logistics-sheet,[data-loadlink-packages-page] article,[data-loadlink-document-preview="v2714"]){background:radial-gradient(circle at 10% 0%,rgba(246,184,0,.11),transparent 32%),linear-gradient(145deg,rgba(255,255,255,.62),rgba(246,241,227,.36))!important;border-color:rgba(255,255,255,.74)!important;-webkit-backdrop-filter:blur(24px) saturate(148%)!important;backdrop-filter:blur(24px) saturate(148%)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.88),0 18px 52px rgba(42,31,8,.08)!important}
+html[data-loadlink-theme="dark"] :is(.loadlink-glass,[data-loadlink-menu-panel],.loadlink-inbox-panel,.loadlink-details-panel,.loadlink-chat-header,.loadlink-chat-composer,.loadlink-logistics-sheet,[data-loadlink-packages-page] article,[data-loadlink-document-preview="v2714"]){background:radial-gradient(circle at 10% 0%,rgba(246,184,0,.075),transparent 32%),linear-gradient(145deg,rgba(27,27,27,.61),rgba(3,3,3,.37))!important;border-color:rgba(255,255,255,.15)!important;-webkit-backdrop-filter:blur(24px) saturate(148%)!important;backdrop-filter:blur(24px) saturate(148%)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 20px 58px rgba(0,0,0,.24)!important}
 
-/* Messages use the actual phone viewport instead of adding a second viewport below the header. */
-body[data-loadlink-path="/messages"] main.loadlink-messages {
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  max-width: 100vw !important;
-  height: var(--loadlink-message-vh, 100dvh) !important;
-  max-height: var(--loadlink-message-vh, 100dvh) !important;
-  min-height: 0 !important;
-  overflow: hidden !important;
-}
-body[data-loadlink-path="/messages"] main.loadlink-messages > div[class*="grid"] {
-  flex: 1 1 0% !important;
-  width: 100vw !important;
-  max-width: 100vw !important;
-  height: auto !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-body[data-loadlink-path="/messages"] :is(.loadlink-inbox-panel,.loadlink-chat-panel,.loadlink-message-viewport,.loadlink-chat-header,.loadlink-chat-composer) {
-  min-width: 0 !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-}
-body[data-loadlink-path="/messages"] .loadlink-chat-panel { width: 100% !important; overflow: hidden !important; }
-body[data-loadlink-path="/messages"] .loadlink-chat-composer {
-  padding: 9px max(9px,env(safe-area-inset-right)) max(9px,env(safe-area-inset-bottom)) max(9px,env(safe-area-inset-left)) !important;
-}
-body[data-loadlink-path="/messages"] .loadlink-chat-composer > .mx-auto { max-width: 760px !important; gap: 8px !important; }
-body[data-loadlink-path="/messages"] .loadlink-chat-composer textarea { font-size: 16px !important; line-height: 1.35 !important; }
-body[data-loadlink-path="/messages"] .loadlink-chat-composer .min-w-0.flex-1 {
-  min-height: 46px !important;
-  display: flex !important;
-  align-items: center !important;
-  border-radius: 19px !important;
-}
-body[data-loadlink-path="/messages"] .loadlink-chat-header span[aria-label$="profile picture"] { border-radius: 9999px !important; overflow: hidden !important; }
-@media (max-width: 767px) {
-  body[data-loadlink-path="/messages"] main.loadlink-messages > div[class*="grid"] { grid-template-columns: minmax(0,1fr) !important; }
-  body[data-loadlink-path="/messages"] :is(.loadlink-inbox-panel,.loadlink-chat-panel) { width: 100vw !important; max-width: 100vw !important; }
-}
+/* Messages fit the phone viewport and keep the composer smooth. */
+body[data-loadlink-path="/messages"] main.loadlink-messages{position:fixed!important;inset:0!important;width:100vw!important;max-width:100vw!important;height:var(--loadlink-message-vh,100dvh)!important;max-height:var(--loadlink-message-vh,100dvh)!important;min-height:0!important;overflow:hidden!important}
+body[data-loadlink-path="/messages"] main.loadlink-messages > div[class*="grid"]{flex:1 1 0%!important;width:100vw!important;max-width:100vw!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important}
+body[data-loadlink-path="/messages"] :is(.loadlink-inbox-panel,.loadlink-chat-panel,.loadlink-message-viewport,.loadlink-chat-header,.loadlink-chat-composer){min-width:0!important;max-width:100%!important;box-sizing:border-box!important}
+body[data-loadlink-path="/messages"] .loadlink-chat-panel{width:100%!important;overflow:hidden!important}
+body[data-loadlink-path="/messages"] .loadlink-chat-composer{padding:9px max(9px,env(safe-area-inset-right)) max(9px,env(safe-area-inset-bottom)) max(9px,env(safe-area-inset-left))!important}
+body[data-loadlink-path="/messages"] .loadlink-chat-composer > .mx-auto{max-width:760px!important;gap:8px!important}
+body[data-loadlink-path="/messages"] .loadlink-chat-composer textarea{font-size:16px!important;line-height:1.35!important}
+body[data-loadlink-path="/messages"] .loadlink-chat-composer .min-w-0.flex-1{min-height:46px!important;display:flex!important;align-items:center!important;border-radius:19px!important}
+/* The old + / attachment-actions control is intentionally removed from the experience. */
+body[data-loadlink-path="/messages"] button[aria-label="Open message actions"]{display:none!important}
+/* Chat profile pictures are plain circles: no status/dealer overlay. */
+body[data-loadlink-path="/messages"] [aria-label="Active in messages"]{display:none!important}
+body[data-loadlink-path="/messages"] .loadlink-chat-header > .relative.h-11.w-11 > button{padding:0!important;background:transparent!important;box-shadow:none!important}
+body[data-loadlink-path="/messages"] .loadlink-chat-header > .relative.h-11.w-11 > button > span{padding:0!important;background:transparent!important}
+body[data-loadlink-path="/messages"] .loadlink-chat-header span[aria-label$="profile picture"]{border-radius:9999px!important;overflow:hidden!important}
+@media(max-width:767px){body[data-loadlink-path="/messages"] main.loadlink-messages > div[class*="grid"]{grid-template-columns:minmax(0,1fr)!important}body[data-loadlink-path="/messages"] :is(.loadlink-inbox-panel,.loadlink-chat-panel){width:100vw!important;max-width:100vw!important}}
 
-/* Listing media clips to the same radius as the card: no white corner wedges. */
-body[data-loadlink-path="/jobs"] article[id^="job-"] { border-radius: 22px !important; overflow: hidden !important; background-clip: padding-box !important; }
-body[data-loadlink-path="/jobs"] article[id^="job-"] > [role="button"]:first-child {
-  width: calc(100% + 2px) !important;
-  margin: -1px -1px 0 !important;
-  overflow: hidden !important;
-  border-radius: 22px 22px 0 0 !important;
-}
-body[data-loadlink-path="/jobs"] article[id^="job-"] > [role="button"]:first-child :is(div:first-child,img) { border-radius: 22px 22px 0 0 !important; }
+/* Listing cards clip cleanly with no white corner wedges. */
+body[data-loadlink-path="/jobs"] article[id^="job-"]{border-radius:22px!important;overflow:hidden!important;background-clip:padding-box!important}
+body[data-loadlink-path="/jobs"] article[id^="job-"] > [role="button"]:first-child{width:calc(100% + 2px)!important;margin:-1px -1px 0!important;overflow:hidden!important;border-radius:22px 22px 0 0!important}
+body[data-loadlink-path="/jobs"] article[id^="job-"] > [role="button"]:first-child :is(div:first-child,img){border-radius:22px 22px 0 0!important}
 
-/* Contact actions: one coherent LoadLink treatment instead of three unrelated colours. */
-body[data-loadlink-path="/jobs"] article[id^="job-"] a[href^="tel:"],
-body[data-loadlink-path="/jobs"] article[id^="job-"] a[href^="/messages"],
-body[data-loadlink-path="/jobs"] article[id^="job-"] a[href*="wa.me"] {
-  min-height: 58px !important;
-  border: 1px solid rgba(246,184,0,.28) !important;
-  background: linear-gradient(145deg,rgba(14,14,14,.94),rgba(30,30,30,.86)) !important;
-  color: white !important;
-  border-radius: 15px !important;
-  margin: 3px !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.08) !important;
-}
-body[data-loadlink-path="/jobs"] article[id^="job-"] a[href*="wa.me"] { color: #f6b800 !important; }
-body[data-loadlink-path="/jobs"] article[id^="job-"] button { transition: transform .16s ease,border-color .16s ease,background .16s ease; }
-body[data-loadlink-path="/jobs"] article[id^="job-"] button:active { transform: scale(.98); }
+/* Contact stack uses one coherent LoadLink visual language. */
+body[data-loadlink-path="/jobs"] article[id^="job-"] a[href^="tel:"],body[data-loadlink-path="/jobs"] article[id^="job-"] a[href^="/messages"],body[data-loadlink-path="/jobs"] article[id^="job-"] a[href*="wa.me"]{min-height:58px!important;border:1px solid rgba(246,184,0,.28)!important;background:linear-gradient(145deg,rgba(14,14,14,.94),rgba(30,30,30,.86))!important;color:white!important;border-radius:15px!important;margin:3px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)!important}
+body[data-loadlink-path="/jobs"] article[id^="job-"] a[href*="wa.me"]{color:#f6b800!important}
+body[data-loadlink-path="/jobs"] article[id^="job-"] div.mt-4.grid.grid-cols-2{gap:8px!important;border:0!important;overflow:visible!important}
+body[data-loadlink-path="/jobs"] article[id^="job-"] div.mt-4.grid.grid-cols-2 > button:first-child{border:0!important;border-radius:15px!important;background:#f6b800!important;color:#000!important;box-shadow:0 10px 26px rgba(246,184,0,.16)!important}
+body[data-loadlink-path="/jobs"] article[id^="job-"] div.mt-4.grid.grid-cols-2 > button:last-child{border:1px solid rgba(239,68,68,.30)!important;border-radius:15px!important;background:rgba(239,68,68,.06)!important;color:#ef4444!important}
+body[data-loadlink-path="/jobs"] article[id^="job-"] button{transition:transform .16s ease,border-color .16s ease,background .16s ease}body[data-loadlink-path="/jobs"] article[id^="job-"] button:active{transform:scale(.98)}
 
-/* Redundant driver helper copy stays removed. */
-body[data-loadlink-path="/driver-portal"] [class*="embeddedCopy"] { display: none !important; }
+body[data-loadlink-path="/driver-portal"] [class*="embeddedCopy"]{display:none!important}
 
-/* Full-image LoadLink auth experience with a floating glass card and no image/form seam. */
-[data-loadlink-auth-landing="v290"] { width: 100vw !important; max-width: 100vw !important; }
-[data-loadlink-auth-landing="v290"] .loadlink-auth-hero-image {
-  opacity: 0;
-  transform: scale(1.01);
-  animation: ll-auth-in .48s cubic-bezier(.2,.75,.25,1) forwards;
-  image-rendering: auto;
-}
-[data-loadlink-auth-landing="v290"] .loadlink-auth-hero-vignette {
-  background: linear-gradient(180deg,rgba(0,0,0,.05) 0%,rgba(0,0,0,.10) 38%,rgba(0,0,0,.38) 72%,rgba(0,0,0,.72) 100%) !important;
-}
-[data-loadlink-auth-landing="v290"] .loadlink-auth-panel {
-  -webkit-backdrop-filter: blur(26px) saturate(145%) !important;
-  backdrop-filter: blur(26px) saturate(145%) !important;
-}
-html[data-loadlink-theme="dark"] [data-loadlink-auth-landing="v290"] .loadlink-auth-panel {
-  background: linear-gradient(145deg,rgba(15,15,15,.76),rgba(4,4,4,.58)) !important;
-  border-color: rgba(255,255,255,.17) !important;
-}
-html[data-loadlink-theme="light"] [data-loadlink-auth-landing="v290"] .loadlink-auth-panel {
-  background: linear-gradient(145deg,rgba(255,255,255,.76),rgba(247,242,229,.61)) !important;
-  border-color: rgba(255,255,255,.80) !important;
-}
-@media (max-width: 1023px) {
-  [data-loadlink-auth-landing="v290"] .loadlink-auth-hero { position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100svh !important; }
-  [data-loadlink-auth-landing="v290"] .loadlink-auth-panel { margin-bottom: max(12px,env(safe-area-inset-bottom)) !important; }
-}
-@keyframes ll-auth-in { to { opacity: 1; transform: scale(1); } }
+/* Current auth information stays untouched; only presentation becomes image-backed floating glass. */
+[data-loadlink-auth-landing="v286"],[data-loadlink-auth-landing="v290"]{width:100vw!important;max-width:100vw!important;overflow:hidden!important}
+[data-loadlink-auth-landing="v286"] > div,[data-loadlink-auth-landing="v290"] > div{position:relative!important;width:100%!important;max-width:100%!important;padding:0!important}
+[data-loadlink-auth-landing="v286"] .loadlink-auth-hero,[data-loadlink-auth-landing="v290"] .loadlink-auth-hero{position:fixed!important;inset:0!important;width:100vw!important;height:100svh!important;min-height:100svh!important;border:0!important}
+[data-loadlink-auth-landing="v286"] .loadlink-auth-hero-image,[data-loadlink-auth-landing="v290"] .loadlink-auth-hero-image{opacity:0;transform:scale(1.01);animation:ll-auth-in .48s cubic-bezier(.2,.75,.25,1) forwards;image-rendering:auto;object-fit:cover!important}
+[data-loadlink-auth-landing="v286"] .loadlink-auth-hero-vignette,[data-loadlink-auth-landing="v290"] .loadlink-auth-hero-vignette{background:linear-gradient(180deg,rgba(0,0,0,.04) 0%,rgba(0,0,0,.08) 38%,rgba(0,0,0,.38) 72%,rgba(0,0,0,.73) 100%)!important}
+[data-loadlink-auth-landing="v286"] .loadlink-auth-panel,[data-loadlink-auth-landing="v290"] .loadlink-auth-panel{position:relative!important;z-index:20!important;width:calc(100% - 24px)!important;max-width:430px!important;margin:30svh auto max(12px,env(safe-area-inset-bottom))!important;border-radius:30px!important;border:1px solid rgba(255,255,255,.16)!important;-webkit-backdrop-filter:blur(26px) saturate(145%)!important;backdrop-filter:blur(26px) saturate(145%)!important;box-shadow:0 24px 70px rgba(0,0,0,.28)!important}
+html[data-loadlink-theme="dark"] :is([data-loadlink-auth-landing="v286"],[data-loadlink-auth-landing="v290"]) .loadlink-auth-panel{background:linear-gradient(145deg,rgba(15,15,15,.76),rgba(4,4,4,.58))!important}
+html[data-loadlink-theme="light"] :is([data-loadlink-auth-landing="v286"],[data-loadlink-auth-landing="v290"]) .loadlink-auth-panel{background:linear-gradient(145deg,rgba(255,255,255,.79),rgba(247,242,229,.64))!important;border-color:rgba(255,255,255,.80)!important}
+@media(min-width:1024px){[data-loadlink-auth-landing="v286"] > div,[data-loadlink-auth-landing="v290"] > div{display:flex!important;align-items:center!important;justify-content:flex-end!important;min-height:100svh!important;padding-right:clamp(30px,6vw,90px)!important}[data-loadlink-auth-landing="v286"] .loadlink-auth-panel,[data-loadlink-auth-landing="v290"] .loadlink-auth-panel{margin:0!important}}
+@keyframes ll-auth-in{to{opacity:1;transform:scale(1)}}
 
-/* All plans remain on one page for direct Manual / Pro / Dealer comparison. */
-[data-loadlink-packages-page="compare-restored"] { width: 100% !important; max-width: 100% !important; overflow-x: hidden !important; }
+[data-loadlink-packages-page="compare-restored"]{width:100%!important;max-width:100%!important;overflow-x:hidden!important}
