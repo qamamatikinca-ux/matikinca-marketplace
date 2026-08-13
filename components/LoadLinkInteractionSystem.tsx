@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
+import ListingReportDialog from "@/components/ListingReportDialog";
 
 type DateTarget = {
   input: HTMLInputElement;
@@ -40,6 +41,11 @@ type ListingImageRow = {
   title?: string | null;
   photos?: string[] | null;
   poster_photo?: string | null;
+};
+
+type ReportTarget = {
+  listingId: string;
+  title: string;
 };
 
 function isoDate(date: Date) {
@@ -151,6 +157,7 @@ export default function LoadLinkInteractionSystem() {
   const [suggestionTarget, setSuggestionTarget] = useState<SuggestionTarget | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [shownMonth, setShownMonth] = useState(() => monthStart(new Date()));
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
 
   useEffect(() => {
     const syncTheme = () => {
@@ -163,6 +170,23 @@ export default function LoadLinkInteractionSystem() {
     const observer = new MutationObserver(syncTheme);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-loadlink-theme"] });
     return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const openReport = (event: MouseEvent) => {
+      const element = selectorTarget(event.target);
+      const button = element?.closest("button");
+      const article = button?.closest<HTMLElement>("article[id^='job-']");
+      if (!button || !article || button.textContent?.trim().toUpperCase() !== "REPORT") return;
+      event.preventDefault();
+      event.stopPropagation();
+      setReportTarget({
+        listingId: article.id.replace(/^job-/, ""),
+        title: article.querySelector("h3")?.textContent?.trim() || "LoadLink listing",
+      });
+    };
+    document.addEventListener("click", openReport, true);
+    return () => document.removeEventListener("click", openReport, true);
   }, []);
 
   useEffect(() => {
@@ -552,6 +576,8 @@ export default function LoadLinkInteractionSystem() {
           </section>
         </div>
       ) : null}
+
+      {reportTarget ? <ListingReportDialog listingId={reportTarget.listingId} title={reportTarget.title} darkMode={darkMode} onClose={() => setReportTarget(null)} /> : null}
     </>
   );
 }
