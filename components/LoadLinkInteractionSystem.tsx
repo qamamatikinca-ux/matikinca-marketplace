@@ -320,7 +320,11 @@ export default function LoadLinkInteractionSystem() {
       setSuggestionTarget(null);
     };
 
-    const closeSuggestionOnViewportMove = () => setSuggestionTarget(null);
+    const closeSuggestionOnViewportMove = (event: Event) => {
+      const element = selectorTarget(event.target);
+      if (element?.closest('[data-loadlink-datalist-menu="true"]')) return;
+      setSuggestionTarget(null);
+    };
 
     const keyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -415,7 +419,7 @@ export default function LoadLinkInteractionSystem() {
           aria-label={`${suggestionTarget.label} suggestions`}
           style={{ left: suggestionTarget.left, top: suggestionTarget.top, width: suggestionTarget.width }}
         >
-          <div className="max-h-[min(42dvh,330px)] overflow-y-auto overscroll-contain py-0.5 [-webkit-overflow-scrolling:touch]">
+          <div className="max-h-[min(42dvh,330px)] overflow-y-auto overscroll-contain py-0.5 touch-pan-y [-webkit-overflow-scrolling:touch]">
             {suggestionOptions.map((option) => (
               <button
                 key={option}
@@ -442,7 +446,7 @@ export default function LoadLinkInteractionSystem() {
               <h2 className="min-w-0 text-xl font-black uppercase tracking-[-.015em]">{choiceTarget.label}</h2>
               <button type="button" onClick={() => setChoiceTarget(null)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-current/15" aria-label="Close options"><LoadLinkIcon name="close" size={16} /></button>
             </div>
-            <div data-loadlink-sheet-scroll="true" className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1 [-webkit-overflow-scrolling:touch]">
+            <div data-loadlink-sheet-scroll="true" className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1 touch-pan-y [-webkit-overflow-scrolling:touch]">
               {choiceTarget.options.map((option) => {
                 const selected = option.value === choiceTarget.value;
                 return (
