@@ -1,0 +1,85 @@
+name: LoadLink Responsive Polish Final Check
+
+on:
+  push:
+    branches:
+      - loadlink-responsive-polish-20260813
+    paths:
+      - ".github/workflows/loadlink-responsive-polish-final.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  validate-package-clean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: loadlink-responsive-polish-20260813
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Verify responsive polish source
+        run: |
+          set -euxo pipefail
+          CSS="app/loadlink-responsive-experience.css"
+          AUTH="components/AuthStatusButton.tsx"
+          HERO="public/images/loadlink-login-hero-hd.webp"
+
+          grep -q -- '--ll-page-gutter: clamp(8px' "$CSS"
+          grep -q 'body\[data-loadlink-path="/messages"\] \.messageApp' "$CSS"
+          grep -q 'padding-left: 0 !important' "$CSS"
+          grep -q '\[class\*="embeddedCopy"\]' "$CSS"
+          grep -q 'article\[id\^="job-"\]' "$CSS"
+          grep -q 'backdrop-filter: blur(30px)' "$CSS"
+          grep -q 'margin-top: -132px' "$CSS"
+          grep -q 'loadlink-auth-hero::after' "$CSS"
+
+          grep -q 'import LoadLinkIcon' "$AUTH"
+          grep -q 'name="user"' "$AUTH"
+          ! grep -q 'auth-icon.png' "$AUTH"
+
+          test "$(wc -c < "$HERO")" -eq 63860
+          test "$(git hash-object "$HERO")" = "0b2a287625a89b45ae49f0b80c019ec44e29c5fb"
+          file "$HERO" | grep -qi 'Web/P image'
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Production build
+        run: npm run build
+
+      - name: Package update only
+        run: |
+          rm -rf /tmp/loadlink-polish
+          mkdir -p /tmp/loadlink-polish/app /tmp/loadlink-polish/components /tmp/loadlink-polish/public/images
+          cp app/loadlink-responsive-experience.css /tmp/loadlink-polish/app/
+          cp components/AuthStatusButton.tsx /tmp/loadlink-polish/components/
+          cp public/images/loadlink-login-hero-hd.webp /tmp/loadlink-polish/public/images/
+          cd /tmp/loadlink-polish
+          zip -9 -r "$GITHUB_WORKSPACE/LoadLink-Marketplace-UPDATE-ONLY-device-fit-polish.zip" .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LoadLink-Marketplace-UPDATE-ONLY-device-fit-polish
+          path: LoadLink-Marketplace-UPDATE-ONLY-device-fit-polish.zip
+          retention-days: 2
+
+      - name: Remove temporary reconstruction and validation files
+        run: |
+          git rm -rf .loadlink-asset-chunks
+          git rm -f .github/workflows/loadlink-HD-login-artwork.yml
+          git rm -f .github/workflows/loadlink-HD-login-artwork-v2.yml
+          git rm -f .github/workflows/loadlink-responsive-polish-final.yml
+
+      - name: Commit clean validated branch
+        run: |
+          git config user.name "qamamatikinca-ux"
+          git config user.email "qamamatikinca@icloud.com"
+          git commit -m "Clean validated responsive marketplace polish"
+          git push origin HEAD:loadlink-responsive-polish-20260813
