@@ -1,0 +1,72 @@
+name: LoadLink Collage UI Repair Build
+
+on:
+  push:
+    branches:
+      - loadlink-collage-ui-repair-20260813
+    paths:
+      - ".github/workflows/loadlink-collage-ui-repair-build.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply current-source repair
+        run: python3 .github/scripts/apply-collage-ui-repair.py
+
+      - name: Restore full resolution LoadLink login hero
+        shell: bash
+        run: |
+          set -e
+          mkdir -p public/images
+          for SHA in 07e3aa998978904519a7743f821c729ab80aadf9 d5eea5c95757aacac3e4451991153f54545a04ea; do
+            if git cat-file -e "$SHA:public/images/loadlink-login-hero-hd.webp" 2>/dev/null; then
+              git show "$SHA:public/images/loadlink-login-hero-hd.webp" > public/images/loadlink-login-hero-hd.webp
+              SIZE=$(wc -c < public/images/loadlink-login-hero-hd.webp)
+              if [ "$SIZE" -gt 100000 ]; then
+                echo "Restored HD hero: ${SIZE} bytes"
+                break
+              fi
+            fi
+          done
+          SIZE=$(wc -c < public/images/loadlink-login-hero-hd.webp)
+          test "$SIZE" -gt 100000
+
+      - name: Source assertions
+        shell: bash
+        run: |
+          set -e
+          grep -q 'loadlink-collage-repair.css' app/layout.tsx
+          grep -q 'LoadLinkTouchScrollGuard' app/layout.tsx
+          ! grep -q 'aria-label="Open message actions"' app/messages/page.tsx
+          grep -q 'data-loadlink-packages-page="compare-restored"' app/packages/page.tsx
+          grep -q 'data-loadlink-auth-landing="v290"' components/AuthLandingShell.tsx
+          grep -q 'photos?.find' 'app/listing/[id]/layout.tsx'
+          ! grep -q 'Browse approved profiles and contact a suitable driver through LoadLink.' components/phase2/DriversAvailableForWork.tsx
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Production build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
+      - name: Commit validated repair
+        shell: bash
+        run: |
+          set -e
+          rm -f .github/workflows/loadlink-collage-ui-repair-build.yml
+          rm -f .github/scripts/apply-collage-ui-repair.py
+          git config user.name "qamamatikinca-ux"
+          git config user.email "qamamatikinca@icloud.com"
+          git add -A
+          git commit -m "Repair LoadLink mobile UI and restore comparison flow"
+          git push origin HEAD:loadlink-collage-ui-repair-20260813
