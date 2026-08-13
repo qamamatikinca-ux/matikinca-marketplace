@@ -40,7 +40,7 @@ export default function ListingReportDialog({ listingId, title, darkMode, onClos
           <div className="p-6 text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f6b800] text-2xl font-black text-black">✓</div>
             <h3 className="mt-4 text-xl font-black">Report saved</h3>
-            <p className={`mx-auto mt-2 max-w-sm text-sm leading-6 ${darkMode ? "text-white/55" : "text-black/55"}`}>Your report has been saved with this listing for LoadLink review.</p>
+            <p className={`mx-auto mt-2 max-w-sm text-sm leading-6 ${darkMode ? "text-white/55" : "text-black/55"}`}>Saved on this device. It will be sent when the complaints email connection is added.</p>
             <button type="button" onClick={onClose} className="mt-5 h-12 w-full rounded-2xl bg-[#f6b800] text-xs font-black uppercase tracking-[.08em] text-black">Done</button>
           </div>
         ) : (
