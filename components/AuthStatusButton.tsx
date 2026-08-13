@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { loginHref } from "@/lib/auth";
 import { useLoadLinkAccount } from "@/lib/loadLinkAccountStore";
 import LoadLinkGearIcon from "@/components/LoadLinkGearIcon";
+import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 export default function AuthStatusButton({ darkMode, className = "" }: { darkMode: boolean; className?: string }) {
   const pathname = usePathname();
@@ -40,9 +41,13 @@ export default function AuthStatusButton({ darkMode, className = "" }: { darkMod
       href={loginHref(pathname || "/")}
       aria-label="Log in or sign up"
       title="Log in / Sign up"
-      className={`${base} border ${darkMode ? "border-[#f6b800]/70 bg-black text-[#f6b800]" : "border-black/10 bg-white text-black"}`}
+      className={`${base} border ${
+        darkMode
+          ? "border-[#f6b800]/70 bg-black/45 text-[#f6b800]"
+          : "border-black/12 bg-white/45 text-black"
+      } backdrop-blur-xl`}
     >
-      <img src="/images/auth-icon.png" alt="" className="h-6 w-6 object-contain" />
+      <LoadLinkIcon name="user" size={22} strokeWidth={2.1} />
     </Link>
   );
 }
