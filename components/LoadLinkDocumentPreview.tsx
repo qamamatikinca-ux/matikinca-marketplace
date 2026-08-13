@@ -56,22 +56,33 @@ export default function LoadLinkDocumentPreview({
   const rateUnit = unit === "km" ? "per km" : unit === "ton" ? "per ton" : unit === "day" ? "per day" : "total";
 
   async function uploadBusinessLogo(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = "";
     if (!file) return;
-    if (!/^image\/(png|jpeg|webp)$/i.test(file.type) || file.size > 5 * 1024 * 1024) {
-      setLogoMessage("Use a PNG, JPG or WebP logo smaller than 5 MB.");
+
+    const imageLike = file.type.startsWith("image/") || /\.(png|jpe?g|webp|heic|heif)$/i.test(file.name);
+    if (!imageLike || file.size > 12 * 1024 * 1024) {
+      setLogoMessage("Choose an image smaller than 12 MB.");
       return;
     }
-    setLogoBusy(true); setLogoMessage("");
+
+    setLogoBusy(true);
+    setLogoMessage("");
     try {
       const cleaned = await cleanLogoBackground(file);
       setBusinessLogo(cleaned);
-      try { localStorage.setItem(LOGO_STORAGE_KEY, cleaned); } catch { /* storage may be unavailable */ }
-      setLogoMessage("Business logo added to this document style.");
+      try {
+        localStorage.setItem(LOGO_STORAGE_KEY, cleaned);
+        setLogoMessage("Business logo added to this document style.");
+      } catch {
+        setLogoMessage("Logo added for this session. Browser storage is full, so it may need to be added again later.");
+      }
     } catch {
-      setLogoMessage("The logo could not be prepared. Try a clearer logo image.");
-    } finally { setLogoBusy(false); }
+      setLogoMessage("This image could not be opened. Try JPG, PNG or WebP if the photo is in an unsupported phone format.");
+    } finally {
+      setLogoBusy(false);
+    }
   }
 
   function removeLogo() {
@@ -128,7 +139,7 @@ export default function LoadLinkDocumentPreview({
 
         <div className={`mt-3 flex flex-wrap items-center justify-between gap-2 rounded-[16px] border p-3 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/8 bg-white"}`}>
           <div className="min-w-0"><p className="text-[10px] font-black">Business branding</p><p className={`mt-0.5 text-[9px] font-semibold ${darkMode ? "text-white/42" : "text-black/42"}`}>Optional. LoadLink removes near-white background pixels locally on this device.</p>{logoMessage ? <p className="mt-1 text-[9px] font-bold text-[#b88900]">{logoMessage}</p> : null}</div>
-          <div className="flex gap-2"><input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={uploadBusinessLogo} className="hidden"/><button type="button" disabled={logoBusy} onClick={() => inputRef.current?.click()} className="h-9 rounded-xl bg-[#f6b800] px-3 text-[9px] font-black text-black disabled:opacity-45">{logoBusy ? "Preparing…" : businessLogo ? "Change logo" : "Add logo"}</button>{businessLogo ? <button type="button" onClick={removeLogo} className={`h-9 rounded-xl border px-3 text-[9px] font-black ${darkMode ? "border-white/12" : "border-black/10"}`}>Remove</button> : null}</div>
+          <div className="flex gap-2"><input ref={inputRef} type="file" accept="image/*" onChange={uploadBusinessLogo} className="hidden"/><button type="button" disabled={logoBusy} onClick={() => inputRef.current?.click()} className="h-9 rounded-xl bg-[#f6b800] px-3 text-[9px] font-black text-black disabled:opacity-45">{logoBusy ? "Preparing…" : businessLogo ? "Change logo" : "Add logo"}</button>{businessLogo ? <button type="button" onClick={removeLogo} className={`h-9 rounded-xl border px-3 text-[9px] font-black ${darkMode ? "border-white/12" : "border-black/10"}`}>Remove</button> : null}</div>
         </div>
       </div>
     </section>
@@ -141,12 +152,13 @@ function DocumentField({ label, value, capitalize = false }: { label: string; va
 
 async function cleanLogoBackground(file: File) {
   const source = await fileToImage(file);
-  const max = 700;
+  const max = 560;
   const scale = Math.min(1, max / Math.max(source.naturalWidth, source.naturalHeight));
   const width = Math.max(1, Math.round(source.naturalWidth * scale));
   const height = Math.max(1, Math.round(source.naturalHeight * scale));
   const canvas = document.createElement("canvas");
-  canvas.width = width; canvas.height = height;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
   if (!ctx) throw new Error("Canvas unavailable");
   ctx.drawImage(source, 0, 0, width, height);
@@ -162,13 +174,15 @@ async function cleanLogoBackground(file: File) {
     }
   }
   ctx.putImageData(image, 0, 0);
-  return canvas.toDataURL("image/png", 0.92);
+  const webp = canvas.toDataURL("image/webp", 0.88);
+  return webp.startsWith("data:image/webp") ? webp : canvas.toDataURL("image/png", 0.9);
 }
 
 function fileToImage(file: File) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const image = new Image();
+    image.decoding = "async";
     image.onload = () => { URL.revokeObjectURL(url); resolve(image); };
     image.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Image failed")); };
     image.src = url;
