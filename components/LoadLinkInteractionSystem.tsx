@@ -10,11 +10,19 @@ type DateTarget = {
   max: string;
 };
 
+type ChoiceOption = {
+  value: string;
+  label: string;
+  disabled: boolean;
+  image?: string;
+};
+
 type ChoiceTarget = {
   select: HTMLSelectElement;
   label: string;
   value: string;
-  options: Array<{ value: string; label: string; disabled: boolean }>;
+  options: ChoiceOption[];
+  kind?: "post" | "default";
 };
 
 type SuggestionTarget = {
@@ -25,6 +33,13 @@ type SuggestionTarget = {
   left: number;
   top: number;
   width: number;
+};
+
+type ListingImageRow = {
+  id?: string | null;
+  title?: string | null;
+  photos?: string[] | null;
+  poster_photo?: string | null;
 };
 
 function isoDate(date: Date) {
@@ -111,6 +126,22 @@ function prepareDatalistControl(input: HTMLInputElement) {
 
 function selectorTarget(target: EventTarget | null) {
   return target instanceof Element ? target : null;
+}
+
+function isPostChoice(label: string, options: ChoiceOption[]) {
+  return /source post|loadlink post/i.test(label) || options.some((option) => /choose a loadlink post/i.test(option.label));
+}
+
+function optionPostTitle(option: ChoiceOption) {
+  const clean = option.label.replace(/^Current post\s*·\s*/i, "").trim();
+  const parts = clean.split(" · ");
+  return parts[0] || clean;
+}
+
+function optionPostMeta(option: ChoiceOption) {
+  const clean = option.label.replace(/^Current post\s*·\s*/i, "").trim();
+  const parts = clean.split(" · ");
+  return parts.slice(1).join(" · ") || (option.value === "__current_post__" ? "Current conversation" : "Your LoadLink post");
 }
 
 export default function LoadLinkInteractionSystem() {
@@ -243,12 +274,33 @@ export default function LoadLinkInteractionSystem() {
       select.blur();
       setDateTarget(null);
       setSuggestionTarget(null);
-      setChoiceTarget({
-        select,
-        label: inputLabel(select, "Choose an option").replace(/\s+/g, " ").trim(),
-        value: select.value,
-        options: Array.from(select.options).map((option) => ({ value: option.value, label: option.textContent || option.value, disabled: option.disabled })),
-      });
+      const label = inputLabel(select, "Choose an option").replace(/\s+/g, " ").trim();
+      const options: ChoiceOption[] = Array.from(select.options).map((option) => ({ value: option.value, label: option.textContent || option.value, disabled: option.disabled }));
+      const postChoice = isPostChoice(label, options);
+      setChoiceTarget({ select, label: postChoice ? "Choose a post" : label, value: select.value, options, kind: postChoice ? "post" : "default" });
+
+      if (postChoice) {
+        void fetch("/api/job-listings", { cache: "no-store" })
+          .then((response) => response.ok ? response.json() : Promise.reject(new Error("Listings unavailable")))
+          .then((payload) => {
+            const rows = (Array.isArray(payload?.rows) ? payload.rows : []) as ListingImageRow[];
+            const byId = new Map(rows.filter((row) => row.id).map((row) => [String(row.id), row]));
+            const byTitle = new Map(rows.filter((row) => row.title).map((row) => [String(row.title).trim().toLowerCase(), row]));
+            setChoiceTarget((current) => {
+              if (!current || current.select !== select || current.kind !== "post") return current;
+              return {
+                ...current,
+                options: current.options.map((option) => {
+                  let row = option.value && option.value !== "__current_post__" ? byId.get(option.value) : undefined;
+                  if (!row && option.value === "__current_post__") row = byTitle.get(optionPostTitle(option).toLowerCase());
+                  const image = row?.photos?.find(Boolean) || row?.poster_photo || "";
+                  return image ? { ...option, image } : option;
+                }),
+              };
+            });
+          })
+          .catch(() => undefined);
+      }
     };
 
     const intercept = (event: Event) => {
@@ -449,6 +501,17 @@ export default function LoadLinkInteractionSystem() {
             <div data-loadlink-sheet-scroll="true" className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1 touch-pan-y [-webkit-overflow-scrolling:touch]">
               {choiceTarget.options.map((option) => {
                 const selected = option.value === choiceTarget.value;
+                if (choiceTarget.kind === "post" && option.value) {
+                  return (
+                    <button key={`${option.value}-${option.label}`} type="button" disabled={option.disabled} onClick={() => chooseOption(option.value)} className={`mb-2 grid min-h-[84px] w-full grid-cols-[64px_minmax(0,1fr)_24px] items-center gap-3 rounded-[17px] border p-2 text-left disabled:opacity-35 ${selected ? "border-[#f6b800] bg-[#f6b800]/12" : darkMode ? "border-white/12 bg-white/[.035]" : "border-black/10 bg-white/[.46]"}`}>
+                      <span className={`h-16 w-16 overflow-hidden rounded-[13px] ${darkMode ? "bg-white/[.06]" : "bg-black/[.05]"}`}>
+                        {option.image ? <img src={option.image} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center bg-black text-[8px] font-black uppercase text-[#f6b800]">LoadLink</span>}
+                      </span>
+                      <span className="min-w-0"><strong className="block truncate text-sm font-black">{optionPostTitle(option)}</strong><small className={`mt-1 block truncate text-[10px] font-semibold ${darkMode ? "text-white/45" : "text-black/45"}`}>{optionPostMeta(option)}</small></span>
+                      <span className={`text-center ${selected ? "text-[#f6b800]" : "opacity-35"}`}>{selected ? <LoadLinkIcon name="check" size={17} strokeWidth={2.2} /> : "›"}</span>
+                    </button>
+                  );
+                }
                 return (
                   <button key={`${option.value}-${option.label}`} type="button" disabled={option.disabled} onClick={() => chooseOption(option.value)} className={`mb-2 flex min-h-12 w-full items-center justify-between gap-3 rounded-[15px] border px-4 text-left text-sm font-bold disabled:opacity-35 ${selected ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/12 bg-white/[.045]" : "border-black/10 bg-white/[.34]"}`}>
                     <span>{option.label}</span>{selected ? <LoadLinkIcon name="check" size={17} strokeWidth={2.2} /> : null}
