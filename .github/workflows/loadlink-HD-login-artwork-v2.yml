@@ -1,0 +1,81 @@
+name: Finalize LoadLink HD Login Artwork
+
+on:
+  push:
+    branches:
+      - loadlink-responsive-polish-20260813
+    paths:
+      - ".github/workflows/loadlink-HD-login-artwork-v2.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  finalize-artwork:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild supplied 1254px artwork from verified blobs
+        run: |
+          python3 - <<'PY'
+          import base64, json, os, urllib.request
+
+          shas = [
+              "ee013f90b9ead51f3f76a185910be80dc606a980",
+              "312658d9c0d409a2c35375250678f81c11eb2d56",
+              "6eb84c17a411b0d0b60b186a64b0c97c29351d72",
+              "5c39343f4aeef41bb96c88e059094a4dfc59f0ea",
+              "4a0cc51610423c240274dc5061249384ddc6ff0b",
+              "19d760819d72a7ce7e8d481f78fd70ab5de540a3",
+              "02b98c6b12ca16b47f91b506452516996db2896e",
+              "36c0c8769d2decf7a109482d7a1196dcd61dd0c0",
+              "991aff1a5f7aa02e5c87ce1ea13b88874779937c",
+              "0f40a91fe783f515c185ebc88d3b2da82cffcda2",
+              "36b7b60692053855146aefe8dc15798235005ae2",
+              "c7959a88e38245f8c9b22f753223183fc5266e37",
+              "c00f6e275e2ad5dfb00f9967dfec51ab37bfa4ee",
+          ]
+          token = os.environ["GH_TOKEN"]
+          repo = os.environ["GH_REPO"]
+          chunks = []
+          for sha in shas:
+              req = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/git/blobs/{sha}",
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+              )
+              with urllib.request.urlopen(req) as response:
+                  payload = json.load(response)
+              chunks.append(base64.b64decode(payload["content"]).decode("utf-8"))
+
+          image = base64.b64decode("".join(chunks), validate=True)
+          assert len(image) == 63860, len(image)
+          assert image[:4] == b"RIFF"
+          assert image[8:12] == b"WEBP"
+          with open("public/images/loadlink-login-hero-hd.webp", "wb") as fh:
+              fh.write(image)
+          PY
+
+          test "$(wc -c < public/images/loadlink-login-hero-hd.webp)" -eq 63860
+          test "$(git hash-object public/images/loadlink-login-hero-hd.webp)" = "0b2a287625a89b45ae49f0b80c019ec44e29c5fb"
+          file public/images/loadlink-login-hero-hd.webp | grep -qi 'Web/P image'
+
+      - name: Remove temporary reconstruction files
+        run: |
+          rm -rf .loadlink-asset-chunks
+          rm -f .github/workflows/loadlink-HD-login-artwork.yml
+          rm -f .github/workflows/loadlink-HD-login-artwork-v2.yml
+
+      - name: Commit final artwork and cleanup
+        run: |
+          git config user.name "qamamatikinca-ux"
+          git config user.email "qamamatikinca@icloud.com"
+          git add -A public/images/loadlink-login-hero-hd.webp .loadlink-asset-chunks .github/workflows/loadlink-HD-login-artwork.yml .github/workflows/loadlink-HD-login-artwork-v2.yml
+          git commit -m "Finalize responsive marketplace polish" || exit 0
+          git push
