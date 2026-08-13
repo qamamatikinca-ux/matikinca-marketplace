@@ -1,0 +1,287 @@
+/* LoadLink regression repair — imported last.
+   Restore stable layout behavior first; apply only visible glass polish on top. */
+
+:root {
+  --ll-repair-gutter: clamp(8px, 2.2vw, 18px);
+  --ll-repair-glass-light: rgba(255,255,255,.56);
+  --ll-repair-glass-dark: rgba(15,15,15,.58);
+}
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/* ---------- Header: logo is always the physical viewport centre ---------- */
+[data-loadlink-site-header="centered-v286"] > div {
+  position: relative !important;
+  display: flex !important;
+  width: 100% !important;
+  max-width: none !important;
+  padding-left: max(12px, env(safe-area-inset-left)) !important;
+  padding-right: max(12px, env(safe-area-inset-right)) !important;
+}
+
+[data-loadlink-site-header="centered-v286"] .loadlink-header-logo {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  width: min(42vw, 190px) !important;
+  transform: translate(-50%, -50%) !important;
+  margin: 0 !important;
+  z-index: 2 !important;
+}
+
+[data-loadlink-site-header="centered-v286"] > div > :first-child {
+  position: relative;
+  z-index: 3;
+}
+
+[data-loadlink-site-header="centered-v286"] > div > :last-child {
+  position: relative;
+  z-index: 3;
+  margin-left: auto !important;
+}
+
+/* Drawer logo: centered, close button remains on the right. */
+[data-loadlink-menu-panel] > header > div:first-child {
+  position: relative !important;
+  min-height: 44px;
+  justify-content: flex-end !important;
+}
+
+[data-loadlink-menu-panel] > header > div:first-child > a[aria-label="LoadLink home"] {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  margin: 0 !important;
+}
+
+/* ---------- Visible but restrained LoadLink glass ---------- */
+html[data-loadlink-theme="light"] :is(
+  [data-loadlink-menu-panel],
+  .loadlink-glass,
+  .loadlink-inbox-panel,
+  .loadlink-details-panel,
+  .loadlink-chat-header,
+  .loadlink-chat-composer,
+  [data-loadlink-packages-page] article,
+  [data-loadlink-packages-page] section[class*="border"]
+) {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(246,184,0,.10), transparent 31%),
+    linear-gradient(145deg, rgba(255,255,255,.64), rgba(247,243,232,.36)) !important;
+  border-color: rgba(255,255,255,.78) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.88), 0 18px 50px rgba(42,31,8,.08) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(145%) !important;
+  backdrop-filter: blur(24px) saturate(145%) !important;
+}
+
+html[data-loadlink-theme="dark"] :is(
+  [data-loadlink-menu-panel],
+  .loadlink-glass,
+  .loadlink-inbox-panel,
+  .loadlink-details-panel,
+  .loadlink-chat-header,
+  .loadlink-chat-composer,
+  [data-loadlink-packages-page] article,
+  [data-loadlink-packages-page] section[class*="border"]
+) {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(246,184,0,.065), transparent 31%),
+    linear-gradient(145deg, rgba(24,24,24,.62), rgba(3,3,3,.36)) !important;
+  border-color: rgba(255,255,255,.14) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 20px 56px rgba(0,0,0,.23) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(145%) !important;
+  backdrop-filter: blur(24px) saturate(145%) !important;
+}
+
+/* ---------- Messages: header + grid must fit inside one phone viewport ---------- */
+body[data-loadlink-path="/messages"] main.loadlink-messages {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: var(--loadlink-message-vh, 100dvh) !important;
+  min-height: 0 !important;
+  max-height: var(--loadlink-message-vh, 100dvh) !important;
+  overflow: hidden !important;
+}
+
+body[data-loadlink-path="/messages"] main.loadlink-messages > div[class*="grid"] {
+  flex: 1 1 0% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body[data-loadlink-path="/messages"] :is(
+  .loadlink-inbox-panel,
+  .loadlink-chat-panel,
+  .loadlink-message-viewport,
+  .loadlink-chat-header,
+  .loadlink-chat-composer
+) {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+body[data-loadlink-path="/messages"] .loadlink-chat-panel {
+  position: relative !important;
+  width: 100% !important;
+  overflow: hidden !important;
+}
+
+body[data-loadlink-path="/messages"] .loadlink-message-viewport,
+body[data-loadlink-path="/messages"] .loadlink-chat-composer {
+  width: 100% !important;
+}
+
+body[data-loadlink-path="/messages"] .loadlink-chat-composer > div,
+body[data-loadlink-path="/messages"] .loadlink-chat-composer textarea {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+/* Keep slow-network feedback visible without stealing a quarter of the chat height. */
+body[data-loadlink-path="/messages"] .loadlink-chat-panel > div.border-t.border-red-200 {
+  position: absolute !important;
+  z-index: 65 !important;
+  left: 50% !important;
+  bottom: calc(76px + env(safe-area-inset-bottom)) !important;
+  width: min(calc(100% - 24px), 560px) !important;
+  transform: translateX(-50%) !important;
+  border: 1px solid rgba(185,28,28,.20) !important;
+  border-radius: 14px !important;
+  padding: 10px 12px !important;
+  box-shadow: 0 16px 40px rgba(0,0,0,.14) !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+}
+
+/* The user explicitly removed the +. Keep the actions, show a paperclip instead. */
+body[data-loadlink-path="/messages"] button[aria-label="Open message actions"] {
+  font-size: 0 !important;
+  color: transparent !important;
+}
+
+body[data-loadlink-path="/messages"] button[aria-label="Open message actions"]::before {
+  content: "";
+  display: block;
+  width: 19px;
+  height: 19px;
+  background: #f6b800;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+@media (max-width: 767px) {
+  body[data-loadlink-path="/messages"] main.loadlink-messages > div[class*="grid"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body[data-loadlink-path="/messages"] .loadlink-inbox-panel,
+  body[data-loadlink-path="/messages"] .loadlink-chat-panel {
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+
+  body[data-loadlink-path="/messages"] .loadlink-chat-header {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    gap: 7px !important;
+  }
+
+  body[data-loadlink-path="/messages"] .loadlink-chat-composer {
+    padding-left: max(8px, env(safe-area-inset-left)) !important;
+    padding-right: max(8px, env(safe-area-inset-right)) !important;
+    padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* ---------- Package page: old compare logic, new glass only ---------- */
+[data-loadlink-packages-page] {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+[data-loadlink-packages-page] > section,
+[data-loadlink-packages-page] #plans {
+  box-sizing: border-box;
+}
+
+/* ---------- Auth: remove the visible join line and fit the actual device ---------- */
+[data-loadlink-auth-landing="v286"] {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
+}
+
+[data-loadlink-auth-landing="v286"] > div {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+[data-loadlink-auth-landing="v286"] .loadlink-auth-hero,
+[data-loadlink-auth-landing="v286"] .loadlink-auth-panel {
+  border: 0 !important;
+  outline: 0 !important;
+}
+
+[data-loadlink-auth-landing="v286"] .loadlink-auth-hero-image {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  image-rendering: auto;
+}
+
+@media (max-width: 1023px) {
+  [data-loadlink-auth-landing="v286"] .loadlink-auth-hero {
+    width: 100vw !important;
+    height: min(60svh, 640px) !important;
+    min-height: 410px !important;
+    margin: 0 !important;
+  }
+
+  [data-loadlink-auth-landing="v286"] .loadlink-auth-hero::after {
+    content: "";
+    position: absolute;
+    z-index: 3;
+    inset: auto 0 -1px;
+    height: 48%;
+    pointer-events: none;
+  }
+
+  html[data-loadlink-theme="dark"] [data-loadlink-auth-landing="v286"] .loadlink-auth-hero::after {
+    background: linear-gradient(180deg, transparent 0%, rgba(5,5,5,.22) 38%, rgba(5,5,5,.88) 86%, #050505 100%);
+  }
+
+  html[data-loadlink-theme="light"] [data-loadlink-auth-landing="v286"] .loadlink-auth-hero::after {
+    background: linear-gradient(180deg, transparent 0%, rgba(244,239,227,.20) 38%, rgba(244,239,227,.90) 86%, #f4efe3 100%);
+  }
+
+  [data-loadlink-auth-landing="v286"] .loadlink-auth-panel {
+    width: 100vw !important;
+    margin-top: -142px !important;
+    padding-top: 120px !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-loadlink-auth-landing="v286"] .loadlink-auth-hero-image,
+  [data-loadlink-auth-landing="v286"] .loadlink-auth-panel {
+    animation: none !important;
+  }
+}
