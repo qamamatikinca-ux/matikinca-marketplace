@@ -8,6 +8,7 @@ import "./loadlink-universal-ui.css";
 import "./loadlink-font-fix.css";
 import "./loadlink-final-foundation.css";
 import "./loadlink-responsive-experience.css";
+import "./loadlink-regression-repair.css";
 import GlobalLoading from "@/components/GlobalLoading";
 import ChatLauncher from "@/components/ChatLauncher";
 import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";
