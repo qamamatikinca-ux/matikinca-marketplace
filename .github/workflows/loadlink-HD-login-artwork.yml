@@ -1,0 +1,33 @@
+name: Build LoadLink HD Login Artwork
+
+on:
+  push:
+    branches:
+      - loadlink-responsive-polish-20260813
+    paths:
+      - ".loadlink-asset-chunks/**"
+      - ".github/workflows/loadlink-HD-login-artwork.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build-art:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild HD WebP
+        run: |
+          cat .loadlink-asset-chunks/part*.b64 | tr -d '\n' | base64 -d > public/images/loadlink-login-hero-hd.webp
+          file public/images/loadlink-login-hero-hd.webp
+          SIZE="$(wc -c < public/images/loadlink-login-hero-hd.webp)"
+          echo "hero_bytes=$SIZE"
+          test "$SIZE" -eq 63860
+          test "$(head -c 4 public/images/loadlink-login-hero-hd.webp)" = "RIFF"
+      - name: Commit artwork
+        run: |
+          git config user.name "qamamatikinca-ux"
+          git config user.email "qamamatikinca@icloud.com"
+          git add public/images/loadlink-login-hero-hd.webp
+          git commit -m "Replace login hero with supplied HD artwork" || exit 0
+          git push
