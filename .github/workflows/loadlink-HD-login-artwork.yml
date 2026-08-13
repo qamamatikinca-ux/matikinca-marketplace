@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Rebuild HD WebP
         run: |
-          cat .loadlink-asset-chunks/part*.b64 | tr -d '\n' | base64 -d > public/images/loadlink-login-hero-hd.webp
+          cat .loadlink-asset-chunks/safe*.b64 | tr -d '\n' | base64 -d > public/images/loadlink-login-hero-hd.webp
           file public/images/loadlink-login-hero-hd.webp
           SIZE="$(wc -c < public/images/loadlink-login-hero-hd.webp)"
           echo "hero_bytes=$SIZE"
