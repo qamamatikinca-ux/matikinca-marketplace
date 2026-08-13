@@ -1,0 +1,25 @@
+name: LoadLink Collage Readonly Build
+
+on:
+  push:
+    branches:
+      - loadlink-collage-ui-repair-20260813
+    paths:
+      - ".github/workflows/loadlink-collage-readonly-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
