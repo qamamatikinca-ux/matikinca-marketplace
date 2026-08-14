@@ -10,6 +10,7 @@ import "./loadlink-final-foundation.css";
 import "./loadlink-responsive-experience.css";
 import "./loadlink-mobile-final.css";
 import "./loadlink-collage-repair.css";
+import "./loadlink-search-glass.css";
 import GlobalLoading from "@/components/GlobalLoading";
 import ChatLauncher from "@/components/ChatLauncher";
 import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";
