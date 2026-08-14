@@ -1,0 +1,52 @@
+name: LoadLink Collage Final Build
+
+on:
+  push:
+    branches:
+      - loadlink-collage-final-20260814
+    paths:
+      - ".github/workflows/loadlink-collage-final-build.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply final repair to current main source
+        run: python3 .github/scripts/finalize-collage-current-main.py
+
+      - name: Source assertions
+        shell: bash
+        run: |
+          set -e
+          grep -q 'loadlink-collage-repair.css' app/layout.tsx
+          grep -q 'LoadLinkTouchScrollGuard' app/layout.tsx
+          grep -q 'photos?.find' 'app/listing/[id]/layout.tsx'
+          grep -q 'fileToDataUrl(file: File)' components/LoadLinkDocumentPreview.tsx
+          ! grep -q 'Browse approved profiles and contact a suitable driver through LoadLink.' components/phase2/DriversAvailableForWork.tsx
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Production build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
+      - name: Commit validated repair
+        shell: bash
+        run: |
+          set -e
+          rm -f .github/workflows/loadlink-collage-final-build.yml
+          rm -f .github/scripts/finalize-collage-current-main.py
+          git config user.name "qamamatikinca-ux"
+          git config user.email "qamamatikinca@icloud.com"
+          git add -A
+          git commit -m "Finish LoadLink collage UI repair"
+          git push origin HEAD:loadlink-collage-final-20260814
