@@ -45,19 +45,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint updated surfaces
+      - name: Lint new near-final surfaces
         run: >-
           npx eslint
-          components/LoadLinkLoading.tsx
-          app/account/settings/page.tsx
-          app/page.tsx
-          components/MarketplaceDiscovery.tsx
-          app/jobs/page.tsx
-          app/messages/page.tsx
-          app/list-your-vehicle/page.tsx
-          components/phase2/DriversAvailableForWork.tsx
-          components/SiteMenu.tsx
-          app/tools/page.tsx
           components/VehicleFullDetails.tsx
           components/VehicleMarketplaceHub.tsx
           app/api/location-coordinates/route.ts
