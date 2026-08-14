@@ -1,0 +1,44 @@
+/* LoadLink search + homepage category glass treatment */
+[aria-label="Search category"] > div {
+  gap: 12px !important;
+  padding-bottom: 6px !important;
+}
+
+[aria-label="Search category"] > div > button {
+  min-height: 56px !important;
+  border-radius: 9999px !important;
+  padding: 13px 28px !important;
+  font-size: 16px !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.01em !important;
+  -webkit-backdrop-filter: blur(22px) saturate(150%) !important;
+  backdrop-filter: blur(22px) saturate(150%) !important;
+  box-shadow: 0 12px 34px rgba(0,0,0,.10) !important;
+}
+
+html[data-loadlink-theme="dark"] [aria-label="Search category"] > div > button[aria-pressed="false"] {
+  background: rgba(16,16,16,.54) !important;
+  border-color: rgba(255,255,255,.15) !important;
+  color: rgba(255,255,255,.68) !important;
+}
+
+html[data-loadlink-theme="light"] [aria-label="Search category"] > div > button[aria-pressed="false"] {
+  background: rgba(255,255,255,.70) !important;
+  border-color: rgba(255,255,255,.78) !important;
+  color: rgba(0,0,0,.62) !important;
+}
+
+[aria-label="Search category"] > div > button[aria-pressed="true"] {
+  background: #f6b800 !important;
+  border-color: #f6b800 !important;
+  color: #050505 !important;
+  box-shadow: 0 14px 36px rgba(246,184,0,.22) !important;
+}
+
+@media (max-width: 640px) {
+  [aria-label="Search category"] > div > button {
+    min-height: 54px !important;
+    padding: 12px 25px !important;
+    font-size: 15px !important;
+  }
+}
