@@ -28,6 +28,7 @@ import LoadLinkToastCenter from "@/components/LoadLinkToastCenter";
 import AccountSettingsGlassFix from "@/components/AccountSettingsGlassFix";
 import LoadLinkInteractionSystem from "@/components/LoadLinkInteractionSystem";
 import LoadLinkTouchScrollGuard from "@/components/LoadLinkTouchScrollGuard";
+import LoadLinkShareEnhancer from "@/components/LoadLinkShareEnhancer";
 
 export const metadata: Metadata = {
   title: "LoadLink",
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AccountSettingsGlassFix />
         <LoadLinkInteractionSystem />
         <LoadLinkTouchScrollGuard />
+        <LoadLinkShareEnhancer />
         <Suspense fallback={null}><GlobalLoading /></Suspense>
         <SwipeDotsEnhancer />
         <AuthBootstrap />
