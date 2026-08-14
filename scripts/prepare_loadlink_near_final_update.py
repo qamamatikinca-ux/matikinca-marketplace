@@ -1,6 +1,7 @@
 from pathlib import Path
 
 # Compatibility layer for the validated near-final LoadLink application update.
+# Keep this deterministic: it only normalises known markup drift before the application update runs.
 path = Path("scripts/apply_loadlink_near_final_update.py")
 text = path.read_text(encoding="utf-8")
 
