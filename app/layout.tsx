@@ -9,6 +9,7 @@ import "./loadlink-font-fix.css";
 import "./loadlink-final-foundation.css";
 import "./loadlink-responsive-experience.css";
 import "./loadlink-mobile-final.css";
+import "./loadlink-collage-repair.css";
 import GlobalLoading from "@/components/GlobalLoading";
 import ChatLauncher from "@/components/ChatLauncher";
 import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";
@@ -26,6 +27,7 @@ import LoadLinkDeleteConfirmationLayer from "@/components/LoadLinkDeleteConfirma
 import LoadLinkToastCenter from "@/components/LoadLinkToastCenter";
 import AccountSettingsGlassFix from "@/components/AccountSettingsGlassFix";
 import LoadLinkInteractionSystem from "@/components/LoadLinkInteractionSystem";
+import LoadLinkTouchScrollGuard from "@/components/LoadLinkTouchScrollGuard";
 
 export const metadata: Metadata = {
   title: "LoadLink",
@@ -50,6 +52,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <MarketplaceRestrictionGuard />
         <AccountSettingsGlassFix />
         <LoadLinkInteractionSystem />
+        <LoadLinkTouchScrollGuard />
         <Suspense fallback={null}><GlobalLoading /></Suspense>
         <SwipeDotsEnhancer />
         <AuthBootstrap />

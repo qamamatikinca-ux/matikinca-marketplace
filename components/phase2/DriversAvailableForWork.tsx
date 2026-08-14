@@ -170,7 +170,7 @@ export default function DriversAvailableForWork({
           {!showHero ? (
             <div>
               <h2 className={styles.embeddedHeading}>Approved drivers ready for work</h2>
-              <p className={styles.embeddedCopy}>Browse approved profiles and contact a suitable driver through LoadLink.</p>
+              
             </div>
           ) : (
             <div>

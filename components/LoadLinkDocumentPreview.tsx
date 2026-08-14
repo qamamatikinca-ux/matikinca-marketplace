@@ -70,7 +70,8 @@ export default function LoadLinkDocumentPreview({
     setLogoBusy(true);
     setLogoMessage("");
     try {
-      const cleaned = await cleanLogoBackground(file);
+      let cleaned = "";
+      try { cleaned = await cleanLogoBackground(file); } catch { cleaned = await fileToDataUrl(file); }
       setBusinessLogo(cleaned);
       try {
         localStorage.setItem(LOGO_STORAGE_KEY, cleaned);
@@ -186,5 +187,14 @@ function fileToImage(file: File) {
     image.onload = () => { URL.revokeObjectURL(url); resolve(image); };
     image.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Image failed")); };
     image.src = url;
+  });
+}
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Image read failed"));
+    reader.readAsDataURL(file);
   });
 }
