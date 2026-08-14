@@ -1,0 +1,61 @@
+name: LoadLink near-final marketplace update
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/apply_loadlink_near_final_update.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: loadlink-near-final-marketplace-update
+  cancel-in-progress: false
+
+jobs:
+  apply-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out current LoadLink main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Apply near-final update
+        run: python scripts/apply_loadlink_near_final_update.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Production build
+        run: npm run build
+
+      - name: Commit validated application update
+        shell: bash
+        run: |
+          if git diff --quiet -- app components lib; then
+            echo "No application changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app components lib
+          git commit -m "feat: complete near-final LoadLink marketplace update"
+          git push origin HEAD:main
