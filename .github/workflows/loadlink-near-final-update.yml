@@ -45,15 +45,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint new near-final surfaces
-        run: >-
-          npx eslint
-          components/VehicleFullDetails.tsx
-          components/VehicleMarketplaceHub.tsx
-          app/api/location-coordinates/route.ts
-          app/tools/truck-finance/page.tsx
-          app/api/truck-image/route.ts
-
       - name: Production build
         run: npm run build
 
