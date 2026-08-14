@@ -16,6 +16,7 @@ import AuthStatusButton from "@/components/AuthStatusButton";
 import RequireAuthLink from "@/components/RequireAuthLink";
 import LoadLinkPagination from "@/components/LoadLinkPagination";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
+import VehicleFullDetails from "@/components/VehicleFullDetails";
 import { isAuthenticatedUser } from "@/lib/auth";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 import { detectIntent, detectRegion, flexibleMatch, normaliseSearch, searchTokens } from "@/lib/smartSearch";
@@ -50,6 +51,8 @@ type JobListing = {
   vehicleNeeded?: string;
   neededBy?: string;
   priorityLevel?: "flexible" | "standard" | "urgent";
+  listingKind?: string | null;
+  dealershipId?: string | null;
 };
 
 type JobRow = {
@@ -70,6 +73,8 @@ type JobRow = {
   view_count?: number | null;
   last_viewed_at?: string | null;
   user_id?: string | null;
+  listing_kind?: string | null;
+  dealership_id?: string | null;
 };
 
 
@@ -151,6 +156,8 @@ function mapJobRow(row: JobRow, verifiedUsers: Set<string> = new Set()): JobList
     vehicleNeeded: details.vehicleNeeded,
     neededBy: details.neededBy,
     priorityLevel: details.priorityLevel,
+    listingKind: row.listing_kind || null,
+    dealershipId: row.dealership_id || null,
   };
 }
 
@@ -280,15 +287,26 @@ function normaliseWhatsapp(value?: string) {
   return clean.replace("+", "");
 }
 
-function buildGreeting(job: JobListing, requesterNumber = "") {
-  const subject =
-    job.group === "Trucks / Trailers"
-      ? "this truck"
-      : job.group === "Catering / Event"
-        ? "this event or catering service"
-        : "this farming or mining transport service";
+function descriptionValue(description: string, label: string) {
+  return description.match(new RegExp(`^${label}:\\s*([^\\n]+)`, "im"))?.[1]?.trim() || "";
+}
 
-  return `Hey, I’m interested in ${subject} on LoadLink. Please call me on ${requesterNumber || "my number"} when you are available.`;
+function buildMessageSuggestion(job: JobListing) {
+  if (job.listingType === "asset") {
+    const offer = descriptionValue(job.description, "Offer");
+    const mileage = descriptionValue(job.description, "Mileage");
+    const terms = formatListingRate(job.rate);
+    return `Hi, I’m interested in ${job.title} in ${job.city} on LoadLink. Is it still available? Please confirm ${offer ? `${offer.toLowerCase()}, ` : ""}${terms !== "POA" ? `the advertised ${terms} terms, ` : ""}${mileage ? `the current ${mileage} mileage/usage, ` : ""}condition and when I can arrange a viewing or inspection.`;
+  }
+  if (job.listingType === "contract") {
+    return `Hi, I’m interested in ${job.title} on LoadLink. Please confirm the contract duration, route or operating area, required vehicle/unit, start date, expected frequency, rate structure, VAT position and payment terms.`;
+  }
+  return `Hi, I’m interested in ${job.title} on LoadLink. Please confirm the collection and delivery points, cargo or load details, required vehicle, needed date, loading time, rate and payment terms.`;
+}
+
+function buildGreeting(job: JobListing, requesterNumber = "") {
+  const message = buildMessageSuggestion(job);
+  return requesterNumber ? `${message} You can reach me on ${requesterNumber}.` : message;
 }
 
 function getViewerDeviceType() {
@@ -651,7 +669,7 @@ export default function JobsPortalPage() {
             </p>
           </div>
 
-          <div className="mt-6 rounded-2xl border border-[#f6b800] bg-black/78 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-sm md:p-5">
+          <div data-loadlink-jobs-search-shell className="loadlink-glass mt-6 rounded-2xl border border-[#f6b800] bg-black/78 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-sm md:p-5">
             <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr_auto]">
               <label className="block">
                 <span className="mb-2 block text-xs font-black uppercase tracking-[0.18em] text-[#f6b800]">Job or truck type</span>
@@ -714,7 +732,7 @@ export default function JobsPortalPage() {
             <p className={`mt-2 text-xs font-semibold ${darkMode ? "text-white/45" : "text-black/45"}`}>Sort by the date the job was posted or the date the vehicle is needed.</p>
           </div>
           <div className="flex items-center gap-2">
-            <label className={`flex h-11 items-center gap-2 rounded-xl border px-3 text-xs font-bold ${darkMode ? "border-white/15 bg-[#111]" : "border-black/10 bg-white"}`}>
+            <label className={`loadlink-sort-control flex h-11 items-center gap-2 rounded-xl border px-3 text-xs font-bold ${darkMode ? "border-white/15 bg-[#111]" : "border-black/10 bg-white"}`}>
               <span className={darkMode ? "text-white/45" : "text-black/45"}>Sort by</span>
               <select value={sortMode} onChange={(event) => setSortMode(event.target.value as JobSortMode)} className="bg-transparent font-black outline-none">
                 <option value="newest">Newest first</option>
@@ -831,7 +849,10 @@ function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onRe
 
         <details className={`mt-5 border ${darkMode?"border-white/10":"border-black/10"}`}>
           <summary className="cursor-pointer list-none px-4 py-4 text-sm font-black uppercase tracking-wide">View full details</summary>
-          <div className={`border-t p-4 ${darkMode?"border-white/10":"border-black/10"}`}><p className={`text-sm leading-7 ${darkMode?"text-white/70":"text-black/65"}`}>{job.description}</p><ContactSellerStack job={job} darkMode={darkMode}/></div>
+          <div className={`border-t p-4 ${darkMode?"border-white/10":"border-black/10"}`}>
+            {job.listingType === "asset" ? <VehicleFullDetails description={job.description} city={job.city} dealershipId={job.dealershipId || null} darkMode={darkMode} /> : <p className={`text-sm leading-7 ${darkMode?"text-white/70":"text-black/65"}`}>{job.description}</p>}
+            <ContactSellerStack job={job} darkMode={darkMode}/>
+          </div>
         </details>
 
         <div className={`mt-4 grid grid-cols-2 overflow-hidden border ${darkMode?"border-white/10":"border-black/10"}`}><button onClick={onShare} className={`flex min-h-12 items-center justify-center gap-2 border-r text-xs font-black uppercase ${darkMode?"border-white/10":"border-black/10"}`}><ShareIcon/>Share</button><button onClick={onReport} className="flex min-h-12 items-center justify-center gap-2 text-xs font-black uppercase text-red-500"><ReportIcon/>Report</button></div>
@@ -870,7 +891,7 @@ function ContactSellerStack({ job, darkMode }: { job: JobListing; darkMode: bool
       </div>
       <div className="grid grid-cols-3 border-t border-black/10">
         <a href={`tel:${job.contactNumber.replace(/\s/g, "")}`} className="flex min-h-16 flex-col items-center justify-center gap-1.5 border-r border-black/10 bg-[#168eea] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><PhoneIcon /> Call</a>
-        <RequireAuthLink href={`/messages?listing=${encodeURIComponent(job.id)}&suggest=1`} className="flex min-h-16 flex-col items-center justify-center gap-1.5 border-r border-black/10 bg-[#168eea] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><MessageIcon /> Message</RequireAuthLink>
+        <RequireAuthLink href={`/messages?listing=${encodeURIComponent(job.id)}&suggest=1&draft=${encodeURIComponent(buildMessageSuggestion(job))}`} className="flex min-h-16 flex-col items-center justify-center gap-1.5 border-r border-black/10 bg-[#168eea] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><MessageIcon /> Message</RequireAuthLink>
         <a href={whatsappPhone ? `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}` : "#"} onClick={(e) => { if (!whatsappPhone) { e.preventDefault(); greetPoster(job); } }} target="_blank" rel="noreferrer" className="flex min-h-16 flex-col items-center justify-center gap-1.5 bg-[#0d442b] px-2 text-center text-xs font-black uppercase tracking-wide text-white"><WhatsAppIcon /> WhatsApp</a>
       </div>
     </div>

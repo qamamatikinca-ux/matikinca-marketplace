@@ -365,15 +365,15 @@ function starterMessages(conversation: Conversation) {
   const title = conversation.listing_title || "this listing";
   if (conversation.role === "owner") {
     return [
-      `Thanks for your interest in ${title}. Please confirm the vehicle you have available and your earliest collection time.`,
-      `Please send your proposed rate, vehicle details and availability for ${title}.`,
-      "Before we proceed, please confirm the collection area, delivery requirements and the documents you can provide.",
+      `Thanks for your interest in ${title}. Please confirm the exact vehicle or unit you have available, its capacity and your earliest collection or viewing time.`,
+      `Please send your proposed rate for ${title}, whether VAT is included, your availability and the payment terms you require.`,
+      "Before we proceed, please confirm the registration or unit details, route capability, required documents and any loading or site restrictions.",
     ];
   }
   return [
-    `Hi, I’m interested in ${title}. Is it still available?`,
-    `Please confirm the rate, collection details, delivery requirements and availability for ${title}.`,
-    "I may have a suitable vehicle available. Please share the route, cargo details, loading time and payment terms.",
+    `Hi, I’m interested in ${title} on LoadLink. Is it still available? Please confirm the advertised terms, current condition and the earliest viewing or collection time.`,
+    `Please confirm the route or location, rate, VAT position, availability, payment terms and any documents required for ${title}.`,
+    "I may have a suitable vehicle or unit. Please share the cargo or operating requirement, weight or capacity needed, loading time and collection/delivery details.",
   ];
 }
 
@@ -472,6 +472,8 @@ export default function MessagesPage() {
   const recordingChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingCancelledRef = useRef(false);
+  const initialMessageDraftRef = useRef("");
+  const draftSeededForThreadRef = useRef("");
 
   useEffect(() => {
     const syncPrivacy = () => setMessagePrivacy(readMessagePrivacy());
@@ -628,13 +630,19 @@ export default function MessagesPage() {
 
 
   useEffect(() => {
-    if (!selectedId) return;
+    if (!selectedId || draftSeededForThreadRef.current === selectedId) return;
     try {
-      setText(window.localStorage.getItem(`loadlink-message-draft:${selectedId}`) || "");
+      const saved = window.localStorage.getItem(`loadlink-message-draft:${selectedId}`) || "";
+      const conversation = conversations.find((item) => item.id === selectedId);
+      const suggested = initialMessageDraftRef.current || (conversation && showStarterSuggestions ? starterMessages(conversation)[0] || "" : "");
+      setText(saved || suggested);
+      draftSeededForThreadRef.current = selectedId;
+      initialMessageDraftRef.current = "";
     } catch {
       setText("");
+      draftSeededForThreadRef.current = selectedId;
     }
-  }, [selectedId]);
+  }, [conversations, selectedId, showStarterSuggestions]);
 
   useEffect(() => {
     setComposerActionsOpen(false);
@@ -892,6 +900,7 @@ export default function MessagesPage() {
 
         await syncAccountState().catch(() => undefined);
         const params = new URLSearchParams(window.location.search);
+        initialMessageDraftRef.current = String(params.get("draft") || "").trim();
         let listingId = params.get("listing");
         const dealershipId = params.get("dealership");
         if (!listingId && dealershipId) {

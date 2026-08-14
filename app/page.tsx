@@ -134,9 +134,16 @@ function HomeExperience() {
                 <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/35 to-black/75" />
 
                 <div
-                  className={`absolute inset-x-0 bottom-0 h-40 blur-3xl transition ${
-                    darkMode ? "bg-[#5c4300]/20" : "bg-[#f6b800]/18"
-                  }`}
+                  data-loadlink-portal-glow
+                  className="pointer-events-none absolute inset-x-[3%] -bottom-12 h-56 transform-gpu"
+                  style={{
+                    background: darkMode
+                      ? "radial-gradient(ellipse at 50% 72%, rgba(246,184,0,.21) 0%, rgba(92,67,0,.18) 40%, rgba(0,0,0,0) 76%)"
+                      : "radial-gradient(ellipse at 50% 72%, rgba(246,184,0,.26) 0%, rgba(246,184,0,.16) 40%, rgba(246,184,0,0) 76%)",
+                    filter: "blur(34px)",
+                    transform: "translate3d(0,0,0)",
+                    willChange: "transform, opacity",
+                  }}
                 />
 
                 <div className="relative z-10 flex h-full w-full flex-col items-center justify-center px-6 text-center">

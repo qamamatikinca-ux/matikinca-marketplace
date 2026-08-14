@@ -179,7 +179,7 @@ export default function DriversAvailableForWork({
             </div>
           )}
 
-          <label className={styles.sortControl}>
+          <label className={`${styles.sortControl} loadlink-sort-control`}>
             <span>Sort</span>
             <select value={sort} onChange={(event) => { setSort(event.target.value as SortOption); setPage(1); }}>
               <option value="recommended">Recommended</option>

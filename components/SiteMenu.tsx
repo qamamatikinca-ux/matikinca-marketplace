@@ -21,6 +21,7 @@ const marketplaceLinks: MenuLink[] = [
   { label: "Find contracts", href: "/contracts", description: "Recurring and project work", icon: "contract" },
   { label: "Driver profiles", href: "/drivers", description: "Approved drivers for hire", icon: "drivers" },
   { label: "Tools", href: "/tools", description: "Quotes and logistics helpers", icon: "tools" },
+  { label: "Truck finance", href: "/tools/truck-finance", description: "Budget, repayments and live stock matches", icon: "tools" },
   { label: "Help centre", href: "/help", description: "Support and safety guidance", icon: "help" },
 ];
 

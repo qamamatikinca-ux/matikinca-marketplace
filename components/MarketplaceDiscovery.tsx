@@ -35,6 +35,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
   const [liveDrivers, setLiveDrivers] = useState<DriverSearchRow[]>([]);
   const [liveDealers, setLiveDealers] = useState<DealerSearchRow[]>([]);
   const searchWrapperRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const fabWrapperRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -127,9 +128,9 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
 
   function chooseScope(value: SearchScope) {
     setScope(value);
-    setShowSuggestions(false);
-    setActiveSearchField(null);
-    router.push(routeForScope(value, query, location));
+    setActiveSearchField("query");
+    setShowSuggestions(true);
+    window.requestAnimationFrame(() => searchInputRef.current?.focus());
   }
 
   return (
@@ -139,7 +140,14 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
           darkMode ? "bg-[#050505] text-white" : "bg-white text-black"
         }`}
       >
-        <div className="mx-auto max-w-7xl">
+        <div data-loadlink-marketplace-search-shell className={`loadlink-glass relative mx-auto max-w-7xl rounded-[28px] border p-3 shadow-[0_18px_48px_rgba(0,0,0,.08)] md:p-4 ${darkMode ? "border-white/12 bg-black/55" : "border-white/75 bg-white/68"}`}>
+        <div className="mb-3 flex items-end justify-between gap-3 px-1">
+          <div>
+            <p className="text-sm font-black tracking-[-.02em]">Search LoadLink</p>
+            <p className={`mt-1 text-[11px] font-semibold ${darkMode ? "text-white/45" : "text-black/45"}`}>Choose a portal first. Search stays inside that portal.</p>
+          </div>
+          <span className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[.08em] ${darkMode ? "border-white/12 bg-black/45 text-white/65" : "border-black/8 bg-white/70 text-black/55"}`}>{scopeLabel(scope)}</span>
+        </div>
           <div className="no-scrollbar overflow-x-auto py-1" aria-label="Search category">
             <div className="flex min-w-max gap-3 px-0.5">
               {visibleScopes.map((item) => (

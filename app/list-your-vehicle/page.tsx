@@ -12,6 +12,7 @@ import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
+import VehicleMarketplaceHub from "@/components/VehicleMarketplaceHub";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
 import PhotoLimitUpgradeToast from "@/components/PhotoLimitUpgradeToast";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
@@ -40,6 +41,8 @@ const acceptedDocuments = ".jpg,.jpeg,.png,.webp,.pdf";
 
 type VehicleCategory = "truck" | "trailer" | "mobile_unit";
 type SellerType = "private" | "dealership";
+type OfferMode = "sale" | "rental" | "sale_or_rental" | "poa";
+type RentalPeriod = "day" | "week" | "month";
 type VerificationFiles = {
   idDocument: File | null;
   driverLicence: File | null;
@@ -53,7 +56,7 @@ type VerificationFiles = {
   businessAddress: File | null;
   representativeAuthority: File | null;
 };
-type ReferenceImage = { imageUrl: string; title: string; exactMatch: boolean; sourceUrl?: string };
+type ReferenceImage = { imageUrl: string; title: string; exactMatch: boolean; sourceUrl?: string; credit?: string; license?: string; matchConfidence?: "high" | "medium" | "reference" };
 
 const emptyVerificationFiles: VerificationFiles = {
   idDocument: null, driverLicence: null, registrationPaper: null, ownershipProof: null,
@@ -65,10 +68,20 @@ function normalizePhone(value: string) { return value.replace(/[^\d+]/g, ""); }
 function isValidSouthAfricanPhone(value: string) { const clean = normalizePhone(value); return /^0\d{9}$/.test(clean) || /^\+27\d{9}$/.test(clean); }
 function safeFileName(value: string) { return value.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/^-+|-+$/g, "") || "document"; }
 function categoryLabel(category: VehicleCategory) { return category === "truck" ? "Truck" : category === "trailer" ? "Trailer" : "Mobile Unit"; }
+function offerLabel(mode: OfferMode) { return mode === "sale" ? "For sale only" : mode === "rental" ? "Rental only" : mode === "sale_or_rental" ? "Sale or rental" : "Price on application (POA)"; }
+function unitSpecSchema(category: VehicleCategory | null, subtype: string): Array<[string, string]> {
+  const clean = subtype.toLowerCase();
+  if (category === "truck") return [["Engine / power", "Engine displacement, output or power rating"], ["Cab configuration", "Sleeper cab, day cab, crew cab"], ["Braking / retarder", "Retarder, engine brake, EBS or ABS"], ["Suspension", "Air, steel or mixed suspension"]];
+  if (category === "trailer") return [["Braking system", "EBS, ABS, drum or disc"], ["Suspension", "Air or mechanical suspension"], ["Body / deck dimensions", "Length, width and usable body/deck size"], ["Loading configuration", "Rear doors, side access, ramps, tipper setup, etc."]];
+  if (clean.includes("fridge") || clean.includes("cold room") || clean.includes("refrigerated")) return [["Temperature range", "Operating temperature range"], ["Refrigeration system", "Unit brand/model and cooling setup"], ["Power supply", "Mains, generator, solar or hybrid"], ["Internal capacity", "Usable refrigerated space / volume"]];
+  if (clean.includes("kitchen") || clean.includes("food truck")) return [["Power supply", "Electrical, generator or gas setup"], ["Water system", "Fresh/grey water capacity and pumps"], ["Included kitchen equipment", "Cooking, refrigeration and prep equipment"], ["Extraction / ventilation", "Extraction hood and ventilation setup"]];
+  return [["Power supply", "Electrical, generator, solar or other"], ["Internal dimensions", "Usable internal dimensions"], ["Fit-out / equipment", "Installed fixtures and equipment"], ["Operating capability", "What this unit is ready to do"]];
+}
 export default function ListYourVehiclePage() {
   const router = useRouter();
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [authReady, setAuthReady] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const [saving, setSaving] = useState(false);
   const [preparingVehiclePhotos, setPreparingVehiclePhotos] = useState(false);
   const [vehiclePhotoProgress, setVehiclePhotoProgress] = useState("");
@@ -105,6 +118,13 @@ export default function ListYourVehiclePage() {
   const [gvmKg, setGvmKg] = useState("");
   const [payloadKg, setPayloadKg] = useState("");
   const [rate, setRate] = useState("");
+  const [offerMode, setOfferMode] = useState<OfferMode>("sale");
+  const [rentalRate, setRentalRate] = useState("");
+  const [rentalPeriod, setRentalPeriod] = useState<RentalPeriod>("month");
+  const [specA, setSpecA] = useState("");
+  const [specB, setSpecB] = useState("");
+  const [specC, setSpecC] = useState("");
+  const [specD, setSpecD] = useState("");
   const [postedBy, setPostedBy] = useState("");
   const [contactNumber, setContactNumber] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
@@ -125,12 +145,14 @@ export default function ListYourVehiclePage() {
   const availableModels = useMemo(() => vehicleCategory === "truck" ? getTruckModels(brand, year) : [], [brand, vehicleCategory, year]);
   const selectedModel = useMemo(() => vehicleCategory === "truck" ? getTruckModel(brand, modelName, year) : null, [brand, modelName, vehicleCategory, year]);
   const transmissionCheck = useMemo(() => vehicleCategory === "truck" && transmission ? validateTruckTransmission(brand, modelName, year, transmission) : null, [brand, modelName, transmission, vehicleCategory, year]);
+  const specSchema = useMemo(() => unitSpecSchema(vehicleCategory, bodyType || vehicleSubtype), [bodyType, vehicleCategory, vehicleSubtype]);
 
   useEffect(() => {
     async function requireAccount() {
-      if (!isSupabaseConfigured) { router.replace(loginHref(currentRelativePath())); return; }
+      if (!isSupabaseConfigured) { setAuthReady(true); return; }
       const user = await getFreshAuthenticatedUser();
-      if (!user) { router.replace(loginHref(currentRelativePath())); return; }
+      if (!user) { setAuthReady(true); return; }
+      setSignedIn(true);
       await syncAccountState().catch(() => undefined);
       setPostedBy(String(user.user_metadata?.full_name || user.user_metadata?.name || ""));
 
@@ -161,7 +183,7 @@ export default function ListYourVehiclePage() {
       }
       setAuthReady(true);
     }
-    void requireAccount().catch(() => router.replace(loginHref(currentRelativePath())));
+    void requireAccount().catch(() => setAuthReady(true));
   }, [router]);
 
   useEffect(() => {
@@ -176,7 +198,7 @@ export default function ListYourVehiclePage() {
       setFuelType(d.fuelType || ""); setAxleConfiguration(d.axleConfiguration || ""); setRegistrationNumber(d.registrationNumber || "");
       setVin(d.vin || ""); setEngineNumber(d.engineNumber || ""); setOdometerKm(d.odometerKm || ""); setPreviousOwners(d.previousOwners || "");
       setCondition(d.condition || "Good"); setServiceHistory(d.serviceHistory || "Partial service history"); setGvmKg(d.gvmKg || "");
-      setPayloadKg(d.payloadKg || ""); setRate(d.rate || ""); setPostedBy(d.postedBy || ""); setContactNumber(d.contactNumber || "");
+      setPayloadKg(d.payloadKg || ""); setRate(d.rate || ""); setOfferMode(d.offerMode || "sale"); setRentalRate(d.rentalRate || ""); setRentalPeriod(d.rentalPeriod || "month"); setSpecA(d.specA || ""); setSpecB(d.specB || ""); setSpecC(d.specC || ""); setSpecD(d.specD || ""); setPostedBy(d.postedBy || ""); setContactNumber(d.contactNumber || "");
       setWhatsappNumber(d.whatsappNumber || ""); setDescription(d.description || ""); setConfirmOwnership(Boolean(d.confirmOwnership));
       setConfirmAccuracy(Boolean(d.confirmAccuracy)); setSelectedPlan(d.selectedPlan || null); setPackageType(d.packageType || "standard");
       submissionIdRef.current = String(d.submissionId || submissionIdRef.current);
@@ -188,10 +210,10 @@ export default function ListYourVehiclePage() {
   }, []);
 
   useEffect(() => {
-    const draft = { sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, gvmKg, payloadKg, rate, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType, submissionId: submissionIdRef.current || localStorage.getItem("loadlink-vehicle-submission-id") || "" };
+    const draft = { sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, gvmKg, payloadKg, rate, offerMode, rentalRate, rentalPeriod, specA, specB, specC, specD, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType, submissionId: submissionIdRef.current || localStorage.getItem("loadlink-vehicle-submission-id") || "" };
     const timer = window.setTimeout(() => localStorage.setItem("loadlink-vehicle-draft-v1", JSON.stringify(draft)), 150);
     return () => window.clearTimeout(timer);
-  }, [sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, gvmKg, payloadKg, rate, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType]);
+  }, [sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, gvmKg, payloadKg, rate, offerMode, rentalRate, rentalPeriod, specA, specB, specC, specD, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType]);
 
   useEffect(() => {
     if (vehicleCategory !== "truck" || !brand || !modelName) return;
@@ -336,7 +358,9 @@ export default function ListYourVehiclePage() {
       if (!vehicleSubtype) return `Choose the ${vehicleCategory === "trailer" ? "trailer" : "mobile unit"} type.`;
       if (!brand.trim() || !modelName.trim()) return "Enter the make and model.";
     }
-    if (!title.trim() || !postedBy.trim() || !rate.trim() || !description.trim()) return "Complete all required vehicle and listing fields.";
+    if (!title.trim() || !postedBy.trim() || !description.trim()) return "Complete all required vehicle and listing fields.";
+    if (offerMode !== "poa" && !rate.trim()) return offerMode === "rental" ? "Enter the advertised rental rate." : "Enter the advertised sale price.";
+    if (offerMode === "sale_or_rental" && !rentalRate.trim()) return "Enter the advertised rental rate as well as the sale price.";
     if (!registrationNumber.trim() || vin.trim().length < 6) return "Enter the registration number and VIN/chassis number.";
     if (!odometerKm || Number(odometerKm) < 0) return "Enter a valid mileage or usage reading.";
     if (!isValidSouthAfricanPhone(contactNumber)) return "Enter a valid South African contact number.";
@@ -399,9 +423,14 @@ export default function ListYourVehiclePage() {
 
       const label = categoryLabel(vehicleCategory!);
       const subtype = vehicleCategory === "truck" ? bodyType : vehicleSubtype;
+      const displayRate = offerMode === "poa" ? "POA" : offerMode === "rental" ? `${formatListingRate(rate)} / ${rentalPeriod}` : formatListingRate(rate);
       const storedDescription = [
         `Listing type: ${label}`,
         `Vehicle subtype: ${subtype}`,
+        `Offer: ${offerLabel(offerMode)}`,
+        offerMode === "sale" || offerMode === "sale_or_rental" ? `Sale price: ${formatListingRate(rate)}` : "",
+        offerMode === "rental" ? `Rental rate: ${formatListingRate(rate)} / ${rentalPeriod}` : "",
+        offerMode === "sale_or_rental" && rentalRate ? `Rental rate: ${formatListingRate(rentalRate)} / ${rentalPeriod}` : "",
         `Year: ${year}`,
         `Make: ${brand.trim()}`,
         `Model: ${modelName.trim()}`,
@@ -414,6 +443,10 @@ export default function ListYourVehiclePage() {
         `Service history: ${serviceHistory}`,
         gvmKg ? `GVM: ${Number(gvmKg).toLocaleString("en-ZA")} kg` : "",
         payloadKg ? `Payload: ${Number(payloadKg).toLocaleString("en-ZA")} kg` : "",
+        specA.trim() ? `${specSchema[0][0]}: ${specA.trim()}` : "",
+        specB.trim() ? `${specSchema[1][0]}: ${specB.trim()}` : "",
+        specC.trim() ? `${specSchema[2][0]}: ${specC.trim()}` : "",
+        specD.trim() ? `${specSchema[3][0]}: ${specD.trim()}` : "",
         `Seller: ${sellerType === "dealership" ? dealershipName || postedBy : postedBy}`,
         "",
         "Description:",
@@ -423,7 +456,7 @@ export default function ListYourVehiclePage() {
       const listingPayload = {
         title: title.trim(), city,
         vehicle_group: vehicleCategory === "mobile_unit" ? "Mobile Units" : "Trucks / Trailers",
-        rate: formatListingRate(rate), posted_by: postedBy.trim(), contact_number: contactNumber.trim(), whatsapp_number: whatsappNumber.trim(),
+        rate: displayRate, posted_by: postedBy.trim(), contact_number: contactNumber.trim(), whatsapp_number: whatsappNumber.trim(),
         description: storedDescription, photos: photoUrls,
         sponsored: packageType === "pro" || packageType === "dealer", package_type: packageType,
         listing_kind: "vehicle", display_tier: packageType === "dealer" ? 4 : packageType === "pro" ? 3 : 1,
@@ -483,9 +516,9 @@ export default function ListYourVehiclePage() {
 
   if (!authReady) return <main className="min-h-screen bg-black text-white"><LoadLinkLoading /></main>;
 
-  const surface = darkMode ? "border-white/10 bg-[#101010] text-white" : "border-black/10 bg-white text-black";
+  const surface = darkMode ? "loadlink-glass border-white/12 bg-black/62 text-white backdrop-blur-xl" : "loadlink-glass border-white/75 bg-white/68 text-black backdrop-blur-xl";
   const muted = darkMode ? "text-white/55" : "text-black/55";
-  const inputClass = `h-14 w-full rounded-xl border px-4 font-semibold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-[#171717] text-white placeholder:text-white/30" : "border-black/10 bg-[#faf8f2] text-black placeholder:text-black/35"}`;
+  const inputClass = `h-14 w-full rounded-xl border px-4 font-semibold outline-none backdrop-blur-lg focus:border-[#f6b800] ${darkMode ? "border-white/14 bg-white/[.055] text-white placeholder:text-white/30" : "border-black/10 bg-white/72 text-black placeholder:text-black/35"}`;
   const textAreaClass = `${inputClass} min-h-32 py-4`;
   const categoryChosen = Boolean(vehicleCategory);
   const detailsReady = vehicleCategory === "truck" ? modelConfirmed : Boolean(vehicleSubtype && brand.trim() && modelName.trim());
@@ -524,8 +557,18 @@ export default function ListYourVehiclePage() {
         </div>
       </section>
 
-      {!dealerPost && !selectedPlan ? (
-        <section className={`border-b px-4 py-6 md:px-6 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+      <section className={`border-b px-4 py-5 md:px-6 ${darkMode ? "border-white/10 bg-[#080808]" : "border-black/10 bg-white/80"}`}>
+        <div className="mx-auto grid max-w-5xl gap-3 sm:grid-cols-3">
+          <a href="#vehicle-listing-form" className="flex min-h-16 items-center justify-center rounded-2xl bg-[#f6b800] px-5 text-center text-sm font-black text-black">List your vehicle</a>
+          <a href="#vehicle-marketplace-vehicles" className={`loadlink-glass flex min-h-16 items-center justify-center rounded-2xl border px-5 text-center text-sm font-black ${darkMode ? "border-white/12 bg-white/[.04]" : "border-black/8 bg-white/70"}`}>Vehicles available</a>
+          <a href="#vehicle-marketplace-units" className={`loadlink-glass flex min-h-16 items-center justify-center rounded-2xl border px-5 text-center text-sm font-black ${darkMode ? "border-white/12 bg-white/[.04]" : "border-black/8 bg-white/70"}`}>Units available</a>
+        </div>
+      </section>
+
+      {!signedIn ? <section id="vehicle-listing-form" className="mx-auto max-w-5xl scroll-mt-24 px-4 py-8 md:px-6"><div className={`loadlink-glass rounded-[24px] border p-6 text-center ${surface}`}><h2 className="text-3xl font-black tracking-[-.04em]">Sign in to list a vehicle</h2><p className={`mx-auto mt-3 max-w-xl text-sm font-semibold leading-6 ${muted}`}>Approved marketplace stock remains available below. Sign in when you are ready to create a truck, trailer or mobile-unit listing.</p><a href={loginHref(currentRelativePath())} className="mt-5 inline-flex h-12 items-center justify-center rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase tracking-[.1em] text-black">Sign in or create account</a></div></section> : null}
+
+      {signedIn && !dealerPost && !selectedPlan ? (
+        <section id="vehicle-listing-form" className={`scroll-mt-24 border-b px-4 py-6 md:px-6 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
           <div className={`mx-auto max-w-6xl rounded-[24px] border p-5 md:flex md:items-center md:justify-between md:gap-8 md:p-6 ${darkMode ? "border-white/12 bg-[#111]" : "border-black/10 bg-[#faf8f2]"}`}>
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#b88900]">Seller type</p>
@@ -540,9 +583,9 @@ export default function ListYourVehiclePage() {
         </section>
       ) : null}
 
-      {!selectedPlan ? <BusinessPlans darkMode={darkMode} selectable selectedPlan={selectedPlan} onSelect={choosePlan} /> : null}
+      {signedIn && !selectedPlan ? <BusinessPlans darkMode={darkMode} selectable selectedPlan={selectedPlan} onSelect={choosePlan} /> : null}
 
-      {selectedPlan ? <form onSubmit={submitVehicle} className="mx-auto grid max-w-5xl gap-6 px-4 py-7 md:px-6 md:py-12">
+      {signedIn && selectedPlan ? <form id="vehicle-listing-form" onSubmit={submitVehicle} className="mx-auto grid max-w-5xl scroll-mt-24 gap-6 px-4 py-7 md:px-6 md:py-12">
         <section id="vehicle-type" className={`scroll-mt-24 overflow-hidden rounded-2xl border ${surface}`}>
           <SectionHeading step="01" title="Choose what you are listing" description="The form changes to show only the details relevant to the selected vehicle or mobile unit." />
           <div className="grid gap-3 p-5 sm:grid-cols-3 md:p-7">
@@ -561,7 +604,7 @@ export default function ListYourVehiclePage() {
               <Field label="Make / manufacturer">{vehicleCategory === "truck" ? <select value={brand} onChange={(event) => { setBrand(event.target.value); setModelName(""); setModelConfirmed(false); }} className={inputClass} required><option value="">Choose manufacturer</option>{truckCatalog.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}</select> : <input value={brand} onChange={(event) => setBrand(event.target.value)} placeholder="Make or manufacturer" className={inputClass} required />}</Field>
               <Field label="Model">{vehicleCategory === "truck" ? <select value={modelName} onChange={(event) => { setModelName(event.target.value); setModelConfirmed(false); }} className={inputClass} disabled={!brand} required><option value="">Choose exact model</option>{availableModels.map((item) => <option key={item.name}>{item.name}</option>)}</select> : <input value={modelName} onChange={(event) => setModelName(event.target.value)} placeholder="Model name or number" className={inputClass} required />}</Field>
             </div>
-            {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>{imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Loading model reference…</p> : null}{referenceImage?.imageUrl ? <img src={referenceImage.imageUrl} alt={referenceImage.title || "Truck reference"} className="mt-4 aspect-[16/9] w-full max-w-xl rounded-xl object-cover" /> : null}</div> : <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={() => { setTitle(`${year} ${brand} ${modelName} ${vehicleSubtype}`.replace(/\s+/g, " ").trim()); setMessage(""); }} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm vehicle details</button></div>}
+            {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>{imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Loading model reference…</p> : null}{referenceImage?.imageUrl ? <figure className="mt-4 max-w-xl"><img src={referenceImage.imageUrl} alt={referenceImage.title || "Truck reference"} className="aspect-[16/9] w-full rounded-xl object-cover" /><figcaption className={`mt-2 text-[11px] font-semibold leading-5 ${muted}`}>Model reference photo · {referenceImage.matchConfidence === "high" ? "high-confidence match" : referenceImage.matchConfidence === "medium" ? "model-family match" : "visual reference"}. Confirm your uploaded photos show the actual truck.{referenceImage.credit ? ` Credit: ${referenceImage.credit}.` : ""}{referenceImage.license ? ` ${referenceImage.license}.` : ""} {referenceImage.sourceUrl ? <a href={referenceImage.sourceUrl} target="_blank" rel="noreferrer" className="font-black underline underline-offset-2">Source</a> : null}</figcaption></figure> : null}</div> : <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={() => { setTitle(`${year} ${brand} ${modelName} ${vehicleSubtype}`.replace(/\s+/g, " ").trim()); setMessage(""); }} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm vehicle details</button></div>}
           </section>
 
           {detailsReady ? <>
@@ -582,7 +625,14 @@ export default function ListYourVehiclePage() {
                 <Field label="Axle configuration"><input value={axleConfiguration} onChange={(event) => setAxleConfiguration(event.target.value)} placeholder="4x2, tandem, tri-axle" className={inputClass} /></Field>
                 <Field label="GVM kg"><input type="number" min="0" value={gvmKg} onChange={(event) => setGvmKg(event.target.value)} className={inputClass} /></Field>
                 <Field label="Payload / capacity kg"><input type="number" min="0" value={payloadKg} onChange={(event) => setPayloadKg(event.target.value)} className={inputClass} /></Field>
-                <Field label="Price" wide><input value={rate} onChange={(event) => setRate(event.target.value)} placeholder="Example: 850000" inputMode="decimal" className={inputClass} required /></Field>
+                <Field label="How is this unit available?"><select value={offerMode} onChange={(event) => setOfferMode(event.target.value as OfferMode)} className={inputClass}><option value="sale">For sale only</option><option value="rental">Rental only</option><option value="sale_or_rental">Sale or rental</option><option value="poa">POA — price on application</option></select></Field>
+                {offerMode !== "poa" ? <Field label={offerMode === "rental" ? "Rental rate" : "Sale price"}><input value={rate} onChange={(event) => setRate(event.target.value)} placeholder={offerMode === "rental" ? "Example: 25000" : "Example: 850000"} inputMode="decimal" className={inputClass} required /></Field> : <Field label="Price"><div className={`${inputClass} flex items-center`}>POA — interested users must contact the seller</div></Field>}
+                {offerMode === "rental" || offerMode === "sale_or_rental" ? <Field label="Rental period"><select value={rentalPeriod} onChange={(event) => setRentalPeriod(event.target.value as RentalPeriod)} className={inputClass}><option value="day">Per day</option><option value="week">Per week</option><option value="month">Per month</option></select></Field> : null}
+                {offerMode === "sale_or_rental" ? <Field label="Rental rate"><input value={rentalRate} onChange={(event) => setRentalRate(event.target.value)} placeholder="Example: 25000" inputMode="decimal" className={inputClass} required /></Field> : null}
+                <Field label={specSchema[0][0]}><input value={specA} onChange={(event) => setSpecA(event.target.value)} placeholder={specSchema[0][1]} className={inputClass} /></Field>
+                <Field label={specSchema[1][0]}><input value={specB} onChange={(event) => setSpecB(event.target.value)} placeholder={specSchema[1][1]} className={inputClass} /></Field>
+                <Field label={specSchema[2][0]}><input value={specC} onChange={(event) => setSpecC(event.target.value)} placeholder={specSchema[2][1]} className={inputClass} /></Field>
+                <Field label={specSchema[3][0]}><input value={specD} onChange={(event) => setSpecD(event.target.value)} placeholder={specSchema[3][1]} className={inputClass} /></Field>
                 <Field label="Location"><SouthAfricaLocationInput value={city} onChange={setCity} darkMode={darkMode} placeholder="City, town or province" ariaLabel="Vehicle location" className={inputClass} required /></Field>
                 <Field label="Description" wide><textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the vehicle, maintenance, features, faults and anything a buyer should know." className={textAreaClass} required /></Field>
               </div>
@@ -604,6 +654,7 @@ export default function ListYourVehiclePage() {
           </> : null}
         </> : null}
       </form> : null}
+      <VehicleMarketplaceHub darkMode={darkMode} />
     </main>
   );
 }

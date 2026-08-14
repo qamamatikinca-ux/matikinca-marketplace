@@ -96,18 +96,27 @@ export default function LoadLinkLoading() {
         .wheel-two { right: 16px; }
 
         .track-mark {
-          position: absolute;
-          right: 200px;
-          width: 170px;
-          height: 8px;
-          opacity: 0.8;
-          background: repeating-linear-gradient(90deg, transparent 0 9px, #f6b800 9px 15px, transparent 15px 24px);
-          transform: skewX(-22deg);
-          animation: track-fade 1.55s linear infinite;
-        }
-
-        .track-one { bottom: 5px; }
-        .track-two { bottom: -7px; }
+  position: absolute;
+  left: -190px;
+  width: 235px;
+  height: 5px;
+  border-radius: 999px;
+  opacity: 0.88;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(246,184,0,0) 0 7px,
+    rgba(246,184,0,.92) 7px 27px,
+    rgba(246,184,0,.22) 27px 35px
+  );
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 20%, #000 82%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 20%, #000 82%, transparent 100%);
+  filter: drop-shadow(0 0 5px rgba(246,184,0,.4));
+  transform: skewX(-18deg) translateZ(0);
+  will-change: background-position, opacity;
+  animation: skid-flow .62s linear infinite, track-fade 1.55s ease-in-out infinite;
+}
+.track-one { bottom: 15px; }
+.track-two { bottom: 4px; left: -168px; width: 210px; opacity: .72; animation-delay: -.18s, -.18s; }
 
         @keyframes truck-drive {
           from { transform: translate(-260px, -50%); }

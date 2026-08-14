@@ -311,3 +311,49 @@ html[data-loadlink-theme="light"] body:is([data-loadlink-path="/packages"],[data
     transform: none !important;
   }
 }
+
+/* Near-final marketplace update — 2026-08-15 */
+[data-loadlink-marketplace-search-shell],
+[data-loadlink-jobs-search-shell] {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  max-width: 100%;
+  isolation: isolate;
+  transform: translateZ(0);
+}
+
+[data-loadlink-marketplace-search-shell] {
+  overflow: visible !important;
+}
+
+[data-loadlink-portal-glow] {
+  backface-visibility: hidden;
+  contain: paint;
+  transform: translate3d(0,0,0);
+}
+
+body[data-loadlink-path="/list-your-vehicle"] select,
+body[data-loadlink-path="/list-your-vehicle"] input,
+body[data-loadlink-path="/list-your-vehicle"] textarea,
+body[data-loadlink-path="/tools/truck-finance"] select,
+body[data-loadlink-path="/tools/truck-finance"] input {
+  -webkit-backdrop-filter: blur(10px) saturate(112%);
+  backdrop-filter: blur(10px) saturate(112%);
+}
+
+@media (max-width: 767px) {
+  [data-loadlink-marketplace-search-shell] {
+    border-radius: 22px !important;
+  }
+  body[data-loadlink-path="/list-your-vehicle"] select,
+  body[data-loadlink-path="/list-your-vehicle"] input,
+  body[data-loadlink-path="/list-your-vehicle"] textarea,
+  body[data-loadlink-path="/tools/truck-finance"] select,
+  body[data-loadlink-path="/tools/truck-finance"] input {
+    -webkit-backdrop-filter: blur(7px) saturate(108%);
+    backdrop-filter: blur(7px) saturate(108%);
+  }
+}
