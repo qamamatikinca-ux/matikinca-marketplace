@@ -1987,7 +1987,7 @@ ${message}` : message)}
               ) : null}
               <form
                 onSubmit={send}
-                className="loadlink-chat-composer border-t border-black/10 bg-white p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:p-4"
+                className="loadlink-chat-composer border-t border-black/10 bg-white/55 p-2.5 pb-[max(.65rem,env(safe-area-inset-bottom))] backdrop-blur-2xl sm:p-3"
               >
                 <input
                   ref={fileInputRef}
@@ -1999,39 +1999,8 @@ ${message}` : message)}
                 {editingMessageId ? <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 rounded-xl border border-black/10 bg-[#f7f4ed] px-3 py-2 text-[10px] font-bold"><span>Editing message · changes are allowed for 15 minutes after sending.</span><button type="button" onClick={() => { setEditingMessageId(""); setText(""); }} className="font-black uppercase">Cancel</button></div> : null}
                 {uploading && uploadProgress ? <div className="mx-auto mb-2 max-w-3xl"><div className="h-1.5 overflow-hidden rounded-full bg-black/10"><div className="h-full rounded-full bg-[#f6b800] transition-[width]" style={{ width: `${uploadProgress}%` }} /></div><p className="mt-1 text-right text-[9px] font-bold text-black/40">Uploading {uploadProgress}%</p></div> : null}
                 {failedUpload && !uploading ? <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[10px] font-bold text-red-700"><span className="min-w-0 truncate">{failedUpload.file.type.startsWith("audio/") ? "Voice note" : failedUpload.file.name} failed to send.</span><span className="flex shrink-0 gap-2"><button type="button" onClick={() => void sendAttachment(failedUpload.file, failedUpload.caption)} className="rounded-lg bg-red-600 px-3 py-1.5 font-black text-white">Retry</button><button type="button" onClick={() => setFailedUpload(null)} className="rounded-lg border border-red-300 px-2 py-1.5 font-black">Dismiss</button></span></div> : null}
-                <div className="mx-auto flex max-w-3xl items-end gap-2">
-                  <div className="relative shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setComposerActionsOpen((value) => !value)}
-                      disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
-                      className={`flex h-11 w-11 items-center justify-center rounded-full border text-xl font-light disabled:opacity-40 ${composerActionsOpen ? "border-black bg-black text-white" : "border-black/10 bg-[#f3f0e8] text-black"}`}
-                      aria-label="Open message actions"
-                      aria-expanded={composerActionsOpen}
-                    >
-                      {composerActionsOpen ? "×" : "+"}
-                    </button>
-                    {composerActionsOpen ? (
-                      <div className="absolute bottom-[calc(100%+.5rem)] left-0 z-[70] max-h-[min(68vh,520px)] w-[min(84vw,320px)] overflow-y-auto rounded-2xl border border-black/10 bg-white p-1.5 shadow-2xl">
-                        <button type="button" onClick={() => { setComposerActionsOpen(false); fileInputRef.current?.click(); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-black/[.04]"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f3f0e8]"><PaperclipIcon /></span><span className="min-w-0"><span className="block text-xs font-semibold">Attach file</span><span className="mt-0.5 block text-[9px] font-medium text-black/40">Photos and documents</span></span></button>
-                        <button
-                          type="button"
-                          disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
-                          onClick={() => {
-                            setComposerActionsOpen(false);
-                            setLogisticsWorkspaceOpen(true);
-                          }}
-                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-bold hover:bg-black/[.04] disabled:opacity-40"
-                        >
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f6b800] text-black" aria-hidden="true">
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 7h11v9H3V7Zm11 3h3.4L21 13.6V16h-7v-6Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /><circle cx="7" cy="17.5" r="1.7" stroke="currentColor" strokeWidth="1.8" /><circle cx="17.5" cy="17.5" r="1.7" stroke="currentColor" strokeWidth="1.8" /></svg>
-                          </span>
-                          <span className="min-w-0 flex-1"><span className="block">Logistics tools</span><span className="mt-0.5 block truncate text-[9px] font-semibold text-black/40">Open the full tool workspace</span></span>
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="min-w-0 flex-1 rounded-2xl border border-black/10 bg-[#f6f4ee] px-3.5 py-2 focus-within:border-[#f6b800] focus-within:bg-white">
+                <div className="mx-auto flex w-full max-w-3xl items-end gap-2">
+                  <div className="loadlink-message-input min-w-0 flex-1 rounded-[22px] border border-black/10 bg-white/55 px-4 py-2.5 shadow-sm backdrop-blur-xl focus-within:border-[#f6b800]">
                     <textarea
                       value={text}
                       onChange={(event) => updateTyping(event.target.value)}
@@ -2055,7 +2024,7 @@ ${message}` : message)}
                       rows={1}
                       maxLength={4000}
                       disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
-                      className="max-h-28 min-h-7 w-full resize-none bg-transparent py-1 text-sm font-medium outline-none placeholder:text-black/35 disabled:opacity-50"
+                      className="max-h-28 min-h-7 w-full resize-none bg-transparent py-1 text-[15px] font-medium leading-6 outline-none placeholder:text-black/38 disabled:opacity-50"
                     />
                   </div>
                   {text.trim() || editingMessageId ? (
@@ -2294,33 +2263,8 @@ function QuoteMessageCard({ message, mine, canRespond, branding, onRespond }: { 
   );
 }
 
-function DealerUpdateAvatar({ listingId, name, photo, online, darkMode }: { listingId: string; name: string; photo?: string | null; online?: boolean; darkMode: boolean }) {
-  const [update, setUpdate] = useState<{ title: string; body: string; update_type?: string | null; created_at?: string | null } | null>(null);
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    setUpdate(null);
-    if (!listingId) return () => { active = false; };
-    (async () => {
-      try {
-        const listing = await supabase.from("job_listings").select("dealership_id").eq("id", listingId).maybeSingle();
-        const dealershipId = listing.data?.dealership_id;
-        if (!active || listing.error || !dealershipId) return;
-        const latest = await supabase.from("dealership_updates").select("title,body,update_type,created_at,status").eq("dealership_id", dealershipId).eq("status", "approved").order("created_at", { ascending: false }).limit(1).maybeSingle();
-        if (!active || latest.error || !latest.data) return;
-        setUpdate(latest.data as { title: string; body: string; update_type?: string | null; created_at?: string | null });
-      } catch { /* dealer updates are optional and must never block chat */ }
-    })();
-    return () => { active = false; };
-  }, [listingId]);
-
-  return <div className="relative h-11 w-11 shrink-0">
-    <button type="button" onClick={() => update && setOpen(true)} disabled={!update} className={`relative block h-11 w-11 rounded-full ${update ? "p-[3px] bg-[#f6b800] shadow-[0_0_0_1px_rgba(246,184,0,.28)]" : "p-0"}`} aria-label={update ? "View latest dealer update" : undefined}>
-      <span className={`block rounded-full ${darkMode ? "bg-black" : "bg-white"} ${update ? "p-[2px]" : ""}`}><Avatar name={name} photo={photo} size="h-11 w-11" online={online} /></span>
-    </button>
-    {update && open ? <div className="fixed inset-0 z-[120] flex items-end bg-black/35 p-3 sm:items-center sm:justify-center" onClick={() => setOpen(false)}><section onClick={(event) => event.stopPropagation()} className={`w-full max-w-sm rounded-[26px] border p-5 shadow-2xl ${darkMode ? "border-white/10 bg-[#0b0b0b] text-white" : "border-black/10 bg-white text-black"}`}><div className="flex items-start justify-between gap-4"><div><p className="text-[9px] font-black uppercase tracking-[.16em] text-[#b88900]">Dealer update</p><h3 className="mt-1 text-xl font-black tracking-[-.025em]">{update.title}</h3></div><button type="button" onClick={() => setOpen(false)} className={`flex h-9 w-9 items-center justify-center rounded-full border text-lg ${darkMode ? "border-white/10" : "border-black/10"}`}>×</button></div><p className={`mt-3 text-sm font-semibold leading-6 ${darkMode ? "text-white/58" : "text-black/58"}`}>{update.body}</p><div className="mt-4 flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#f6b800]"/><span className={`text-[10px] font-bold uppercase tracking-[.08em] ${darkMode ? "text-white/40" : "text-black/40"}`}>{String(update.update_type || "dealership update").replaceAll("_", " ")}</span></div></section></div> : null}
-  </div>;
+function DealerUpdateAvatar({ name, photo }: { listingId: string; name: string; photo?: string | null; online?: boolean; darkMode: boolean }) {
+  return <Avatar name={name} photo={photo} size="h-11 w-11" />;
 }
 
 function Avatar({

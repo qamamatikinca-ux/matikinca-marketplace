@@ -1,0 +1,8 @@
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
+const SITE="https://matikinca-marketplace.vercel.app";
+type ListingRow={title?:string|null;city?:string|null;vehicle_group?:string|null;photos?:string[]|null;poster_photo?:string|null};
+async function getListing(id:string):Promise<ListingRow|null>{const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;if(!url||!key||!id)return null;try{const r=await fetch(`${url}/rest/v1/job_listings?id=eq.${encodeURIComponent(id)}&select=title,city,vehicle_group,photos,poster_photo&limit=1`,{headers:{apikey:key,Authorization:`Bearer ${key}`},next:{revalidate:60}});if(!r.ok)return null;const rows=(await r.json()) as ListingRow[];return rows[0]||null}catch{return null}}
+function imageUrl(v?:string|null){if(!v)return `${SITE}/images/loadlink-logo-light.png`;if(/^https?:\/\//i.test(v))return v;return `${SITE}${v.startsWith("/")?v:`/${v}`}`}
+export async function generateMetadata({params}:{params:Promise<{id:string}>}):Promise<Metadata>{const {id}=await params;const l=await getListing(id);const title=l?.title?`${l.title} | LoadLink`:"LoadLink listing";const description=l?[l.city,l.vehicle_group,"Available on LoadLink"].filter(Boolean).join(" · "):"View this logistics listing on LoadLink.";const image=imageUrl(l?.photos?.find(Boolean)||l?.poster_photo);const canonical=`${SITE}/listing/${encodeURIComponent(id)}`;return{title,description,alternates:{canonical},openGraph:{title,description,url:canonical,siteName:"LoadLink",type:"website",images:[{url:image,alt:l?.title||"LoadLink listing"}]},twitter:{card:"summary_large_image",title,description,images:[image]}}}
+export default function ListingLayout({children}:{children:ReactNode}){return children;}
