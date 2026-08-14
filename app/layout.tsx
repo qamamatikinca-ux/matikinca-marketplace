@@ -11,6 +11,8 @@ import "./loadlink-responsive-experience.css";
 import "./loadlink-mobile-final.css";
 import "./loadlink-collage-repair.css";
 import "./loadlink-search-glass.css";
+import "./loadlink-performance.css";
+import "./loadlink-final-polish-20260814.css";
 import GlobalLoading from "@/components/GlobalLoading";
 import ChatLauncher from "@/components/ChatLauncher";
 import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";

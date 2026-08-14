@@ -16,17 +16,20 @@ export default function AuthLandingShell({
   title?: string;
   subtitle?: string;
 }) {
+  const cleanSubtitle = subtitle.trim();
+  const showSubtitle = Boolean(cleanSubtitle) && cleanSubtitle.toLowerCase() !== "logistics made easier";
+
   return (
     <main
       data-loadlink-auth-landing="v286"
       className={`relative min-h-[100svh] overflow-x-hidden ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}
     >
       <div className="mx-auto min-h-[100svh] w-full max-w-[760px] lg:flex lg:max-w-none">
-        <section className="loadlink-auth-hero relative h-[44svh] min-h-[320px] overflow-hidden sm:h-[48svh] lg:h-screen lg:min-h-screen lg:flex-1">
+        <section className="loadlink-auth-hero relative h-[56svh] min-h-[410px] overflow-hidden sm:h-[60svh] sm:min-h-[470px] lg:h-screen lg:min-h-screen lg:flex-1">
           <img
             src="/images/loadlink-login-hero-hd.webp"
             alt="LoadLink logistics made easier"
-            className="loadlink-auth-hero-image absolute inset-0 h-full w-full object-cover object-center"
+            className="loadlink-auth-hero-image absolute inset-0 h-full w-full object-contain object-center lg:object-cover"
             loading="eager"
             fetchPriority="high"
             decoding="async"
@@ -55,7 +58,7 @@ export default function AuthLandingShell({
           <div className="mx-auto w-full max-w-[390px]">
             <div className="text-center">
               <h1 className="text-[28px] font-black tracking-[-.04em] sm:text-[32px]">{title}</h1>
-              <p className={`mt-1.5 text-sm font-semibold ${darkMode ? "text-white/58" : "text-black/55"}`}>{subtitle}</p>
+              {showSubtitle ? <p className={`mt-1.5 text-sm font-semibold ${darkMode ? "text-white/58" : "text-black/55"}`}>{cleanSubtitle}</p> : null}
             </div>
             <div className="mt-5">{children}</div>
             {footer ? <div className={`mt-5 text-center text-sm font-semibold ${darkMode ? "text-white/68" : "text-black/64"}`}>{footer}</div> : null}

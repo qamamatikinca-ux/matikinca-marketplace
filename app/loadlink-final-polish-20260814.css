@@ -1,0 +1,313 @@
+/* LoadLink final polish — 2026-08-14
+   Small-screen containment, restrained glass, consistent filters/sorts,
+   sharper media presentation and lighter interaction work. */
+
+:root {
+  --ll-glass-dark: rgba(12, 12, 12, .66);
+  --ll-glass-light: rgba(255, 255, 255, .72);
+  --ll-glass-dark-border: rgba(255, 255, 255, .12);
+  --ll-glass-light-border: rgba(255, 255, 255, .76);
+  --ll-gold: #f6b800;
+}
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+img {
+  image-rendering: auto;
+}
+
+/* Keep the glass language subtle. Repeated listing cards should not receive
+   expensive full-strength blur on iOS; major panels and controls still do. */
+.loadlink-glass,
+[data-loadlink-glass="true"],
+[data-loadlink-menu-panel],
+[data-loadlink-datalist-menu="true"],
+[data-loadlink-choice-sheet="true"] > section,
+[data-loadlink-calendar-sheet="true"] > section {
+  -webkit-backdrop-filter: blur(13px) saturate(116%) !important;
+  backdrop-filter: blur(13px) saturate(116%) !important;
+}
+
+html[data-loadlink-theme="dark"] .loadlink-glass {
+  background-color: var(--ll-glass-dark) !important;
+  border-color: var(--ll-glass-dark-border) !important;
+}
+
+html[data-loadlink-theme="light"] .loadlink-glass {
+  background-color: var(--ll-glass-light) !important;
+  border-color: var(--ll-glass-light-border) !important;
+}
+
+/* Homepage search categories: compact independent pills instead of a pasted-in rail. */
+[aria-label="Search category"] {
+  max-width: 100% !important;
+}
+
+[aria-label="Search category"] > div {
+  gap: 8px !important;
+  padding: 1px 2px 3px !important;
+}
+
+[aria-label="Search category"] > div > button {
+  min-height: 44px !important;
+  min-width: 86px !important;
+  padding: 9px 16px !important;
+  border-radius: 9999px !important;
+  font-size: 13px !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+  -webkit-backdrop-filter: blur(11px) saturate(116%) !important;
+  backdrop-filter: blur(11px) saturate(116%) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .08) !important;
+}
+
+[aria-label="Search category"] > div > button[aria-pressed="true"] {
+  background: var(--ll-gold) !important;
+  border-color: var(--ll-gold) !important;
+  color: #050505 !important;
+  box-shadow: 0 8px 20px rgba(246, 184, 0, .18) !important;
+}
+
+/* Search page categories use the same proportions and cannot overrun the viewport. */
+[aria-label="Search LoadLink sections"] {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+[aria-label="Search LoadLink sections"] > div {
+  gap: 8px !important;
+}
+
+[aria-label="Search LoadLink sections"] button {
+  min-height: 46px !important;
+  min-width: 90px !important;
+  max-width: 150px !important;
+  padding: 10px 16px !important;
+  font-size: 14px !important;
+  white-space: nowrap !important;
+}
+
+[data-loadlink-search-page="true"] .loadlink-search-hero-image {
+  image-rendering: auto !important;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+[data-loadlink-search-page="true"] .loadlink-search-result-card {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Homepage portal cards: preserve the photography, reduce the excessive vertical footprint. */
+main > section.w-full > div.flex.w-full.flex-col.gap-0 > a[class*="h-[52vh]"] {
+  height: clamp(286px, 39svh, 410px) !important;
+  min-height: 286px !important;
+}
+
+main > section.w-full > div.flex.w-full.flex-col.gap-0 > a[class*="h-[52vh]"] h2 {
+  font-size: clamp(2.15rem, 9vw, 3.45rem) !important;
+  line-height: .98 !important;
+  letter-spacing: -.045em !important;
+}
+
+main > section.w-full > div.flex.w-full.flex-col.gap-0 > a[class*="h-[52vh]"] [class*="mt-6"][class*="border"][class*="px-8"] {
+  margin-top: 16px !important;
+  padding: 11px 18px !important;
+  font-size: 12px !important;
+  border-radius: 16px !important;
+  background: rgba(5, 5, 5, .58) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(112%) !important;
+  backdrop-filter: blur(10px) saturate(112%) !important;
+}
+
+@media (min-width: 768px) {
+  main > section.w-full > div.flex.w-full.flex-col.gap-0 > a[class*="h-[52vh]"] {
+    height: clamp(360px, 48vh, 520px) !important;
+    min-height: 360px !important;
+  }
+}
+
+/* Canonical LoadLink sort control used on Jobs / Contracts / Vehicles surfaces. */
+#matching-jobs label.flex.h-11.items-center.gap-2.rounded-xl.border.px-3.text-xs.font-bold:has(select),
+.loadlink-sort-control {
+  min-height: 46px !important;
+  height: 46px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  border-radius: 18px !important;
+  padding: 0 14px !important;
+  -webkit-backdrop-filter: blur(11px) saturate(114%) !important;
+  backdrop-filter: blur(11px) saturate(114%) !important;
+  box-shadow: 0 7px 20px rgba(0, 0, 0, .07) !important;
+}
+
+html[data-loadlink-theme="dark"] #matching-jobs label:has(select),
+html[data-loadlink-theme="dark"] .loadlink-sort-control {
+  background: rgba(14, 14, 14, .72) !important;
+  border-color: rgba(255, 255, 255, .13) !important;
+}
+
+html[data-loadlink-theme="light"] #matching-jobs label:has(select),
+html[data-loadlink-theme="light"] .loadlink-sort-control {
+  background: rgba(255, 255, 255, .78) !important;
+  border-color: rgba(0, 0, 0, .08) !important;
+}
+
+#matching-jobs label:has(select) > span,
+.loadlink-sort-control > span {
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+  opacity: .58;
+}
+
+#matching-jobs label:has(select) select,
+.loadlink-sort-control select {
+  max-width: 150px;
+  min-width: 0;
+  border: 0 !important;
+  background: transparent !important;
+  font-size: 14px !important;
+  font-weight: 850 !important;
+  outline: none !important;
+}
+
+/* Logistics Tools: keep the category strip and workspace glassy without blurring every card. */
+body[data-loadlink-path="/tools"] main section > div.flex.flex-col.gap-5 > div.flex.gap-1.overflow-x-auto,
+body[data-loadlink-path="/tools"] #tool-workspace {
+  -webkit-backdrop-filter: blur(12px) saturate(114%) !important;
+  backdrop-filter: blur(12px) saturate(114%) !important;
+}
+
+html[data-loadlink-theme="dark"] body[data-loadlink-path="/tools"] main section > div.flex.flex-col.gap-5 > div.flex.gap-1.overflow-x-auto {
+  background: rgba(15, 15, 15, .64) !important;
+  border-color: rgba(255, 255, 255, .12) !important;
+}
+
+html[data-loadlink-theme="light"] body[data-loadlink-path="/tools"] main section > div.flex.flex-col.gap-5 > div.flex.gap-1.overflow-x-auto {
+  background: rgba(255, 255, 255, .68) !important;
+  border-color: rgba(255, 255, 255, .76) !important;
+}
+
+/* Package comparison is intentionally shared by /packages and List Your Vehicle. */
+body[data-loadlink-path="/packages"] #plans article,
+body[data-loadlink-path="/list-your-vehicle"] #plans article {
+  -webkit-backdrop-filter: blur(11px) saturate(112%) !important;
+  backdrop-filter: blur(11px) saturate(112%) !important;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .06);
+}
+
+html[data-loadlink-theme="dark"] body:is([data-loadlink-path="/packages"],[data-loadlink-path="/list-your-vehicle"]) #plans article {
+  background: rgba(12, 12, 12, .70) !important;
+  border-color: rgba(255, 255, 255, .11) !important;
+}
+
+html[data-loadlink-theme="light"] body:is([data-loadlink-path="/packages"],[data-loadlink-path="/list-your-vehicle"]) #plans article {
+  background: rgba(255, 255, 255, .72) !important;
+  border-color: rgba(255, 255, 255, .78) !important;
+}
+
+/* Login artwork: preserve the supplied artwork, show it sharply, then blend naturally into the panel. */
+[data-loadlink-auth-landing="v286"] .loadlink-auth-hero {
+  background: #a9480b !important;
+}
+
+[data-loadlink-auth-landing="v286"] .loadlink-auth-hero-image {
+  filter: none !important;
+  image-rendering: auto !important;
+}
+
+[data-loadlink-auth-landing="v286"] .loadlink-auth-hero-vignette {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.015) 0%, rgba(0,0,0,0) 56%, rgba(20,9,2,.14) 78%, rgba(12,6,2,.40) 100%),
+    linear-gradient(90deg, rgba(0,0,0,.025), transparent 22%, transparent 78%, rgba(0,0,0,.025)) !important;
+}
+
+@media (max-width: 767px) {
+  [aria-label="Search category"] > div > button {
+    min-width: 84px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  [aria-label="Search LoadLink sections"] button {
+    min-width: 86px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  [data-loadlink-search-page="true"] .loadlink-search-result-card {
+    padding: 18px !important;
+  }
+
+  [data-loadlink-search-page="true"] .loadlink-search-result-kind {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    font-size: 8px !important;
+  }
+
+  /* iOS performance: keep repeated surfaces translucent, but reserve actual
+     backdrop blur for menus/forms/primary glass panels. */
+  html[data-loadlink-theme="light"] body main :is(section, article, aside)[class*="rounded"][class*="border"][class*="bg-white"]:not(.loadlink-glass) {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background-color: rgba(255, 255, 255, .82) !important;
+  }
+
+  html[data-loadlink-theme="dark"] body main :is(section, article, aside)[class*="rounded"][class*="border"][class*="bg-black"]:not(.loadlink-glass) {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background-color: rgba(8, 8, 8, .80) !important;
+  }
+
+  body[data-loadlink-path="/tools"] main section > div.flex.flex-col.gap-5 > div.flex.gap-1.overflow-x-auto,
+  body[data-loadlink-path="/tools"] #tool-workspace,
+  body:is([data-loadlink-path="/packages"],[data-loadlink-path="/list-your-vehicle"]) #plans article {
+    -webkit-backdrop-filter: blur(8px) saturate(108%) !important;
+    backdrop-filter: blur(8px) saturate(108%) !important;
+  }
+}
+
+@media (max-width: 390px) {
+  [aria-label="Search category"] > div > button {
+    min-width: 80px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    font-size: 12.5px !important;
+  }
+
+  [aria-label="Search LoadLink sections"] button {
+    min-width: 82px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    font-size: 13px !important;
+  }
+
+  [data-loadlink-search-page="true"] .loadlink-search-result-card {
+    padding: 16px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-loadlink-auth-landing="v286"] .loadlink-auth-hero-image,
+  [data-loadlink-auth-landing="v286"] .loadlink-auth-panel {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

@@ -31,16 +31,22 @@ export default function LoadLinkLoading() {
           width: 220px;
           height: 84px;
           transform: translateY(-50%);
-          animation: truck-drive 1.65s linear infinite;
+          animation: truck-drive 1.55s linear infinite;
           will-change: transform;
+          contain: layout paint;
         }
 
+        /* The original truck artwork faced left while travelling to the right.
+           Flip only the vehicle body so the cab now leads the movement; unflip
+           the wordmark so LOADLINK remains readable. */
         .truck-body {
           position: absolute;
           left: 44px;
           top: 15px;
           width: 148px;
           height: 54px;
+          transform: scaleX(-1);
+          transform-origin: center;
         }
 
         .truck-box {
@@ -62,6 +68,7 @@ export default function LoadLinkLoading() {
           font-size: 11px;
           font-weight: 900;
           letter-spacing: 0.08em;
+          transform: scaleX(-1);
         }
 
         .truck-cab {
@@ -96,7 +103,7 @@ export default function LoadLinkLoading() {
           opacity: 0.8;
           background: repeating-linear-gradient(90deg, transparent 0 9px, #f6b800 9px 15px, transparent 15px 24px);
           transform: skewX(-22deg);
-          animation: track-fade 1.65s linear infinite;
+          animation: track-fade 1.55s linear infinite;
         }
 
         .track-one { bottom: 5px; }

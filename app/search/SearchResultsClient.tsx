@@ -29,7 +29,7 @@ const SEARCH_HERO: Record<SearchScope, string> = {
   all: "/images/loadlink-search-all-boxes.webp",
   job: "/images/loadlink-search-all-boxes.webp",
   contract: "/images/loadlink-search-contracts-hd.webp",
-  asset: "/api/search-hero/vehicles",
+  asset: "/images/loadlink-search-vehicles.webp",
   driver: "/images/loadlink-search-drivers-hd.webp",
   dealer: "/images/loadlink-search-jobs-truck-yard.webp",
   page: "/images/loadlink-search-all-boxes.webp",
@@ -174,6 +174,7 @@ export default function SearchResultsClient() {
 
   return (
     <main
+      data-loadlink-search-page="true"
       className={
         darkMode
           ? "min-h-screen overflow-x-hidden bg-black text-white"
@@ -198,20 +199,21 @@ export default function SearchResultsClient() {
             onError={() => setHeroFailed(true)}
             style={{
               objectPosition: SEARCH_HERO_POSITION[scope],
+              imageRendering: "auto",
               WebkitMaskImage:
-                "linear-gradient(to bottom, #000 0%, #000 65%, rgba(0,0,0,.98) 74%, rgba(0,0,0,.78) 84%, rgba(0,0,0,.28) 94%, transparent 100%)",
+                "linear-gradient(to bottom, #000 0%, #000 66%, rgba(0,0,0,.98) 75%, rgba(0,0,0,.80) 85%, rgba(0,0,0,.30) 94%, transparent 100%)",
               maskImage:
-                "linear-gradient(to bottom, #000 0%, #000 65%, rgba(0,0,0,.98) 74%, rgba(0,0,0,.78) 84%, rgba(0,0,0,.28) 94%, transparent 100%)",
+                "linear-gradient(to bottom, #000 0%, #000 66%, rgba(0,0,0,.98) 75%, rgba(0,0,0,.80) 85%, rgba(0,0,0,.30) 94%, transparent 100%)",
             }}
-            className="absolute inset-0 h-full w-full object-cover"
+            className="loadlink-search-hero-image absolute inset-0 h-full w-full object-cover"
           />
 
-          <div className="absolute inset-0 bg-gradient-to-b from-black/28 via-black/[.06] to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 h-[210px] bg-gradient-to-t from-black/24 via-black/[.06] to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/24 via-black/[.035] to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-[210px] bg-gradient-to-t from-black/22 via-black/[.045] to-transparent" />
 
-          <div className="relative mx-auto flex h-full max-w-6xl items-end px-5 pb-[126px] sm:px-6 md:px-8 md:pb-[142px]">
+          <div className="relative mx-auto flex h-full max-w-6xl items-end px-5 pb-[122px] sm:px-6 md:px-8 md:pb-[140px]">
             <div className="max-w-[680px]">
-              <h1 className="text-[2.55rem] font-black leading-[.98] tracking-[-.052em] text-white drop-shadow-[0_3px_18px_rgba(0,0,0,.58)] sm:text-5xl md:text-6xl">
+              <h1 className="text-[2.45rem] font-black leading-[.98] tracking-[-.052em] text-white drop-shadow-[0_3px_18px_rgba(0,0,0,.58)] sm:text-5xl md:text-6xl">
                 Search LoadLink
               </h1>
               <p className="mt-4 max-w-[620px] text-[15px] font-semibold leading-7 text-white/90 drop-shadow-[0_2px_12px_rgba(0,0,0,.62)] sm:text-base">
@@ -221,15 +223,15 @@ export default function SearchResultsClient() {
           </div>
         </div>
 
-        <div className="relative z-10 mx-auto -mt-[92px] max-w-6xl px-4 pb-12 sm:px-5 md:px-8 md:pb-16">
+        <div className="relative z-10 mx-auto -mt-[88px] max-w-6xl px-4 pb-12 sm:px-5 md:px-8 md:pb-16">
           <div
             ref={tabRailRef}
             role="tablist"
             aria-label="Search LoadLink sections"
-            className="no-scrollbar overflow-x-auto overscroll-x-contain py-1"
+            className="no-scrollbar max-w-full overflow-x-auto overscroll-x-contain py-1"
             style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x" }}
           >
-            <div className="flex min-w-max snap-x snap-mandatory gap-3 px-0.5">
+            <div className="flex min-w-max snap-x snap-mandatory gap-2 px-0.5">
               {visibleScopes.map((item) => (
                 <button
                   key={item.value}
@@ -237,12 +239,12 @@ export default function SearchResultsClient() {
                   role="tab"
                   aria-selected={scope === item.value}
                   onClick={() => router.push(routeForScope(item.value, input, place))}
-                  className={`min-h-[56px] min-w-[118px] shrink-0 snap-center rounded-full border px-6 py-3 text-[16px] font-semibold tracking-[-.015em] backdrop-blur-xl backdrop-saturate-150 transition duration-200 active:scale-[.985] ${
+                  className={`min-h-[46px] min-w-[90px] shrink-0 snap-center rounded-full border px-4 py-2.5 text-[14px] font-semibold tracking-[-.015em] backdrop-blur-xl backdrop-saturate-150 transition duration-150 active:scale-[.985] ${
                     scope === item.value
-                      ? "border-[#f6b800] bg-[#f6b800] text-black shadow-[0_10px_28px_rgba(246,184,0,.24)]"
+                      ? "border-[#f6b800] bg-[#f6b800] text-black shadow-[0_8px_22px_rgba(246,184,0,.20)]"
                       : darkMode
-                        ? "border-white/[.16] bg-black/34 text-white/76 shadow-[0_8px_24px_rgba(0,0,0,.16)]"
-                        : "border-white/65 bg-white/46 text-black/68 shadow-[0_8px_24px_rgba(0,0,0,.08)]"
+                        ? "border-white/[.14] bg-black/34 text-white/76 shadow-[0_6px_18px_rgba(0,0,0,.14)]"
+                        : "border-white/65 bg-white/50 text-black/68 shadow-[0_6px_18px_rgba(0,0,0,.07)]"
                   }`}
                 >
                   {item.label}
@@ -253,10 +255,10 @@ export default function SearchResultsClient() {
 
           <form
             onSubmit={submit}
-            className={`mt-5 grid gap-3 rounded-[26px] border p-3 shadow-[0_20px_52px_rgba(0,0,0,.10)] backdrop-blur-2xl backdrop-saturate-150 md:grid-cols-[1fr_260px_auto] ${
+            className={`mt-4 grid gap-2.5 rounded-[24px] border p-3 shadow-[0_18px_44px_rgba(0,0,0,.09)] backdrop-blur-xl backdrop-saturate-125 md:grid-cols-[1fr_260px_auto] ${
               darkMode
-                ? "border-white/12 bg-black/38"
-                : "border-white/68 bg-white/46"
+                ? "border-white/11 bg-black/36"
+                : "border-white/70 bg-white/50"
             }`}
           >
             <label className="relative block">
@@ -271,10 +273,10 @@ export default function SearchResultsClient() {
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 placeholder="Search everything on LoadLink"
-                className={`h-[60px] w-full rounded-[18px] border py-0 pl-[52px] pr-4 text-[15px] font-semibold outline-none transition focus:border-[#f6b800] ${
+                className={`h-[54px] w-full rounded-[17px] border py-0 pl-[50px] pr-4 text-[15px] font-semibold outline-none transition focus:border-[#f6b800] sm:h-[60px] ${
                   darkMode
-                    ? "border-white/12 bg-black/62 text-white placeholder:text-white/38"
-                    : "border-black/[.07] bg-white/86 text-black placeholder:text-black/40"
+                    ? "border-white/11 bg-black/58 text-white placeholder:text-white/38"
+                    : "border-black/[.07] bg-white/84 text-black placeholder:text-black/40"
                 }`}
               />
             </label>
@@ -293,27 +295,27 @@ export default function SearchResultsClient() {
                 darkMode={darkMode}
                 placeholder="City, town or province"
                 ariaLabel="Filter all LoadLink results by South African location"
-                className={`h-[60px] w-full rounded-[18px] border py-0 pl-[52px] pr-4 text-[15px] font-semibold outline-none transition focus:border-[#f6b800] ${
+                className={`h-[54px] w-full rounded-[17px] border py-0 pl-[50px] pr-4 text-[15px] font-semibold outline-none transition focus:border-[#f6b800] sm:h-[60px] ${
                   darkMode
-                    ? "border-white/12 bg-black/62 text-white placeholder:text-white/38"
-                    : "border-black/[.07] bg-white/86 text-black placeholder:text-black/40"
+                    ? "border-white/11 bg-black/58 text-white placeholder:text-white/38"
+                    : "border-black/[.07] bg-white/84 text-black placeholder:text-black/40"
                 }`}
               />
             </label>
 
             <button
               type="submit"
-              className="h-[60px] rounded-[18px] bg-[#f6b800] px-9 text-[16px] font-semibold text-black shadow-[0_10px_26px_rgba(246,184,0,.20)] transition active:scale-[.985]"
+              className="h-[54px] rounded-[17px] bg-[#f6b800] px-8 text-[16px] font-semibold text-black shadow-[0_8px_22px_rgba(246,184,0,.18)] transition active:scale-[.985] sm:h-[60px]"
             >
               Search
             </button>
           </form>
 
-          <div className="mt-10 flex items-center justify-between gap-4">
-            <h2 className="text-2xl font-black tracking-[-.035em] md:text-3xl">
+          <div className="mt-9 flex items-center justify-between gap-4">
+            <h2 className="min-w-0 text-2xl font-black tracking-[-.035em] md:text-3xl">
               {scopeLabel(scope)} results
             </h2>
-            <p className={`text-sm font-bold ${darkMode ? "text-white/45" : "text-black/45"}`}>
+            <p className={`shrink-0 text-sm font-bold ${darkMode ? "text-white/45" : "text-black/45"}`}>
               {loading ? "Searching…" : `${results.length} found`}
             </p>
           </div>
@@ -337,22 +339,22 @@ export default function SearchResultsClient() {
                 <Link
                   key={item.id}
                   href={item.href}
-                  className={`rounded-[22px] border p-5 shadow-[0_12px_34px_rgba(0,0,0,.06)] transition ${
+                  className={`loadlink-search-result-card min-w-0 rounded-[22px] border p-5 shadow-[0_12px_34px_rgba(0,0,0,.06)] transition ${
                     darkMode
                       ? "border-white/10 bg-white/[.045] hover:bg-white/[.075]"
                       : "border-black/[.07] bg-white/76 hover:bg-white"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
                       <h3 className="truncate text-lg font-black">{item.label}</h3>
-                      <p className={`mt-2 text-sm font-semibold ${darkMode ? "text-white/50" : "text-black/50"}`}>
+                      <p className={`mt-2 truncate text-sm font-semibold ${darkMode ? "text-white/50" : "text-black/50"}`}>
                         {item.meta}
                       </p>
                     </div>
 
                     <span
-                      className={`shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wide ${
+                      className={`loadlink-search-result-kind shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wide ${
                         darkMode
                           ? "border-white/15 text-white/55"
                           : "border-black/10 text-black/50"
