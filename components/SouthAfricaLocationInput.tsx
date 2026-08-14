@@ -67,8 +67,24 @@ export default function SouthAfricaLocationInput({
     setActiveIndex(-1);
   }
 
+  function closeMenu() {
+    setOpen(false);
+    setActiveIndex(-1);
+  }
+
   return (
-    <div ref={wrapperRef} className="relative">
+    <div ref={wrapperRef} className={`relative ${open && !disabled ? "z-[121]" : ""}`}>
+      {open && !disabled ? (
+        <button
+          type="button"
+          aria-label="Close location menu"
+          onClick={closeMenu}
+          className={`fixed inset-0 z-[110] cursor-default ${
+            darkMode ? "bg-black/12 backdrop-blur-[2px]" : "bg-black/[.035] backdrop-blur-[2px]"
+          }`}
+        />
+      ) : null}
+
       <input
         id={inputId}
         name={name}
@@ -83,7 +99,7 @@ export default function SouthAfricaLocationInput({
         aria-controls={listId}
         aria-activedescendant={open && activeIndex >= 0 ? `${inputId}-option-${activeIndex}` : undefined}
         placeholder={placeholder}
-        className={className}
+        className={`relative z-[121] ${className}`}
         onFocus={() => {
           onInputFocus?.();
           setOpen(true);
@@ -106,8 +122,7 @@ export default function SouthAfricaLocationInput({
             event.preventDefault();
             choose(suggestions[activeIndex]);
           } else if (event.key === "Escape") {
-            setOpen(false);
-            setActiveIndex(-1);
+            closeMenu();
           }
         }}
       />
@@ -116,32 +131,40 @@ export default function SouthAfricaLocationInput({
         <div
           id={listId}
           role="listbox"
-          className={`absolute left-0 right-0 top-[calc(100%+8px)] z-[120] max-h-72 overflow-y-auto rounded-2xl border p-2 shadow-2xl ${
-            darkMode ? "border-white/15 bg-[#0b0b0b] text-white" : "border-black/10 bg-white text-black"
+          className={`absolute left-0 right-0 top-[calc(100%+8px)] z-[130] max-h-72 overflow-y-auto rounded-[20px] border p-2 shadow-[0_26px_80px_rgba(0,0,0,.38)] backdrop-blur-2xl backdrop-saturate-150 ${
+            darkMode
+              ? "border-white/13 bg-black/72 text-white"
+              : "border-black/[.08] bg-white/78 text-black"
           }`}
         >
-          {suggestions.length ? suggestions.map((location, index) => (
-            <button
-              id={`${inputId}-option-${index}`}
-              key={`${location.kind}-${location.name}-${location.province}`}
-              type="button"
-              role="option"
-              aria-selected={index === activeIndex}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => choose(location)}
-              className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left text-sm font-bold transition ${
-                index === activeIndex
-                  ? "bg-[#f6b800] text-black"
-                  : darkMode
-                    ? "hover:bg-white/10"
-                    : "hover:bg-black/[.05]"
-              }`}
-            >
-              <span>{formatSouthAfricanLocation(location)}</span>
-              {location.kind === "place" ? <span className="shrink-0 text-[10px] font-black uppercase opacity-50">Town or city</span> : null}
-            </button>
-          )) : (
-            <p className="px-3 py-4 text-sm font-semibold opacity-60">No matching South African place was found. You can still type the location manually.</p>
+          {suggestions.length ? (
+            suggestions.map((location, index) => (
+              <button
+                id={`${inputId}-option-${index}`}
+                key={`${location.kind}-${location.name}-${location.province}`}
+                type="button"
+                role="option"
+                aria-selected={index === activeIndex}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => choose(location)}
+                className={`flex w-full items-center justify-between gap-3 rounded-[14px] px-3 py-3 text-left text-sm font-bold transition ${
+                  index === activeIndex
+                    ? "bg-[#f6b800] text-black"
+                    : darkMode
+                      ? "hover:bg-white/[.08]"
+                      : "hover:bg-white/75"
+                }`}
+              >
+                <span>{formatSouthAfricanLocation(location)}</span>
+                {location.kind === "place" ? (
+                  <span className="shrink-0 text-[10px] font-black uppercase opacity-50">Town or city</span>
+                ) : null}
+              </button>
+            ))
+          ) : (
+            <p className="px-3 py-4 text-sm font-semibold opacity-60">
+              No matching South African place was found. You can still type the location manually.
+            </p>
           )}
         </div>
       ) : null}
