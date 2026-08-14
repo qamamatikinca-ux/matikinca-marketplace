@@ -25,14 +25,20 @@ import {
   searchScopes,
 } from "@/lib/loadlinkSearch";
 
-const SEARCH_HERO: Record<SearchScope, string> = {
-  all: "/images/search-jobs-boxes.jpg",
-  job: "/images/search-jobs-boxes.jpg",
+const SEARCH_HERO_FALLBACK: Record<SearchScope, string> = {
+  all: "/images/jobs-1.jpg",
+  job: "/images/jobs-1.jpg",
   contract: "/images/contracts-1.jpg",
   asset: "/images/truck-1.jpg",
   driver: "/images/driver-profile-hero.jpg",
-  dealer: "/images/search-dealerships-trucks.jpg",
+  dealer: "/images/truck-2.jpg",
   page: "/images/jobs-2.jpg",
+};
+
+const SEARCH_HERO_BASE64: Partial<Record<SearchScope, string>> = {
+  all: "/images/search-jobs-boxes.jpg.b64",
+  job: "/images/search-jobs-boxes.jpg.b64",
+  dealer: "/images/search-dealerships-trucks.jpg.b64",
 };
 
 export default function SearchResultsClient() {
@@ -49,11 +55,33 @@ export default function SearchResultsClient() {
   const [listings, setListings] = useState<ListingSearchRow[]>([]);
   const [drivers, setDrivers] = useState<DriverSearchRow[]>([]);
   const [dealers, setDealers] = useState<DealerSearchRow[]>([]);
+  const [heroImage, setHeroImage] = useState(SEARCH_HERO_FALLBACK[scope]);
 
   useEffect(() => {
     setInput(query);
     setPlace(location);
   }, [location, query]);
+
+  useEffect(() => {
+    let active = true;
+    const encodedPath = SEARCH_HERO_BASE64[scope];
+    setHeroImage(SEARCH_HERO_FALLBACK[scope]);
+
+    if (!encodedPath) return () => {
+      active = false;
+    };
+
+    fetch(encodedPath, { cache: "force-cache" })
+      .then((response) => response.ok ? response.text() : Promise.reject(new Error("hero unavailable")))
+      .then((encoded) => {
+        if (active && encoded.trim()) setHeroImage(`data:image/jpeg;base64,${encoded.trim()}`);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, [scope]);
 
   useEffect(() => {
     let active = true;
@@ -94,8 +122,6 @@ export default function SearchResultsClient() {
     router.push(routeForScope(scope, input, place));
   }
 
-  const heroImage = SEARCH_HERO[scope];
-
   return (
     <main className={darkMode ? "min-h-screen bg-black text-white" : "min-h-screen bg-[#fffaf0] text-black"}>
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
@@ -110,7 +136,7 @@ export default function SearchResultsClient() {
           />
           <div className={`absolute inset-0 ${darkMode ? "bg-black/46" : "bg-black/34"}`} />
           <div className={`absolute inset-0 ${darkMode ? "bg-gradient-to-b from-black/10 via-black/48 to-black" : "bg-gradient-to-b from-black/10 via-[#fffaf0]/46 to-[#fffaf0]"}`} />
-          <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-b from-transparent to-current opacity-[.08] blur-2xl" />
+          <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent to-black/30 blur-2xl" />
         </div>
 
         <div className="relative mx-auto max-w-6xl px-5 py-8 md:px-8 md:py-12">
