@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "scripts/apply_loadlink_near_final_update.py"
+      - "scripts/prepare_loadlink_near_final_update.py"
 
 permissions:
   contents: write
@@ -34,6 +35,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Prepare update compatibility
+        run: python scripts/prepare_loadlink_near_final_update.py
 
       - name: Apply near-final update
         run: python scripts/apply_loadlink_near_final_update.py
