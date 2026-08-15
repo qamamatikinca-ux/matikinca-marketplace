@@ -17,48 +17,12 @@ export type ListingSearchRow = {
   expires_at?: string | null;
 };
 
-export type DriverSearchRow = {
-  id: string;
-  full_name?: string | null;
-  headline?: string | null;
-  city?: string | null;
-  province?: string | null;
-  licence_code?: string | null;
-  vehicle_types?: string[] | null;
-  years_experience?: number | null;
-  availability?: string | null;
-};
-
-export type DealerSearchRow = {
-  id: string;
-  slug?: string | null;
-  name?: string | null;
-  short_bio?: string | null;
-  business_description?: string | null;
-  physical_location?: string | null;
-  province?: string | null;
-  verification_status?: string | null;
-  is_public?: boolean | null;
-};
-
-export type SearchResult = {
-  id: string;
-  label: string;
-  meta: string;
-  href: string;
-  searchable: string;
-  scope: SearchScope;
-  priority: number;
-  location?: string;
-};
+export type DriverSearchRow = { id: string; full_name?: string | null; headline?: string | null; city?: string | null; province?: string | null; licence_code?: string | null; vehicle_types?: string[] | null; years_experience?: number | null; availability?: string | null };
+export type DealerSearchRow = { id: string; slug?: string | null; name?: string | null; short_bio?: string | null; business_description?: string | null; physical_location?: string | null; province?: string | null; verification_status?: string | null; is_public?: boolean | null };
+export type SearchResult = { id: string; label: string; meta: string; href: string; searchable: string; scope: SearchScope; priority: number; location?: string };
 
 export const searchScopes: { label: string; value: SearchScope }[] = [
-  { label: "All", value: "all" },
-  { label: "Jobs", value: "job" },
-  { label: "Contracts", value: "contract" },
-  { label: "Vehicles", value: "asset" },
-  { label: "Drivers", value: "driver" },
-  { label: "Dealerships", value: "dealer" },
+  { label: "All", value: "all" }, { label: "Jobs", value: "job" }, { label: "Contracts", value: "contract" }, { label: "Vehicles", value: "asset" }, { label: "Drivers", value: "driver" }, { label: "Dealerships", value: "dealer" },
 ];
 
 export const loadLinkSitePages: SearchResult[] = [
@@ -83,7 +47,6 @@ export function listingScope(item: ListingSearchRow): "job" | "contract" | "asse
   const stored = String(item.listing_kind || "").toLowerCase();
   if (["vehicle", "asset", "truck_sale", "vehicle_listing"].includes(stored)) return "asset";
   if (stored === "contract") return "contract";
-
   const match = String(item.description || "").match(/^Listing type:\s*([^\n]+)/i);
   const described = String(match?.[1] || "").toLowerCase();
   if (described.includes("contract")) return "contract";
@@ -94,10 +57,7 @@ export function listingScope(item: ListingSearchRow): "job" | "contract" | "asse
 export function isCurrentListing(item: ListingSearchRow) {
   if (item.status && item.status !== "active") return false;
   if (item.moderation_status && item.moderation_status !== "approved") return false;
-  if (item.expires_at) {
-    const expiry = new Date(item.expires_at).getTime();
-    if (Number.isFinite(expiry) && expiry <= Date.now()) return false;
-  }
+  if (item.expires_at) { const expiry = new Date(item.expires_at).getTime(); if (Number.isFinite(expiry) && expiry <= Date.now()) return false; }
   return true;
 }
 
@@ -105,11 +65,14 @@ export function listingToSearchResult(item: ListingSearchRow): SearchResult {
   const scope = listingScope(item);
   const title = item.title || "LoadLink listing";
   const city = item.city || "South Africa";
+  const href = scope === "asset"
+    ? `/listing/${item.id}`
+    : `/jobs?portal=${scope}&search=${encodeURIComponent(`${title} ${city}`)}#job-${item.id}`;
   return {
     id: `listing-${item.id}`,
     label: title,
     meta: `${scopeLabel(scope)} · ${city}`,
-    href: `/jobs?portal=${scope}&search=${encodeURIComponent(`${title} ${city}`)}#job-${item.id}`,
+    href,
     searchable: `${title} ${locationSearchTerms(city)} ${item.vehicle_group || ""} ${item.rate || ""} ${item.posted_by || ""} ${item.description || ""}`,
     location: city,
     scope,
@@ -120,30 +83,12 @@ export function listingToSearchResult(item: ListingSearchRow): SearchResult {
 export function driverToSearchResult(driver: DriverSearchRow): SearchResult {
   const name = driver.full_name || "Approved LoadLink driver";
   const place = [driver.city, driver.province].filter(Boolean).join(", ") || "South Africa";
-  return {
-    id: `driver-${driver.id}`,
-    label: name,
-    meta: `${place} · Licence ${driver.licence_code || "on request"}`,
-    href: `/drivers?search=${encodeURIComponent(name)}`,
-    searchable: `${name} ${driver.headline || ""} ${locationSearchTerms(driver.city || driver.province)} ${driver.city || ""} ${driver.province || ""} ${driver.licence_code || ""} ${(driver.vehicle_types || []).join(" ")} ${driver.years_experience || ""} ${driver.availability || ""}`,
-    location: driver.city || driver.province || "",
-    scope: "driver",
-    priority: 138,
-  };
+  return { id: `driver-${driver.id}`, label: name, meta: `${place} · Licence ${driver.licence_code || "on request"}`, href: `/drivers?search=${encodeURIComponent(name)}`, searchable: `${name} ${driver.headline || ""} ${locationSearchTerms(driver.city || driver.province)} ${driver.city || ""} ${driver.province || ""} ${driver.licence_code || ""} ${(driver.vehicle_types || []).join(" ")} ${driver.years_experience || ""} ${driver.availability || ""}`, location: driver.city || driver.province || "", scope: "driver", priority: 138 };
 }
 
 export function dealerToSearchResult(dealer: DealerSearchRow): SearchResult {
   const name = dealer.name || "Approved LoadLink dealership";
-  return {
-    id: `dealer-${dealer.id}`,
-    label: name,
-    meta: `${dealer.physical_location || dealer.province || "South Africa"} · Approved dealership`,
-    href: dealer.slug ? `/dealership/${dealer.slug}` : "/dealer",
-    searchable: `${name} ${dealer.short_bio || ""} ${dealer.business_description || ""} ${locationSearchTerms(dealer.physical_location || dealer.province)} ${dealer.physical_location || ""} ${dealer.province || ""} dealership dealer vehicles stock`,
-    location: dealer.physical_location || dealer.province || "",
-    scope: "dealer",
-    priority: 136,
-  };
+  return { id: `dealer-${dealer.id}`, label: name, meta: `${dealer.physical_location || dealer.province || "South Africa"} · Approved dealership`, href: dealer.slug ? `/dealership/${dealer.slug}` : "/dealer", searchable: `${name} ${dealer.short_bio || ""} ${dealer.business_description || ""} ${locationSearchTerms(dealer.physical_location || dealer.province)} ${dealer.physical_location || ""} ${dealer.province || ""} dealership dealer vehicles stock`, location: dealer.physical_location || dealer.province || "", scope: "dealer", priority: 136 };
 }
 
 export function scoreSearchResult(item: SearchResult, query: string, location = "") {
@@ -154,7 +99,6 @@ export function scoreSearchResult(item: SearchResult, query: string, location = 
   const searchable = normaliseSearch(`${item.label} ${item.meta} ${item.searchable}`);
   const matches = tokens.filter((token) => tokenMatches(searchable, token)).length;
   if (!flexibleMatch(searchable, combined) && matches === 0) return -1;
-
   let score = item.priority + matches * 20;
   const cleanQuery = normaliseSearch(query);
   if (cleanQuery && normaliseSearch(item.label).startsWith(cleanQuery)) score += 42;
@@ -164,12 +108,7 @@ export function scoreSearchResult(item: SearchResult, query: string, location = 
 }
 
 export function filterAndRankResults(items: SearchResult[], scope: SearchScope, query: string, location = "") {
-  return items
-    .filter((item) => scope === "all" || item.scope === scope || (scope === "page" && item.scope === "page"))
-    .map((item) => ({ item, score: scoreSearchResult(item, query, location) }))
-    .filter(({ score }) => score >= 0)
-    .sort((a, b) => b.score - a.score || a.item.label.localeCompare(b.item.label))
-    .map(({ item }) => item);
+  return items.filter((item) => scope === "all" || item.scope === scope || (scope === "page" && item.scope === "page")).map((item) => ({ item, score: scoreSearchResult(item, query, location) })).filter(({ score }) => score >= 0).sort((a, b) => b.score - a.score || a.item.label.localeCompare(b.item.label)).map(({ item }) => item);
 }
 
 export function routeForScope(scope: SearchScope, query: string, location: string) {
