@@ -136,3 +136,5 @@ html[data-loadlink-theme="light"] [aria-label="Search category"] > div > button[
 a[href="/tools/truck-finance"] > div:first-child > p:first-child {
   display: none !important;
 }
+
+/* Primary-only consolidated release marker. */
