@@ -57,9 +57,7 @@ function repairSeenListings() {
     if (!id) return;
     if (!link.dataset.loadlinkSeenBound) {
       link.dataset.loadlinkSeenBound = "true";
-      link.addEventListener("click", () => {
-        markSeen(id);
-      });
+      link.addEventListener("click", () => markSeen(id));
     }
     if (seen.has(id)) ensureSeenBadge(link, id);
   });
@@ -81,7 +79,26 @@ function repairVehiclePortal() {
   browse.className = listVehicle.className;
   listVehicle.className = listUnit.className;
   parent.insertBefore(browse, parent.firstChild);
-  if (!parent.dataset.loadlinkDriverHierarchy) parent.dataset.loadlinkDriverHierarchy = "true";
+  parent.dataset.loadlinkDriverHierarchy = "true";
+}
+
+function repairDealerPackage() {
+  if (!window.location.pathname.startsWith("/packages") && !window.location.pathname.startsWith("/list-your-vehicle")) return;
+  const cards = [...document.querySelectorAll<HTMLElement>("article")];
+  const dealer = cards.find((card) => /^\s*Dealer\s*$/i.test(card.querySelector("h3")?.textContent || ""));
+  const list = dealer?.querySelector("ul");
+  if (!dealer || !list) return;
+  const existing = (dealer.textContent || "").toLowerCase();
+  const add = (label: string) => {
+    const key = label.toLowerCase();
+    if ((dealer.textContent || "").toLowerCase().includes(key)) return;
+    const li = document.createElement("li");
+    li.className = "flex gap-2 text-[11px] font-semibold";
+    li.innerHTML = '<span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]"></span>' + label;
+    list.appendChild(li);
+  };
+  if (!existing.includes("opening times")) add("Public dealership opening times");
+  if (!existing.includes("customer reviews")) add("Verified customer reviews");
 }
 
 function repairDealerProfile() {
@@ -102,12 +119,12 @@ function repairDealerProfile() {
           <span>Saturday</span><strong>08:00 – 13:00</strong>
           <span>Sunday</span><strong>Closed</strong>
         </div>
-        <p>Dealerships can publish their own verified trading hours from their Dealer profile settings.</p>
+        <p>Dealer accounts can publish their own trading hours on the public showroom.</p>
       </article>
       <article class="loadlink-dealer-business-card">
         <div class="loadlink-dealer-card-kicker">Reviews</div>
-        <div class="loadlink-review-heading"><h2>Customer reviews</h2><strong>New</strong></div>
-        <p>Verified LoadLink customers can review a dealership after a genuine enquiry or transaction. Reviews are tied to the dealership profile rather than individual stock cards.</p>
+        <div class="loadlink-review-heading"><h2>Customer reviews</h2><strong>Dealer</strong></div>
+        <p>Verified customers can review a dealership after a genuine LoadLink interaction. Reviews stay attached to the dealership profile rather than one stock card.</p>
         <button type="button" data-loadlink-review-action="true">Write a review</button>
       </article>
     </div>`;
@@ -115,27 +132,26 @@ function repairDealerProfile() {
   if (firstContentSection?.nextSibling) main.insertBefore(section, firstContentSection.nextSibling);
   else main.appendChild(section);
   section.querySelector<HTMLButtonElement>('[data-loadlink-review-action="true"]')?.addEventListener("click", () => {
-    window.dispatchEvent(new CustomEvent("loadlink-toast", { detail: { message: "Reviews are available to verified customers after a genuine LoadLink interaction." } }));
+    window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { kind: "info", title: "Dealership reviews", message: "Reviews are available to verified customers after a genuine LoadLink interaction.", duration: 5200 } }));
   });
 }
 
 function ensureStyles() {
-  if (document.getElementById("loadlink-v276-ui-repair")) return;
+  if (document.getElementById("loadlink-v277-ui-repair")) return;
   const style = document.createElement("style");
-  style.id = "loadlink-v276-ui-repair";
+  style.id = "loadlink-v277-ui-repair";
   style.textContent = `
 .loadlink-chat-header button[aria-label="View latest dealer update"]{padding:0!important;background:transparent!important;overflow:visible!important}
 .loadlink-chat-header button[aria-label="View latest dealer update"]>span{width:100%!important;height:100%!important;padding:0!important;background:transparent!important;border-radius:999px!important}
 .loadlink-chat-header button[aria-label="View latest dealer update"] [aria-label$="profile picture"]{width:100%!important;height:100%!important}
 [aria-label$="profile picture"]>span{background:transparent!important}
 
-/* Homepage portal photography stays full-cover; only the section and CTA controls become neater. */
 body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a{height:330px!important;min-height:330px!important}
+body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a>div.absolute.inset-0.bg-cover{background-size:cover!important;background-attachment:scroll!important;transform:none!important}
 body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a img{width:100%!important;height:100%!important;object-fit:cover!important;transform:none!important}
 body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a>div.relative.z-10>div{min-height:50px!important;width:min(72vw,390px)!important;padding:10px 20px!important;font-size:14px!important}
 @media(min-width:768px){body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a{height:420px!important;min-height:420px!important}body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a>div.relative.z-10>div{min-height:58px!important;width:min(42vw,430px)!important;padding:12px 28px!important;font-size:16px!important}}
 
-/* All / Jobs / Contracts / Vehicles stay visible but compact. */
 [data-loadlink-marketplace-search-shell] [aria-label="Search category"] button{min-height:40px!important;min-width:86px!important;padding:8px 16px!important;font-size:13px!important}
 
 .loadlink-seen-post-badge{position:absolute!important;top:12px!important;right:12px!important;z-index:8!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;border-radius:12px!important;background:rgba(0,0,0,.72)!important;color:#fff!important;padding:7px 12px!important;font-size:12px!important;font-weight:600!important;line-height:1!important;letter-spacing:0!important;backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important}
@@ -146,8 +162,7 @@ body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a>div.re
 .loadlink-dealer-card-kicker{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#9a7300}
 .loadlink-dealer-business-card h2{margin:8px 0 0;font-size:24px;font-weight:900;letter-spacing:-.035em}
 .loadlink-dealer-business-card p{margin:13px 0 0;font-size:13px;font-weight:600;line-height:1.65;color:rgba(0,0,0,.58)}
-.loadlink-hours-grid{margin-top:18px;display:grid;grid-template-columns:1fr auto;gap:10px 18px;font-size:13px}
-.loadlink-hours-grid strong{font-weight:900}
+.loadlink-hours-grid{margin-top:18px;display:grid;grid-template-columns:1fr auto;gap:10px 18px;font-size:13px}.loadlink-hours-grid strong{font-weight:900}
 .loadlink-review-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}.loadlink-review-heading>strong{border-radius:999px;background:#f6b800;color:#000;padding:6px 9px;font-size:9px;text-transform:uppercase}
 .loadlink-dealer-business-card button{margin-top:18px;height:42px;border:0;border-radius:12px;background:#f6b800;color:#000;padding:0 16px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
 html[data-loadlink-theme="dark"] .loadlink-dealer-business-info{border-color:rgba(255,255,255,.1)}html[data-loadlink-theme="dark"] .loadlink-dealer-business-card{border-color:rgba(255,255,255,.11);background:rgba(13,13,13,.92);color:#fff}html[data-loadlink-theme="dark"] .loadlink-dealer-business-card p{color:rgba(255,255,255,.58)}
@@ -161,6 +176,7 @@ function runRepairs() {
   repairContractLinks();
   repairSeenListings();
   repairVehiclePortal();
+  repairDealerPackage();
   repairDealerProfile();
 }
 
