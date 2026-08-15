@@ -67,18 +67,29 @@ function repairVehiclePortal() {
   if (!window.location.pathname.startsWith("/list-your-vehicle")) return;
   const headings = [...document.querySelectorAll<HTMLElement>("h1")];
   const heroHeading = headings.find((node) => /find a vehicle|add stock/i.test(node.textContent || ""));
-  const hero = heroHeading?.closest("section");
+  const hero = heroHeading?.closest<HTMLElement>("section");
   if (!hero) return;
+
+  hero.dataset.loadlinkVehicleHero = "true";
+  hero.style.minHeight = window.innerWidth < 768 ? "390px" : "450px";
+
+  const heroInner = heroHeading?.parentElement;
+  if (heroInner) {
+    heroInner.style.minHeight = window.innerWidth < 768 ? "390px" : "450px";
+    heroInner.style.paddingBottom = window.innerWidth < 768 ? "28px" : "38px";
+  }
+
   const controls = [...hero.querySelectorAll<HTMLElement>("a,button")];
   const browse = controls.find((node) => /browse available stock|view available vehicles/i.test(node.textContent || ""));
   const listVehicle = controls.find((node) => /^\s*list your vehicle\s*$/i.test(node.textContent || ""));
   const listUnit = controls.find((node) => /list a mobile unit/i.test(node.textContent || ""));
   const parent = listVehicle?.parentElement;
   if (!parent || !browse || !listVehicle || !listUnit) return;
-  browse.textContent = "View available vehicles";
-  browse.className = listVehicle.className;
-  listVehicle.className = listUnit.className;
-  parent.insertBefore(browse, parent.firstChild);
+
+  browse.textContent = "Browse available vehicles";
+  parent.insertBefore(listVehicle, parent.firstChild);
+  parent.insertBefore(listUnit, listVehicle.nextSibling);
+  parent.appendChild(browse);
   parent.dataset.loadlinkDriverHierarchy = "true";
 }
 
@@ -146,13 +157,29 @@ function ensureStyles() {
 .loadlink-chat-header button[aria-label="View latest dealer update"] [aria-label$="profile picture"]{width:100%!important;height:100%!important}
 [aria-label$="profile picture"]>span{background:transparent!important}
 
-body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a{height:330px!important;min-height:330px!important}
-body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a>div.absolute.inset-0.bg-cover{background-size:cover!important;background-attachment:scroll!important;transform:none!important}
-body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a img{width:100%!important;height:100%!important;object-fit:cover!important;transform:none!important}
+[data-loadlink-site-header]{position:fixed!important;inset-inline:0!important;top:0!important;z-index:1000!important}
+
+body[data-loadlink-path="/"] [data-loadlink-marketplace-search-shell],
+body[data-loadlink-path="/"] [data-loadlink-marketplace-search-shell]>*{border-top:0!important}
+body[data-loadlink-path="/"] [data-loadlink-marketplace-search-shell]::before,
+body[data-loadlink-path="/"] [data-loadlink-marketplace-search-shell]::after{display:none!important;content:none!important}
+
+body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a{height:290px!important;min-height:290px!important}
+body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a>img:first-of-type{width:100%!important;height:100%!important;object-fit:cover!important;opacity:.48!important;filter:blur(3px) brightness(1.08)!important;transform:scale(1.025)!important}
+body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a>img:nth-of-type(2){width:100%!important;height:100%!important;object-fit:contain!important;opacity:1!important;filter:brightness(1.14) saturate(1.12) contrast(1.03)!important;transform:none!important}
 body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a>div.relative.z-10>div{min-height:50px!important;width:min(72vw,390px)!important;padding:10px 20px!important;font-size:14px!important}
-@media(min-width:768px){body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a{height:420px!important;min-height:420px!important}body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a>div.relative.z-10>div{min-height:58px!important;width:min(42vw,430px)!important;padding:12px 28px!important;font-size:16px!important}}
+@media(min-width:640px){body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a{height:330px!important;min-height:330px!important}}
+@media(min-width:768px){body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a{height:380px!important;min-height:380px!important}body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a>div.relative.z-10>div{min-height:58px!important;width:min(42vw,430px)!important;padding:12px 28px!important;font-size:16px!important}}
+@media(min-width:1024px){body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a{height:420px!important;min-height:420px!important}}
 
 [data-loadlink-marketplace-search-shell] [aria-label="Search category"] button{min-height:40px!important;min-width:86px!important;padding:8px 16px!important;font-size:13px!important}
+[data-loadlink-marketplace-search-shell] [aria-label="Search category"] button[aria-pressed="false"]{border-color:#d1d5db!important;box-shadow:none!important}
+html[data-loadlink-theme="dark"] [data-loadlink-marketplace-search-shell] [aria-label="Search category"] button[aria-pressed="false"]{border-color:#4b5563!important}
+
+body[data-loadlink-path^="/list-your-vehicle"] [data-loadlink-vehicle-hero="true"]{min-height:390px!important}
+body[data-loadlink-path^="/list-your-vehicle"] [data-loadlink-driver-hierarchy="true"]{width:min(100%,430px)!important;gap:10px!important}
+body[data-loadlink-path^="/list-your-vehicle"] [data-loadlink-driver-hierarchy="true"]>*{min-height:50px!important}
+@media(min-width:768px){body[data-loadlink-path^="/list-your-vehicle"] [data-loadlink-vehicle-hero="true"]{min-height:450px!important}}
 
 .loadlink-seen-post-badge{position:absolute!important;top:12px!important;right:12px!important;z-index:8!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;border-radius:12px!important;background:rgba(0,0,0,.72)!important;color:#fff!important;padding:7px 12px!important;font-size:12px!important;font-weight:600!important;line-height:1!important;letter-spacing:0!important;backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important}
 
