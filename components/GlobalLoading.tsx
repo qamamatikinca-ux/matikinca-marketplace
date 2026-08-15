@@ -39,5 +39,6 @@ export default function GlobalLoading() {
     };
   }, []);
 
-  return loading ? <LoadLinkLoading /> : null;
+  const skipOverlay = pathname === "/messages" || pathname.startsWith("/list-your-vehicle");
+  return loading && !skipOverlay ? <LoadLinkLoading /> : null;
 }

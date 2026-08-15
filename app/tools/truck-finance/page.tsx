@@ -144,12 +144,13 @@ export default function TruckFinanceCalculatorPage() {
         <section className={`mt-7 overflow-hidden rounded-[30px] border shadow-[0_24px_70px_rgba(0,0,0,.08)] ${card}`}>
           <div className={`relative min-h-[315px] overflow-hidden ${darkMode ? "bg-[#101010]" : "bg-white"}`}>
             <div className={`absolute inset-x-0 bottom-0 h-24 ${darkMode ? "bg-gradient-to-t from-black/30 to-transparent" : "bg-gradient-to-t from-black/[.06] to-transparent"}`} aria-hidden="true" />
-            <div aria-hidden="true" className="absolute bottom-8 left-1/2 h-8 w-[66%] -translate-x-1/2 rounded-[50%] bg-black/20 blur-xl sm:bottom-10" />
             <img
               src={TRUCK_IMAGE}
               alt="Real commercial truck"
               className="absolute inset-0 z-10 h-full w-full object-contain object-center p-4 drop-shadow-[0_16px_14px_rgba(0,0,0,.18)] sm:p-7"
             />
+            <div aria-hidden="true" className="pointer-events-none absolute bottom-7 left-1/2 z-20 h-5 w-[58%] -translate-x-1/2 rounded-[50%] bg-black/22 blur-xl sm:bottom-9" />
+            <div aria-hidden="true" className="pointer-events-none absolute bottom-8 left-1/2 z-20 h-2.5 w-[43%] -translate-x-1/2 rounded-[50%] bg-black/30 blur-md sm:bottom-10" />
           </div>
 
           <div className="px-4 pb-7 pt-7 sm:px-7 sm:pb-9">

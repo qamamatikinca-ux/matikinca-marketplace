@@ -120,10 +120,10 @@ export default function SouthAfricaLocationInput({
         <div
           id={listId}
           role="listbox"
-          className={`absolute left-0 right-0 top-[calc(100%+8px)] z-[130] max-h-64 overflow-y-auto rounded-[16px] border p-2 shadow-[0_18px_48px_rgba(0,0,0,.34)] backdrop-blur-xl backdrop-saturate-125 ${
+          className={`absolute left-0 right-0 top-[calc(100%+8px)] z-[130] max-h-[230px] overflow-y-auto rounded-[16px] border p-2 shadow-[0_18px_44px_rgba(0,0,0,.24)] backdrop-blur-xl backdrop-saturate-125 ${
             darkMode
-              ? "border-[#f6b800]/22 bg-[#090909]/98 text-white"
-              : "border-black/[.10] bg-white/98 text-black"
+              ? "border-[#f6b800]/18 bg-[#090909]/84 text-white"
+              : "border-black/[.08] bg-white/84 text-black"
           }`}
         >
           {suggestions.length ? (

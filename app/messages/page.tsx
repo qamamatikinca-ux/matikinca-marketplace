@@ -1622,7 +1622,7 @@ ${message}` : message)}
           {!selectedId ? (
             <></>
           ) : null}
-          <div className="border-b border-black/10 p-5">
+          <div className="min-w-0 border-b border-black/10 p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-2xl font-bold tracking-[-.025em]">Inbox</h2>
@@ -1641,7 +1641,7 @@ ${message}` : message)}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search messages or listings"
-                className="h-12 w-full rounded-xl border border-black/10 bg-[#f5f3ed] px-4 text-sm font-semibold outline-none transition focus:border-[#f6b800] focus:bg-white"
+                className="h-12 w-full min-w-0 rounded-xl border border-black/10 bg-[#f5f3ed] px-4 text-sm font-semibold outline-none transition focus:border-[#f6b800] focus:bg-white"
               />
             </label>
             <div data-loadlink-folder-tabs="v2619-fixed" className="loadlink-folder-tabs mt-3 grid min-w-0 grid-cols-[0.8fr_1.35fr_0.9fr] gap-2" role="tablist" aria-label="Conversation folders">

@@ -95,7 +95,7 @@ function HomeExperience() {
                 key={card.title}
                 href={card.href}
                 aria-label={card.buttonText}
-                className="group relative block h-[360px] w-full overflow-hidden bg-black sm:h-[390px] md:h-[450px] lg:h-[500px]"
+                className={`group relative block h-[360px] w-full overflow-hidden sm:h-[390px] md:h-[450px] lg:h-[500px] ${darkMode ? "bg-black" : "bg-[#fff6dc]"}`}
               >
                 <img
                   src={activeImage.src}
@@ -104,11 +104,11 @@ function HomeExperience() {
                   className="absolute inset-0 h-full w-full object-cover transition duration-700"
                   style={{ objectPosition: activeImage.position }}
                 />
-                <div className="absolute inset-0 bg-black/36" />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/12 via-black/14 to-black/48" />
+                <div className="absolute inset-0 bg-black/24" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/8 via-black/12 to-black/42" />
                 <div
                   data-loadlink-portal-glow
-                  className="pointer-events-none absolute inset-0 shadow-[inset_0_0_70px_rgba(246,184,0,0.08)]"
+                  className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_48%,rgba(246,184,0,.055)_76%,rgba(246,184,0,.11)_100%)] shadow-[inset_0_0_92px_rgba(246,184,0,.20)]"
                 />
                 <div className="relative z-10 flex h-full w-full items-center justify-center px-5 text-center">
                   <div

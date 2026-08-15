@@ -704,3 +704,28 @@ html[data-loadlink-theme="dark"] .loadlink-ui-label {
   color: #050505 !important;
 }
 /* LOADLINK_V277_HEADER_TOOLS_LABELS_END */
+
+
+/* LOADLINK 2026-08-15 FINAL VISIBLE CORRECTIONS */
+[data-loadlink-menu-panel],
+[data-loadlink-menu-close] {
+  border-radius: 0 !important;
+}
+[data-loadlink-menu-close] {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+@media (max-width: 767px) {
+  .loadlink-messages .loadlink-inbox-panel {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+  .loadlink-messages .loadlink-inbox-panel input,
+  .loadlink-messages .loadlink-folder-tabs {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}

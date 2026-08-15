@@ -669,7 +669,7 @@ export default function JobsPortalPage() {
             </p>
           </div>
 
-          <div data-loadlink-jobs-search-shell className="loadlink-glass mt-6 rounded-2xl border border-[#f6b800] bg-black/78 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-sm md:p-5">
+          <div data-loadlink-jobs-search-shell className={`loadlink-glass mt-6 rounded-2xl border p-4 shadow-[0_20px_60px_rgba(0,0,0,0.18)] backdrop-blur-md md:p-5 ${darkMode ? "border-[#f6b800]/55 bg-black/72" : "border-white/55 bg-white/68"}`}>
             <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr_auto]">
               <label className="block">
                 <span className="mb-2 block text-xs font-black uppercase tracking-[0.18em] text-[#f6b800]">Job or truck type</span>
