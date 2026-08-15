@@ -1,7 +1,8 @@
 LoadLink primary deployment trigger
 
-Verified source commit: 329f859f1fdd8f50c0aff07cc3e8bfdb626549f4
-Build verification: GitHub Actions production build passed before main promotion
-Requested deployment method: GitHub main branch push
-Batch: homepage search, portal glow, seen badge, vehicle flow, menu corners, finance shadow, messages/light-mode fixes
-Retry trigger: force production deployment now
+Corrected source commit: ed24ce529cc4e7ea73f821f1c5c151ff9249e390
+Repository: qamamatikinca-ux/matikinca-marketplace
+Branch: main
+Deployment target: primary LoadLink production only
+Manual GitHub push: 2026-08-15 17:11 SAST
+Batch: restore yesterday homepage search and portal glow, correct List Your Vehicle flow, move Seen badge to top-left, fix iOS select zoom, preserve finance truck ground shadow
