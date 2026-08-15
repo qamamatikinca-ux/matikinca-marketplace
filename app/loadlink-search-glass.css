@@ -14,102 +14,115 @@
   font-size: 13px !important;
   font-weight: 800 !important;
   letter-spacing: -0.015em !important;
-  -webkit-backdrop-filter: blur(18px) saturate(145%) !important;
-  backdrop-filter: blur(18px) saturate(145%) !important;
-  box-shadow: 0 8px 22px rgba(0,0,0,.05) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
 }
 
 html[data-loadlink-theme="dark"] [aria-label="Search category"] > div > button[aria-pressed="false"] {
-  background: rgba(255,255,255,.045) !important;
-  border-color: rgba(255,255,255,.14) !important;
-  color: rgba(255,255,255,.74) !important;
+  background: rgba(255,255,255,.035) !important;
+  border-color: rgba(255,255,255,.16) !important;
+  color: rgba(255,255,255,.78) !important;
 }
 
 html[data-loadlink-theme="light"] [aria-label="Search category"] > div > button[aria-pressed="false"] {
-  background: rgba(255,255,255,.68) !important;
-  border-color: rgba(0,0,0,.08) !important;
-  color: rgba(0,0,0,.66) !important;
+  background: #fff !important;
+  border-color: rgba(180,153,86,.34) !important;
+  color: #514d43 !important;
 }
 
 [aria-label="Search category"] > div > button[aria-pressed="true"] {
   background: #f6b800 !important;
   border-color: #f6b800 !important;
   color: #050505 !important;
-  box-shadow: 0 8px 20px rgba(246,184,0,.16) !important;
+  box-shadow: 0 8px 18px rgba(246,184,0,.12) !important;
 }
 
-/* Homepage search keeps the approved Jobs-style composition: compact category
-   pills, black icon block, white input, gold action, then a separate location field. */
+/* Approved homepage search composition: compact category pills, then one clean
+   search row and a separate location field. No oversized labels or glass block. */
 [data-loadlink-home-search-section] {
   overflow: visible !important;
 }
 html[data-loadlink-theme="light"] [data-loadlink-home-search-section] {
-  background: #fff6dc !important;
+  background: #fff !important;
 }
 html[data-loadlink-theme="dark"] [data-loadlink-home-search-section] {
   background: #050505 !important;
 }
 
 [data-loadlink-home-search-section] > div > div.mt-5 {
-  margin-top: 16px !important;
+  margin-top: 14px !important;
 }
+
+/* The approved reference has no gold SEARCH LOADLINK / LOCATION headings. */
 [data-loadlink-home-search-section] p {
-  margin-bottom: 10px !important;
-  font-size: 11px !important;
-  line-height: 1.2 !important;
-  letter-spacing: .16em !important;
+  display: none !important;
 }
 
 [data-loadlink-home-search-row] {
   min-height: 56px !important;
   height: 56px !important;
-  border-radius: 16px !important;
+  border-radius: 18px !important;
   background: #fff !important;
+  border: 1px solid rgba(17,17,17,.11) !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,.07) !important;
 }
 [data-loadlink-home-search-row] > span {
-  width: 52px !important;
+  width: 48px !important;
+  background: #fff !important;
+  color: rgba(17,17,17,.46) !important;
 }
 [data-loadlink-home-search-input] {
   height: 56px !important;
   min-width: 0 !important;
-  padding-left: 12px !important;
+  padding-left: 4px !important;
   padding-right: 8px !important;
   background: #fff !important;
   color: #111 !important;
-  border-color: rgba(17,17,17,.14) !important;
+  border: 0 !important;
   font-size: 16px !important;
+  font-weight: 500 !important;
 }
 [data-loadlink-home-search-row] > button {
-  min-width: 88px !important;
-  padding-left: 12px !important;
-  padding-right: 12px !important;
-  border-radius: 14px !important;
+  min-width: 92px !important;
+  height: 46px !important;
+  margin: 5px !important;
+  margin-left: 0 !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+  border-radius: 15px !important;
+  background: #f6b800 !important;
+  color: #050505 !important;
   font-size: 12px !important;
-  letter-spacing: .04em !important;
+  font-weight: 500 !important;
+  letter-spacing: .02em !important;
 }
 [data-loadlink-home-search-input]::placeholder,
 [data-loadlink-home-location] input::placeholder {
   color: rgba(17,17,17,.42) !important;
+  opacity: 1 !important;
 }
 
 [data-loadlink-home-location] {
-  margin-top: 18px !important;
+  margin-top: 10px !important;
 }
 [data-loadlink-home-location] input {
   height: 56px !important;
-  border-radius: 16px !important;
+  border-radius: 18px !important;
   padding-left: 16px !important;
   padding-right: 16px !important;
   background: #fff !important;
   color: #111 !important;
-  border-color: rgba(17,17,17,.14) !important;
+  border: 1px solid rgba(17,17,17,.12) !important;
   font-size: 16px !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
 }
 
 [data-loadlink-home-search-suggestions] {
   top: 64px !important;
-  -webkit-backdrop-filter: blur(22px) saturate(140%) !important;
-  backdrop-filter: blur(22px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(130%) !important;
+  backdrop-filter: blur(18px) saturate(130%) !important;
 }
 
 @media (min-width: 640px) {
