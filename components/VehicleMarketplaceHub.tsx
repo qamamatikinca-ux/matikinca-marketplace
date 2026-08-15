@@ -157,7 +157,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
                 <Link key={row.id} href={`/listing/${row.id}`} onClick={() => markSeen(String(row.id))} className={`loadlink-glass group overflow-hidden rounded-[24px] border shadow-[0_12px_34px_rgba(0,0,0,.06)] ${surface}`}>
                   <div className="relative aspect-[16/10] overflow-hidden bg-black/10">
                     {row.photos?.[0] ? <img src={row.photos[0]} alt={row.title || "LoadLink vehicle"} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.015]" /> : <img src="/images/truck-1.jpg" alt="Commercial vehicle" className="h-full w-full object-cover" />}
-                    {wasSeen ? <span className="absolute left-3 top-3 rounded-xl border border-white/10 bg-black/72 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">Seen</span> : null}
+                    {wasSeen ? <span data-loadlink-seen-badge="true" className="absolute left-3 top-3 rounded-xl border border-white/10 bg-black/72 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">Seen</span> : null}
                     <span className="absolute right-3 top-3 rounded-full bg-black/82 px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] text-white">{offer}</span>
                   </div>
                   <div className="p-4">
