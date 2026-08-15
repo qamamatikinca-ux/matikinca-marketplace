@@ -69,3 +69,5 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 1
+
+# Manual primary-only deployment trigger for the corrected List Your Vehicle build.
