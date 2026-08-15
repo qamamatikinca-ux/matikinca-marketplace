@@ -1,0 +1,143 @@
+name: LoadLink chat speed once
+
+on:
+  push:
+    paths:
+      - '.github/workflows/loadlink-chat-speed-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-chat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch chat startup
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/messages/page.tsx')
+          s = p.read_text()
+
+          old = '''    const buyerRows: Conversation[] = [];
+
+    for (const buyerKey of buyerKeys) {
+      const buyerResult = await supabase.rpc("get_buyer_guest_threads", {
+        p_buyer_key: buyerKey,
+      });
+      if (buyerResult.error) throw buyerResult.error;
+
+      buyerRows.push(
+        ...((buyerResult.data || []) as ConversationRow[]).map((row) => ({
+          ...row,
+          accessKey: buyerKey,
+          role: "buyer" as const,
+          unreadCount: toCount(row.unread_count),
+        })),
+      );
+    }
+
+    const ownerRows: Conversation[] = [];
+    for (const ownerKey of ownerKeys) {
+      const ownerResult = await supabase.rpc("get_owner_guest_threads", {
+        p_owner_key: ownerKey,
+      });
+      if (ownerResult.error) throw ownerResult.error;
+      ownerRows.push(
+        ...((ownerResult.data || []) as ConversationRow[]).map((row) => ({
+          ...row,
+          accessKey: ownerKey,
+          role: "owner" as const,
+          unreadCount: toCount(row.unread_count),
+        })),
+      );
+    }
+'''
+          new = '''    const [buyerResults, ownerResults] = await Promise.all([
+      Promise.all(buyerKeys.map(async (buyerKey) => {
+        const result = await supabase.rpc("get_buyer_guest_threads", { p_buyer_key: buyerKey });
+        if (result.error) throw result.error;
+        return ((result.data || []) as ConversationRow[]).map((row) => ({
+          ...row,
+          accessKey: buyerKey,
+          role: "buyer" as const,
+          unreadCount: toCount(row.unread_count),
+        }));
+      })),
+      Promise.all(ownerKeys.map(async (ownerKey) => {
+        const result = await supabase.rpc("get_owner_guest_threads", { p_owner_key: ownerKey });
+        if (result.error) throw result.error;
+        return ((result.data || []) as ConversationRow[]).map((row) => ({
+          ...row,
+          accessKey: ownerKey,
+          role: "owner" as const,
+          unreadCount: toCount(row.unread_count),
+        }));
+      })),
+    ]);
+    const buyerRows: Conversation[] = buyerResults.flat();
+    const ownerRows: Conversation[] = ownerResults.flat();
+'''
+          if old not in s:
+              raise SystemExit('loadConversations target not found')
+          s = s.replace(old, new, 1)
+
+          old2 = '''        const { data: privacyRow } = await supabase
+          .from("profiles")
+          .select("message_activity_visible,message_typing_indicators,message_requests_enabled,message_notification_previews")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        await Promise.allSettled(
+          Array.from(new Set([getBuyerKey(), ...getOwnerKeys()])).map((accessKey) =>
+            supabase.rpc("loadlink_register_chat_access_key", { p_access_key: accessKey }),
+          ),
+        );
+
+        if (privacyRow) {
+          const nextPrivacy = profileRowToMessagePrivacy(
+            privacyRow as Record<string, unknown>,
+          );
+          writeMessagePrivacy(nextPrivacy);
+          setMessagePrivacy(nextPrivacy);
+        }
+
+        await syncAccountState().catch(() => undefined);
+'''
+          new2 = '''        const privacyPromise = supabase
+          .from("profiles")
+          .select("message_activity_visible,message_typing_indicators,message_requests_enabled,message_notification_previews")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        void Promise.allSettled(
+          Array.from(new Set([getBuyerKey(), ...getOwnerKeys()])).map((accessKey) =>
+            supabase.rpc("loadlink_register_chat_access_key", { p_access_key: accessKey }),
+          ),
+        );
+        void syncAccountState().catch(() => undefined);
+        void privacyPromise.then(({ data: privacyRow }) => {
+          if (!privacyRow) return;
+          const nextPrivacy = profileRowToMessagePrivacy(privacyRow as Record<string, unknown>);
+          writeMessagePrivacy(nextPrivacy);
+          setMessagePrivacy(nextPrivacy);
+        });
+'''
+          if old2 not in s:
+              raise SystemExit('initialise target not found')
+          s = s.replace(old2, new2, 1)
+
+          s = s.replace('''          10000,\n        );''', '''          15000,\n        );''', 1)
+          p.write_text(s)
+          PY
+      - name: Commit source patch
+        run: |
+          git config user.name "LoadLink Release Bot"
+          git config user.email "loadlink-release@users.noreply.github.com"
+          git add app/messages/page.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "Speed up LoadLink message startup"
+          git push origin HEAD:main
