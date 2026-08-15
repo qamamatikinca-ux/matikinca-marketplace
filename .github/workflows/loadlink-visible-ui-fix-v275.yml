@@ -1,0 +1,96 @@
+name: LoadLink visible UI correction v275
+on:
+  push:
+    paths:
+      - '.github/workflows/loadlink-visible-ui-fix-v275.yml'
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch visible UI
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def one(path, old, new):
+              p=Path(path); s=p.read_text(); n=s.count(old)
+              if n != 1: raise SystemExit(f'{path}: {n} matches for {old[:60]}')
+              p.write_text(s.replace(old,new,1))
+
+          one('app/page.tsx','className="group relative block h-[52vh] min-h-[380px] w-full overflow-hidden md:h-[65vh]"','className="group relative block h-[330px] min-h-[330px] w-full overflow-hidden sm:h-[360px] md:h-[420px] md:min-h-[420px]"')
+          one('app/page.tsx','''                <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-cover bg-fixed transition duration-700 group-hover:scale-[1.02]"
+        style={{ backgroundImage: `url(${activeImage.src})`, backgroundPosition: activeImage.position }}
+      />''','''                <img
+                  src={activeImage.src}
+                  alt=""
+                  aria-hidden="true"
+                  style={{ objectPosition: activeImage.position }}
+                  className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-[1.01]"
+                />''')
+          one('app/page.tsx','min-h-[64px] w-[min(78vw,470px)] items-center justify-center rounded-full border px-6 py-3.5 text-[16px]','min-h-[50px] w-[min(72vw,390px)] items-center justify-center rounded-full border px-5 py-2.5 text-[14px]')
+          one('app/page.tsx','md:min-h-[72px] md:w-[min(50vw,500px)] md:px-8 md:py-4 md:text-[18px]','md:min-h-[58px] md:w-[min(42vw,430px)] md:px-7 md:py-3 md:text-[16px]')
+          one('components/MarketplaceDiscovery.tsx','min-h-[46px] min-w-[104px] shrink-0 rounded-full border px-5 py-2.5 text-sm','min-h-[40px] min-w-[86px] shrink-0 rounded-full border px-4 py-2 text-[13px]')
+
+          p=Path('app/list-your-vehicle/page.tsx'); s=p.read_text()
+          old='''          {!dealerPost ? (
+  <div className="mx-auto mt-6 grid w-full max-w-md gap-3">
+    <button type="button" onClick={() => {
+      setListingIntent("vehicle");
+      setVehicleCategory(null);
+      setListingFlowOpen(true);
+      setSelectedPlan(null);
+      setPackageType("standard");
+      window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+    }} className="flex min-h-14 items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]">
+      List your vehicle
+    </button>
+    <button type="button" onClick={() => {
+      setListingIntent("mobile_unit");
+      setVehicleCategory("mobile_unit");
+      setListingFlowOpen(true);
+      setSelectedPlan(null);
+      setPackageType("standard");
+      window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+    }} className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]">
+      List a mobile unit
+    </button>
+    <a href="#vehicle-marketplace-vehicles" onClick={() => { setListingFlowOpen(false); setListingIntent(null); }} className="flex min-h-12 items-center justify-center rounded-full border border-white/35 bg-black/55 px-6 text-xs font-black uppercase tracking-[.1em] text-white/85 backdrop-blur transition active:scale-[.99]">
+      Browse available stock
+    </a>
+  </div>
+) : null}'''
+          new='''          {!dealerPost ? (
+            <div className="mx-auto mt-6 grid w-full max-w-md gap-3">
+              <a href="#vehicle-marketplace-vehicles" onClick={() => { setListingFlowOpen(false); setListingIntent(null); }} className="flex min-h-14 items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]">View available vehicles</a>
+              <button type="button" onClick={() => { setListingIntent("vehicle"); setVehicleCategory(null); setListingFlowOpen(true); setSelectedPlan(null); setPackageType("standard"); window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40); }} className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]">List your vehicle</button>
+              <button type="button" onClick={() => { setListingIntent("mobile_unit"); setVehicleCategory("mobile_unit"); setListingFlowOpen(true); setSelectedPlan(null); setPackageType("standard"); window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40); }} className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]">List a mobile unit</button>
+            </div>
+          ) : null}'''
+          if s.count(old)!=1: raise SystemExit(f'list vehicle hero matches {s.count(old)}')
+          p.write_text(s.replace(old,new,1))
+
+          hub=Path('components/VehicleMarketplaceHub.tsx').read_text()
+          for x in ['const SEEN_KEY = "loadlink-seen-vehicle-listings-v1";','onClick={() => markSeen(String(row.id))}','>Seen</span>']:
+              if x not in hub: raise SystemExit('Seen badge behavior missing: '+x)
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Verify build
+        run: npm ci && npm run build
+      - name: Commit
+        run: |
+          rm -f .github/workflows/loadlink-visible-ui-fix-v274.yml .github/workflows/loadlink-visible-ui-fix-v275.yml
+          git config user.name 'LoadLink Maintenance'
+          git config user.email 'loadlinksouthafrica@gmail.com'
+          git add -A
+          git commit -m 'Fix visible portal sizing and vehicle entry flow'
+          git push origin HEAD:main
