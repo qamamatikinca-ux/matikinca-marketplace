@@ -208,23 +208,7 @@ export async function syncAccountState() {
   writeGlobalSnapshot(snapshot);
   writeAccountCache(user.id, snapshot);
   localStorage.setItem(ACTIVE_ACCOUNT_STORAGE_KEY, user.id);
-
-  if (!readError) {
-    const { error: writeError } = await supabase.from("user_account_state").upsert(
-      {
-        user_id: user.id,
-        buyer_keys: snapshot.buyer_keys,
-        owned_job_keys: snapshot.owned_job_keys,
-        recent_viewed: snapshot.recent_viewed,
-        recent_portals: snapshot.recent_portals,
-        liked_listings: snapshot.liked_listings,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" },
-    );
-
-    if (!writeError) writeAccountCache(user.id, snapshot);
-  }
+  emitStateEvents();
 
   const ownerKeys = new Set<string>(Object.values(snapshot.owned_job_keys));
   const accountOwnerKey = getAccountOwnerKey(user.id);
@@ -235,11 +219,27 @@ export async function syncAccountState() {
     if (legacyDeviceKey && legacyDeviceKey.length >= 20) ownerKeys.add(legacyDeviceKey);
   }
 
-  for (const ownerKey of ownerKeys) {
-    await supabase.rpc("claim_guest_listings", { p_owner_key: ownerKey });
-  }
-
-  emitStateEvents();
+  // Remote persistence and legacy-ownership claims are maintenance work. They no
+  // longer block chat/page startup; local state is already ready at this point.
+  void Promise.allSettled([
+    ...(!readError ? [
+      supabase.from("user_account_state").upsert(
+        {
+          user_id: user.id,
+          buyer_keys: snapshot.buyer_keys,
+          owned_job_keys: snapshot.owned_job_keys,
+          recent_viewed: snapshot.recent_viewed,
+          recent_portals: snapshot.recent_portals,
+          liked_listings: snapshot.liked_listings,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      ),
+    ] : []),
+    ...Array.from(ownerKeys).map((ownerKey) =>
+      supabase.rpc("claim_guest_listings", { p_owner_key: ownerKey }),
+    ),
+  ]).then(() => writeAccountCache(user.id, snapshot));
 }
 
 export function clearActiveAccountState() {
