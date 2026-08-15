@@ -154,6 +154,10 @@ export default function ListYourVehiclePage() {
   const specSchema = useMemo(() => unitSpecSchema(vehicleCategory, bodyType || vehicleSubtype), [bodyType, vehicleCategory, vehicleSubtype]);
 
   useEffect(() => {
+    if (!window.location.hash) window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, []);
+
+  useEffect(() => {
     async function requireAccount() {
       if (!isSupabaseConfigured) { setAuthReady(true); return; }
       const user = await getFreshAuthenticatedUser();
@@ -567,7 +571,7 @@ export default function ListYourVehiclePage() {
             {dealerPost ? `Add stock to ${dealershipName}` : "Find a vehicle or list your own"}
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm font-semibold leading-7 text-white/75 md:text-base">
-            Browse approved trucks, trailers and mobile units, or choose what you want to list and continue through the correct LoadLink flow.
+            Browse approved trucks, trailers and mobile units or create your own LoadLink vehicle listing.
           </p>
 
           {!dealerPost ? (
@@ -583,7 +587,7 @@ export default function ListYourVehiclePage() {
                 setPackageType("standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-choice")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
               }} className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]">
-                List a vehicle or mobile unit
+                List your vehicle
               </button>
             </div>
           ) : null}
@@ -594,26 +598,36 @@ export default function ListYourVehiclePage() {
         <section id="vehicle-listing-choice" className={`scroll-mt-24 border-b px-4 py-8 md:px-6 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
           <div className="mx-auto max-w-5xl text-center">
             <h2 className="text-3xl font-black tracking-[-.04em]">What do you want to list?</h2>
-            <p className={`mx-auto mt-2 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Choose first. LoadLink will only show the plan guide and form for that listing route after you make this selection.</p>
-            <div className="mx-auto mt-6 grid max-w-2xl gap-3 sm:grid-cols-2">
+            <p className={`mx-auto mt-2 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Choose the exact listing type first. Seller and package options only appear after this choice.</p>
+            <div className="mx-auto mt-6 grid max-w-3xl gap-3 sm:grid-cols-3">
               <button type="button" onClick={() => {
                 setListingIntent("vehicle");
-                setVehicleCategory(null);
+                chooseCategory("truck");
                 setSelectedPlan(null);
                 setPackageType("standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
               }} className={`min-h-28 rounded-2xl border p-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
-                <span className="block text-xl font-black">List a vehicle</span>
-                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Truck or trailer listing.</span>
+                <span className="block text-xl font-black">Truck</span>
+                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Commercial trucks and tractor units.</span>
+              </button>
+              <button type="button" onClick={() => {
+                setListingIntent("vehicle");
+                chooseCategory("trailer");
+                setSelectedPlan(null);
+                setPackageType("standard");
+                window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+              }} className={`min-h-28 rounded-2xl border p-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <span className="block text-xl font-black">Trailer</span>
+                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Commercial trailer listings.</span>
               </button>
               <button type="button" onClick={() => {
                 setListingIntent("mobile_unit");
-                setVehicleCategory("mobile_unit");
+                chooseCategory("mobile_unit");
                 setSelectedPlan(null);
                 setPackageType("standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
               }} className={`min-h-28 rounded-2xl border p-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
-                <span className="block text-xl font-black">List a mobile unit</span>
+                <span className="block text-xl font-black">Mobile Unit</span>
                 <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Mobile fridge, kitchen, clinic, office and other units.</span>
               </button>
             </div>
@@ -642,19 +656,9 @@ export default function ListYourVehiclePage() {
       {listingFlowOpen && signedIn && listingIntent && !selectedPlan ? <BusinessPlans darkMode={darkMode} selectable selectedPlan={selectedPlan} onSelect={choosePlan} /> : null}
 
       {listingFlowOpen && signedIn && listingIntent && selectedPlan ? <form id="vehicle-listing-form" onSubmit={submitVehicle} className="mx-auto grid max-w-5xl scroll-mt-24 gap-6 px-4 py-7 md:px-6 md:py-12">
-        <section id="vehicle-type" className={`scroll-mt-24 overflow-hidden rounded-2xl border ${surface}`}>
-          <SectionHeading step="01" title="Choose what you are listing" description="The form changes to show only the details relevant to the selected vehicle or mobile unit." />
-          <div className={`grid gap-3 p-5 md:p-7 ${listingIntent === "vehicle" ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
-  {listingIntent === "vehicle" ? <>
-    <CategoryButton label="Truck" description="Commercial trucks and tractor units" active={vehicleCategory === "truck"} onClick={() => chooseCategory("truck")} />
-    <CategoryButton label="Trailer" description="All commercial trailer types" active={vehicleCategory === "trailer"} onClick={() => chooseCategory("trailer")} />
-  </> : <CategoryButton label="Mobile Unit" description="Mobile service and business units" active={vehicleCategory === "mobile_unit"} onClick={() => chooseCategory("mobile_unit")} />}
-</div>
-        </section>
-
         {categoryChosen ? <>
           <section className={`overflow-hidden rounded-2xl border ${surface}`}>
-            <SectionHeading step="02" title={`${categoryLabel(vehicleCategory!)} identity`} description={vehicleCategory === "truck" ? "Select the registration year, manufacturer and exact truck model." : "Choose the unit type and enter the make and model exactly as shown on the registration papers."} />
+            <SectionHeading step="01" title={`${categoryLabel(vehicleCategory!)} identity`} description={vehicleCategory === "truck" ? "Select the registration year, manufacturer and exact truck model." : "Choose the unit type and enter the make and model exactly as shown on the registration papers."} />
             <div className="grid gap-5 p-5 md:grid-cols-3 md:p-7">
               {vehicleCategory !== "truck" ? <Field label={`${vehicleCategory === "trailer" ? "Trailer" : "Mobile unit"} type`}><select value={vehicleSubtype} onChange={(event) => { setVehicleSubtype(event.target.value); setBodyType(event.target.value); }} className={inputClass} required><option value="">Select type</option>{(vehicleCategory === "trailer" ? trailerTypes : mobileUnitTypes).map((item) => <option key={item}>{item}</option>)}</select></Field> : null}
               <Field label="Registration / model year"><select value={year} onChange={(event) => { setYear(Number(event.target.value)); setModelName(""); setModelConfirmed(false); }} className={inputClass}>{truckYears.map((item) => <option key={item} value={item}>{item}</option>)}</select></Field>
@@ -666,7 +670,7 @@ export default function ListYourVehiclePage() {
 
           {detailsReady ? <>
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
-              <SectionHeading step="03" title="Vehicle details" description="Add the information buyers need before opening the full product view." />
+              <SectionHeading step="02" title="Vehicle details" description="Add the information buyers need before opening the full product view." />
               <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7">
                 <Field label="Listing title" wide><input value={title} onChange={(event) => setTitle(event.target.value)} className={inputClass} required /></Field>
                 <Field label={vehicleCategory === "truck" ? "Body type" : "Type"}><select value={bodyType || vehicleSubtype} onChange={(event) => setBodyType(event.target.value)} className={inputClass}>{(vehicleCategory === "truck" ? truckBodyTypes : vehicleCategory === "trailer" ? trailerTypes : mobileUnitTypes).map((item) => <option key={item}>{item}</option>)}</select></Field>
@@ -696,14 +700,14 @@ export default function ListYourVehiclePage() {
             </section>
 
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
-              <SectionHeading step="04" title="Photos and verification" description="Upload clear product photos and the critical documents required for review." />
+              <SectionHeading step="03" title="Photos and verification" description="Upload clear product photos and the critical documents required for review." />
               <div className="p-5 md:p-7"><label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>{vehiclePhotoProgress || `Minimum 2 photos · up to ${packageType === "pro" || packageType === "dealer" ? 15 : 5}`}</span><input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} disabled={preparingVehiclePhotos || saving} className="hidden" /></label>{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <img key={preview} src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 shrink-0 snap-start rounded-xl object-cover" />)}</div> : null}</div>
               {sellerType === "dealership" && !dealerPost ? <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><Field label="Dealership name"><input value={dealershipName} onChange={(event) => setDealershipName(event.target.value)} className={inputClass} required /></Field><Field label="Company registration number"><input value={companyRegistrationNumber} onChange={(event) => setCompanyRegistrationNumber(event.target.value)} className={inputClass} required /></Field><Field label="SARS tax number"><input value={taxNumber} onChange={(event) => setTaxNumber(event.target.value)} className={inputClass} required /></Field><DocumentInput label="CIPC company registration" required file={documents.companyRegistration} onChange={(file) => setDocument("companyRegistration", file)} /><DocumentInput label="SARS tax document" required file={documents.taxDocument} onChange={(file) => setDocument("taxDocument", file)} /><DocumentInput label="Proof of business address" required file={documents.businessAddress} onChange={(file) => setDocument("businessAddress", file)} /><DocumentInput label="Representative authority" required file={documents.representativeAuthority} onChange={(file) => setDocument("representativeAuthority", file)} /></div> : null}
               <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><DocumentInput label="South African ID or passport" required file={documents.idDocument} onChange={(file) => setDocument("idDocument", file)} />{vehicleCategory === "truck" ? <DocumentInput label="Driver’s licence" required file={documents.driverLicence} onChange={(file) => setDocument("driverLicence", file)} /> : null}<DocumentInput label="Vehicle registration certificate" required file={documents.registrationPaper} onChange={(file) => setDocument("registrationPaper", file)} /><DocumentInput label="Proof of ownership or authority to list" required file={documents.ownershipProof} onChange={(file) => setDocument("ownershipProof", file)} /><DocumentInput label="Roadworthy certificate" file={documents.roadworthy} onChange={(file) => setDocument("roadworthy", file)} /><DocumentInput label="Operating licence" file={documents.operatingLicence} onChange={(file) => setDocument("operatingLicence", file)} />{transmissionCheck?.requiresModificationProof ? <DocumentInput label="Gearbox conversion paperwork" required file={documents.modificationProof} onChange={(file) => setDocument("modificationProof", file)} /> : null}</div>
             </section>
 
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
-              <SectionHeading step="05" title="Contact and confirmation" description="Confirm the details before the product is added to LoadLink." />
+              <SectionHeading step="04" title="Contact and confirmation" description="Confirm the details before the product is added to LoadLink." />
               <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7"><Field label={sellerType === "dealership" ? "Dealership / contact name" : "Owner / company name"}><input value={postedBy} onChange={(event) => setPostedBy(event.target.value)} className={inputClass} required /></Field><Field label="Contact number"><input value={contactNumber} onChange={(event) => setContactNumber(event.target.value)} placeholder="0821234567" className={inputClass} required /></Field><Field label="WhatsApp number — optional"><input value={whatsappNumber} onChange={(event) => setWhatsappNumber(event.target.value)} placeholder="0821234567" className={inputClass} /></Field><Field label="Selected plan"><div className={`${inputClass} flex items-center`}>{false ? "Manual listing — R15 per vehicle per day" : selectedPlan === "pro" ? "Pro listing — analytics enabled" : "Dealer package — dealership inventory"}</div></Field></div>
               <div className="grid gap-3 px-5 pb-5 md:px-7 md:pb-7"><CheckRow checked={confirmOwnership} onChange={setConfirmOwnership} label="I own this vehicle or have written authority from the owner to list it." /><CheckRow checked={confirmAccuracy} onChange={setConfirmAccuracy} label="I confirm that the details, mileage, ownership history and uploaded documents are accurate." /></div>
               <div className="border-t border-[#f6b800]/25 bg-black p-5 text-white md:p-7">{message ? <div className="mb-4 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm font-bold leading-6 text-red-300">{message}</div> : null}<button type="submit" disabled={saving || preparingVehiclePhotos} className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[0.12em] text-black disabled:opacity-50">{saving ? "Submitting vehicle…" : dealershipId ? "Add to dealership inventory" : "Submit vehicle for verification"}</button><p className="mt-3 text-center text-xs leading-5 text-white/45">The product will appear in the dealership slider when linked to an approved dealership. Analytics remains available only on Pro listings.</p></div>
