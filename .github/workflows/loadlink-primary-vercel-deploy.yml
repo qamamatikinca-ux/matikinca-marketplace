@@ -1,0 +1,113 @@
+name: LoadLink Primary Vercel Deploy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: loadlink-primary-vercel-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy primary LoadLink production
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    env:
+      VERCEL_ORG_ID: team_ltBsujLbhqOPqX4dlpWDHial
+      VERCEL_PROJECT_ID: prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt
+      PRIMARY_PRODUCTION_URL: https://matikinca-marketplace.vercel.app
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify correct repository
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$GITHUB_REPOSITORY" = "qamamatikinca-ux/matikinca-marketplace"
+          echo "Repository check: PASS"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Verify production build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Link only the primary Vercel project
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p .vercel
+          cat > .vercel/project.json <<'JSON'
+          {
+            "orgId": "team_ltBsujLbhqOPqX4dlpWDHial",
+            "projectId": "prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt"
+          }
+          JSON
+          cat .vercel/project.json
+
+      - name: Pull primary production settings
+        run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Build for Vercel production
+        run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Deploy only primary production
+        id: deploy
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          DEPLOY_URL="$(vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}")"
+          echo "deployment_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+          echo "Deployment URL: $DEPLOY_URL"
+
+      - name: Verify deployment responds
+        shell: bash
+        env:
+          DEPLOY_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: |
+          set -Eeuo pipefail
+          for attempt in $(seq 1 18); do
+            CODE="$(curl -L -sS -o /dev/null -w '%{http_code}' "$DEPLOY_URL" || true)"
+            echo "[$attempt/18] HTTP $CODE"
+            case "$CODE" in
+              200|301|302|307|308) exit 0 ;;
+            esac
+            sleep 5
+          done
+          echo "::error::Deployment URL did not become reachable."
+          exit 1
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## LoadLink primary production deployment"
+            echo ""
+            echo "- Repository: qamamatikinca-ux/matikinca-marketplace"
+            echo "- Branch: main"
+            echo "- Vercel project: matikinca-marketplace"
+            echo "- Vercel project ID: prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt"
+            echo "- Production URL: https://matikinca-marketplace.vercel.app"
+            echo "- No empty deploy commit is created by this workflow."
+          } >> "$GITHUB_STEP_SUMMARY"
