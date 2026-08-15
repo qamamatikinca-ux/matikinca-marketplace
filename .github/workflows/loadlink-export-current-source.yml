@@ -1,0 +1,36 @@
+name: LoadLink Export Current Source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/loadlink-export-current-source.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Package current source
+        shell: bash
+        run: |
+          rm -rf .git
+          zip -qr loadlink-current-source.zip . -x 'node_modules/*' '.next/*' 'loadlink-current-source.zip'
+
+      - name: Upload source artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: loadlink-current-source
+          path: loadlink-current-source.zip
+          if-no-files-found: error
+          retention-days: 1
