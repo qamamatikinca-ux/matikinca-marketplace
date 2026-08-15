@@ -572,45 +572,54 @@ export default function ListYourVehiclePage() {
 
           {!dealerPost ? (
             <div className="mx-auto mt-6 grid w-full max-w-md gap-3">
-              <a
-                href="#vehicle-marketplace-vehicles"
-                onClick={() => { setListingFlowOpen(false); setListingIntent(null); setSelectedPlan(null); }}
-                className="flex min-h-14 items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]"
-              >
+              <a href="#vehicle-marketplace-vehicles" onClick={() => { setListingFlowOpen(false); setListingIntent(null); setSelectedPlan(null); }} className="flex min-h-14 items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]">
                 View available vehicles
               </a>
-              <button
-                type="button"
-                onClick={() => {
-                  setListingFlowOpen(true);
-                  setListingIntent("vehicle");
-                  setVehicleCategory(null);
-                  setSelectedPlan(null);
-                  setPackageType("standard");
-                  window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-                }}
-                className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]"
-              >
-                List your vehicle
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setListingFlowOpen(true);
-                  setListingIntent("mobile_unit");
-                  setVehicleCategory("mobile_unit");
-                  setSelectedPlan(null);
-                  setPackageType("standard");
-                  window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-                }}
-                className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]"
-              >
-                List a mobile unit
+              <button type="button" onClick={() => {
+                setListingFlowOpen(true);
+                setListingIntent(null);
+                setVehicleCategory(null);
+                setSelectedPlan(null);
+                setPackageType("standard");
+                window.setTimeout(() => document.getElementById("vehicle-listing-choice")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+              }} className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]">
+                List a vehicle or mobile unit
               </button>
             </div>
           ) : null}
         </div>
       </section>
+
+      {listingFlowOpen && !listingIntent && !dealerPost ? (
+        <section id="vehicle-listing-choice" className={`scroll-mt-24 border-b px-4 py-8 md:px-6 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+          <div className="mx-auto max-w-5xl text-center">
+            <h2 className="text-3xl font-black tracking-[-.04em]">What do you want to list?</h2>
+            <p className={`mx-auto mt-2 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Choose first. LoadLink will only show the plan guide and form for that listing route after you make this selection.</p>
+            <div className="mx-auto mt-6 grid max-w-2xl gap-3 sm:grid-cols-2">
+              <button type="button" onClick={() => {
+                setListingIntent("vehicle");
+                setVehicleCategory(null);
+                setSelectedPlan(null);
+                setPackageType("standard");
+                window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+              }} className={`min-h-28 rounded-2xl border p-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <span className="block text-xl font-black">List a vehicle</span>
+                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Truck or trailer listing.</span>
+              </button>
+              <button type="button" onClick={() => {
+                setListingIntent("mobile_unit");
+                setVehicleCategory("mobile_unit");
+                setSelectedPlan(null);
+                setPackageType("standard");
+                window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+              }} className={`min-h-28 rounded-2xl border p-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <span className="block text-xl font-black">List a mobile unit</span>
+                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Mobile fridge, kitchen, clinic, office and other units.</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {listingFlowOpen && listingIntent && !signedIn ? <section id="vehicle-listing-form" className="mx-auto max-w-5xl scroll-mt-24 px-4 py-8 md:px-6"><div className={`loadlink-glass rounded-[24px] border p-6 text-center ${surface}`}><h2 className="text-3xl font-black tracking-[-.04em]">Sign in to list a vehicle</h2><p className={`mx-auto mt-3 max-w-xl text-sm font-semibold leading-6 ${muted}`}>Approved marketplace stock remains available below. Sign in when you are ready to create a truck, trailer or mobile-unit listing.</p><a href={loginHref(currentRelativePath())} className="mt-5 inline-flex h-12 items-center justify-center rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase tracking-[.1em] text-black">Sign in or create account</a></div></section> : null}
 
