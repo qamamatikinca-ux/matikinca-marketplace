@@ -145,3 +145,5 @@ jobs:
           echo "- Deployment commit: \`${DEPLOY_SHA:-none}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Target: primary matikinca-marketplace Vercel project only" >> "$GITHUB_STEP_SUMMARY"
           echo "- Production build must pass before deployment commit is pushed" >> "$GITHUB_STEP_SUMMARY"
+
+# Manual workflow trigger: corrected vehicle portal production deployment.
