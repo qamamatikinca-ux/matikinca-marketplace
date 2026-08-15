@@ -25,7 +25,6 @@ jobs:
       VERCEL_ORG_ID: team_ltBsujLbhqOPqX4dlpWDHial
       VERCEL_PROJECT_ID: prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt
       PRIMARY_PRODUCTION_URL: https://matikinca-marketplace.vercel.app
-      VERCEL_SCOPE: loadlink
 
     steps:
       - name: Checkout main
@@ -58,29 +57,33 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
-      - name: Link only the primary Vercel project
+      - name: Pin the primary Vercel project
         shell: bash
         run: |
           set -Eeuo pipefail
           rm -rf .vercel
-          vercel link \
-            --yes \
-            --project="matikinca-marketplace" \
-            --scope="$VERCEL_SCOPE" \
-            --token="${{ secrets.VERCEL_TOKEN }}"
+          mkdir -p .vercel
+          cat > .vercel/project.json <<'JSON'
+          {
+            "orgId": "team_ltBsujLbhqOPqX4dlpWDHial",
+            "projectId": "prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt",
+            "projectName": "matikinca-marketplace"
+          }
+          JSON
+          cat .vercel/project.json
 
       - name: Pull primary production settings
-        run: vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}"
+        run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
 
       - name: Build for Vercel production
-        run: vercel build --prod --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}"
+        run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
 
       - name: Deploy only primary production
         id: deploy
         shell: bash
         run: |
           set -Eeuo pipefail
-          DEPLOY_URL="$(vercel deploy --prebuilt --prod --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}")"
+          DEPLOY_URL="$(vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}")"
           echo "deployment_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
           echo "Deployment URL: $DEPLOY_URL"
 
@@ -113,5 +116,4 @@ jobs:
             echo "- Vercel project: matikinca-marketplace"
             echo "- Vercel project ID: prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt"
             echo "- Production URL: https://matikinca-marketplace.vercel.app"
-            echo "- Scope: loadlink"
           } >> "$GITHUB_STEP_SUMMARY"
