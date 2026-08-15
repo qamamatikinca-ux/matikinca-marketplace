@@ -143,3 +143,26 @@ div:has(> img[src="/images/loadlink-finance-truck.webp"]) > img {
 div:has(> img[src="/images/loadlink-finance-truck.webp"]) > div[aria-hidden="true"]:not(:first-child) {
   z-index: 2 !important;
 }
+
+/* Dealership stock should swipe naturally on phones instead of squeezing two
+   product cards into the viewport. Desktop keeps the approved grid. */
+@media (max-width: 639px) {
+  body[data-loadlink-path^="/dealership/"] section > div.grid.gap-4.p-4 {
+    display: flex !important;
+    max-width: 100% !important;
+    gap: 12px !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    overscroll-behavior-x: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+  body[data-loadlink-path^="/dealership/"] section > div.grid.gap-4.p-4::-webkit-scrollbar {
+    display: none !important;
+  }
+  body[data-loadlink-path^="/dealership/"] section > div.grid.gap-4.p-4 > a {
+    flex: 0 0 min(86vw, 340px) !important;
+    width: min(86vw, 340px) !important;
+    scroll-snap-align: start !important;
+  }
+}
