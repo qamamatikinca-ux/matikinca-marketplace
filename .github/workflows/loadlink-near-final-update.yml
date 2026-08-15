@@ -5,7 +5,6 @@ on:
     branches:
       - main
     paths:
-      - "scripts/apply_loadlink_near_final_update.py"
       - "scripts/prepare_loadlink_near_final_update.py"
 
 permissions:
@@ -16,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  apply-and-validate:
+  polish-and-validate:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -36,11 +35,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Prepare update compatibility
+      - name: Apply final audit polish
         run: python scripts/prepare_loadlink_near_final_update.py
-
-      - name: Apply near-final update
-        run: python scripts/apply_loadlink_near_final_update.py
 
       - name: Install dependencies
         run: npm ci
@@ -48,7 +44,7 @@ jobs:
       - name: Production build
         run: npm run build
 
-      - name: Commit validated application update
+      - name: Commit validated application polish
         shell: bash
         run: |
           if git diff --quiet -- app components lib; then
@@ -58,5 +54,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app components lib
-          git commit -m "feat: complete near-final LoadLink marketplace update"
+          git commit -m "fix: finish LoadLink near-final marketplace polish"
           git push origin HEAD:main
