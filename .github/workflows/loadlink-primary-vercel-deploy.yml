@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'app/packages/page.tsx'
+      - 'deploy/package-rebuild-trigger.txt'
 
 permissions:
   contents: read
