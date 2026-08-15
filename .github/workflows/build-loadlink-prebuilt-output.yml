@@ -70,4 +70,4 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
 
-# Manual primary-only deployment trigger for the corrected List Your Vehicle build.
+# Manual primary-only deployment trigger for commit 60db3f452f9eff55bc59b85cf801ee5e2113944e — run 2026-08-15 17:37 SAST.
