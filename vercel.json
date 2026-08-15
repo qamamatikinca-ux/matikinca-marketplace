@@ -1,1 +1,1 @@
-{"$schema":"https://openapi.vercel.sh/vercel.json","framework":"nextjs"}
+{"$schema":"https://openapi.vercel.sh/vercel.json","framework":"nextjs","ignoreCommand":"if printf '%s' \"${VERCEL_GIT_COMMIT_MESSAGE:-}\" | grep -Fq '[primary-only]'; then if [ \"${VERCEL_PROJECT_ID:-}\" = 'prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt' ]; then exit 1; else exit 0; fi; else exit 1; fi"}
