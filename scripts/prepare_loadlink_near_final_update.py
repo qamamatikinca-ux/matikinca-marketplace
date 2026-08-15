@@ -44,8 +44,9 @@ next_settings = settings.replace(
 )
 write_if_changed(settings_path, settings, next_settings)
 
-# 3. Homepage marketplace search: scope buttons select a portal, focus the real
-# search field, and the CTA explicitly says where the search will run.
+# 3. Homepage marketplace search: scope buttons select a portal and focus the
+# real search field. Search stays on the homepage until the user actually
+# submits or picks a ranked suggestion.
 discovery_path = "components/MarketplaceDiscovery.tsx"
 discovery = read(discovery_path)
 next_discovery = discovery
@@ -55,12 +56,48 @@ if 'ref={searchInputRef}' not in next_discovery:
     if target not in next_discovery:
         raise SystemExit("Marketplace search input insertion point was not found.")
     next_discovery = next_discovery.replace(target, replacement, 1)
-if '`Search ${scopeLabel(scope)}`' not in next_discovery:
-    target = '                  Search\n                </button>'
-    replacement = '                  {scope === "all" ? "Search" : `Search ${scopeLabel(scope)}`}\n                </button>'
-    if target not in next_discovery:
-        raise SystemExit("Marketplace search CTA insertion point was not found.")
-    next_discovery = next_discovery.replace(target, replacement, 1)
+
+# The first redesign made the homepage search look like a second page inside
+# the homepage: a large outer card, duplicate active-scope badge and an
+# oversized portal-specific CTA. Restore the approved compact proportions and
+# keep only the smarter portal-scoped behaviour underneath.
+old_shell = '''        <div data-loadlink-marketplace-search-shell className={`loadlink-glass relative mx-auto max-w-7xl rounded-[28px] border p-3 shadow-[0_18px_48px_rgba(0,0,0,.08)] md:p-4 ${darkMode ? "border-white/12 bg-black/55" : "border-white/75 bg-white/68"}`}>
+        <div className="mb-3 flex items-end justify-between gap-3 px-1">
+          <div>
+            <p className="text-sm font-black tracking-[-.02em]">Search LoadLink</p>
+            <p className={`mt-1 text-[11px] font-semibold ${darkMode ? "text-white/45" : "text-black/45"}`}>Choose a portal first. Search stays inside that portal.</p>
+          </div>
+          <span className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[.08em] ${darkMode ? "border-white/12 bg-black/45 text-white/65" : "border-black/8 bg-white/70 text-black/55"}`}>{scopeLabel(scope)}</span>
+        </div>'''
+new_shell = '''        <div data-loadlink-marketplace-search-shell className="relative mx-auto max-w-7xl">'''
+if old_shell in next_discovery:
+    next_discovery = next_discovery.replace(old_shell, new_shell, 1)
+elif new_shell not in next_discovery:
+    raise SystemExit("Marketplace compact search shell could not be verified.")
+
+# A short CTA keeps the actual query visible on narrow iPhones. The selected
+# portal is already obvious from the highlighted pill and still controls the
+# ranked results and destination.
+next_discovery = next_discovery.replace(
+    '                  {scope === "all" ? "Search" : `Search ${scopeLabel(scope)}`}\n',
+    '                  Search\n',
+    1,
+)
+next_discovery = next_discovery.replace(
+    'className="mr-1.5 h-11 rounded-[14px] bg-[#f6b800] px-4 text-xs font-black uppercase tracking-wide text-black"',
+    'className="mr-1.5 h-11 min-w-[88px] shrink-0 rounded-[14px] bg-[#f6b800] px-3 text-[11px] font-black uppercase tracking-wide text-black sm:px-4 sm:text-xs"',
+    1,
+)
+next_discovery = next_discovery.replace(
+    'className={`flex min-h-14 items-center overflow-hidden rounded-[18px] border shadow-sm ${',
+    'className={`flex min-h-14 items-center overflow-hidden rounded-[18px] border shadow-sm backdrop-blur-xl backdrop-saturate-150 ${',
+    1,
+)
+next_discovery = next_discovery.replace(
+    'className={`h-14 w-full rounded-[18px] border px-4 text-sm font-bold outline-none focus:border-[#f6b800] ${',
+    'className={`h-14 w-full rounded-[18px] border px-4 text-sm font-bold outline-none backdrop-blur-xl backdrop-saturate-150 focus:border-[#f6b800] ${',
+    1,
+)
 write_if_changed(discovery_path, discovery, next_discovery)
 
 # 4. Vehicle portal copy must reflect the actual marketplace: sale, rental and
@@ -91,7 +128,7 @@ write_if_changed(vehicle_path, vehicle, next_vehicle)
 checks = {
     loader_path: ["@keyframes skid-flow", "animation: skid-flow"],
     settings_path: ["border-current/20 px-5 text-xs font-semibold\">Sign out", "border-red-500 px-5 text-xs font-semibold text-red-500\">Request deletion"],
-    discovery_path: ['ref={searchInputRef}', '`Search ${scopeLabel(scope)}`', 'data-loadlink-marketplace-search-shell'],
+    discovery_path: ['ref={searchInputRef}', 'data-loadlink-marketplace-search-shell className="relative mx-auto max-w-7xl"', 'min-w-[88px] shrink-0', 'backdrop-blur-xl backdrop-saturate-150'],
     jobs_path: ["Find commercial vehicles and units", "sale, rental or POA", "VehicleFullDetails"],
     vehicle_path: ["Mobile Fridge", "VehicleMarketplaceHub", 'value={offerMode}', "unitSpecSchema"],
 }
@@ -101,5 +138,11 @@ for file_path, required_fragments in checks.items():
     missing = [fragment for fragment in required_fragments if fragment not in current]
     if missing:
         raise SystemExit(f"Final LoadLink audit failed for {file_path}: missing {missing}")
+
+final_discovery = read(discovery_path)
+if "Choose a portal first. Search stays inside that portal." in final_discovery or '>Search LoadLink</p>' in final_discovery:
+    raise SystemExit("Oversized duplicate homepage search heading is still present.")
+if '`Search ${scopeLabel(scope)}`' in final_discovery:
+    raise SystemExit("Portal-specific CTA is still too wide for the compact mobile search.")
 
 print("Near-final LoadLink audit polish is complete and ready for production build validation.")
