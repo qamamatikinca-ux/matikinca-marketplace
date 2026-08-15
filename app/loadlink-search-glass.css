@@ -1,5 +1,5 @@
-/* Shared LoadLink category-pill treatment for homepage search.
-   SearchResultsClient has its own matching classes. */
+/* LoadLink homepage search, mobile scale and visual grounding.
+   Keep these rules narrow so approved page layouts are not redesigned globally. */
 
 [aria-label="Search category"] > div {
   gap: 12px !important;
@@ -7,16 +7,16 @@
 }
 
 [aria-label="Search category"] > div > button {
-  min-height: 54px !important;
-  min-width: 116px !important;
+  min-height: 50px !important;
+  min-width: 108px !important;
   border-radius: 9999px !important;
-  padding: 12px 24px !important;
+  padding: 11px 20px !important;
   font-size: 15px !important;
   font-weight: 600 !important;
   letter-spacing: -0.01em !important;
   -webkit-backdrop-filter: blur(18px) saturate(145%) !important;
   backdrop-filter: blur(18px) saturate(145%) !important;
-  box-shadow: 0 8px 22px rgba(0,0,0,.07) !important;
+  box-shadow: 0 8px 22px rgba(0,0,0,.06) !important;
 }
 
 html[data-loadlink-theme="dark"] [aria-label="Search category"] > div > button[aria-pressed="false"] {
@@ -26,7 +26,7 @@ html[data-loadlink-theme="dark"] [aria-label="Search category"] > div > button[a
 }
 
 html[data-loadlink-theme="light"] [aria-label="Search category"] > div > button[aria-pressed="false"] {
-  background: rgba(255,255,255,.78) !important;
+  background: rgba(255,255,255,.68) !important;
   border-color: rgba(0,0,0,.08) !important;
   color: rgba(0,0,0,.66) !important;
 }
@@ -35,7 +35,44 @@ html[data-loadlink-theme="light"] [aria-label="Search category"] > div > button[
   background: #f6b800 !important;
   border-color: #f6b800 !important;
   color: #050505 !important;
-  box-shadow: 0 10px 28px rgba(246,184,0,.22) !important;
+  box-shadow: 0 10px 28px rgba(246,184,0,.18) !important;
+}
+
+/* Homepage search must keep the approved Jobs-style composition: black icon,
+   white input, gold action, then a separate white location field. */
+[data-loadlink-home-search-row] {
+  background: #fff !important;
+}
+[data-loadlink-home-search-input],
+[data-loadlink-home-location] input {
+  background: #fff !important;
+  color: #111 !important;
+  border-color: rgba(17,17,17,.14) !important;
+  font-size: 16px !important;
+}
+[data-loadlink-home-search-input]::placeholder,
+[data-loadlink-home-location] input::placeholder {
+  color: rgba(17,17,17,.42) !important;
+}
+[data-loadlink-home-search-suggestions] {
+  -webkit-backdrop-filter: blur(22px) saturate(140%) !important;
+  backdrop-filter: blur(22px) saturate(140%) !important;
+}
+
+/* Restore yesterday's restrained bottom gold portal glow instead of a large
+   radial spotlight. The image itself remains untouched. */
+[data-loadlink-portal-glow] {
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  height: 10rem !important;
+  opacity: 1 !important;
+  transform: none !important;
+  filter: blur(48px) !important;
+  background: rgba(246,184,0,.18) !important;
+}
+html[data-loadlink-theme="dark"] [data-loadlink-portal-glow] {
+  background: rgba(92,67,0,.20) !important;
 }
 
 /* Keep the Seen marker in the upper-left of listing media so it never fights
@@ -57,7 +94,8 @@ html[data-loadlink-theme="light"] [aria-label="Search category"] > div > button[
   }
 }
 
-/* Ground the finance truck with a soft tyre/contact shadow. */
+/* Ground the finance truck with a soft contact shadow behind the vehicle,
+   matching the visual depth of the reference without painting over the truck. */
 div:has(> img[src="/images/loadlink-finance-truck.webp"]) {
   isolation: isolate;
 }
@@ -67,15 +105,17 @@ div:has(> img[src="/images/loadlink-finance-truck.webp"])::after {
   z-index: 1;
   left: 50%;
   bottom: 8%;
-  width: 58%;
-  height: 8%;
+  width: 62%;
+  height: 9%;
   transform: translateX(-50%);
   border-radius: 50%;
-  background: rgba(0,0,0,.22);
-  filter: blur(16px);
+  background: rgba(0,0,0,.20);
+  filter: blur(17px);
   pointer-events: none;
 }
 div:has(> img[src="/images/loadlink-finance-truck.webp"]) > img {
-  position: relative;
+  z-index: 10 !important;
+}
+div:has(> img[src="/images/loadlink-finance-truck.webp"]) > div[aria-hidden="true"]:not(:first-child) {
   z-index: 2 !important;
 }
