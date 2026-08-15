@@ -12,12 +12,16 @@ function repairContractLinks() {
 }
 
 function readSeen() {
+  const seen = new Set<string>();
   try {
     const saved = JSON.parse(localStorage.getItem(SEEN_KEY) || "[]");
-    return new Set<string>(Array.isArray(saved) ? saved.map(String) : []);
-  } catch {
-    return new Set<string>();
-  }
+    if (Array.isArray(saved)) saved.forEach((id) => id && seen.add(String(id)));
+  } catch {}
+  try {
+    const recent = JSON.parse(localStorage.getItem("loadlink-recent-viewed-jobs") || "[]");
+    if (Array.isArray(recent)) recent.forEach((item) => item?.id && seen.add(String(item.id)));
+  } catch {}
+  return seen;
 }
 
 function markSeen(id: string) {
@@ -25,6 +29,7 @@ function markSeen(id: string) {
   const seen = readSeen();
   seen.add(id);
   try { localStorage.setItem(SEEN_KEY, JSON.stringify([...seen])); } catch {}
+  window.dispatchEvent(new Event("loadlink-seen-listings-updated"));
 }
 
 function listingIdFromHref(href: string) {
@@ -37,10 +42,9 @@ function listingIdFromHref(href: string) {
   }
 }
 
-function ensureSeenBadge(link: HTMLAnchorElement, id: string) {
+function ensureSeenBadge(media: HTMLElement, id: string) {
   if (!id || !readSeen().has(id)) return;
-  if (link.querySelector('[data-loadlink-seen-badge="true"]')) return;
-  const media = link.querySelector<HTMLElement>("img")?.parentElement || link;
+  if (media.querySelector('[data-loadlink-seen-badge="true"]')) return;
   if (getComputedStyle(media).position === "static") media.style.position = "relative";
   const badge = document.createElement("span");
   badge.dataset.loadlinkSeenBadge = "true";
@@ -52,45 +56,43 @@ function ensureSeenBadge(link: HTMLAnchorElement, id: string) {
 
 function repairSeenListings() {
   const seen = readSeen();
+
   document.querySelectorAll<HTMLAnchorElement>('a[href*="/listing/"]').forEach((link) => {
     const id = listingIdFromHref(link.href);
-    if (!id) return;
-    if (!link.dataset.loadlinkSeenBound) {
-      link.dataset.loadlinkSeenBound = "true";
-      link.addEventListener("click", () => markSeen(id));
-    }
-    if (seen.has(id)) ensureSeenBadge(link, id);
+    if (!id || !seen.has(id)) return;
+    const media = link.querySelector<HTMLElement>("img")?.parentElement || link;
+    ensureSeenBadge(media, id);
+  });
+
+  document.querySelectorAll<HTMLElement>('article[id^="job-"]').forEach((article) => {
+    const id = article.id.replace(/^job-/, "");
+    if (!id || !seen.has(id)) return;
+    const media = article.querySelector<HTMLElement>('[role="button"]') || article.querySelector<HTMLElement>("img")?.parentElement;
+    if (media) ensureSeenBadge(media, id);
   });
 }
 
-function repairVehiclePortal() {
-  if (!window.location.pathname.startsWith("/list-your-vehicle")) return;
-  const headings = [...document.querySelectorAll<HTMLElement>("h1")];
-  const heroHeading = headings.find((node) => /find a vehicle|add stock/i.test(node.textContent || ""));
-  const hero = heroHeading?.closest<HTMLElement>("section");
-  if (!hero) return;
+function captureSeenClick(event: MouseEvent) {
+  const target = event.target as HTMLElement | null;
+  if (!target) return;
 
-  hero.dataset.loadlinkVehicleHero = "true";
-  hero.style.minHeight = window.innerWidth < 768 ? "390px" : "450px";
-
-  const heroInner = heroHeading?.parentElement;
-  if (heroInner) {
-    heroInner.style.minHeight = window.innerWidth < 768 ? "390px" : "450px";
-    heroInner.style.paddingBottom = window.innerWidth < 768 ? "28px" : "38px";
+  const listingLink = target.closest<HTMLAnchorElement>('a[href*="/listing/"]');
+  if (listingLink) {
+    const id = listingIdFromHref(listingLink.href);
+    if (id) markSeen(id);
+    window.requestAnimationFrame(repairSeenListings);
+    return;
   }
 
-  const controls = [...hero.querySelectorAll<HTMLElement>("a,button")];
-  const browse = controls.find((node) => /browse available stock|view available vehicles/i.test(node.textContent || ""));
-  const listVehicle = controls.find((node) => /^\s*list your vehicle\s*$/i.test(node.textContent || ""));
-  const listUnit = controls.find((node) => /list a mobile unit/i.test(node.textContent || ""));
-  const parent = listVehicle?.parentElement;
-  if (!parent || !browse || !listVehicle || !listUnit) return;
-
-  browse.textContent = "Browse available vehicles";
-  parent.insertBefore(listVehicle, parent.firstChild);
-  parent.insertBefore(listUnit, listVehicle.nextSibling);
-  parent.appendChild(browse);
-  parent.dataset.loadlinkDriverHierarchy = "true";
+  const card = target.closest<HTMLElement>('article[id^="job-"]');
+  if (!card) return;
+  const id = card.id.replace(/^job-/, "");
+  const photoOpen = Boolean(target.closest('[role="button"]'));
+  const summary = target.closest("summary");
+  const detailsOpen = Boolean(summary && /view full details/i.test(summary.textContent || ""));
+  if (!photoOpen && !detailsOpen) return;
+  markSeen(id);
+  window.requestAnimationFrame(repairSeenListings);
 }
 
 function repairDealerPackage() {
@@ -99,17 +101,15 @@ function repairDealerPackage() {
   const dealer = cards.find((card) => /^\s*Dealer\s*$/i.test(card.querySelector("h3")?.textContent || ""));
   const list = dealer?.querySelector("ul");
   if (!dealer || !list) return;
-  const existing = (dealer.textContent || "").toLowerCase();
   const add = (label: string) => {
-    const key = label.toLowerCase();
-    if ((dealer.textContent || "").toLowerCase().includes(key)) return;
+    if ((dealer.textContent || "").toLowerCase().includes(label.toLowerCase())) return;
     const li = document.createElement("li");
     li.className = "flex gap-2 text-[11px] font-semibold";
     li.innerHTML = '<span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]"></span>' + label;
     list.appendChild(li);
   };
-  if (!existing.includes("opening times")) add("Public dealership opening times");
-  if (!existing.includes("customer reviews")) add("Verified customer reviews");
+  add("Public dealership opening times");
+  add("Verified customer reviews");
 }
 
 function repairDealerProfile() {
@@ -142,47 +142,18 @@ function repairDealerProfile() {
   const firstContentSection = main.querySelector("section:nth-of-type(2)");
   if (firstContentSection?.nextSibling) main.insertBefore(section, firstContentSection.nextSibling);
   else main.appendChild(section);
-  section.querySelector<HTMLButtonElement>('[data-loadlink-review-action="true"]')?.addEventListener("click", () => {
-    window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { kind: "info", title: "Dealership reviews", message: "Reviews are available to verified customers after a genuine LoadLink interaction.", duration: 5200 } }));
-  });
 }
 
 function ensureStyles() {
-  if (document.getElementById("loadlink-v277-ui-repair")) return;
+  if (document.getElementById("loadlink-v278-ui-repair")) return;
   const style = document.createElement("style");
-  style.id = "loadlink-v277-ui-repair";
+  style.id = "loadlink-v278-ui-repair";
   style.textContent = `
 .loadlink-chat-header button[aria-label="View latest dealer update"]{padding:0!important;background:transparent!important;overflow:visible!important}
 .loadlink-chat-header button[aria-label="View latest dealer update"]>span{width:100%!important;height:100%!important;padding:0!important;background:transparent!important;border-radius:999px!important}
 .loadlink-chat-header button[aria-label="View latest dealer update"] [aria-label$="profile picture"]{width:100%!important;height:100%!important}
 [aria-label$="profile picture"]>span{background:transparent!important}
-
-[data-loadlink-site-header]{position:fixed!important;inset-inline:0!important;top:0!important;z-index:1000!important}
-
-body[data-loadlink-path="/"] [data-loadlink-marketplace-search-shell],
-body[data-loadlink-path="/"] [data-loadlink-marketplace-search-shell]>*{border-top:0!important}
-body[data-loadlink-path="/"] [data-loadlink-marketplace-search-shell]::before,
-body[data-loadlink-path="/"] [data-loadlink-marketplace-search-shell]::after{display:none!important;content:none!important}
-
-body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a{height:290px!important;min-height:290px!important}
-body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a>img:first-of-type{width:100%!important;height:100%!important;object-fit:cover!important;opacity:.48!important;filter:blur(3px) brightness(1.08)!important;transform:scale(1.025)!important}
-body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a>img:nth-of-type(2){width:100%!important;height:100%!important;object-fit:contain!important;opacity:1!important;filter:brightness(1.14) saturate(1.12) contrast(1.03)!important;transform:none!important}
-body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a>div.relative.z-10>div{min-height:50px!important;width:min(72vw,390px)!important;padding:10px 20px!important;font-size:14px!important}
-@media(min-width:640px){body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a{height:330px!important;min-height:330px!important}}
-@media(min-width:768px){body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a{height:380px!important;min-height:380px!important}body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a>div.relative.z-10>div{min-height:58px!important;width:min(42vw,430px)!important;padding:12px 28px!important;font-size:16px!important}}
-@media(min-width:1024px){body[data-loadlink-path="/"] section[aria-label="LoadLink portals"]>div>a{height:420px!important;min-height:420px!important}}
-
-[data-loadlink-marketplace-search-shell] [aria-label="Search category"] button{min-height:40px!important;min-width:86px!important;padding:8px 16px!important;font-size:13px!important}
-[data-loadlink-marketplace-search-shell] [aria-label="Search category"] button[aria-pressed="false"]{border-color:#d1d5db!important;box-shadow:none!important}
-html[data-loadlink-theme="dark"] [data-loadlink-marketplace-search-shell] [aria-label="Search category"] button[aria-pressed="false"]{border-color:#4b5563!important}
-
-body[data-loadlink-path^="/list-your-vehicle"] [data-loadlink-vehicle-hero="true"]{min-height:390px!important}
-body[data-loadlink-path^="/list-your-vehicle"] [data-loadlink-driver-hierarchy="true"]{width:min(100%,430px)!important;gap:10px!important}
-body[data-loadlink-path^="/list-your-vehicle"] [data-loadlink-driver-hierarchy="true"]>*{min-height:50px!important}
-@media(min-width:768px){body[data-loadlink-path^="/list-your-vehicle"] [data-loadlink-vehicle-hero="true"]{min-height:450px!important}}
-
-.loadlink-seen-post-badge{position:absolute!important;top:12px!important;right:12px!important;z-index:8!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;border-radius:12px!important;background:rgba(0,0,0,.72)!important;color:#fff!important;padding:7px 12px!important;font-size:12px!important;font-weight:600!important;line-height:1!important;letter-spacing:0!important;backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important}
-
+.loadlink-seen-post-badge{position:absolute!important;top:12px!important;right:12px!important;z-index:20!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:9px!important;background:rgba(18,18,18,.78)!important;color:#fff!important;padding:8px 13px!important;font-size:12px!important;font-weight:700!important;line-height:1!important;letter-spacing:0!important;box-shadow:0 6px 18px rgba(0,0,0,.2)!important;backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important}
 .loadlink-dealer-business-info{padding:28px 20px;border-bottom:1px solid rgba(0,0,0,.08)}
 .loadlink-dealer-business-grid{width:min(100%,1216px);margin:0 auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .loadlink-dealer-business-card{border:1px solid rgba(0,0,0,.1);background:rgba(255,255,255,.78);border-radius:24px;padding:22px;box-shadow:0 12px 34px rgba(0,0,0,.05)}
@@ -202,7 +173,6 @@ function runRepairs() {
   ensureStyles();
   repairContractLinks();
   repairSeenListings();
-  repairVehiclePortal();
   repairDealerPackage();
   repairDealerProfile();
 }
@@ -214,14 +184,19 @@ export default function LoadLinkUiRepairV273() {
     runRepairs();
     const observer = new MutationObserver(() => runRepairs());
     observer.observe(document.body, { childList: true, subtree: true });
+    const seenRefresh = () => runRepairs();
+    document.addEventListener("click", captureSeenClick, true);
+    window.addEventListener("loadlink-seen-listings-updated", seenRefresh);
+    window.addEventListener("loadlink-recent-activity-updated", seenRefresh);
     const frame = window.requestAnimationFrame(runRepairs);
-    const shortTimer = window.setTimeout(runRepairs, 180);
-    const longTimer = window.setTimeout(runRepairs, 700);
+    const timer = window.setTimeout(runRepairs, 350);
     return () => {
       observer.disconnect();
+      document.removeEventListener("click", captureSeenClick, true);
+      window.removeEventListener("loadlink-seen-listings-updated", seenRefresh);
+      window.removeEventListener("loadlink-recent-activity-updated", seenRefresh);
       window.cancelAnimationFrame(frame);
-      window.clearTimeout(shortTimer);
-      window.clearTimeout(longTimer);
+      window.clearTimeout(timer);
     };
   }, [pathname]);
 
