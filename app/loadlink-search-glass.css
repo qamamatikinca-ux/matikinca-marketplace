@@ -61,3 +61,5 @@ html[data-loadlink-theme="light"] [aria-label="Search category"] > div > button[
   color: #050505 !important;
   box-shadow: 0 10px 28px rgba(246,184,0,.22) !important;
 }
+
+/* Primary production sync: keep this overlay fix tied to the deployed source. */
