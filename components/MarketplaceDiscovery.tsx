@@ -103,17 +103,17 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
   const visibleScopes = useMemo(() => searchScopes.filter((item) => item.value !== "page"), []);
 
   const suggestions = useMemo(() => {
-    const ranked = filterAndRankResults(allSearchItems, scope, query, location).slice(0, 11);
+    const ranked = filterAndRankResults(allSearchItems, scope, query, location).slice(0, 5);
     const browse: SearchResult = {
       id: `browse-${scope}`,
       label: scope === "all" ? "Search all of LoadLink" : `Browse all ${scopeLabel(scope).toLowerCase()}`,
-      meta: location ? `Results around ${location}` : "Open the full image-led LoadLink results page",
+      meta: location ? `Results around ${location}` : "Open the full LoadLink results page",
       href: routeForScope(scope, query, location),
       searchable: `${scopeLabel(scope)} ${query} ${location} search all LoadLink`,
       scope,
       priority: 70,
     };
-    return query.trim() || location.trim() ? [...ranked, browse].slice(0, 12) : [browse, ...ranked.slice(0, 7)];
+    return query.trim() || location.trim() ? [...ranked, browse].slice(0, 6) : [browse];
   }, [allSearchItems, location, query, scope]);
 
   function launchSearch(destination?: string) {
@@ -131,16 +131,9 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
 
   return (
     <>
-      <section
-        className={`relative z-[180] overflow-visible border-0 px-4 py-5 sm:px-5 md:px-12 md:py-7 ${
-          darkMode ? "bg-[#050505] text-white" : "bg-white text-black"
-        }`}
-      >
-        <div
-          data-loadlink-marketplace-search-shell
-          className="loadlink-glass relative z-[181] mx-auto max-w-5xl overflow-visible rounded-[22px] border border-[#f6b800]/55 bg-black/88 p-4 text-white shadow-[0_20px_60px_rgba(0,0,0,.36)] backdrop-blur-md md:p-5"
-        >
-          <div className="no-scrollbar overflow-x-auto border-0 py-1" aria-label="Search category">
+      <section className={`relative z-[180] overflow-visible border-0 px-5 py-4 md:px-12 md:py-6 ${darkMode ? "bg-[#050505] text-white" : "bg-[#fffaf0] text-black"}`}>
+        <div className="mx-auto max-w-5xl">
+          <div className="no-scrollbar overflow-x-auto py-1" aria-label="Search category">
             <div className="flex min-w-max gap-2 px-0.5">
               {visibleScopes.map((item) => (
                 <button
@@ -148,10 +141,12 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                   type="button"
                   onClick={() => chooseScope(item.value)}
                   aria-pressed={scope === item.value}
-                  className={`min-h-[42px] min-w-[92px] shrink-0 rounded-full border px-4 py-2 text-[12px] font-black tracking-[-.01em] transition duration-200 active:scale-[.985] sm:min-w-[104px] sm:text-[13px] ${
+                  className={`min-h-[44px] min-w-[100px] shrink-0 rounded-full border px-4 py-2 text-[13px] font-black tracking-[-.015em] transition active:scale-[.985] sm:min-h-[46px] sm:min-w-[112px] sm:px-5 sm:text-sm ${
                     scope === item.value
-                      ? "border-[#f6b800] bg-[#f6b800] text-black shadow-[0_8px_22px_rgba(246,184,0,.16)]"
-                      : "border-[#6b7280] bg-[#080808]/90 text-white/84 shadow-none hover:border-[#9ca3af]"
+                      ? "border-[#f6b800] bg-[#f6b800] text-black shadow-[0_8px_20px_rgba(246,184,0,.16)]"
+                      : darkMode
+                        ? "border-[#4b5563] bg-[#090909] text-white/80"
+                        : "border-[#d1d5db] bg-white text-[#4b5563]"
                   }`}
                 >
                   {item.label}
@@ -160,13 +155,14 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3 overflow-visible md:grid-cols-[minmax(0,1.25fr)_minmax(230px,.75fr)]">
-            <div ref={searchWrapperRef} className="relative z-[190] min-w-0 overflow-visible">
-              <label htmlFor="loadlink-marketplace-search" className="mb-2 block text-[10px] font-black uppercase tracking-[.16em] text-[#f6b800] sm:text-xs">
+          <div data-loadlink-marketplace-search-shell className="relative z-[181] mt-4 overflow-visible">
+            <div ref={searchWrapperRef} className="relative z-[190] overflow-visible">
+              <label htmlFor="loadlink-marketplace-search" className="mb-3 block text-[11px] font-black uppercase tracking-[.16em] text-[#c18d00]">
                 Search LoadLink
               </label>
-              <div className="flex min-h-12 min-w-0 items-center overflow-hidden rounded-xl border border-white/15 bg-[#111]/94 shadow-none focus-within:border-[#f6b800]">
-                <span className="flex h-12 w-11 shrink-0 items-center justify-center text-white/52">
+
+              <div className="flex h-14 w-full min-w-0 overflow-hidden rounded-[16px] border border-black/55 bg-[#1b1b1b] shadow-[0_7px_18px_rgba(0,0,0,.12)]">
+                <span className="flex h-full w-14 shrink-0 items-center justify-center bg-[#1b1b1b] text-white/55">
                   <SearchIcon />
                 </span>
                 <input
@@ -174,12 +170,12 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                   value={query}
                   onFocus={() => {
                     setActiveSearchField("query");
-                    setShowSuggestions(true);
+                    setShowSuggestions(Boolean(query.trim()));
                   }}
                   onChange={(event) => {
                     setQuery(event.target.value);
                     setActiveSearchField("query");
-                    setShowSuggestions(true);
+                    setShowSuggestions(Boolean(event.target.value.trim()));
                   }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") launchSearch();
@@ -190,87 +186,67 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                   }}
                   autoComplete="off"
                   placeholder={placeholderForScope(scope)}
-                  className="h-12 min-w-0 flex-1 bg-transparent pr-2 text-sm font-semibold text-white outline-none placeholder:text-white/38"
+                  className="h-full min-w-0 flex-1 border-0 bg-white px-3 text-[16px] font-semibold text-black outline-none placeholder:text-black/40 sm:px-4"
                 />
                 <button
                   type="button"
                   onClick={() => launchSearch()}
-                  className="mr-1 h-10 min-w-[82px] shrink-0 rounded-lg border border-[#f6b800] bg-[#f6b800] px-3 text-[10px] font-black uppercase tracking-wide text-black sm:min-w-[94px] sm:text-[11px]"
+                  className="m-1.5 ml-0 min-w-[94px] shrink-0 rounded-[14px] bg-[#f6b800] px-3 text-[12px] font-black uppercase tracking-[.04em] text-black sm:min-w-[112px] sm:text-sm"
                 >
                   Search
                 </button>
               </div>
 
               {showSuggestions && activeSearchField === "query" ? (
-                <div className="absolute inset-x-0 top-[74px] z-[240] max-h-[360px] overflow-y-auto rounded-[14px] border border-[#f6b800]/25 bg-[#070707]/[.99] text-white shadow-[0_22px_60px_rgba(0,0,0,.52)]">
-                  {suggestions.length ? (
-                    suggestions.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => launchSearch(item.href)}
-                        className="flex w-full items-center justify-between gap-4 border-b border-white/[.08] px-4 py-3.5 text-left last:border-b-0 hover:bg-white/[.06]"
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-black">{item.label}</span>
-                          <span className="mt-1 block truncate text-[11px] font-semibold text-white/45">
-                            {item.meta}
-                          </span>
-                        </span>
-                        <ArrowIcon />
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-4 py-5 text-sm font-semibold text-white/50">
-                      No matching public result was found. Try a simpler word or search All.
-                    </div>
-                  )}
+                <div className={`absolute inset-x-0 top-[92px] z-[240] max-h-[320px] overflow-y-auto rounded-[18px] border shadow-[0_22px_56px_rgba(0,0,0,.24)] backdrop-blur-xl ${darkMode ? "border-white/12 bg-[#090909]/86 text-white" : "border-black/[.08] bg-white/82 text-black"}`}>
+                  {suggestions.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => launchSearch(item.href)}
+                      className={`flex w-full items-center justify-between gap-4 border-b px-4 py-3.5 text-left last:border-b-0 ${darkMode ? "border-white/[.08] hover:bg-white/[.06]" : "border-black/[.05] hover:bg-white/70"}`}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-black">{item.label}</span>
+                        <span className={`mt-1 block truncate text-[11px] font-semibold ${darkMode ? "text-white/48" : "text-black/48"}`}>{item.meta}</span>
+                      </span>
+                      <ArrowIcon />
+                    </button>
+                  ))}
                 </div>
               ) : null}
             </div>
 
-            <div className="min-w-0">
-              <label htmlFor="loadlink-marketplace-location" className="mb-2 block text-[10px] font-black uppercase tracking-[.16em] text-[#f6b800] sm:text-xs">
-                Location
-              </label>
-              <SouthAfricaLocationInput
-                id="loadlink-marketplace-location"
-                value={location}
-                onInputFocus={() => {
-                  setActiveSearchField("location");
-                  setShowSuggestions(false);
-                }}
-                onChange={(value) => {
-                  setLocation(value);
-                  setActiveSearchField("location");
-                  setShowSuggestions(false);
-                }}
-                darkMode
-                placeholder="City, town or province"
-                ariaLabel="Optional South African city, town or province"
-                className="h-12 w-full rounded-xl border border-white/15 bg-[#111]/94 px-4 text-sm font-semibold text-white outline-none placeholder:text-white/38 focus:border-[#f6b800]"
-              />
-            </div>
+            <label htmlFor="loadlink-marketplace-location" className="mb-3 mt-5 block text-[11px] font-black uppercase tracking-[.16em] text-[#c18d00]">
+              Location
+            </label>
+            <SouthAfricaLocationInput
+              id="loadlink-marketplace-location"
+              value={location}
+              onInputFocus={() => {
+                setActiveSearchField("location");
+                setShowSuggestions(false);
+              }}
+              onChange={(value) => {
+                setLocation(value);
+                setActiveSearchField("location");
+                setShowSuggestions(false);
+              }}
+              darkMode={darkMode}
+              placeholder="City, town or province"
+              ariaLabel="Optional South African city, town or province"
+              className={`h-14 w-full rounded-[16px] border px-4 text-[16px] font-semibold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/14 bg-[#141414] text-white placeholder:text-white/35" : "border-[#d5d7db] bg-white text-black placeholder:text-black/40"}`}
+            />
           </div>
         </div>
       </section>
 
       <div ref={fabWrapperRef} className="fixed bottom-5 right-5 z-[70] flex flex-col items-end gap-2">
         {fabOpen ? (
-          <div
-            className={`w-64 overflow-hidden rounded-[20px] border shadow-[0_24px_70px_rgba(0,0,0,.34)] ${
-              darkMode ? "border-white/13 bg-black/96 text-white" : "border-black/[.08] bg-white text-black"
-            }`}
-          >
-            <RequireAuthLink href="/jobs/list" className="block border-b border-black/10 px-4 py-3.5 text-sm font-black">
-              Post a job
-            </RequireAuthLink>
-            <RequireAuthLink href="/list-your-vehicle" className="block border-b border-black/10 px-4 py-3.5 text-sm font-black">
-              List a vehicle
-            </RequireAuthLink>
-            <RequireAuthLink href="/jobs/list?mode=contract" className="block px-4 py-3.5 text-sm font-black">
-              Post a contract
-            </RequireAuthLink>
+          <div className={`w-64 overflow-hidden rounded-[20px] border shadow-[0_24px_70px_rgba(0,0,0,.34)] ${darkMode ? "border-white/13 bg-black/96 text-white" : "border-black/[.08] bg-white text-black"}`}>
+            <RequireAuthLink href="/jobs/list" className="block border-b border-black/10 px-4 py-3.5 text-sm font-black">Post a job</RequireAuthLink>
+            <RequireAuthLink href="/list-your-vehicle" className="block border-b border-black/10 px-4 py-3.5 text-sm font-black">List a vehicle</RequireAuthLink>
+            <RequireAuthLink href="/jobs/list?mode=contract" className="block px-4 py-3.5 text-sm font-black">Post a contract</RequireAuthLink>
           </div>
         ) : null}
         <button
@@ -289,7 +265,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
 
 function SearchIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="2" />
       <path d="m16 16 4.2 4.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
