@@ -133,7 +133,7 @@ export default function ToolsPage() {
       </div>
 
       <Link href="/tools/truck-finance" className={`loadlink-glass mt-7 grid overflow-hidden rounded-[28px] border md:grid-cols-[1.05fr_.95fr] ${card}`}>
-        <div className="p-5 md:p-7"><p className="text-[10px] font-black uppercase tracking-[.18em] text-[#b88900]">Finance planning</p><h2 className="mt-2 text-3xl font-black tracking-[-.04em]">Truck finance calculator</h2><p className={`mt-3 max-w-xl text-sm font-semibold leading-6 ${muted}`}>Set a monthly budget, term, deposit, trade-in and planning rate, then match the outcome against approved LoadLink trucks, trailers and units.</p><span className="mt-5 inline-flex rounded-xl bg-[#f6b800] px-4 py-3 text-xs font-black text-black">Open calculator</span></div>
+        <div className="p-5 md:p-7"><p className="text-[10px] font-black uppercase tracking-[.18em] text-[#b88900]">Vehicle planning</p><h2 className="mt-2 text-3xl font-black tracking-[-.04em]">Calculator</h2><p className={`mt-3 max-w-xl text-sm font-semibold leading-6 ${muted}`}>Enter your monthly budget, term, deposit, trade-in and interest rate, then see approved LoadLink stock that actually fits the result.</p><span className="mt-5 inline-flex rounded-xl bg-[#f6b800] px-4 py-3 text-xs font-black text-black">Open calculator</span></div>
         <div className="relative min-h-[190px] overflow-hidden bg-black"><img src="/images/jobs/jobs-hero-fleet.jpg" alt="Commercial trucks" className="absolute inset-0 h-full w-full object-cover opacity-75"/><div className="absolute inset-0 bg-gradient-to-r from-black/55 to-transparent"/></div>
       </Link>
 
