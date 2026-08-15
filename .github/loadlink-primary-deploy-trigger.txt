@@ -4,3 +4,4 @@ Verified source commit: 329f859f1fdd8f50c0aff07cc3e8bfdb626549f4
 Build verification: GitHub Actions production build passed before main promotion
 Requested deployment method: GitHub main branch push
 Batch: homepage search, portal glow, seen badge, vehicle flow, menu corners, finance shadow, messages/light-mode fixes
+Retry trigger: force production deployment now
