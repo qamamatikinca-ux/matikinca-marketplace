@@ -2,10 +2,6 @@ name: LoadLink Primary Vercel Deploy
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'deploy/package-rebuild-trigger.txt'
 
 permissions:
   contents: read
