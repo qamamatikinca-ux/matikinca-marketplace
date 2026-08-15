@@ -1,0 +1,42 @@
+name: Install finance truck image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/install-finance-truck-image.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Assemble finance truck asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p public/images
+          cat .loadlink-asset-staging/finance-truck/part* | base64 --decode > public/images/loadlink-finance-truck.webp
+          test "$(stat -c '%s' public/images/loadlink-finance-truck.webp)" = "54988"
+          echo "2f971a0ee3b654e913488e240a750d0821f38fa3fbf8bbfab162b7b1dd788c17  public/images/loadlink-finance-truck.webp" | sha256sum -c -
+
+      - name: Commit only the finished image
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -r .loadlink-asset-staging/finance-truck
+          git rm .github/workflows/install-finance-truck-image.yml
+          git add public/images/loadlink-finance-truck.webp
+          git commit -m "Add finance calculator truck image [skip ci]"
+          git push origin HEAD:main
