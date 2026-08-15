@@ -21,8 +21,17 @@ jobs:
           ref: loadlink-final-ui-20260815
           fetch-depth: 0
 
-      - name: Apply exact UI corrections
-        run: python3 .github/loadlink-final-ui-20260815.py
+      - name: Correct patch marker and apply exact UI corrections
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('.github/loadlink-final-ui-20260815.py')
+          s = p.read_text()
+          s = s.replace("choice_end = s.index('      {listingFlowOpen && !signedIn ?', choice_start)", "choice_end = s.index('      {listingFlowOpen && listingIntent && !signedIn ?', choice_start)")
+          p.write_text(s)
+          PY
+          python3 .github/loadlink-final-ui-20260815.py
 
       - name: Install dependencies
         run: npm ci
