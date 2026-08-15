@@ -128,6 +128,11 @@ export default function LoadLinkLoading() {
           to { transform: rotate(360deg); }
         }
 
+        @keyframes skid-flow {
+          from { background-position: 0 0; }
+          to { background-position: -70px 0; }
+        }
+
         @keyframes track-fade {
           0% { opacity: 0; }
           10% { opacity: 0.9; }

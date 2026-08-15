@@ -35,7 +35,7 @@ const truckBodyTypes = [
   "Crane truck", "Logging truck", "Other",
 ];
 const trailerTypes = ["Flatbed", "Tautliner", "Side Tipper", "End Tipper", "Refrigerated", "Tanker", "Lowbed", "Livestock", "Car Carrier", "Container", "Other"];
-const mobileUnitTypes = ["Mobile Toilet", "Food Truck", "Mobile Kitchen", "Mobile Clinic", "Mobile Office", "Mobile Workshop", "Mobile Classroom", "Mobile Accommodation", "Mobile Shower", "Cold Room", "Other"];
+const mobileUnitTypes = ["Mobile Toilet", "Mobile Fridge", "Food Truck", "Mobile Kitchen", "Mobile Clinic", "Mobile Office", "Mobile Workshop", "Mobile Classroom", "Mobile Accommodation", "Mobile Shower", "Cold Room", "Other"];
 const gearboxOptions = ["Manual", "Automatic", "Automated manual", "Electric direct drive", "Not applicable", "Converted / custom"];
 const acceptedDocuments = ".jpg,.jpeg,.png,.webp,.pdf";
 

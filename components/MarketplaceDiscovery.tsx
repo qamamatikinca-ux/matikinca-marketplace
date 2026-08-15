@@ -185,6 +185,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                 </span>
                 <input
                   id="loadlink-marketplace-search"
+                  ref={searchInputRef}
                   value={query}
                   onFocus={() => {
                     setActiveSearchField("query");
@@ -213,7 +214,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                   onClick={() => launchSearch()}
                   className="mr-1.5 h-11 rounded-[14px] bg-[#f6b800] px-4 text-xs font-black uppercase tracking-wide text-black"
                 >
-                  Search
+                  {scope === "all" ? "Search" : `Search ${scopeLabel(scope)}`}
                 </button>
               </div>
 

@@ -649,7 +649,7 @@ export default function JobsPortalPage() {
   const portalCopy = portalFilter === "contract"
     ? { title: "Find logistics contracts", description: "Browse posted transport, construction, mining, farming and recurring delivery contracts.", searchButton: "Search contracts", listLabel: "Post contract", listHref: "/jobs/list?mode=contract", results: "Available contracts" }
     : portalFilter === "asset"
-      ? { title: "Find equipment for hire", description: "Browse trucks, trailers, mobile toilets, mobile fridges, food trucks and other mobile units.", searchButton: "Search listings", listLabel: "List vehicle", listHref: "/jobs/list?mode=asset", results: "Available vehicles and mobile units" }
+      ? { title: "Find commercial vehicles and units", description: "Browse approved trucks, trailers, mobile fridges, mobile kitchens and other commercial units for sale, rental or POA.", searchButton: "Search vehicles", listLabel: "List vehicle", listHref: "/jobs/list?mode=asset", results: "Available vehicles and mobile units" }
       : { title: "Find paid logistics work", description: "For truck owners, drivers, mobile kitchens, mobile fridges, farming vehicles and mining transport operators looking for real posted jobs.", searchButton: "Search jobs", listLabel: "Post job", listHref: "/jobs/list", results: "Available jobs" };
 
   return (
