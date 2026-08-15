@@ -1,0 +1,230 @@
+name: LoadLink UI repair v2.7.2
+
+on:
+  push:
+    paths:
+      - '.github/workflows/loadlink-ui-repair-v272.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.event.head_commit.message != 'Apply LoadLink UI repair v2.7.2'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Apply focused UI repairs
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f'Expected block not found in {path}: {old[:90]!r}')
+              if text.count(old) != 1:
+                  raise SystemExit(f'Expected one block in {path}, found {text.count(old)}')
+              p.write_text(text.replace(old, new, 1))
+
+          # Compact marketplace portal tabs only. Do not alter portal image dimensions/crop.
+          replace_once(
+              'components/MarketplaceDiscovery.tsx',
+              'className={`min-h-[62px] min-w-[142px] shrink-0 rounded-full border px-7 py-3.5 text-base font-black tracking-[-.015em] transition duration-200 active:scale-[.985] ${',
+              'className={`min-h-[46px] min-w-[104px] shrink-0 rounded-full border px-5 py-2.5 text-sm font-black tracking-[-.015em] transition duration-200 active:scale-[.985] sm:min-w-[112px] ${'
+          )
+          replace_once(
+              'components/MarketplaceDiscovery.tsx',
+              '<div className="flex min-w-max gap-3 px-0.5">',
+              '<div className="flex min-w-max gap-2 px-0.5">'
+          )
+
+          # Keep portal photography at its original cover crop while locking the background to the viewport.
+          replace_once(
+              'app/page.tsx',
+              '''                <img
+                  src={activeImage.src}
+                  alt=""
+                  aria-hidden="true"
+                  style={{ objectPosition: activeImage.position }}
+                  className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-[1.02]"
+                />''',
+              '''                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 bg-cover bg-fixed transition duration-700 group-hover:scale-[1.02]"
+                  style={{ backgroundImage: `url(${activeImage.src})`, backgroundPosition: activeImage.position }}
+                />'''
+          )
+          replace_once(
+              'app/page.tsx',
+              'className={`flex min-h-[82px] w-[min(82vw,560px)] items-center justify-center rounded-full border px-8 py-[18px] text-[18px] font-black uppercase leading-[1.15] tracking-[.045em] transition active:scale-[.99] md:min-h-[94px] md:w-[min(58vw,590px)] md:px-10 md:py-[22px] md:text-[20px] ${',
+              'className={`flex min-h-[64px] w-[min(78vw,470px)] items-center justify-center rounded-full border px-6 py-3.5 text-[16px] font-black uppercase leading-[1.15] tracking-[.045em] transition active:scale-[.99] md:min-h-[72px] md:w-[min(50vw,500px)] md:px-8 md:py-4 md:text-[18px] ${'
+          )
+
+          # Seen receipt: use the conversation's recipient presence timestamp, which is updated when that thread is opened/read.
+          replace_once(
+              'app/messages/page.tsx',
+              '''                      const mine = message.sender_role === selectedConversation.role;
+                      const previous = searchedMessages[index - 1];''',
+              '''                      const mine = message.sender_role === selectedConversation.role;
+                      const recipientSeenAt = selectedConversation.other_last_seen ? new Date(selectedConversation.other_last_seen).getTime() : 0;
+                      const messageSentAt = new Date(message.created_at).getTime();
+                      const seen = mine && Number.isFinite(recipientSeenAt) && recipientSeenAt >= messageSentAt;
+                      const previous = searchedMessages[index - 1];'''
+          )
+          replace_once(
+              'app/messages/page.tsx',
+              '''{message.edited_at && !message.deleted_at ? <span>edited ·</span> : null}<span>{formatClock(message.created_at)}</span>{mine ? <span aria-label="Sent">✓</span> : null}''',
+              '''{message.edited_at && !message.deleted_at ? <span>edited ·</span> : null}<span>{formatClock(message.created_at)}</span>{mine ? <span className={seen ? "font-black text-[#f6b800]" : ""} aria-label={seen ? "Seen" : "Sent"}>{seen ? "Seen ✓✓" : "Sent ✓"}</span> : null}'''
+          )
+
+          # List Your Vehicle: choose listing intent first; Plan Guide comes only after that choice.
+          replace_once(
+              'app/list-your-vehicle/page.tsx',
+              '''type VehicleCategory = "truck" | "trailer" | "mobile_unit";
+type SellerType = "private" | "dealership";''',
+              '''type VehicleCategory = "truck" | "trailer" | "mobile_unit";
+type ListingIntent = "vehicle" | "mobile_unit";
+type SellerType = "private" | "dealership";'''
+          )
+          replace_once(
+              'app/list-your-vehicle/page.tsx',
+              '''  const [listingFlowOpen, setListingFlowOpen] = useState(false);
+  const [saving, setSaving] = useState(false);''',
+              '''  const [listingFlowOpen, setListingFlowOpen] = useState(false);
+  const [listingIntent, setListingIntent] = useState<ListingIntent | null>(null);
+  const [saving, setSaving] = useState(false);'''
+          )
+
+          old_actions = '''          {!dealerPost ? (
+            <div className="mx-auto mt-6 grid w-full max-w-md gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setListingFlowOpen(true);
+                  window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+                }}
+                className="flex min-h-14 items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]"
+              >
+                List your vehicle
+              </button>
+              <a
+                href="#vehicle-marketplace-vehicles"
+                onClick={() => setListingFlowOpen(false)}
+                className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]"
+              >
+                Vehicles available
+              </a>
+              <a
+                href="#vehicle-marketplace-units"
+                onClick={() => setListingFlowOpen(false)}
+                className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]"
+              >
+                Units available
+              </a>
+            </div>
+          ) : null}'''
+          new_actions = '''          {!dealerPost ? (
+            <div className="mx-auto mt-6 grid w-full max-w-md gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setListingIntent("vehicle");
+                  setVehicleCategory(null);
+                  setListingFlowOpen(true);
+                  setSelectedPlan(null);
+                  setPackageType("standard");
+                  window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+                }}
+                className="flex min-h-14 items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]"
+              >
+                List your vehicle
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setListingIntent("mobile_unit");
+                  setVehicleCategory("mobile_unit");
+                  setListingFlowOpen(true);
+                  setSelectedPlan(null);
+                  setPackageType("standard");
+                  window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+                }}
+                className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]"
+              >
+                List a mobile unit
+              </button>
+              <a
+                href="#vehicle-marketplace-vehicles"
+                onClick={() => { setListingFlowOpen(false); setListingIntent(null); }}
+                className="flex min-h-12 items-center justify-center rounded-full border border-white/35 bg-black/55 px-6 text-xs font-black uppercase tracking-[.1em] text-white/85 backdrop-blur transition active:scale-[.99]"
+              >
+                Browse available stock
+              </a>
+            </div>
+          ) : null}'''
+          replace_once('app/list-your-vehicle/page.tsx', old_actions, new_actions)
+
+          replace_once(
+              'app/list-your-vehicle/page.tsx',
+              '''      {listingFlowOpen && signedIn && !dealerPost && !selectedPlan ? (''',
+              '''      {listingFlowOpen && signedIn && listingIntent && !dealerPost && !selectedPlan ? ('''
+          )
+          replace_once(
+              'app/list-your-vehicle/page.tsx',
+              '''      {listingFlowOpen && signedIn && !selectedPlan ? <BusinessPlans darkMode={darkMode} selectable selectedPlan={selectedPlan} onSelect={choosePlan} /> : null}''',
+              '''      {listingFlowOpen && signedIn && listingIntent && !selectedPlan ? <BusinessPlans darkMode={darkMode} selectable selectedPlan={selectedPlan} onSelect={choosePlan} /> : null}'''
+          )
+          replace_once(
+              'app/list-your-vehicle/page.tsx',
+              '''      {listingFlowOpen && signedIn && selectedPlan ? <form id="vehicle-listing-form" onSubmit={submitVehicle} className="mx-auto grid max-w-5xl scroll-mt-24 gap-6 px-4 py-7 md:px-6 md:py-12">''',
+              '''      {listingFlowOpen && signedIn && listingIntent && selectedPlan ? <form id="vehicle-listing-form" onSubmit={submitVehicle} className="mx-auto grid max-w-5xl scroll-mt-24 gap-6 px-4 py-7 md:px-6 md:py-12">'''
+          )
+          replace_once(
+              'app/list-your-vehicle/page.tsx',
+              '''          <div className="grid gap-3 p-5 sm:grid-cols-3 md:p-7">
+            <CategoryButton label="Truck" description="Commercial trucks and tractor units" active={vehicleCategory === "truck"} onClick={() => chooseCategory("truck")} />
+            <CategoryButton label="Trailer" description="All commercial trailer types" active={vehicleCategory === "trailer"} onClick={() => chooseCategory("trailer")} />
+            <CategoryButton label="Mobile Unit" description="Mobile service and business units" active={vehicleCategory === "mobile_unit"} onClick={() => chooseCategory("mobile_unit")} />
+          </div>''',
+              '''          <div className={`grid gap-3 p-5 md:p-7 ${listingIntent === "vehicle" ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
+            {listingIntent === "vehicle" ? <>
+              <CategoryButton label="Truck" description="Commercial trucks and tractor units" active={vehicleCategory === "truck"} onClick={() => chooseCategory("truck")} />
+              <CategoryButton label="Trailer" description="All commercial trailer types" active={vehicleCategory === "trailer"} onClick={() => chooseCategory("trailer")} />
+            </> : <CategoryButton label="Mobile Unit" description="Mobile service and business units" active={vehicleCategory === "mobile_unit"} onClick={() => chooseCategory("mobile_unit")} />}
+          </div>'''
+          )
+
+          # Dealer-post flow bypasses the public intent chooser as before.
+          replace_once(
+              'app/list-your-vehicle/page.tsx',
+              '''          setDealerPost(true);
+          setListingFlowOpen(true);''',
+              '''          setDealerPost(true);
+          setListingIntent("vehicle");
+          setListingFlowOpen(true);'''
+          )
+
+          print('Focused LoadLink UI repairs applied.')
+          PY
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Commit repaired application
+        shell: bash
+        run: |
+          rm -f .github/workflows/loadlink-ui-repair-v272.yml
+          git config user.name "LoadLink Maintenance"
+          git config user.email "loadlinksouthafrica@gmail.com"
+          git add app/page.tsx app/messages/page.tsx app/list-your-vehicle/page.tsx components/MarketplaceDiscovery.tsx .github/workflows/loadlink-ui-repair-v272.yml
+          git commit -m "Apply LoadLink UI repair v2.7.2"
+          git push origin HEAD:main
