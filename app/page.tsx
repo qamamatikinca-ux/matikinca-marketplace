@@ -91,30 +91,47 @@ function HomeExperience() {
           {portalCards.map((card) => {
             const activeImage = getActiveImage(card);
             return (
-              <Link key={card.title} href={card.href} aria-label={card.buttonText} className="group relative block h-[52vh] min-h-[380px] w-full overflow-hidden md:h-[65vh]">
-                <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-cover bg-fixed transition duration-700 group-hover:scale-[1.02]"
-        style={{ backgroundImage: `url(${activeImage.src})`, backgroundPosition: activeImage.position }}
-      />
-                <div className="absolute inset-0 bg-black/45" />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/35 to-black/75" />
+              <Link
+                key={card.title}
+                href={card.href}
+                aria-label={card.buttonText}
+                className="group relative block h-[290px] w-full overflow-hidden bg-black sm:h-[330px] md:h-[380px] lg:h-[420px]"
+              >
+                <img
+                  src={activeImage.src}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 h-full w-full scale-[1.025] object-cover opacity-50 blur-[3px] transition duration-700 group-hover:scale-[1.04]"
+                  style={{ objectPosition: activeImage.position }}
+                />
+                <img
+                  src={activeImage.src}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 h-full w-full object-contain brightness-[1.12] saturate-[1.10] contrast-[1.03] transition duration-700 group-hover:brightness-[1.16]"
+                  style={{ objectPosition: activeImage.position }}
+                />
+                <div className="absolute inset-0 bg-black/10" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/35" />
                 <div
                   data-loadlink-portal-glow
-                  className="pointer-events-none absolute inset-x-[3%] -bottom-12 h-56 transform-gpu"
+                  className="pointer-events-none absolute inset-0 shadow-[inset_0_0_82px_rgba(246,184,0,0.16)]"
+                />
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-[6%] -bottom-14 h-44 transform-gpu"
                   style={{
                     background: darkMode
-                      ? "radial-gradient(ellipse at 50% 72%, rgba(246,184,0,.21) 0%, rgba(92,67,0,.18) 40%, rgba(0,0,0,0) 76%)"
-                      : "radial-gradient(ellipse at 50% 72%, rgba(246,184,0,.26) 0%, rgba(246,184,0,.16) 40%, rgba(246,184,0,0) 76%)",
-                    filter: "blur(34px)",
+                      ? "radial-gradient(ellipse at 50% 72%, rgba(246,184,0,.18) 0%, rgba(92,67,0,.12) 42%, rgba(0,0,0,0) 76%)"
+                      : "radial-gradient(ellipse at 50% 72%, rgba(246,184,0,.22) 0%, rgba(246,184,0,.11) 42%, rgba(246,184,0,0) 76%)",
+                    filter: "blur(28px)",
                     transform: "translate3d(0,0,0)",
-                    willChange: "transform, opacity",
                   }}
                 />
                 <div className="relative z-10 flex h-full w-full items-center justify-center px-5 text-center">
                   <div
-                    className={`flex min-h-[64px] w-[min(78vw,470px)] items-center justify-center rounded-full border px-6 py-3.5 text-[16px] font-black uppercase leading-[1.15] tracking-[.045em] transition active:scale-[.99] md:min-h-[72px] md:w-[min(50vw,500px)] md:px-8 md:py-4 md:text-[18px] ${
-                      darkMode ? "border-[#5c4300] bg-black/76 text-[#f6b800]" : "border-[#f6b800] bg-black/76 text-[#f6b800]"
+                    className={`flex min-h-[58px] w-[min(76vw,430px)] items-center justify-center rounded-full border px-5 py-3 text-[15px] font-black uppercase leading-[1.15] tracking-[.045em] transition active:scale-[.99] md:min-h-[68px] md:w-[min(48vw,520px)] md:px-8 md:py-4 md:text-[18px] ${
+                      darkMode ? "border-[#6f560a] bg-black/72 text-[#f6b800]" : "border-[#f6b800] bg-black/70 text-[#f6b800]"
                     }`}
                   >
                     {card.buttonText}
