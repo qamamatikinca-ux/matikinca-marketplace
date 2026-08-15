@@ -27,7 +27,7 @@ html[data-loadlink-theme="dark"] [aria-label="Search category"] > div > button[a
 
 html[data-loadlink-theme="light"] [aria-label="Search category"] > div > button[aria-pressed="false"] {
   background: #fff !important;
-  border-color: rgba(180,153,86,.34) !important;
+  border-color: rgba(17,17,17,.16) !important;
   color: #514d43 !important;
 }
 
