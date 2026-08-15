@@ -1,0 +1,10 @@
+LoadLink approved portal regression repair repush
+2026-08-15 03:27 SAST
+
+This release marker accompanies the verified application state on main:
+- restored larger LoadLink portal controls and approved gold inactive treatment
+- quick links navigate to their result pages
+- List Your Vehicle follows the Driver Portal-style hero flow
+- Calculator naming and simplified finance inputs preserved
+
+This file exists only to create a fresh GitHub production deployment trigger.
