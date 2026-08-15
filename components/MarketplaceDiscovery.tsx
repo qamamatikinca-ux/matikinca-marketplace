@@ -132,12 +132,12 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
   return (
     <>
       <section
-        className={`relative z-[180] overflow-visible px-5 py-6 md:px-12 md:py-8 ${
+        className={`relative z-[180] overflow-visible border-0 px-5 py-5 md:px-12 md:py-7 ${
           darkMode ? "bg-[#050505] text-white" : "bg-white text-black"
         }`}
       >
-        <div data-loadlink-marketplace-search-shell className="relative z-[181] mx-auto max-w-7xl overflow-visible">
-          <div className="no-scrollbar overflow-x-auto py-1" aria-label="Search category">
+        <div data-loadlink-marketplace-search-shell className="relative z-[181] mx-auto max-w-7xl overflow-visible border-0">
+          <div className="no-scrollbar overflow-x-auto border-0 py-1" aria-label="Search category">
             <div className="flex min-w-max gap-2 px-0.5">
               {visibleScopes.map((item) => (
                 <button
@@ -145,12 +145,12 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                   type="button"
                   onClick={() => chooseScope(item.value)}
                   aria-pressed={scope === item.value}
-                  className={`min-h-[46px] min-w-[104px] shrink-0 rounded-full border px-5 py-2.5 text-sm font-black tracking-[-.015em] transition duration-200 active:scale-[.985] ${
+                  className={`min-h-[44px] min-w-[100px] shrink-0 rounded-full border px-4 py-2 text-[13px] font-black tracking-[-.015em] transition duration-200 active:scale-[.985] sm:min-h-[46px] sm:min-w-[112px] sm:px-5 sm:text-sm ${
                     scope === item.value
-                      ? "border-[#f6b800] bg-[#f6b800] text-black shadow-[0_10px_28px_rgba(246,184,0,.22)]"
+                      ? "border-[#f6b800] bg-[#f6b800] text-black shadow-[0_8px_22px_rgba(246,184,0,.18)]"
                       : darkMode
-                        ? "border-[#f6b800]/35 bg-[#080808] text-[#f6b800] shadow-[0_8px_22px_rgba(0,0,0,.16)]"
-                        : "border-[#b88900]/28 bg-white text-[#8d6800] shadow-[0_8px_22px_rgba(0,0,0,.06)]"
+                        ? "border-[#4b5563] bg-[#080808] text-white/82 shadow-none hover:border-[#6b7280]"
+                        : "border-[#d1d5db] bg-white text-[#4b5563] shadow-none hover:border-[#9ca3af] hover:text-black"
                   }`}
                 >
                   {item.label}
