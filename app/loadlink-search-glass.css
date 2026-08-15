@@ -130,3 +130,9 @@ html[data-loadlink-theme="light"] [aria-label="Search category"] > div > button[
   color: #050505 !important;
   box-shadow: 0 10px 28px rgba(246,184,0,.22) !important;
 }
+
+/* The Calculator card already explains itself. Keep it clean rather than
+   adding another gold eyebrow above the title. */
+a[href="/tools/truck-finance"] > div:first-child > p:first-child {
+  display: none !important;
+}
