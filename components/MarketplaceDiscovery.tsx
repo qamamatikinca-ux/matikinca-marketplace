@@ -23,6 +23,13 @@ import {
   searchScopes,
 } from "@/lib/loadlinkSearch";
 
+const directPortalRoutes: Partial<Record<SearchScope, string>> = {
+  job: "/jobs",
+  contract: "/contracts",
+  asset: "/list-your-vehicle",
+  driver: "/driver-portal",
+};
+
 export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -130,6 +137,15 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
     setScope(value);
     setShowSuggestions(false);
     setActiveSearchField(null);
+
+    const hasSearchTerms = Boolean(query.trim() || location.trim());
+    const directPortalRoute = directPortalRoutes[value];
+
+    if (!hasSearchTerms && directPortalRoute) {
+      router.push(directPortalRoute);
+      return;
+    }
+
     router.push(routeForScope(value, query, location));
   }
 
