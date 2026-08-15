@@ -1,0 +1,126 @@
+name: LoadLink Manual ZIP Update + Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: "Create a fresh deployment commit even if source already matches"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: loadlink-manual-zip-deploy
+  cancel-in-progress: false
+
+jobs:
+  install-build-push:
+    name: Install, verify, build and push
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      ARCHIVE_PATH: .github/workflows/LoadLink-update-719283b.zip
+      TARGET_FILE: components/MarketplaceDiscovery.tsx
+      EXPECTED_COMPONENT_SHA256: 018541cf6b41f66a354eae7056c8c882c1f48ec3866a1b6031e986506337c4b6
+
+    steps:
+      - name: Checkout LoadLink main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify repository and ZIP
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$GITHUB_REPOSITORY" = "qamamatikinca-ux/matikinca-marketplace"
+          test -f package.json
+          test -f package-lock.json
+          test -f "$ARCHIVE_PATH" || { echo "::error::Missing $ARCHIVE_PATH"; exit 1; }
+          unzip -tq "$ARCHIVE_PATH" >/dev/null
+          echo "ZIP integrity: PASS"
+
+      - name: Install exact approved update
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          rm -rf /tmp/loadlink-update
+          mkdir -p /tmp/loadlink-update
+          unzip -q "$ARCHIVE_PATH" -d /tmp/loadlink-update
+
+          PAYLOAD="$(find /tmp/loadlink-update -type f -path '*/components/MarketplaceDiscovery.tsx' -print -quit)"
+          test -n "$PAYLOAD" || { echo "::error::MarketplaceDiscovery.tsx missing from ZIP"; exit 1; }
+
+          ACTUAL_SHA="$(sha256sum "$PAYLOAD" | awk '{print $1}')"
+          test "$ACTUAL_SHA" = "$EXPECTED_COMPONENT_SHA256" || {
+            echo "::error::Update checksum mismatch"
+            echo "Expected: $EXPECTED_COMPONENT_SHA256"
+            echo "Actual:   $ACTUAL_SHA"
+            exit 1
+          }
+
+          cp "$PAYLOAD" "$TARGET_FILE"
+          grep -Fq 'job: "/jobs"' "$TARGET_FILE"
+          grep -Fq 'contract: "/contracts"' "$TARGET_FILE"
+          grep -Fq 'asset: "/list-your-vehicle"' "$TARGET_FILE"
+          grep -Fq 'driver: "/driver-portal"' "$TARGET_FILE"
+          git diff --check
+          echo "Approved update verification: PASS"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Production build
+        run: npm run build
+
+      - name: Commit validated update
+        id: commit
+        shell: bash
+        env:
+          FORCE_DEPLOY: ${{ inputs.force_deploy }}
+        run: |
+          set -Eeuo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$TARGET_FILE"
+
+          if ! git diff --cached --quiet; then
+            git commit -m "fix: restore direct LoadLink portal navigation"
+            echo "mode=source-update" >> "$GITHUB_OUTPUT"
+          elif [ "$FORCE_DEPLOY" = "true" ]; then
+            git commit --allow-empty -m "deploy: manual LoadLink redeploy [run $GITHUB_RUN_NUMBER]"
+            echo "mode=deployment-trigger" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=no-change" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push to main
+        if: steps.commit.outputs.mode != 'no-change'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git push origin HEAD:main
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          echo "Remote main verification: PASS"
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## LoadLink manual ZIP deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "Production build must pass before any push." >> "$GITHUB_STEP_SUMMARY"
+          echo "A successful push then hands the new main commit to the existing Vercel Git integration." >> "$GITHUB_STEP_SUMMARY"
