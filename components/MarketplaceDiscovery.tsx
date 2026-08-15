@@ -138,14 +138,14 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
       >
         <div data-loadlink-marketplace-search-shell className="relative z-[181] mx-auto max-w-7xl overflow-visible">
           <div className="no-scrollbar overflow-x-auto py-1" aria-label="Search category">
-            <div className="flex min-w-max gap-3 px-0.5">
+            <div className="flex min-w-max gap-2 px-0.5">
               {visibleScopes.map((item) => (
                 <button
                   key={item.value}
                   type="button"
                   onClick={() => chooseScope(item.value)}
                   aria-pressed={scope === item.value}
-                  className={`min-h-[62px] min-w-[142px] shrink-0 rounded-full border px-7 py-3.5 text-base font-black tracking-[-.015em] transition duration-200 active:scale-[.985] ${
+                  className={`min-h-[46px] min-w-[104px] shrink-0 rounded-full border px-5 py-2.5 text-sm font-black tracking-[-.015em] transition duration-200 active:scale-[.985] ${
                     scope === item.value
                       ? "border-[#f6b800] bg-[#f6b800] text-black shadow-[0_10px_28px_rgba(246,184,0,.22)]"
                       : darkMode

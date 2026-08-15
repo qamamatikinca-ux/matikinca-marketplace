@@ -40,6 +40,7 @@ const gearboxOptions = ["Manual", "Automatic", "Automated manual", "Electric dir
 const acceptedDocuments = ".jpg,.jpeg,.png,.webp,.pdf";
 
 type VehicleCategory = "truck" | "trailer" | "mobile_unit";
+type ListingIntent = "vehicle" | "mobile_unit";
 type SellerType = "private" | "dealership";
 type OfferMode = "sale" | "rental" | "sale_or_rental" | "poa";
 type RentalPeriod = "day" | "week" | "month";
@@ -83,6 +84,7 @@ export default function ListYourVehiclePage() {
   const [authReady, setAuthReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [listingFlowOpen, setListingFlowOpen] = useState(false);
+  const [listingIntent, setListingIntent] = useState<ListingIntent | null>(null);
   const [saving, setSaving] = useState(false);
   const [preparingVehiclePhotos, setPreparingVehiclePhotos] = useState(false);
   const [vehiclePhotoProgress, setVehiclePhotoProgress] = useState("");
@@ -178,6 +180,7 @@ export default function ListYourVehiclePage() {
           setWhatsappNumber(String(data.whatsapp_number || ""));
           setSellerType("dealership");
           setDealerPost(true);
+          setListingIntent("vehicle");
           setListingFlowOpen(true);
           setSelectedPlan("dealer");
           setPackageType("dealer");
@@ -567,39 +570,38 @@ export default function ListYourVehiclePage() {
           </p>
 
           {!dealerPost ? (
-            <div className="mx-auto mt-6 grid w-full max-w-md gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setListingFlowOpen(true);
-                  window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-                }}
-                className="flex min-h-14 items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]"
-              >
-                List your vehicle
-              </button>
-              <a
-                href="#vehicle-marketplace-vehicles"
-                onClick={() => setListingFlowOpen(false)}
-                className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]"
-              >
-                Vehicles available
-              </a>
-              <a
-                href="#vehicle-marketplace-units"
-                onClick={() => setListingFlowOpen(false)}
-                className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]"
-              >
-                Units available
-              </a>
-            </div>
-          ) : null}
+  <div className="mx-auto mt-6 grid w-full max-w-md gap-3">
+    <button type="button" onClick={() => {
+      setListingIntent("vehicle");
+      setVehicleCategory(null);
+      setListingFlowOpen(true);
+      setSelectedPlan(null);
+      setPackageType("standard");
+      window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+    }} className="flex min-h-14 items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]">
+      List your vehicle
+    </button>
+    <button type="button" onClick={() => {
+      setListingIntent("mobile_unit");
+      setVehicleCategory("mobile_unit");
+      setListingFlowOpen(true);
+      setSelectedPlan(null);
+      setPackageType("standard");
+      window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+    }} className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]">
+      List a mobile unit
+    </button>
+    <a href="#vehicle-marketplace-vehicles" onClick={() => { setListingFlowOpen(false); setListingIntent(null); }} className="flex min-h-12 items-center justify-center rounded-full border border-white/35 bg-black/55 px-6 text-xs font-black uppercase tracking-[.1em] text-white/85 backdrop-blur transition active:scale-[.99]">
+      Browse available stock
+    </a>
+  </div>
+) : null}
         </div>
       </section>
 
       {listingFlowOpen && !signedIn ? <section id="vehicle-listing-form" className="mx-auto max-w-5xl scroll-mt-24 px-4 py-8 md:px-6"><div className={`loadlink-glass rounded-[24px] border p-6 text-center ${surface}`}><h2 className="text-3xl font-black tracking-[-.04em]">Sign in to list a vehicle</h2><p className={`mx-auto mt-3 max-w-xl text-sm font-semibold leading-6 ${muted}`}>Approved marketplace stock remains available below. Sign in when you are ready to create a truck, trailer or mobile-unit listing.</p><a href={loginHref(currentRelativePath())} className="mt-5 inline-flex h-12 items-center justify-center rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase tracking-[.1em] text-black">Sign in or create account</a></div></section> : null}
 
-      {listingFlowOpen && signedIn && !dealerPost && !selectedPlan ? (
+      {listingFlowOpen && signedIn && listingIntent && !dealerPost && !selectedPlan ? (
         <section id="vehicle-listing-form" className={`scroll-mt-24 border-b px-4 py-6 md:px-6 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
           <div className={`mx-auto max-w-6xl rounded-[24px] border p-5 md:flex md:items-center md:justify-between md:gap-8 md:p-6 ${darkMode ? "border-white/12 bg-[#111]" : "border-black/10 bg-[#faf8f2]"}`}>
             <div>
@@ -615,16 +617,17 @@ export default function ListYourVehiclePage() {
         </section>
       ) : null}
 
-      {listingFlowOpen && signedIn && !selectedPlan ? <BusinessPlans darkMode={darkMode} selectable selectedPlan={selectedPlan} onSelect={choosePlan} /> : null}
+      {listingFlowOpen && signedIn && listingIntent && !selectedPlan ? <BusinessPlans darkMode={darkMode} selectable selectedPlan={selectedPlan} onSelect={choosePlan} /> : null}
 
-      {listingFlowOpen && signedIn && selectedPlan ? <form id="vehicle-listing-form" onSubmit={submitVehicle} className="mx-auto grid max-w-5xl scroll-mt-24 gap-6 px-4 py-7 md:px-6 md:py-12">
+      {listingFlowOpen && signedIn && listingIntent && selectedPlan ? <form id="vehicle-listing-form" onSubmit={submitVehicle} className="mx-auto grid max-w-5xl scroll-mt-24 gap-6 px-4 py-7 md:px-6 md:py-12">
         <section id="vehicle-type" className={`scroll-mt-24 overflow-hidden rounded-2xl border ${surface}`}>
           <SectionHeading step="01" title="Choose what you are listing" description="The form changes to show only the details relevant to the selected vehicle or mobile unit." />
-          <div className="grid gap-3 p-5 sm:grid-cols-3 md:p-7">
-            <CategoryButton label="Truck" description="Commercial trucks and tractor units" active={vehicleCategory === "truck"} onClick={() => chooseCategory("truck")} />
-            <CategoryButton label="Trailer" description="All commercial trailer types" active={vehicleCategory === "trailer"} onClick={() => chooseCategory("trailer")} />
-            <CategoryButton label="Mobile Unit" description="Mobile service and business units" active={vehicleCategory === "mobile_unit"} onClick={() => chooseCategory("mobile_unit")} />
-          </div>
+          <div className={`grid gap-3 p-5 md:p-7 ${listingIntent === "vehicle" ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
+  {listingIntent === "vehicle" ? <>
+    <CategoryButton label="Truck" description="Commercial trucks and tractor units" active={vehicleCategory === "truck"} onClick={() => chooseCategory("truck")} />
+    <CategoryButton label="Trailer" description="All commercial trailer types" active={vehicleCategory === "trailer"} onClick={() => chooseCategory("trailer")} />
+  </> : <CategoryButton label="Mobile Unit" description="Mobile service and business units" active={vehicleCategory === "mobile_unit"} onClick={() => chooseCategory("mobile_unit")} />}
+</div>
         </section>
 
         {categoryChosen ? <>

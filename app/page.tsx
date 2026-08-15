@@ -92,13 +92,11 @@ function HomeExperience() {
             const activeImage = getActiveImage(card);
             return (
               <Link key={card.title} href={card.href} aria-label={card.buttonText} className="group relative block h-[52vh] min-h-[380px] w-full overflow-hidden md:h-[65vh]">
-                <img
-                  src={activeImage.src}
-                  alt=""
-                  aria-hidden="true"
-                  style={{ objectPosition: activeImage.position }}
-                  className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-[1.02]"
-                />
+                <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-cover bg-fixed transition duration-700 group-hover:scale-[1.02]"
+        style={{ backgroundImage: `url(${activeImage.src})`, backgroundPosition: activeImage.position }}
+      />
                 <div className="absolute inset-0 bg-black/45" />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/35 to-black/75" />
                 <div
@@ -115,7 +113,7 @@ function HomeExperience() {
                 />
                 <div className="relative z-10 flex h-full w-full items-center justify-center px-5 text-center">
                   <div
-                    className={`flex min-h-[82px] w-[min(82vw,560px)] items-center justify-center rounded-full border px-8 py-[18px] text-[18px] font-black uppercase leading-[1.15] tracking-[.045em] transition active:scale-[.99] md:min-h-[94px] md:w-[min(58vw,590px)] md:px-10 md:py-[22px] md:text-[20px] ${
+                    className={`flex min-h-[64px] w-[min(78vw,470px)] items-center justify-center rounded-full border px-6 py-3.5 text-[16px] font-black uppercase leading-[1.15] tracking-[.045em] transition active:scale-[.99] md:min-h-[72px] md:w-[min(50vw,500px)] md:px-8 md:py-4 md:text-[18px] ${
                       darkMode ? "border-[#5c4300] bg-black/76 text-[#f6b800]" : "border-[#f6b800] bg-black/76 text-[#f6b800]"
                     }`}
                   >

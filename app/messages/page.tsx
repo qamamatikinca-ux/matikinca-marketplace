@@ -1881,7 +1881,10 @@ ${message}` : message)}
                   <div className="mx-auto max-w-3xl space-y-3">
                     {searchedMessages.map((message, index) => {
                       const mine = message.sender_role === selectedConversation.role;
-                      const previous = searchedMessages[index - 1];
+                      const recipientSeenAt = selectedConversation.other_last_seen ? new Date(selectedConversation.other_last_seen).getTime() : 0;
+            const messageSentAt = new Date(message.created_at).getTime();
+            const seen = mine && Number.isFinite(recipientSeenAt) && recipientSeenAt >= messageSentAt;
+            const previous = searchedMessages[index - 1];
                       const showDay =
                         !previous ||
                         new Date(previous.created_at).toDateString() !==
@@ -1932,7 +1935,7 @@ ${message}` : message)}
                                 <p className="whitespace-pre-wrap break-words text-sm font-medium leading-6">{message.body}</p>
                               ) : null}
                               <div className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] font-semibold ${mine ? "text-white/45" : "text-black/35"}`}>
-                                {message.edited_at && !message.deleted_at ? <span>edited ·</span> : null}<span>{formatClock(message.created_at)}</span>{mine ? <span aria-label="Sent">✓</span> : null}
+                                {message.edited_at && !message.deleted_at ? <span>edited ·</span> : null}<span>{formatClock(message.created_at)}</span>{mine ? <span className={seen ? "font-black text-[#f6b800]" : ""} aria-label={seen ? "Seen" : "Sent"}>{seen ? "Seen ✓✓" : "Sent ✓"}</span> : null}
                                 {!message.deleted_at ? <button type="button" onClick={() => setMessageMenuId((current) => current === message.id ? "" : message.id)} className={`ml-1 flex h-5 w-6 items-center justify-center rounded-md text-[13px] leading-none ${mine ? "text-white/55 hover:bg-white/10" : "text-black/40 hover:bg-black/5"}`} aria-label="Message options" aria-expanded={messageMenuId === message.id}>•••</button> : null}
                               </div>
                               {!message.deleted_at && messageMenuId === message.id ? (
