@@ -2,6 +2,10 @@ name: LoadLink Primary Vercel Deploy
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'app/packages/page.tsx'
 
 permissions:
   contents: read
