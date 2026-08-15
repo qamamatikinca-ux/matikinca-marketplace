@@ -20,7 +20,7 @@ type VehicleRow = {
 type FinanceMatch = VehicleRow & { price: number; monthly: number };
 
 const TERMS = [12, 24, 36, 48, 60, 72, 84];
-const TRUCK_IMAGE = "/images/truck-1.jpg";
+const TRUCK_IMAGE = "/images/loadlink-finance-truck.webp";
 
 function moneyValue(value: string | null | undefined) {
   const compact = String(value || "").replace(/\s+/g, "").replace(/,/g, "");
