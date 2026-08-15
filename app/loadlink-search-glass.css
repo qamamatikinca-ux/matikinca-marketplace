@@ -241,3 +241,5 @@ div:has(> img[src="/images/loadlink-finance-truck.webp"]) > div[aria-hidden="tru
     scroll-snap-align: start !important;
   }
 }
+
+/* Reference lock: homepage search matches the approved compact white-row layout. */
