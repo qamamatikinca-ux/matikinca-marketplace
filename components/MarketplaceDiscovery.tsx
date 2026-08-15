@@ -140,14 +140,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
           darkMode ? "bg-[#050505] text-white" : "bg-white text-black"
         }`}
       >
-        <div data-loadlink-marketplace-search-shell className={`loadlink-glass relative mx-auto max-w-7xl rounded-[28px] border p-3 shadow-[0_18px_48px_rgba(0,0,0,.08)] md:p-4 ${darkMode ? "border-white/12 bg-black/55" : "border-white/75 bg-white/68"}`}>
-        <div className="mb-3 flex items-end justify-between gap-3 px-1">
-          <div>
-            <p className="text-sm font-black tracking-[-.02em]">Search LoadLink</p>
-            <p className={`mt-1 text-[11px] font-semibold ${darkMode ? "text-white/45" : "text-black/45"}`}>Choose a portal first. Search stays inside that portal.</p>
-          </div>
-          <span className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[.08em] ${darkMode ? "border-white/12 bg-black/45 text-white/65" : "border-black/8 bg-white/70 text-black/55"}`}>{scopeLabel(scope)}</span>
-        </div>
+        <div data-loadlink-marketplace-search-shell className="relative mx-auto max-w-7xl">
           <div className="no-scrollbar overflow-x-auto py-1" aria-label="Search category">
             <div className="flex min-w-max gap-3 px-0.5">
               {visibleScopes.map((item) => (
@@ -176,7 +169,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                 Search everything on LoadLink
               </label>
               <div
-                className={`flex min-h-14 items-center overflow-hidden rounded-[18px] border shadow-sm ${
+                className={`flex min-h-14 items-center overflow-hidden rounded-[18px] border shadow-sm backdrop-blur-xl backdrop-saturate-150 ${
                   darkMode ? "border-white/13 bg-black/66" : "border-black/[.09] bg-white"
                 }`}
               >
@@ -212,9 +205,9 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                 <button
                   type="button"
                   onClick={() => launchSearch()}
-                  className="mr-1.5 h-11 rounded-[14px] bg-[#f6b800] px-4 text-xs font-black uppercase tracking-wide text-black"
+                  className="mr-1.5 h-11 min-w-[88px] shrink-0 rounded-[14px] bg-[#f6b800] px-3 text-[11px] font-black uppercase tracking-wide text-black sm:px-4 sm:text-xs"
                 >
-                  {scope === "all" ? "Search" : `Search ${scopeLabel(scope)}`}
+                  Search
                 </button>
               </div>
 
@@ -271,7 +264,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
               darkMode={darkMode}
               placeholder="City, town or province (optional)"
               ariaLabel="Optional South African city, town or province"
-              className={`h-14 w-full rounded-[18px] border px-4 text-sm font-bold outline-none focus:border-[#f6b800] ${
+              className={`h-14 w-full rounded-[18px] border px-4 text-sm font-bold outline-none backdrop-blur-xl backdrop-saturate-150 focus:border-[#f6b800] ${
                 darkMode
                   ? "border-white/13 bg-black/66 text-white placeholder:text-white/35"
                   : "border-black/[.09] bg-white text-black placeholder:text-black/40"
