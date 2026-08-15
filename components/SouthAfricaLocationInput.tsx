@@ -74,17 +74,6 @@ export default function SouthAfricaLocationInput({
 
   return (
     <div ref={wrapperRef} className={`relative ${open && !disabled ? "z-[121]" : ""}`}>
-      {open && !disabled ? (
-        <button
-          type="button"
-          aria-label="Close location menu"
-          onClick={closeMenu}
-          className={`fixed inset-0 z-[110] cursor-default ${
-            darkMode ? "bg-black/12 backdrop-blur-[2px]" : "bg-black/[.035] backdrop-blur-[2px]"
-          }`}
-        />
-      ) : null}
-
       <input
         id={inputId}
         name={name}
@@ -131,10 +120,10 @@ export default function SouthAfricaLocationInput({
         <div
           id={listId}
           role="listbox"
-          className={`absolute left-0 right-0 top-[calc(100%+8px)] z-[130] max-h-72 overflow-y-auto rounded-[20px] border p-2 shadow-[0_26px_80px_rgba(0,0,0,.38)] backdrop-blur-2xl backdrop-saturate-150 ${
+          className={`absolute left-0 right-0 top-[calc(100%+8px)] z-[130] max-h-64 overflow-y-auto rounded-[16px] border p-2 shadow-[0_18px_48px_rgba(0,0,0,.34)] backdrop-blur-xl backdrop-saturate-125 ${
             darkMode
-              ? "border-white/13 bg-black/72 text-white"
-              : "border-black/[.08] bg-white/78 text-black"
+              ? "border-[#f6b800]/22 bg-[#090909]/98 text-white"
+              : "border-black/[.10] bg-white/98 text-black"
           }`}
         >
           {suggestions.length ? (
@@ -147,7 +136,7 @@ export default function SouthAfricaLocationInput({
                 aria-selected={index === activeIndex}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => choose(location)}
-                className={`flex w-full items-center justify-between gap-3 rounded-[14px] px-3 py-3 text-left text-sm font-bold transition ${
+                className={`flex w-full items-center justify-between gap-3 rounded-[11px] px-3 py-3 text-left text-sm font-bold transition ${
                   index === activeIndex
                     ? "bg-[#f6b800] text-black"
                     : darkMode

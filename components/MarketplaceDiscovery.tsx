@@ -136,7 +136,12 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
           darkMode ? "bg-[#050505] text-white" : "bg-white text-black"
         }`}
       >
-        <div data-loadlink-marketplace-search-shell className="relative z-[181] mx-auto max-w-7xl overflow-visible border-0">
+        <div
+          data-loadlink-marketplace-search-shell
+          className={`loadlink-glass relative z-[181] mx-auto max-w-5xl overflow-visible rounded-[24px] border p-4 shadow-[0_18px_45px_rgba(0,0,0,.18)] md:p-5 ${
+            darkMode ? "border-[#f6b800]/18 bg-[#0d0d0d]/94 text-white" : "border-black/10 bg-white/96 text-black"
+          }`}
+        >
           <div className="no-scrollbar overflow-x-auto border-0 py-1" aria-label="Search category">
             <div className="flex min-w-max gap-2 px-0.5">
               {visibleScopes.map((item) => (
@@ -165,7 +170,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                 Search everything on LoadLink
               </label>
               <div
-                className={`flex min-h-14 items-center overflow-hidden rounded-[18px] border shadow-sm ${
+                className={`flex min-h-14 items-center overflow-hidden rounded-[16px] border shadow-none ${
                   darkMode ? "border-white/13 bg-black/92" : "border-black/[.09] bg-white"
                 }`}
               >
@@ -255,7 +260,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
               darkMode={darkMode}
               placeholder="City, town or province (optional)"
               ariaLabel="Optional South African city, town or province"
-              className={`h-14 w-full rounded-[18px] border px-4 text-sm font-bold outline-none focus:border-[#f6b800] ${
+              className={`h-14 w-full rounded-[16px] border px-4 text-sm font-bold outline-none focus:border-[#f6b800] ${
                 darkMode
                   ? "border-white/13 bg-black/92 text-white placeholder:text-white/35"
                   : "border-black/[.09] bg-white text-black placeholder:text-black/40"

@@ -95,42 +95,24 @@ function HomeExperience() {
                 key={card.title}
                 href={card.href}
                 aria-label={card.buttonText}
-                className="group relative block h-[290px] w-full overflow-hidden bg-black sm:h-[330px] md:h-[380px] lg:h-[420px]"
+                className="group relative block h-[360px] w-full overflow-hidden bg-black sm:h-[390px] md:h-[450px] lg:h-[500px]"
               >
                 <img
                   src={activeImage.src}
                   alt=""
                   aria-hidden="true"
-                  className="absolute inset-0 h-full w-full scale-[1.025] object-cover opacity-50 blur-[3px] transition duration-700 group-hover:scale-[1.04]"
+                  className="absolute inset-0 h-full w-full object-cover transition duration-700"
                   style={{ objectPosition: activeImage.position }}
                 />
-                <img
-                  src={activeImage.src}
-                  alt=""
-                  aria-hidden="true"
-                  className="absolute inset-0 h-full w-full object-contain brightness-[1.12] saturate-[1.10] contrast-[1.03] transition duration-700 group-hover:brightness-[1.16]"
-                  style={{ objectPosition: activeImage.position }}
-                />
-                <div className="absolute inset-0 bg-black/10" />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/35" />
+                <div className="absolute inset-0 bg-black/36" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/12 via-black/14 to-black/48" />
                 <div
                   data-loadlink-portal-glow
-                  className="pointer-events-none absolute inset-0 shadow-[inset_0_0_82px_rgba(246,184,0,0.16)]"
-                />
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-[6%] -bottom-14 h-44 transform-gpu"
-                  style={{
-                    background: darkMode
-                      ? "radial-gradient(ellipse at 50% 72%, rgba(246,184,0,.18) 0%, rgba(92,67,0,.12) 42%, rgba(0,0,0,0) 76%)"
-                      : "radial-gradient(ellipse at 50% 72%, rgba(246,184,0,.22) 0%, rgba(246,184,0,.11) 42%, rgba(246,184,0,0) 76%)",
-                    filter: "blur(28px)",
-                    transform: "translate3d(0,0,0)",
-                  }}
+                  className="pointer-events-none absolute inset-0 shadow-[inset_0_0_70px_rgba(246,184,0,0.08)]"
                 />
                 <div className="relative z-10 flex h-full w-full items-center justify-center px-5 text-center">
                   <div
-                    className={`flex min-h-[58px] w-[min(76vw,430px)] items-center justify-center rounded-full border px-5 py-3 text-[15px] font-black uppercase leading-[1.15] tracking-[.045em] transition active:scale-[.99] md:min-h-[68px] md:w-[min(48vw,520px)] md:px-8 md:py-4 md:text-[18px] ${
+                    className={`flex min-h-[52px] w-[min(76vw,400px)] items-center justify-center rounded-full border px-5 py-3 text-[14px] font-black uppercase leading-[1.15] tracking-[.045em] transition active:scale-[.99] md:min-h-[58px] md:w-[min(44vw,440px)] md:px-7 md:py-3 md:text-[16px] ${
                       darkMode ? "border-[#6f560a] bg-black/72 text-[#f6b800]" : "border-[#f6b800] bg-black/70 text-[#f6b800]"
                     }`}
                   >

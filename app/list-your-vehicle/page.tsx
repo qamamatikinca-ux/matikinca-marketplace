@@ -1,18 +1,18 @@
 "use client";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+import dynamic from "next/dynamic";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import AuthStatusButton from "@/components/AuthStatusButton";
 import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
-import BusinessPlans, { type BusinessPlanId } from "@/components/BusinessPlans";
+import type { BusinessPlanId } from "@/components/BusinessPlans";
 import HomeLogoLink from "@/components/HomeLogoLink";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
-import VehicleMarketplaceHub from "@/components/VehicleMarketplaceHub";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
 import PhotoLimitUpgradeToast from "@/components/PhotoLimitUpgradeToast";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
@@ -26,6 +26,9 @@ import { getFreshAuthenticatedUser, postingErrorMessage, withTransientRetry } fr
 import { getLoadLinkIntelligence } from "@/lib/loadlinkIntelligence";
 import { inspectLoadLinkImage, showLoadLinkImageQuality } from "@/lib/loadlinkImageQuality";
 import { submitListingDirect } from "@/lib/listingSubmission";
+
+const BusinessPlans = dynamic(() => import("@/components/BusinessPlans"), { ssr: false, loading: () => <div className="mx-auto my-6 h-28 max-w-6xl animate-pulse rounded-2xl bg-current/[.05]" /> });
+const VehicleMarketplaceHub = dynamic(() => import("@/components/VehicleMarketplaceHub"), { ssr: false, loading: () => <div className="mx-auto my-8 h-64 max-w-6xl animate-pulse rounded-2xl bg-current/[.05]" /> });
 import { getTruckModel, getTruckModels, truckCatalog, truckYears, validateTruckTransmission } from "@/lib/truckCatalog";
 
 
@@ -156,7 +159,7 @@ export default function ListYourVehiclePage() {
       const user = await getFreshAuthenticatedUser();
       if (!user) { setAuthReady(true); return; }
       setSignedIn(true);
-      await syncAccountState().catch(() => undefined);
+      void syncAccountState().catch(() => undefined);
       setPostedBy(String(user.user_metadata?.full_name || user.user_metadata?.name || ""));
 
       const params = new URLSearchParams(window.location.search);
@@ -519,8 +522,6 @@ export default function ListYourVehiclePage() {
     }
   }
 
-  if (!authReady) return <main className="min-h-screen bg-black text-white"><LoadLinkLoading /></main>;
-
   const surface = darkMode ? "loadlink-glass border-white/12 bg-black/62 text-white backdrop-blur-xl" : "loadlink-glass border-white/75 bg-white/68 text-black backdrop-blur-xl";
   const muted = darkMode ? "text-white/55" : "text-black/55";
   const inputClass = `h-14 w-full rounded-xl border px-4 font-semibold outline-none backdrop-blur-lg focus:border-[#f6b800] ${darkMode ? "border-white/14 bg-white/[.055] text-white placeholder:text-white/30" : "border-black/10 bg-white/72 text-black placeholder:text-black/35"}`;
@@ -566,40 +567,61 @@ export default function ListYourVehiclePage() {
             {dealerPost ? `Add stock to ${dealershipName}` : "Find a vehicle or list your own"}
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm font-semibold leading-7 text-white/75 md:text-base">
-            Browse approved trucks, trailers and mobile units, or create your own verified LoadLink listing.
+            Browse approved trucks, trailers and mobile units, or choose what you want to list and continue through the correct LoadLink flow.
           </p>
 
           {!dealerPost ? (
-  <div className="mx-auto mt-6 grid w-full max-w-md gap-3">
-    <button type="button" onClick={() => {
-      setListingIntent("vehicle");
-      setVehicleCategory(null);
-      setListingFlowOpen(true);
-      setSelectedPlan(null);
-      setPackageType("standard");
-      window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-    }} className="flex min-h-14 items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]">
-      List your vehicle
-    </button>
-    <button type="button" onClick={() => {
-      setListingIntent("mobile_unit");
-      setVehicleCategory("mobile_unit");
-      setListingFlowOpen(true);
-      setSelectedPlan(null);
-      setPackageType("standard");
-      window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-    }} className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]">
-      List a mobile unit
-    </button>
-    <a href="#vehicle-marketplace-vehicles" onClick={() => { setListingFlowOpen(false); setListingIntent(null); }} className="flex min-h-12 items-center justify-center rounded-full border border-white/35 bg-black/55 px-6 text-xs font-black uppercase tracking-[.1em] text-white/85 backdrop-blur transition active:scale-[.99]">
-      Browse available stock
-    </a>
-  </div>
-) : null}
+            <div className="mx-auto mt-6 grid w-full max-w-md gap-3">
+              <a href="#vehicle-marketplace-vehicles" onClick={() => { setListingFlowOpen(false); setListingIntent(null); setSelectedPlan(null); }} className="flex min-h-14 items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]">
+                View available vehicles
+              </a>
+              <button type="button" onClick={() => {
+                setListingFlowOpen(true);
+                setListingIntent(null);
+                setVehicleCategory(null);
+                setSelectedPlan(null);
+                setPackageType("standard");
+                window.setTimeout(() => document.getElementById("vehicle-listing-choice")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+              }} className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]">
+                List a vehicle or mobile unit
+              </button>
+            </div>
+          ) : null}
         </div>
       </section>
 
-      {listingFlowOpen && !signedIn ? <section id="vehicle-listing-form" className="mx-auto max-w-5xl scroll-mt-24 px-4 py-8 md:px-6"><div className={`loadlink-glass rounded-[24px] border p-6 text-center ${surface}`}><h2 className="text-3xl font-black tracking-[-.04em]">Sign in to list a vehicle</h2><p className={`mx-auto mt-3 max-w-xl text-sm font-semibold leading-6 ${muted}`}>Approved marketplace stock remains available below. Sign in when you are ready to create a truck, trailer or mobile-unit listing.</p><a href={loginHref(currentRelativePath())} className="mt-5 inline-flex h-12 items-center justify-center rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase tracking-[.1em] text-black">Sign in or create account</a></div></section> : null}
+      {listingFlowOpen && !listingIntent && !dealerPost ? (
+        <section id="vehicle-listing-choice" className={`scroll-mt-24 border-b px-4 py-8 md:px-6 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+          <div className="mx-auto max-w-5xl text-center">
+            <h2 className="text-3xl font-black tracking-[-.04em]">What do you want to list?</h2>
+            <p className={`mx-auto mt-2 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Choose first. LoadLink will only show the plan guide and form for that listing route after you make this selection.</p>
+            <div className="mx-auto mt-6 grid max-w-2xl gap-3 sm:grid-cols-2">
+              <button type="button" onClick={() => {
+                setListingIntent("vehicle");
+                setVehicleCategory(null);
+                setSelectedPlan(null);
+                setPackageType("standard");
+                window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+              }} className={`min-h-28 rounded-2xl border p-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <span className="block text-xl font-black">List a vehicle</span>
+                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Truck or trailer listing.</span>
+              </button>
+              <button type="button" onClick={() => {
+                setListingIntent("mobile_unit");
+                setVehicleCategory("mobile_unit");
+                setSelectedPlan(null);
+                setPackageType("standard");
+                window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+              }} className={`min-h-28 rounded-2xl border p-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <span className="block text-xl font-black">List a mobile unit</span>
+                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Mobile fridge, kitchen, clinic, office and other units.</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {listingFlowOpen && listingIntent && !signedIn ? <section id="vehicle-listing-form" className="mx-auto max-w-5xl scroll-mt-24 px-4 py-8 md:px-6"><div className={`loadlink-glass rounded-[24px] border p-6 text-center ${surface}`}><h2 className="text-3xl font-black tracking-[-.04em]">Sign in to list a vehicle</h2><p className={`mx-auto mt-3 max-w-xl text-sm font-semibold leading-6 ${muted}`}>Approved marketplace stock remains available below. Sign in when you are ready to create a truck, trailer or mobile-unit listing.</p><a href={loginHref(currentRelativePath())} className="mt-5 inline-flex h-12 items-center justify-center rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase tracking-[.1em] text-black">Sign in or create account</a></div></section> : null}
 
       {listingFlowOpen && signedIn && listingIntent && !dealerPost && !selectedPlan ? (
         <section id="vehicle-listing-form" className={`scroll-mt-24 border-b px-4 py-6 md:px-6 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>

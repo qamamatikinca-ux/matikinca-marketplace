@@ -753,39 +753,30 @@ export default function MessagesPage() {
     const requestSequence = ++conversationLoadSequenceRef.current;
     const buyerKeys = getBuyerKeys();
     const ownerKeys = getOwnerKeys();
-    const buyerRows: Conversation[] = [];
-
-    for (const buyerKey of buyerKeys) {
-      const buyerResult = await supabase.rpc("get_buyer_guest_threads", {
-        p_buyer_key: buyerKey,
-      });
-      if (buyerResult.error) throw buyerResult.error;
-
-      buyerRows.push(
-        ...((buyerResult.data || []) as ConversationRow[]).map((row) => ({
+    const [buyerGroups, ownerGroups] = await Promise.all([
+      Promise.all(buyerKeys.map(async (buyerKey) => {
+        const result = await supabase.rpc("get_buyer_guest_threads", { p_buyer_key: buyerKey });
+        if (result.error) throw result.error;
+        return ((result.data || []) as ConversationRow[]).map((row) => ({
           ...row,
           accessKey: buyerKey,
           role: "buyer" as const,
           unreadCount: toCount(row.unread_count),
-        })),
-      );
-    }
-
-    const ownerRows: Conversation[] = [];
-    for (const ownerKey of ownerKeys) {
-      const ownerResult = await supabase.rpc("get_owner_guest_threads", {
-        p_owner_key: ownerKey,
-      });
-      if (ownerResult.error) throw ownerResult.error;
-      ownerRows.push(
-        ...((ownerResult.data || []) as ConversationRow[]).map((row) => ({
+        }));
+      })),
+      Promise.all(ownerKeys.map(async (ownerKey) => {
+        const result = await supabase.rpc("get_owner_guest_threads", { p_owner_key: ownerKey });
+        if (result.error) throw result.error;
+        return ((result.data || []) as ConversationRow[]).map((row) => ({
           ...row,
           accessKey: ownerKey,
           role: "owner" as const,
           unreadCount: toCount(row.unread_count),
-        })),
-      );
-    }
+        }));
+      })),
+    ]);
+    const buyerRows: Conversation[] = buyerGroups.flat();
+    const ownerRows: Conversation[] = ownerGroups.flat();
 
     const locallyArchived = readLocalArchivedIds();
     const merged = new Map<string, Conversation>();
@@ -878,27 +869,24 @@ export default function MessagesPage() {
           return;
         }
 
-        const { data: privacyRow } = await supabase
+        const privacyPromise = supabase
           .from("profiles")
           .select("message_activity_visible,message_typing_indicators,message_requests_enabled,message_notification_previews")
           .eq("id", user.id)
           .maybeSingle();
 
-        await Promise.allSettled(
+        void Promise.allSettled(
           Array.from(new Set([getBuyerKey(), ...getOwnerKeys()])).map((accessKey) =>
             supabase.rpc("loadlink_register_chat_access_key", { p_access_key: accessKey }),
           ),
         );
-
-        if (privacyRow) {
-          const nextPrivacy = profileRowToMessagePrivacy(
-            privacyRow as Record<string, unknown>,
-          );
+        void syncAccountState().catch(() => undefined);
+        void privacyPromise.then(({ data: privacyRow }) => {
+          if (!privacyRow) return;
+          const nextPrivacy = profileRowToMessagePrivacy(privacyRow as Record<string, unknown>);
           writeMessagePrivacy(nextPrivacy);
           setMessagePrivacy(nextPrivacy);
-        }
-
-        await syncAccountState().catch(() => undefined);
+        });
         const params = new URLSearchParams(window.location.search);
         initialMessageDraftRef.current = String(params.get("draft") || "").trim();
         let listingId = params.get("listing");
@@ -949,7 +937,7 @@ export default function MessagesPage() {
             entityId: listingId,
             metadata: { threadId: openedId },
           }).catch(() => undefined);
-          await syncAccountState().catch(() => undefined);
+          void syncAccountState().catch(() => undefined);
           window.history.replaceState(
             {},
             "",
@@ -963,7 +951,7 @@ export default function MessagesPage() {
         await loadConversations(openedId);
         refreshTimer = setInterval(
           () => loadConversations().catch(() => undefined),
-          10000,
+          15000,
         );
       } catch (initialiseError) {
         if (active)
@@ -1583,7 +1571,7 @@ export default function MessagesPage() {
     window.history.replaceState({}, "", "/messages");
   }
 
-  if (loading || (messagesLoading && Boolean(selectedId) && messages.length === 0)) {
+  if (loading) {
     return (
       <main
         className={`min-h-[100svh] ${
@@ -1656,10 +1644,10 @@ ${message}` : message)}
                 className="h-12 w-full rounded-xl border border-black/10 bg-[#f5f3ed] px-4 text-sm font-semibold outline-none transition focus:border-[#f6b800] focus:bg-white"
               />
             </label>
-            <div data-loadlink-folder-tabs="v2619-fixed" className="loadlink-folder-tabs no-scrollbar mt-3 flex min-w-0 gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Conversation folders">
-              <button type="button" role="tab" aria-selected={folder === "inbox"} onClick={() => { setFolder("inbox"); setQuery(""); }} className={`shrink-0 whitespace-nowrap rounded-xl border px-4 py-2.5 text-[11px] font-black transition ${folder === "inbox" ? "border-[#f6b800] bg-[#f6b800] text-black shadow-sm" : darkMode ? "border-white/12 bg-[#0b0b0b] text-white/62" : "border-black/10 bg-white text-black/62"}`}>Inbox</button>
-              <button type="button" role="tab" aria-selected={folder === "potential"} onClick={() => { setFolder("potential"); setQuery(""); }} className={`shrink-0 whitespace-nowrap rounded-xl border px-4 py-2.5 text-[11px] font-black transition ${folder === "potential" ? "border-[#f6b800] bg-[#f6b800] text-black shadow-sm" : darkMode ? "border-white/12 bg-[#0b0b0b] text-white/62" : "border-black/10 bg-white text-black/62"}`}>Potential Deals{potentialDealCount ? <span className="ml-1.5 opacity-65">{potentialDealCount}</span> : null}</button>
-              <button type="button" role="tab" aria-selected={folder === "archived"} onClick={() => { setFolder("archived"); setQuery(""); }} className={`shrink-0 whitespace-nowrap rounded-xl border px-4 py-2.5 text-[11px] font-black transition ${folder === "archived" ? "border-[#f6b800] bg-[#f6b800] text-black shadow-sm" : darkMode ? "border-white/12 bg-[#0b0b0b] text-white/62" : "border-black/10 bg-white text-black/62"}`}>Archived{archivedCount ? <span className="ml-1.5 opacity-65">{archivedCount}</span> : null}</button>
+            <div data-loadlink-folder-tabs="v2619-fixed" className="loadlink-folder-tabs mt-3 grid min-w-0 grid-cols-[0.8fr_1.35fr_0.9fr] gap-2" role="tablist" aria-label="Conversation folders">
+              <button type="button" role="tab" aria-selected={folder === "inbox"} onClick={() => { setFolder("inbox"); setQuery(""); }} className={`min-w-0 whitespace-nowrap rounded-xl border px-2 py-2.5 text-[10px] font-black transition ${folder === "inbox" ? "border-[#f6b800] bg-[#f6b800] text-black shadow-sm" : darkMode ? "border-white/12 bg-[#0b0b0b] text-white/62" : "border-black/10 bg-white text-black/62"}`}>Inbox</button>
+              <button type="button" role="tab" aria-selected={folder === "potential"} onClick={() => { setFolder("potential"); setQuery(""); }} className={`min-w-0 whitespace-nowrap rounded-xl border px-2 py-2.5 text-[10px] font-black transition ${folder === "potential" ? "border-[#f6b800] bg-[#f6b800] text-black shadow-sm" : darkMode ? "border-white/12 bg-[#0b0b0b] text-white/62" : "border-black/10 bg-white text-black/62"}`}>Potential Deals{potentialDealCount ? <span className="ml-1.5 opacity-65">{potentialDealCount}</span> : null}</button>
+              <button type="button" role="tab" aria-selected={folder === "archived"} onClick={() => { setFolder("archived"); setQuery(""); }} className={`min-w-0 whitespace-nowrap rounded-xl border px-2 py-2.5 text-[10px] font-black transition ${folder === "archived" ? "border-[#f6b800] bg-[#f6b800] text-black shadow-sm" : darkMode ? "border-white/12 bg-[#0b0b0b] text-white/62" : "border-black/10 bg-white text-black/62"}`}>Archived{archivedCount ? <span className="ml-1.5 opacity-65">{archivedCount}</span> : null}</button>
             </div>
           </div>
 

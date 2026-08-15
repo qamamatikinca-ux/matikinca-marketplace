@@ -135,7 +135,6 @@ export default function TruckFinanceCalculatorPage() {
 
       <section className="mx-auto max-w-[820px] px-4 pb-16 pt-7 sm:px-6 sm:pt-10">
         <div className="text-center">
-          <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#b88700]">LoadLink truck finance</p>
           <h1 className="mt-2 text-[36px] font-black tracking-[-.055em] sm:text-[46px]">What truck can your budget buy?</h1>
           <p className={`mx-auto mt-3 max-w-[620px] text-sm font-semibold leading-6 ${muted}`}>
             Enter the monthly amount you are comfortable with and LoadLink will estimate your buying power, then compare it with approved truck listings.
@@ -145,10 +144,11 @@ export default function TruckFinanceCalculatorPage() {
         <section className={`mt-7 overflow-hidden rounded-[30px] border shadow-[0_24px_70px_rgba(0,0,0,.08)] ${card}`}>
           <div className={`relative min-h-[315px] overflow-hidden ${darkMode ? "bg-[#101010]" : "bg-white"}`}>
             <div className={`absolute inset-x-0 bottom-0 h-24 ${darkMode ? "bg-gradient-to-t from-black/30 to-transparent" : "bg-gradient-to-t from-black/[.06] to-transparent"}`} aria-hidden="true" />
+            <div aria-hidden="true" className="absolute bottom-8 left-1/2 h-8 w-[66%] -translate-x-1/2 rounded-[50%] bg-black/20 blur-xl sm:bottom-10" />
             <img
               src={TRUCK_IMAGE}
               alt="Real commercial truck"
-              className="absolute inset-0 h-full w-full object-contain object-center p-4 sm:p-7"
+              className="absolute inset-0 z-10 h-full w-full object-contain object-center p-4 drop-shadow-[0_16px_14px_rgba(0,0,0,.18)] sm:p-7"
             />
           </div>
 

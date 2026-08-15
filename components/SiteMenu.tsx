@@ -202,7 +202,7 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
         <header className={`border-b px-5 pb-5 pt-4 ${border}`}>
           <div className="flex items-center justify-between gap-4">
             <Link href="/" aria-label="LoadLink home"><LoadLinkLogo theme={darkMode ? "dark" : "light"} showGlow={false} containerClassName="!w-[150px]" className="h-9 w-auto" /></Link>
-            <button ref={closeButtonRef} data-loadlink-menu-close type="button" onClick={() => setOpen(false)} className={`flex h-10 w-10 items-center justify-center rounded-full border outline-none focus:outline-none [-webkit-tap-highlight-color:transparent] ${border}`} aria-label="Close menu"><CloseIcon /></button>
+            <button ref={closeButtonRef} data-loadlink-menu-close type="button" onClick={() => setOpen(false)} className="flex h-10 w-10 items-center justify-center bg-transparent outline-none focus:outline-none [-webkit-tap-highlight-color:transparent]" aria-label="Close menu"><CloseIcon /></button>
           </div>
           {signedIn ? (
             <div className={`mt-5 flex items-center gap-3 rounded-2xl border p-3 ${border} ${darkMode ? "bg-white/[.04]" : "bg-white"}`}>
