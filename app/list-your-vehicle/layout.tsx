@@ -106,7 +106,7 @@ export default function ListYourVehicleLayout({ children }: { children: ReactNod
   }, []);
 
   return (
-    <div data-loadlink-listing-entry={entryMode || undefined}>
+    <div data-loadlink-listing-entry={entryMode || undefined} data-loadlink-listing-entry-version="private-gate-bypass-v1">
       {children}
       <style jsx global>{`
         [data-loadlink-legacy-dealership-gate="hidden"] {
