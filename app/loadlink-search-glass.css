@@ -7,10 +7,10 @@
 }
 
 [aria-label="Search category"] > div > button {
-  min-height: 44px !important;
-  min-width: 100px !important;
+  min-height: 42px !important;
+  min-width: 96px !important;
   border-radius: 9999px !important;
-  padding: 8px 16px !important;
+  padding: 7px 15px !important;
   font-size: 13px !important;
   font-weight: 800 !important;
   letter-spacing: -0.015em !important;
@@ -84,7 +84,7 @@ html[data-loadlink-theme="dark"] [data-loadlink-home-search-section] {
   font-weight: 500 !important;
 }
 [data-loadlink-home-search-row] > button {
-  min-width: 92px !important;
+  min-width: 94px !important;
   height: 46px !important;
   margin: 5px !important;
   margin-left: 0 !important;
@@ -93,7 +93,7 @@ html[data-loadlink-theme="dark"] [data-loadlink-home-search-section] {
   border-radius: 15px !important;
   background: #f6b800 !important;
   color: #050505 !important;
-  font-size: 12px !important;
+  font-size: 13px !important;
   font-weight: 500 !important;
   letter-spacing: .02em !important;
 }
@@ -123,6 +123,19 @@ html[data-loadlink-theme="dark"] [data-loadlink-home-search-section] {
   top: 64px !important;
   -webkit-backdrop-filter: blur(18px) saturate(130%) !important;
   backdrop-filter: blur(18px) saturate(130%) !important;
+}
+
+@media (max-width: 639px) {
+  [data-loadlink-home-search-row],
+  [data-loadlink-home-search-input],
+  [data-loadlink-home-location] input {
+    height: 54px !important;
+    min-height: 54px !important;
+  }
+  [data-loadlink-home-search-row] > button {
+    height: 44px !important;
+    min-width: 94px !important;
+  }
 }
 
 @media (min-width: 640px) {
