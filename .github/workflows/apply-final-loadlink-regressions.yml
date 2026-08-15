@@ -1,11 +1,11 @@
-name: Apply final LoadLink regression repair
+name: Verify final LoadLink portal alignment
 
 on:
   push:
     branches:
       - main
     paths:
-      - "scripts/fix-final-loadlink-regressions.py"
+      - "scripts/align-vehicle-portal-with-driver.py"
       - ".github/workflows/apply-final-loadlink-regressions.yml"
   workflow_dispatch:
 
@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: apply-final-loadlink-regressions
+  group: verify-final-loadlink-portal-alignment
   cancel-in-progress: false
 
 jobs:
@@ -33,8 +33,8 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Apply targeted regression repair
-        run: python scripts/fix-final-loadlink-regressions.py
+      - name: Align vehicle portal to Driver Portal structure
+        run: python scripts/align-vehicle-portal-with-driver.py
 
       - name: Install dependencies
         env:
@@ -46,16 +46,16 @@ jobs:
           NEXT_TELEMETRY_DISABLED: "1"
         run: npm run build
 
-      - name: Commit verified application changes
+      - name: Commit verified alignment
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name "LoadLink Regression Repair"
+          git config user.name "LoadLink Portal Alignment"
           git config user.email "actions@users.noreply.github.com"
-          git add components/MarketplaceDiscovery.tsx app/list-your-vehicle/page.tsx components/SiteMenu.tsx app/tools/page.tsx
+          git add app/list-your-vehicle/page.tsx
           if git diff --cached --quiet; then
-            echo "No application changes were required."
+            echo "No alignment changes were required."
             exit 0
           fi
-          git commit -m "fix: restore approved LoadLink portal behavior and vehicle flow"
+          git commit -m "fix: make vehicle portal follow approved driver portal structure"
           git push origin HEAD:main
