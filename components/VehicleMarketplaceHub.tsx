@@ -19,6 +19,8 @@ type VehicleRow = {
 type ViewMode = "all" | "vehicles" | "units";
 type SortMode = "newest" | "price_low" | "price_high";
 
+const SEEN_KEY = "loadlink-seen-vehicle-listings-v1";
+
 function readMeta(description: string | null | undefined, label: string) {
   return String(description || "").match(new RegExp(`^${label}:\\s*([^\\n]+)`, "im"))?.[1]?.trim() || "";
 }
@@ -46,6 +48,16 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<ViewMode>("all");
   const [sort, setSort] = useState<SortMode>("newest");
+  const [seen, setSeen] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(SEEN_KEY) || "[]");
+      setSeen(new Set(Array.isArray(saved) ? saved.map(String) : []));
+    } catch {
+      setSeen(new Set());
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -54,15 +66,9 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
       .then((payload) => {
         if (active) setRows(((payload.rows || []) as VehicleRow[]).filter(isVehicleListing));
       })
-      .catch(() => {
-        if (active) setRows([]);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+      .catch(() => active && setRows([]))
+      .finally(() => active && setLoading(false));
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -84,6 +90,15 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
     });
   }, [mode, rows, sort]);
 
+  function markSeen(id: string) {
+    setSeen((current) => {
+      const next = new Set(current);
+      next.add(id);
+      try { localStorage.setItem(SEEN_KEY, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }
+
   const surface = darkMode ? "border-white/10 bg-black/62 text-white" : "border-white/75 bg-white/70 text-black";
   const muted = darkMode ? "text-white/50" : "text-black/50";
 
@@ -94,8 +109,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
       <div className="mx-auto max-w-5xl">
         <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#b88900]">Approved LoadLink listings</p>
-            <h2 className="mt-2 text-4xl font-black tracking-[-.05em] md:text-5xl">Vehicles and mobile units available</h2>
+            <h2 className="text-4xl font-black tracking-[-.05em] md:text-5xl">Vehicles and mobile units available</h2>
             <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Browse approved trucks, trailers and commercial mobile units from the same portal used to list stock.</p>
           </div>
           <label className={`loadlink-sort-control w-fit border ${surface}`}>
@@ -109,46 +123,31 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
         </div>
 
         <div className="mt-6 flex max-w-full gap-2 overflow-x-auto pb-1">
-          {([
-            ["all", "All approved"],
-            ["vehicles", "Trucks & trailers"],
-            ["units", "Mobile units"],
-          ] as Array<[ViewMode, string]>).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setMode(value)}
-              className={`shrink-0 rounded-full border px-4 py-2.5 text-xs font-black transition ${mode === value ? "border-[#f6b800] bg-[#f6b800] text-black" : surface}`}
-            >
-              {label}
-            </button>
+          {([["all", "All approved"], ["vehicles", "Trucks & trailers"], ["units", "Mobile units"]] as Array<[ViewMode, string]>).map(([value, label]) => (
+            <button key={value} type="button" onClick={() => setMode(value)} className={`shrink-0 rounded-full border px-4 py-2.5 text-xs font-black transition ${mode === value ? "border-[#f6b800] bg-[#f6b800] text-black" : surface}`}>{label}</button>
           ))}
         </div>
 
         {loading ? (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {[0, 1, 2, 3].map((item) => <div key={item} className={`h-72 animate-pulse rounded-[24px] border ${surface}`} />)}
-          </div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">{[0, 1, 2, 3].map((item) => <div key={item} className={`h-72 animate-pulse rounded-[24px] border ${surface}`} />)}</div>
         ) : visible.length ? (
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             {visible.map((row) => {
               const type = readMeta(row.description, "Vehicle subtype") || readMeta(row.description, "Listing type") || row.vehicle_group || "Commercial vehicle";
               const offer = readMeta(row.description, "Offer") || "Available";
+              const wasSeen = seen.has(String(row.id));
               return (
-                <Link
-                  key={row.id}
-                  href={`/jobs?portal=asset&search=${encodeURIComponent(row.title || "vehicle")}#job-${row.id}`}
-                  className={`loadlink-glass group overflow-hidden rounded-[24px] border shadow-[0_12px_34px_rgba(0,0,0,.06)] ${surface}`}
-                >
+                <Link key={row.id} href={`/listing/${row.id}`} onClick={() => markSeen(String(row.id))} className={`loadlink-glass group overflow-hidden rounded-[24px] border shadow-[0_12px_34px_rgba(0,0,0,.06)] ${surface}`}>
                   <div className="relative aspect-[16/10] overflow-hidden bg-black/10">
-                    {row.photos?.[0] ? <img src={row.photos[0]} alt={row.title || "LoadLink vehicle"} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.015]" /> : <div className="flex h-full items-center justify-center text-sm font-black opacity-35">LoadLink</div>}
-                    <span className="absolute left-3 top-3 rounded-full bg-black/78 px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] text-white">{offer}</span>
+                    {row.photos?.[0] ? <img src={row.photos[0]} alt={row.title || "LoadLink vehicle"} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.015]" /> : <img src="/images/truck-1.jpg" alt="Commercial vehicle" className="h-full w-full object-cover" />}
+                    <span className="absolute left-3 top-3 rounded-full bg-black/82 px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] text-white">{offer}</span>
+                    {wasSeen ? <span className="absolute right-3 top-3 rounded-xl bg-black/72 px-3 py-1.5 text-xs font-semibold text-white">Seen</span> : null}
                   </div>
                   <div className="p-4">
                     <p className={`text-[10px] font-black uppercase tracking-[.1em] ${muted}`}>{type} · {row.city || "South Africa"}</p>
                     <h3 className="mt-2 text-xl font-black tracking-[-.03em]">{row.title || "Commercial vehicle"}</h3>
-                    <p className="mt-3 text-2xl font-black text-[#b88900]">{formatListingRate(row.rate)}</p>
-                    <span className="mt-4 inline-block text-xs font-black underline underline-offset-4">View full listing</span>
+                    <p className="mt-3 text-2xl font-black">{formatListingRate(row.rate)}</p>
+                    <span className="mt-4 inline-block text-xs font-black underline underline-offset-4">View full details</span>
                   </div>
                 </Link>
               );
