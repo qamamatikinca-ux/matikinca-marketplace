@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import AuthStatusButton from "@/components/AuthStatusButton";
 import HomeLogoLink from "@/components/HomeLogoLink";
+import ListVehicleEntryHero from "@/components/ListVehicleEntryHero";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import SiteMenu from "@/components/SiteMenu";
 
@@ -52,6 +53,7 @@ export default function LoadLinkSiteHeader({
     <>
       {header}
       <div aria-hidden="true" className="h-20 shrink-0" />
+      <ListVehicleEntryHero />
     </>
   );
 }
