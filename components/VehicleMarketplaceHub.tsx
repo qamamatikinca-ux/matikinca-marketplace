@@ -19,7 +19,8 @@ type VehicleRow = {
 type ViewMode = "all" | "vehicles" | "units";
 type SortMode = "newest" | "price_low" | "price_high";
 
-const SEEN_KEY = "loadlink-seen-vehicle-listings-v1";
+const SEEN_KEY = "loadlink-seen-listings-v2";
+const RECENT_KEY = "loadlink-recent-viewed-jobs";
 
 function readMeta(description: string | null | undefined, label: string) {
   return String(description || "").match(new RegExp(`^${label}:\\s*([^\\n]+)`, "im"))?.[1]?.trim() || "";
@@ -43,6 +44,19 @@ function numericPrice(row: VehicleRow) {
   return match ? Number(match[1]) : Number.POSITIVE_INFINITY;
 }
 
+function readSeenIds() {
+  const ids = new Set<string>();
+  try {
+    const saved = JSON.parse(localStorage.getItem(SEEN_KEY) || "[]");
+    if (Array.isArray(saved)) saved.forEach((id) => id && ids.add(String(id)));
+  } catch {}
+  try {
+    const recent = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]");
+    if (Array.isArray(recent)) recent.forEach((item) => item?.id && ids.add(String(item.id)));
+  } catch {}
+  return ids;
+}
+
 export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean }) {
   const [rows, setRows] = useState<VehicleRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,12 +65,14 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
   const [seen, setSeen] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(SEEN_KEY) || "[]");
-      setSeen(new Set(Array.isArray(saved) ? saved.map(String) : []));
-    } catch {
-      setSeen(new Set());
-    }
+    const refreshSeen = () => setSeen(readSeenIds());
+    refreshSeen();
+    window.addEventListener("loadlink-seen-listings-updated", refreshSeen);
+    window.addEventListener("loadlink-recent-activity-updated", refreshSeen);
+    return () => {
+      window.removeEventListener("loadlink-seen-listings-updated", refreshSeen);
+      window.removeEventListener("loadlink-recent-activity-updated", refreshSeen);
+    };
   }, []);
 
   useEffect(() => {
@@ -97,6 +113,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
       try { localStorage.setItem(SEEN_KEY, JSON.stringify([...next])); } catch {}
       return next;
     });
+    window.dispatchEvent(new Event("loadlink-seen-listings-updated"));
   }
 
   const surface = darkMode ? "border-white/10 bg-black/62 text-white" : "border-white/75 bg-white/70 text-black";
@@ -140,8 +157,8 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
                 <Link key={row.id} href={`/listing/${row.id}`} onClick={() => markSeen(String(row.id))} className={`loadlink-glass group overflow-hidden rounded-[24px] border shadow-[0_12px_34px_rgba(0,0,0,.06)] ${surface}`}>
                   <div className="relative aspect-[16/10] overflow-hidden bg-black/10">
                     {row.photos?.[0] ? <img src={row.photos[0]} alt={row.title || "LoadLink vehicle"} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.015]" /> : <img src="/images/truck-1.jpg" alt="Commercial vehicle" className="h-full w-full object-cover" />}
-                    <span className="absolute left-3 top-3 rounded-full bg-black/82 px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] text-white">{offer}</span>
-                    {wasSeen ? <span className="absolute right-3 top-3 rounded-xl bg-black/72 px-3 py-1.5 text-xs font-semibold text-white">Seen</span> : null}
+                    {wasSeen ? <span className="absolute left-3 top-3 rounded-xl border border-white/10 bg-black/72 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">Seen</span> : null}
+                    <span className="absolute right-3 top-3 rounded-full bg-black/82 px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] text-white">{offer}</span>
                   </div>
                   <div className="p-4">
                     <p className={`text-[10px] font-black uppercase tracking-[.1em] ${muted}`}>{type} · {row.city || "South Africa"}</p>
