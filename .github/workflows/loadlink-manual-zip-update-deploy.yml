@@ -1,79 +1,54 @@
-name: LoadLink Manual ZIP Update + Deploy
+name: LoadLink Manual Primary Deploy
 
 on:
   workflow_dispatch:
     inputs:
       force_deploy:
-        description: "Create a fresh deployment commit even if source already matches"
+        description: "Create a fresh production deployment commit"
         required: true
         default: true
         type: boolean
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/loadlink-manual-zip-update-deploy.yml"
 
 permissions:
   contents: write
   statuses: read
 
 concurrency:
-  group: loadlink-manual-zip-deploy
+  group: loadlink-manual-primary-deploy
   cancel-in-progress: false
 
 jobs:
-  install-build-push:
-    name: Install, verify, build, push and verify Vercel
+  build-push-verify:
+    name: Build current main, push primary deploy, verify Vercel
     runs-on: ubuntu-latest
     timeout-minutes: 35
 
     env:
-      ARCHIVE_PATH: .github/workflows/LoadLink-update-719283b.zip
-      TARGET_FILE: components/MarketplaceDiscovery.tsx
-      EXPECTED_COMPONENT_SHA256: 018541cf6b41f66a354eae7056c8c882c1f48ec3866a1b6031e986506337c4b6
       PRIMARY_VERCEL_CONTEXT: "Vercel – matikinca-marketplace"
 
     steps:
-      - name: Checkout LoadLink main
+      - name: Checkout current LoadLink main
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Verify repository and ZIP
+      - name: Verify primary-only Vercel routing
         shell: bash
         run: |
           set -Eeuo pipefail
           test "$GITHUB_REPOSITORY" = "qamamatikinca-ux/matikinca-marketplace"
           test -f package.json
           test -f package-lock.json
-          test -f "$ARCHIVE_PATH" || { echo "::error::Missing $ARCHIVE_PATH"; exit 1; }
-          unzip -tq "$ARCHIVE_PATH" >/dev/null
-          echo "ZIP integrity: PASS"
-
-      - name: Install exact approved update
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          rm -rf /tmp/loadlink-update
-          mkdir -p /tmp/loadlink-update
-          unzip -q "$ARCHIVE_PATH" -d /tmp/loadlink-update
-
-          PAYLOAD="$(find /tmp/loadlink-update -type f -path '*/components/MarketplaceDiscovery.tsx' -print -quit)"
-          test -n "$PAYLOAD" || { echo "::error::MarketplaceDiscovery.tsx missing from ZIP"; exit 1; }
-
-          ACTUAL_SHA="$(sha256sum "$PAYLOAD" | awk '{print $1}')"
-          test "$ACTUAL_SHA" = "$EXPECTED_COMPONENT_SHA256" || {
-            echo "::error::Update checksum mismatch"
-            echo "Expected: $EXPECTED_COMPONENT_SHA256"
-            echo "Actual:   $ACTUAL_SHA"
-            exit 1
-          }
-
-          cp "$PAYLOAD" "$TARGET_FILE"
-          grep -Fq 'job: "/jobs"' "$TARGET_FILE"
-          grep -Fq 'contract: "/contracts"' "$TARGET_FILE"
-          grep -Fq 'asset: "/list-your-vehicle"' "$TARGET_FILE"
-          grep -Fq 'driver: "/driver-portal"' "$TARGET_FILE"
-          git diff --check
-          echo "Approved update verification: PASS"
+          test -f vercel.json
+          grep -Fq "matikinca-marketplace.vercel.app" vercel.json
+          echo "Primary-only Vercel routing: PASS"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -86,33 +61,23 @@ jobs:
         run: npm ci
 
       - name: Production build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
         run: npm run build
 
-      - name: Commit validated update
+      - name: Create manual production deployment commit
         id: commit
         shell: bash
-        env:
-          FORCE_DEPLOY: ${{ inputs.force_deploy }}
         run: |
           set -Eeuo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$TARGET_FILE"
-
-          if ! git diff --cached --quiet; then
-            git commit -m "fix: restore direct LoadLink portal navigation"
-            echo "mode=source-update" >> "$GITHUB_OUTPUT"
-          elif [ "$FORCE_DEPLOY" = "true" ]; then
-            git commit --allow-empty -m "deploy: manual LoadLink redeploy [run $GITHUB_RUN_NUMBER]"
-            echo "mode=deployment-trigger" >> "$GITHUB_OUTPUT"
-          else
-            echo "mode=no-change" >> "$GITHUB_OUTPUT"
-          fi
-
+          git fetch origin main
+          git reset --hard origin/main
+          git commit --allow-empty -m "deploy: manual primary LoadLink production [run $GITHUB_RUN_NUMBER]"
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: Push to main
-        if: steps.commit.outputs.mode != 'no-change'
+      - name: Push deployment commit to main
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -121,63 +86,62 @@ jobs:
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
           echo "Remote main verification: PASS"
 
-      - name: Wait for Vercel production status
-        if: steps.commit.outputs.mode != 'no-change'
+      - name: Wait for primary Vercel production status
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           DEPLOY_SHA: ${{ steps.commit.outputs.sha }}
         run: |
           set -Eeuo pipefail
+          echo "Waiting for primary Vercel status on $DEPLOY_SHA"
 
-          echo "Waiting for Vercel status on $DEPLOY_SHA"
-
-          for attempt in $(seq 1 30); do
+          for attempt in $(seq 1 40); do
             STATUS_JSON="$(gh api "repos/$GITHUB_REPOSITORY/commits/$DEPLOY_SHA/status")"
             STATE="$(printf '%s' "$STATUS_JSON" | jq -r --arg ctx "$PRIMARY_VERCEL_CONTEXT" '.statuses[] | select(.context == $ctx) | .state' | head -n1)"
             DESCRIPTION="$(printf '%s' "$STATUS_JSON" | jq -r --arg ctx "$PRIMARY_VERCEL_CONTEXT" '.statuses[] | select(.context == $ctx) | .description' | head -n1)"
+            TARGET_URL="$(printf '%s' "$STATUS_JSON" | jq -r --arg ctx "$PRIMARY_VERCEL_CONTEXT" '.statuses[] | select(.context == $ctx) | .target_url' | head -n1)"
 
             if [ -z "$STATE" ]; then
-              echo "[$attempt/30] Vercel has not reported yet."
+              echo "[$attempt/40] Primary Vercel has not reported yet."
               sleep 5
               continue
             fi
 
-            echo "Vercel state: $STATE"
-            echo "Vercel message: ${DESCRIPTION:-none}"
+            echo "Primary Vercel state: $STATE"
+            echo "Primary Vercel message: ${DESCRIPTION:-none}"
+            echo "Primary Vercel target: ${TARGET_URL:-none}"
 
             case "$STATE" in
               success)
-                echo "Vercel deployment accepted and completed successfully."
+                echo "Primary LoadLink production deployment completed successfully."
                 exit 0
                 ;;
               failure|error)
-                echo "::error::Vercel rejected the deployment: ${DESCRIPTION:-unknown Vercel error}"
+                echo "::error::Primary Vercel rejected deployment: ${DESCRIPTION:-unknown Vercel error}"
                 exit 1
                 ;;
               pending)
-                echo "[$attempt/30] Vercel deployment is still pending."
                 sleep 5
                 ;;
               *)
-                echo "[$attempt/30] Unknown Vercel state '$STATE'; waiting."
                 sleep 5
                 ;;
             esac
           done
 
-          echo "::error::Timed out waiting for Vercel to report a successful production deployment."
+          echo "::error::Timed out waiting for primary Vercel production deployment."
           exit 1
 
-      - name: Summary
+      - name: Deployment summary
         if: always()
         shell: bash
         env:
           DEPLOY_SHA: ${{ steps.commit.outputs.sha }}
         run: |
-          echo "## LoadLink manual ZIP deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "## LoadLink manual primary deployment" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- GitHub production build must pass before push." >> "$GITHUB_STEP_SUMMARY"
-          echo "- Pushed commit: \`${DEPLOY_SHA:-none}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- The workflow now waits for the primary Vercel project result." >> "$GITHUB_STEP_SUMMARY"
-          echo "- A Vercel rejection makes this workflow fail instead of showing a false green success." >> "$GITHUB_STEP_SUMMARY"
+          echo "- Repository: qamamatikinca-ux/matikinca-marketplace" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Branch: main" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Deployment commit: \`${DEPLOY_SHA:-none}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Target: primary matikinca-marketplace Vercel project only" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Production build must pass before deployment commit is pushed" >> "$GITHUB_STEP_SUMMARY"
