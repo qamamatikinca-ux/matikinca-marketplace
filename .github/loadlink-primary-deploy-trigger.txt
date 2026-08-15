@@ -1,8 +1,9 @@
 LoadLink primary deployment trigger
 
-Corrected source commit: ed24ce529cc4e7ea73f821f1c5c151ff9249e390
+Corrected source commit: 60db3f452f9eff55bc59b85cf801ee5e2113944e
 Repository: qamamatikinca-ux/matikinca-marketplace
 Branch: main
 Deployment target: primary LoadLink production only
-Manual GitHub push: 2026-08-15 17:11 SAST
-Batch: restore yesterday homepage search and portal glow, correct List Your Vehicle flow, move Seen badge to top-left, fix iOS select zoom, preserve finance truck ground shadow
+Manual GitHub push: 2026-08-15 20:00 SAST
+Batch: corrected List Your Vehicle opening flow to match approved Driver Portal structure; direct shared source for /list-your-truck and /list-your-vehicle; route-entry scroll reset; seller and package stages only after listing type selection
+Retry trigger: force primary production deployment from current main
