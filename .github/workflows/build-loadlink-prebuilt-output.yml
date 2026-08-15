@@ -1,4 +1,4 @@
-name: Build LoadLink prebuilt output
+name: Deploy LoadLink primary from prebuilt output
 
 on:
   push:
@@ -30,42 +30,41 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Check Vercel token availability
+      - name: Require Vercel token
         shell: bash
         run: |
-          if [ -n "${VERCEL_TOKEN:-}" ]; then
-            echo "VERCEL_TOKEN_PRESENT=yes"
-          else
-            echo "VERCEL_TOKEN_PRESENT=no"
-          fi
+          test -n "${VERCEL_TOKEN:-}" || { echo "VERCEL_TOKEN is missing"; exit 1; }
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Link b4sf project locally
+      - name: Link primary LoadLink project locally
         shell: bash
         run: |
           mkdir -p .vercel
           cat > .vercel/project.json <<'JSON'
           {
             "orgId": "team_ltBsujLbhqOPqX4dlpWDHial",
-            "projectId": "prj_vkKr08egoWmA7XCmUKruj2zjiBi4"
+            "projectId": "prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt"
           }
           JSON
+
+      - name: Pull production environment
+        run: npx --yes vercel@latest pull --yes --environment=production --token "$VERCEL_TOKEN"
 
       - name: Build Vercel prebuilt output
         env:
           NEXT_TELEMETRY_DISABLED: "1"
         run: npx --yes vercel@latest build --prod --yes --token "$VERCEL_TOKEN"
 
-      - name: Deploy prebuilt output to b4sf production
-        run: npx --yes vercel@latest deploy --prebuilt --prod --token "$VERCEL_TOKEN"
+      - name: Deploy prebuilt output to primary production
+        run: npx --yes vercel@latest deploy --prebuilt --prod --yes --token "$VERCEL_TOKEN"
 
       - name: Upload prebuilt output
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: loadlink-b4sf-vercel-output
+          name: loadlink-primary-vercel-output
           path: .vercel/output
           include-hidden-files: true
           if-no-files-found: ignore
