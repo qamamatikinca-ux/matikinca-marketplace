@@ -63,7 +63,7 @@ export default function ListVehicleEntryHero() {
   return (
     <section
       data-loadlink-vehicle-entry
-      data-loadlink-vehicle-entry-version="drivers-layout-v1"
+      data-loadlink-vehicle-entry-version="drivers-layout-v2"
       className="relative flex min-h-[690px] w-full items-end overflow-hidden bg-black text-white md:min-h-[620px]"
       aria-labelledby="loadlink-vehicle-entry-title"
     >
