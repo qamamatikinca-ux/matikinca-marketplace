@@ -1,75 +1,99 @@
 /* Homepage LoadLink search + portal treatment.
-   Keep suggestions above the image portal cards without breaking the location
-   list's own scrolling. Preserve the approved larger search-category pills. */
+   Search and location results must always sit above the photo portals without
+   breaking their own scrolling. The portal visuals remain the approved large
+   image cards with one strong gold CTA and no redundant white heading. */
 
 main > section:has([data-loadlink-marketplace-search-shell]) {
   position: relative !important;
-  z-index: 120 !important;
+  z-index: 180 !important;
   overflow: visible !important;
   isolation: isolate;
 }
 
 [data-loadlink-marketplace-search-shell] {
   position: relative !important;
-  z-index: 121 !important;
+  z-index: 181 !important;
   overflow: visible !important;
 }
 
-/* Only the shell rows need to allow the popup to escape. Do not force every
-   absolute descendant to overflow visibly: that breaks the location list's
-   max-height and scrolling on mobile Safari. */
 [data-loadlink-marketplace-search-shell] > div {
   overflow: visible;
 }
 
-main > section:has([data-loadlink-marketplace-search-shell]) + section {
-  position: relative;
-  z-index: 0;
+[data-loadlink-marketplace-search-shell] .absolute {
+  z-index: 220 !important;
 }
 
-/* Keep homepage location suggestions contained and fully legible over portal
-   photography. */
+main > section:has([data-loadlink-marketplace-search-shell]) + section {
+  position: relative !important;
+  z-index: 0 !important;
+  isolation: isolate;
+}
+
+/* Location suggestions stay contained on mobile Safari and fully cover portal
+   artwork/text behind them. */
 [data-loadlink-marketplace-search-shell] [role="listbox"] {
+  z-index: 230 !important;
   max-height: 18rem !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
   overscroll-behavior: contain;
   isolation: isolate;
   -webkit-overflow-scrolling: touch;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 html[data-loadlink-theme="dark"] [data-loadlink-marketplace-search-shell] [role="listbox"] {
-  background: rgba(5, 5, 5, .97) !important;
+  background: rgba(5, 5, 5, .985) !important;
   border-color: rgba(255, 255, 255, .14) !important;
 }
 
 html[data-loadlink-theme="light"] [data-loadlink-marketplace-search-shell] [role="listbox"] {
-  background: rgba(255, 255, 255, .98) !important;
+  background: rgba(255, 255, 255, .99) !important;
   border-color: rgba(0, 0, 0, .10) !important;
 }
 
-/* Homepage image portals: remove the redundant white heading and lock the gold
-   CTA back to the original approved padding/type dimensions. */
+/* Approved homepage photo portals: one button only. */
 main > section:has([data-loadlink-marketplace-search-shell]) + section a h2 {
   display: none !important;
 }
 
+main > section:has([data-loadlink-marketplace-search-shell]) + section a > div.relative.z-10 {
+  align-items: center !important;
+  justify-content: center !important;
+}
+
 main > section:has([data-loadlink-marketplace-search-shell]) + section a > div.relative.z-10 > div {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: min(82vw, 560px) !important;
+  min-height: 82px !important;
   margin-top: 0 !important;
-  padding: 16px 32px !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  font-size: 16px !important;
+  padding: 18px 30px !important;
+  border-radius: 9999px !important;
+  font-size: 18px !important;
   font-weight: 900 !important;
-  line-height: 1.5 !important;
+  line-height: 1.15 !important;
+  letter-spacing: .045em !important;
+  text-align: center !important;
+  white-space: normal !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 @media (min-width: 768px) {
   main > section:has([data-loadlink-marketplace-search-shell]) + section a > div.relative.z-10 > div {
-    font-size: 18px !important;
+    width: min(58vw, 590px) !important;
+    min-height: 94px !important;
+    padding: 22px 38px !important;
+    font-size: 20px !important;
   }
 }
 
+/* Homepage search portal pills: retain the larger approved proportions and
+   LoadLink gold inactive state. */
 [aria-label="Search category"] > div {
   gap: 12px !important;
   padding: 2px !important;
@@ -89,14 +113,14 @@ main > section:has([data-loadlink-marketplace-search-shell]) + section a > div.r
 }
 
 html[data-loadlink-theme="dark"] [aria-label="Search category"] > div > button[aria-pressed="false"] {
-  background: rgba(8,8,8,.92) !important;
-  border-color: rgba(246,184,0,.38) !important;
+  background: rgba(8,8,8,.96) !important;
+  border-color: rgba(246,184,0,.42) !important;
   color: #f6b800 !important;
 }
 
 html[data-loadlink-theme="light"] [aria-label="Search category"] > div > button[aria-pressed="false"] {
-  background: rgba(255,255,255,.96) !important;
-  border-color: rgba(184,137,0,.26) !important;
+  background: rgba(255,255,255,.98) !important;
+  border-color: rgba(184,137,0,.30) !important;
   color: #8d6800 !important;
 }
 
