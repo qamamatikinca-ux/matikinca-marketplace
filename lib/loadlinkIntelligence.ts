@@ -54,7 +54,7 @@ export function loadLinkHumanError(error: unknown, fallback = "LoadLink could no
     return "The connection was interrupted. Your page is still here — try again when your signal settles.";
   if (/jwt|unauthorized|401|session/i.test(raw))
     return "Your sign-in session needs to be refreshed. Sign in again and LoadLink will keep your account state.";
-  if (/row level security|postgres|pgrst|supabase|schema cache|permission denied/i.test(raw)) return fallback;
+  if (/duplicate key|unique constraint|23505|row level security|postgres|pgrst|supabase|schema cache|permission denied/i.test(raw)) return fallback;
   return raw.trim() || fallback;
 }
 
