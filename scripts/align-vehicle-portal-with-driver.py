@@ -3,72 +3,97 @@ from pathlib import Path
 path = Path("app/list-your-vehicle/page.tsx")
 text = path.read_text(encoding="utf-8")
 
-old = '''      <section className="relative min-h-[300px] overflow-hidden border-b border-[#f6b800]/35 md:min-h-[360px]">
-        <img src="/images/jobs/jobs-hero-fleet.jpg" alt="Commercial vehicles ready to be listed on LoadLink" className="absolute inset-0 h-full w-full scale-[1.03] object-cover object-center grayscale opacity-80 [mask-image:linear-gradient(to_bottom,black_0%,black_64%,transparent_100%)]" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/65 to-black/35 [mask-image:linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)]" />
-        <div className="relative mx-auto flex min-h-[300px] max-w-5xl flex-col justify-end px-5 pb-9 pt-20 text-white md:min-h-[360px]">
-          <h1 className="max-w-3xl text-5xl font-black leading-[0.94] tracking-[-0.06em] md:text-7xl">{dealerPost ? `Add stock to ${dealershipName}` : "Find a vehicle or list your own"}</h1>
-          <p className="mt-4 max-w-xl text-base font-semibold leading-7 text-white/75">Browse approved trucks, trailers and mobile units, or open the listing flow when you are ready to add your own.</p>
-        </div>
-      </section>
+# Keep the approved Driver Portal structure and only change the vehicle entry flow.
+old_description = "Browse approved trucks, trailers and mobile units, or choose what you want to list and continue through the correct LoadLink flow."
+new_description = "Browse approved trucks, trailers and mobile units or create your own LoadLink vehicle listing."
+if old_description in text:
+    text = text.replace(old_description, new_description, 1)
+elif new_description not in text:
+    raise SystemExit("Vehicle hero description marker was not found.")
 
-      <section className={`border-b px-4 py-5 md:px-6 ${darkMode ? "border-white/10 bg-[#080808]" : "border-black/10 bg-white/80"}`}>
-        <div className="mx-auto grid max-w-5xl gap-3 sm:grid-cols-3">
-          <button type="button" onClick={() => { setListingFlowOpen(true); window.requestAnimationFrame(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" })); }} className="flex min-h-16 items-center justify-center rounded-2xl bg-[#f6b800] px-5 text-center text-sm font-black text-black">List your vehicle</button>
-          <a href="#vehicle-marketplace-vehicles" onClick={() => setListingFlowOpen(false)} className={`loadlink-glass flex min-h-16 items-center justify-center rounded-2xl border px-5 text-center text-sm font-black ${darkMode ? "border-white/12 bg-white/[.04]" : "border-black/8 bg-white/70"}`}>Vehicles available</a>
-          <a href="#vehicle-marketplace-units" onClick={() => setListingFlowOpen(false)} className={`loadlink-glass flex min-h-16 items-center justify-center rounded-2xl border px-5 text-center text-sm font-black ${darkMode ? "border-white/12 bg-white/[.04]" : "border-black/8 bg-white/70"}`}>Units available</a>
-        </div>
-      </section>'''
+old_cta = "List a vehicle or mobile unit"
+if old_cta in text:
+    text = text.replace(old_cta, "List your vehicle", 1)
+elif "List your vehicle" not in text:
+    raise SystemExit("Vehicle hero CTA marker was not found.")
 
-new = '''      <section className="relative min-h-[520px] overflow-hidden md:min-h-[620px]">
-        <img
-          src="/images/jobs/jobs-hero-fleet.jpg"
-          alt="Approved LoadLink commercial vehicles and mobile units"
-          className="absolute inset-0 h-full w-full object-cover object-center"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/45 to-black/90" />
+choice_start = '      {listingFlowOpen && !listingIntent && !dealerPost ? (\n'
+choice_end = '      {listingFlowOpen && listingIntent && !signedIn ?'
+start = text.find(choice_start)
+end = text.find(choice_end, start if start >= 0 else 0)
+if start < 0 or end < 0:
+    raise SystemExit("Vehicle listing-choice flow markers were not found.")
 
-        <div className="relative mx-auto flex min-h-[520px] max-w-6xl flex-col justify-end px-5 pb-8 pt-24 text-center text-white md:min-h-[620px] md:pb-12">
-          <h1 className="mx-auto max-w-4xl text-5xl font-black tracking-[-.055em] md:text-7xl">
-            {dealerPost ? `Add stock to ${dealershipName}` : "Find a vehicle or list your own"}
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-sm font-semibold leading-7 text-white/75 md:text-base">
-            Browse approved trucks, trailers and mobile units, or create your own verified LoadLink listing.
-          </p>
-
-          {!dealerPost ? (
-            <div className="mx-auto mt-6 grid w-full max-w-md gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setListingFlowOpen(true);
-                  window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-                }}
-                className="flex min-h-14 items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]"
-              >
-                List your vehicle
+choice_block = '''      {listingFlowOpen && !listingIntent && !dealerPost ? (
+        <section id="vehicle-listing-choice" className={`scroll-mt-24 border-b px-4 py-8 md:px-6 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+          <div className="mx-auto max-w-5xl text-center">
+            <h2 className="text-3xl font-black tracking-[-.04em]">What do you want to list?</h2>
+            <p className={`mx-auto mt-2 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Choose the exact listing type first. Seller and package options only appear after this choice.</p>
+            <div className="mx-auto mt-6 grid max-w-3xl gap-3 sm:grid-cols-3">
+              <button type="button" onClick={() => {
+                setListingIntent("vehicle");
+                chooseCategory("truck");
+                setSelectedPlan(null);
+                setPackageType("standard");
+                window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+              }} className={`min-h-28 rounded-2xl border p-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <span className="block text-xl font-black">Truck</span>
+                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Commercial trucks and tractor units.</span>
               </button>
-              <a
-                href="#vehicle-marketplace-vehicles"
-                onClick={() => setListingFlowOpen(false)}
-                className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]"
-              >
-                Vehicles available
-              </a>
-              <a
-                href="#vehicle-marketplace-units"
-                onClick={() => setListingFlowOpen(false)}
-                className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]"
-              >
-                Units available
-              </a>
+              <button type="button" onClick={() => {
+                setListingIntent("vehicle");
+                chooseCategory("trailer");
+                setSelectedPlan(null);
+                setPackageType("standard");
+                window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+              }} className={`min-h-28 rounded-2xl border p-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <span className="block text-xl font-black">Trailer</span>
+                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Commercial trailer listings.</span>
+              </button>
+              <button type="button" onClick={() => {
+                setListingIntent("mobile_unit");
+                chooseCategory("mobile_unit");
+                setSelectedPlan(null);
+                setPackageType("standard");
+                window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+              }} className={`min-h-28 rounded-2xl border p-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <span className="block text-xl font-black">Mobile Unit</span>
+                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Mobile fridge, kitchen, clinic, office and other units.</span>
+              </button>
             </div>
-          ) : null}
-        </div>
-      </section>'''
+          </div>
+        </section>
+      ) : null}
 
-if old not in text:
-    raise SystemExit("Expected vehicle portal hero/options block was not found.")
+'''
+text = text[:start] + choice_block + text[end:]
 
-path.write_text(text.replace(old, new, 1), encoding="utf-8")
-print("Vehicle portal now follows the Driver Portal landing structure.")
+# The listing type was already chosen in the entry step, so do not ask for it a second time inside the form.
+form_category_start = '        <section id="vehicle-type" className={`scroll-mt-24 overflow-hidden rounded-2xl border ${surface}`}>\n'
+form_category_end = '        {categoryChosen ? <>\n'
+fs = text.find(form_category_start)
+fe = text.find(form_category_end, fs if fs >= 0 else 0)
+if fs < 0 or fe < 0:
+    raise SystemExit("Repeated category section markers were not found.")
+text = text[:fs] + text[fe:]
+
+# Renumber the remaining form steps after removing the duplicate category step.
+text = text.replace('SectionHeading step="02" title={`${categoryLabel(vehicleCategory!)} identity`}', 'SectionHeading step="01" title={`${categoryLabel(vehicleCategory!)} identity`}', 1)
+text = text.replace('SectionHeading step="03" title="Vehicle details"', 'SectionHeading step="02" title="Vehicle details"', 1)
+text = text.replace('SectionHeading step="04" title="Photos and verification"', 'SectionHeading step="03" title="Photos and verification"', 1)
+text = text.replace('SectionHeading step="05" title="Contact and confirmation"', 'SectionHeading step="04" title="Contact and confirmation"', 1)
+
+# Entering either public route should always show the hero first, not a restored mid-flow scroll position.
+anchor = '  const specSchema = useMemo(() => unitSpecSchema(vehicleCategory, bodyType || vehicleSubtype), [bodyType, vehicleCategory, vehicleSubtype]);\n\n'
+scroll_effect = '''  useEffect(() => {
+    if (!window.location.hash) window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, []);
+
+'''
+if scroll_effect not in text:
+    if anchor not in text:
+        raise SystemExit("Vehicle page effect insertion marker was not found.")
+    text = text.replace(anchor, anchor + scroll_effect, 1)
+
+path.write_text(text, encoding="utf-8")
+print("Vehicle portal now opens like Driver Portal, then asks Truck / Trailer / Mobile Unit before seller and package steps.")
