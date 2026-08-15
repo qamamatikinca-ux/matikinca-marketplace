@@ -17,10 +17,10 @@ export default function LoadLinkSiteHeader({
   sticky?: boolean;
   className?: string;
 }) {
-  return (
+  const header = (
     <header
-      data-loadlink-site-header="centered-v286"
-      className={`${sticky ? "sticky top-0" : "relative"} z-[80] shrink-0 border-b transition-colors duration-300 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"} ${className}`}
+      data-loadlink-site-header="centered-v287"
+      className={`${sticky ? "fixed inset-x-0 top-0" : "relative"} z-[1000] shrink-0 border-b transition-colors duration-300 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-white text-black"} ${className}`}
     >
       <div className="mx-auto grid h-20 w-full max-w-[1600px] grid-cols-[104px_minmax(0,1fr)_104px] items-center px-4 sm:px-5 md:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-2">
@@ -44,5 +44,14 @@ export default function LoadLinkSiteHeader({
         </div>
       </div>
     </header>
+  );
+
+  if (!sticky) return header;
+
+  return (
+    <>
+      {header}
+      <div aria-hidden="true" className="h-20 shrink-0" />
+    </>
   );
 }
