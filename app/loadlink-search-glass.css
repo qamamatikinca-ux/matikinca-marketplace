@@ -40,6 +40,15 @@ html[data-loadlink-theme="light"] [aria-label="Search category"] > div > button[
 
 /* Homepage search must keep the approved Jobs-style composition: black icon,
    white input, gold action, then a separate white location field. */
+[data-loadlink-home-search-section] {
+  overflow: visible !important;
+}
+html[data-loadlink-theme="light"] [data-loadlink-home-search-section] {
+  background: #fff6dc !important;
+}
+html[data-loadlink-theme="dark"] [data-loadlink-home-search-section] {
+  background: #050505 !important;
+}
 [data-loadlink-home-search-row] {
   background: #fff !important;
 }
@@ -91,6 +100,21 @@ html[data-loadlink-theme="dark"] [data-loadlink-portal-glow] {
   button[aria-haspopup="listbox"] {
     font-size: 16px !important;
     max-width: 100% !important;
+  }
+
+  #matching-jobs .loadlink-sort-control,
+  #matching-jobs label:has(select) {
+    max-width: 100% !important;
+  }
+
+  #matching-jobs .loadlink-sort-control select,
+  #matching-jobs label:has(select) select,
+  .loadlink-sort-control select {
+    min-width: 0 !important;
+    max-width: 160px !important;
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+    transform: none !important;
   }
 }
 
