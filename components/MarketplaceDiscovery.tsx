@@ -128,9 +128,9 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
 
   function chooseScope(value: SearchScope) {
     setScope(value);
-    setActiveSearchField("query");
-    setShowSuggestions(true);
-    window.requestAnimationFrame(() => searchInputRef.current?.focus());
+    setShowSuggestions(false);
+    setActiveSearchField(null);
+    router.push(routeForScope(value, query, location));
   }
 
   return (
@@ -147,13 +147,13 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                   key={item.value}
                   type="button"
                   onClick={() => chooseScope(item.value)}
-                  aria-pressed={scope === item.value}
+                  aria-current={scope === item.value ? "page" : undefined}
                   className={`min-h-[50px] min-w-[108px] shrink-0 rounded-full border px-5 py-3 text-[15px] font-semibold tracking-[-.01em] backdrop-blur-xl backdrop-saturate-150 transition duration-200 active:scale-[.985] ${
                     scope === item.value
                       ? "border-[#f6b800] bg-[#f6b800] text-black shadow-[0_10px_28px_rgba(246,184,0,.18)]"
                       : darkMode
-                        ? "border-white/[.14] bg-white/[.045] text-white/74 shadow-[0_8px_22px_rgba(0,0,0,.14)]"
-                        : "border-black/[.08] bg-white/68 text-black/66 shadow-[0_8px_22px_rgba(0,0,0,.05)]"
+                        ? "border-white/[.18] bg-white/[.045] text-white/74 shadow-[0_8px_22px_rgba(0,0,0,.14)]"
+                        : "border-black/[.16] bg-white/68 text-black/66 shadow-[0_8px_22px_rgba(0,0,0,.05)]"
                   }`}
                 >
                   {item.label}
