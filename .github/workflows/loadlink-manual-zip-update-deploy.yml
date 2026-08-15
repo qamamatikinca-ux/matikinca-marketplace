@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write
+  statuses: read
 
 concurrency:
   group: loadlink-manual-zip-deploy
@@ -18,14 +19,15 @@ concurrency:
 
 jobs:
   install-build-push:
-    name: Install, verify, build and push
+    name: Install, verify, build, push and verify Vercel
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     env:
       ARCHIVE_PATH: .github/workflows/LoadLink-update-719283b.zip
       TARGET_FILE: components/MarketplaceDiscovery.tsx
       EXPECTED_COMPONENT_SHA256: 018541cf6b41f66a354eae7056c8c882c1f48ec3866a1b6031e986506337c4b6
+      PRIMARY_VERCEL_CONTEXT: "Vercel – matikinca-marketplace"
 
     steps:
       - name: Checkout LoadLink main
@@ -76,7 +78,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: package-lock.json
 
@@ -107,6 +109,8 @@ jobs:
             echo "mode=no-change" >> "$GITHUB_OUTPUT"
           fi
 
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Push to main
         if: steps.commit.outputs.mode != 'no-change'
         shell: bash
@@ -117,10 +121,63 @@ jobs:
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
           echo "Remote main verification: PASS"
 
+      - name: Wait for Vercel production status
+        if: steps.commit.outputs.mode != 'no-change'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          set -Eeuo pipefail
+
+          echo "Waiting for Vercel status on $DEPLOY_SHA"
+
+          for attempt in $(seq 1 30); do
+            STATUS_JSON="$(gh api "repos/$GITHUB_REPOSITORY/commits/$DEPLOY_SHA/status")"
+            STATE="$(printf '%s' "$STATUS_JSON" | jq -r --arg ctx "$PRIMARY_VERCEL_CONTEXT" '.statuses[] | select(.context == $ctx) | .state' | head -n1)"
+            DESCRIPTION="$(printf '%s' "$STATUS_JSON" | jq -r --arg ctx "$PRIMARY_VERCEL_CONTEXT" '.statuses[] | select(.context == $ctx) | .description' | head -n1)"
+
+            if [ -z "$STATE" ]; then
+              echo "[$attempt/30] Vercel has not reported yet."
+              sleep 5
+              continue
+            fi
+
+            echo "Vercel state: $STATE"
+            echo "Vercel message: ${DESCRIPTION:-none}"
+
+            case "$STATE" in
+              success)
+                echo "Vercel deployment accepted and completed successfully."
+                exit 0
+                ;;
+              failure|error)
+                echo "::error::Vercel rejected the deployment: ${DESCRIPTION:-unknown Vercel error}"
+                exit 1
+                ;;
+              pending)
+                echo "[$attempt/30] Vercel deployment is still pending."
+                sleep 5
+                ;;
+              *)
+                echo "[$attempt/30] Unknown Vercel state '$STATE'; waiting."
+                sleep 5
+                ;;
+            esac
+          done
+
+          echo "::error::Timed out waiting for Vercel to report a successful production deployment."
+          exit 1
+
       - name: Summary
         if: always()
         shell: bash
+        env:
+          DEPLOY_SHA: ${{ steps.commit.outputs.sha }}
         run: |
           echo "## LoadLink manual ZIP deployment" >> "$GITHUB_STEP_SUMMARY"
-          echo "Production build must pass before any push." >> "$GITHUB_STEP_SUMMARY"
-          echo "A successful push then hands the new main commit to the existing Vercel Git integration." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- GitHub production build must pass before push." >> "$GITHUB_STEP_SUMMARY"
+          echo "- Pushed commit: \`${DEPLOY_SHA:-none}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- The workflow now waits for the primary Vercel project result." >> "$GITHUB_STEP_SUMMARY"
+          echo "- A Vercel rejection makes this workflow fail instead of showing a false green success." >> "$GITHUB_STEP_SUMMARY"
