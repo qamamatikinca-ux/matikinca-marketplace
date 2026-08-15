@@ -1,5 +1,29 @@
-/* Shared LoadLink category-pill treatment for homepage search.
-   SearchResultsClient has its own matching classes. */
+/* Homepage LoadLink search + portal-pill treatment.
+   Keep the search suggestions above the image portal cards and preserve the
+   approved larger gold LoadLink controls without a blurred pill background. */
+
+main > section:has([data-loadlink-marketplace-search-shell]) {
+  position: relative !important;
+  z-index: 120 !important;
+  overflow: visible !important;
+  isolation: isolate;
+}
+
+[data-loadlink-marketplace-search-shell] {
+  position: relative !important;
+  z-index: 121 !important;
+  overflow: visible !important;
+}
+
+[data-loadlink-marketplace-search-shell] > div,
+[data-loadlink-marketplace-search-shell] [class*="absolute"] {
+  overflow: visible;
+}
+
+main > section:has([data-loadlink-marketplace-search-shell]) + section {
+  position: relative;
+  z-index: 0;
+}
 
 [aria-label="Search category"] > div {
   gap: 12px !important;
@@ -7,28 +31,28 @@
 }
 
 [aria-label="Search category"] > div > button {
-  min-height: 54px !important;
-  min-width: 116px !important;
+  min-height: 62px !important;
+  min-width: 142px !important;
   border-radius: 9999px !important;
-  padding: 12px 24px !important;
-  font-size: 15px !important;
-  font-weight: 600 !important;
+  padding: 14px 28px !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
   letter-spacing: -0.01em !important;
-  -webkit-backdrop-filter: blur(18px) saturate(145%) !important;
-  backdrop-filter: blur(18px) saturate(145%) !important;
-  box-shadow: 0 8px 22px rgba(0,0,0,.07) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 8px 22px rgba(0,0,0,.08) !important;
 }
 
 html[data-loadlink-theme="dark"] [aria-label="Search category"] > div > button[aria-pressed="false"] {
-  background: rgba(255,255,255,.045) !important;
-  border-color: rgba(255,255,255,.14) !important;
-  color: rgba(255,255,255,.74) !important;
+  background: rgba(8,8,8,.92) !important;
+  border-color: rgba(246,184,0,.38) !important;
+  color: #f6b800 !important;
 }
 
 html[data-loadlink-theme="light"] [aria-label="Search category"] > div > button[aria-pressed="false"] {
-  background: rgba(255,255,255,.78) !important;
-  border-color: rgba(0,0,0,.08) !important;
-  color: rgba(0,0,0,.66) !important;
+  background: rgba(255,255,255,.96) !important;
+  border-color: rgba(184,137,0,.26) !important;
+  color: #8d6800 !important;
 }
 
 [aria-label="Search category"] > div > button[aria-pressed="true"] {
