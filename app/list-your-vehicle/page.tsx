@@ -42,10 +42,35 @@ export default function ListYourVehiclePage() {
   const page = darkMode ? "bg-black text-white" : "bg-[#fffaf0] text-black";
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const requested = params.get("entry");
-    setEntryMode(requested === "vehicle" || requested === "mobile-unit" ? requested : "");
-    setDealershipRoute(Boolean(params.get("dealership")));
+    const url = new URL(window.location.href);
+    const requested = url.searchParams.get("entry");
+    const mode: EntryMode = requested === "vehicle" || requested === "mobile-unit" ? requested : "";
+
+    setEntryMode(mode);
+
+    // The base vehicle route is always the Drivers-style browse-or-post portal.
+    // Old smart/dealer redirects must never bypass that choice screen.
+    if (!mode) {
+      setDealershipRoute(false);
+      setEntryReady(false);
+
+      let changed = false;
+      for (const key of ["plan", "smart", "dealership"]) {
+        if (url.searchParams.has(key)) {
+          url.searchParams.delete(key);
+          changed = true;
+        }
+      }
+      if (changed) {
+        const clean = `${url.pathname}${url.search ? url.search : ""}${url.hash}`;
+        window.history.replaceState(window.history.state, "", clean);
+      }
+    } else {
+      // Dealer-specific inventory is only allowed to take over after the user
+      // explicitly chooses a posting route.
+      setDealershipRoute(Boolean(url.searchParams.get("dealership")));
+    }
+
     setBooted(true);
   }, []);
 
@@ -82,12 +107,12 @@ export default function ListYourVehiclePage() {
 
   if (!booted) return <LoadLinkLoading />;
 
-  // Approved dealership inventory keeps its established dealer-specific route.
-  if (dealershipRoute) return <LegacyVehicleListingPage />;
+  // Dealer inventory can only open after an explicit posting choice.
+  if (entryMode && dealershipRoute) return <LegacyVehicleListingPage />;
 
   if (!entryMode) {
     return (
-      <main className={`min-h-screen ${page}`} data-loadlink-vehicle-portal="drivers-style-v2">
+      <main className={`min-h-screen ${page}`} data-loadlink-vehicle-portal="drivers-style-v3">
         <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
         <section className="relative flex min-h-[690px] w-full items-end overflow-hidden bg-black text-white md:min-h-[620px]">
@@ -106,7 +131,7 @@ export default function ListYourVehiclePage() {
               Browse approved vehicles and mobile units or create your own LoadLink listing for a commercial vehicle or mobile unit.
             </p>
 
-            <div className="mx-auto mt-7 grid w-full max-w-[640px] gap-3">
+            <div className="mx-auto mt-7 grid w-full max-w-[640px] gap-3" aria-label="Vehicle marketplace options">
               <a
                 href="#vehicle-marketplace"
                 className="flex min-h-[58px] items-center justify-center rounded-full border border-[#f6b800] bg-[#f6b800] px-6 text-center text-[13px] font-black uppercase tracking-[.08em] text-black shadow-[0_14px_34px_rgba(0,0,0,.32)] transition active:scale-[.99] md:text-sm"
@@ -146,13 +171,13 @@ export default function ListYourVehiclePage() {
   }
 
   return (
-    <div data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v2">
+    <div data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v3">
       <LegacyVehicleListingPage />
       <style jsx global>{`
-        [data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v2"] main > section:first-of-type {
+        [data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v3"] main > section:first-of-type {
           display: none !important;
         }
-        [data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v2"] #plans {
+        [data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v3"] #plans {
           display: none !important;
         }
       `}</style>
