@@ -39,26 +39,18 @@ jobs:
         run: npm ci
 
       - name: Link primary LoadLink project locally
-        shell: bash
-        run: |
-          mkdir -p .vercel
-          cat > .vercel/project.json <<'JSON'
-          {
-            "orgId": "team_ltBsujLbhqOPqX4dlpWDHial",
-            "projectId": "prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt"
-          }
-          JSON
+        run: npx --yes vercel@latest link --yes --project matikinca-marketplace --scope loadlink --token "$VERCEL_TOKEN"
 
       - name: Pull production environment
-        run: npx --yes vercel@latest pull --yes --environment=production --token "$VERCEL_TOKEN"
+        run: npx --yes vercel@latest pull --yes --environment=production --scope loadlink --token "$VERCEL_TOKEN"
 
       - name: Build Vercel prebuilt output
         env:
           NEXT_TELEMETRY_DISABLED: "1"
-        run: npx --yes vercel@latest build --prod --yes --token "$VERCEL_TOKEN"
+        run: npx --yes vercel@latest build --prod --yes --scope loadlink --token "$VERCEL_TOKEN"
 
       - name: Deploy prebuilt output to primary production
-        run: npx --yes vercel@latest deploy --prebuilt --prod --yes --token "$VERCEL_TOKEN"
+        run: npx --yes vercel@latest deploy --prebuilt --prod --yes --scope loadlink --token "$VERCEL_TOKEN"
 
       - name: Upload prebuilt output
         if: always()
@@ -70,4 +62,4 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
 
-# Primary-only prebuilt deployment trigger for current main df5f48646b1dc32b819336dea8d43f3df57c0b56 — 2026-08-16.
+# Primary-only prebuilt deployment path repaired to link by project name/scope before build and deploy — 2026-08-16.
