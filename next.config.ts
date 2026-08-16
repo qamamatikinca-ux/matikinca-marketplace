@@ -10,7 +10,11 @@ const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
 ];
 
-const noStoreHeaders = [{ key: "Cache-Control", value: "no-store, max-age=0" }];
+const noStoreHeaders = [
+  { key: "Cache-Control", value: "no-store, no-cache, max-age=0, must-revalidate" },
+  { key: "CDN-Cache-Control", value: "no-store" },
+  { key: "Vercel-CDN-Cache-Control", value: "no-store" },
+];
 
 const nextConfig: NextConfig = {
   async headers() {
@@ -21,6 +25,11 @@ const nextConfig: NextConfig = {
       { source: "/forgot-password", headers: noStoreHeaders },
       { source: "/reset-password", headers: noStoreHeaders },
       { source: "/auth/:path*", headers: noStoreHeaders },
+      // The listing flow depends on live account/package state and must never be served
+      // from an older route snapshot after a release or billing change.
+      { source: "/list-your-vehicle", headers: noStoreHeaders },
+      { source: "/list-your-truck", headers: noStoreHeaders },
+      { source: "/api/account/intelligence", headers: noStoreHeaders },
     ];
   },
 };
