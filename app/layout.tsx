@@ -24,7 +24,7 @@ import AccountActivityTracker from "@/components/AccountActivityTracker";
 import AuthMfaGate from "@/components/AuthMfaGate";
 import ProfileOnboardingGate from "@/components/ProfileOnboardingGate";
 import MarketplaceRestrictionGuard from "@/components/phase2/MarketplaceRestrictionGuard";
-import LoadLinkRuntimeIntelligence from "@/components/LoadLinkRuntimeIntelligence";
+import LoadLinkRuntimeBoundary from "@/components/LoadLinkRuntimeBoundary";
 import LoadLinkUiRepairV273 from "@/components/LoadLinkUiRepairV273";
 import LoadLinkDeleteConfirmationLayer from "@/components/LoadLinkDeleteConfirmationLayer";
 import LoadLinkToastCenter from "@/components/LoadLinkToastCenter";
@@ -67,7 +67,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <LoadLinkDeleteConfirmationLayer />
         <NetworkRecovery />
         {children}
-        <LoadLinkRuntimeIntelligence />
+        <Suspense fallback={null}><LoadLinkRuntimeBoundary /></Suspense>
       </body>
     </html>
   );
