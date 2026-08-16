@@ -27,16 +27,30 @@ function removeLegacyDealershipGate() {
       return text === "no" || text.startsWith("no ");
     });
 
-  if (privateSellerButton) privateSellerButton.click();
+  if (privateSellerButton && !privateSellerButton.disabled) privateSellerButton.click();
 
   section.dataset.loadlinkLegacyDealershipGate = "hidden";
   section.style.setProperty("display", "none", "important");
+  return true;
+}
 
-  window.setTimeout(() => {
-    const next = section.nextElementSibling as HTMLElement | null;
-    next?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 60);
+function advancePastLegacyPlanGuide() {
+  const plans = document.getElementById("plans") as HTMLElement | null;
+  if (!plans) return false;
 
+  plans.dataset.loadlinkLegacyPlanGuide = "hidden";
+  plans.style.setProperty("display", "none", "important");
+
+  let preferred = "pro";
+  try {
+    preferred = localStorage.getItem("loadlink-vehicle-render-plan") === "dealer" ? "dealer" : "pro";
+  } catch {
+    preferred = "pro";
+  }
+
+  const button = buttonWithText(plans, preferred === "dealer" ? "dealer" : "pro");
+  if (!button || button.disabled) return false;
+  button.click();
   return true;
 }
 
@@ -51,41 +65,44 @@ export default function ListYourVehicleLayout({ children }: { children: ReactNod
 
     setEntryMode(mode);
 
-    // Normal owners/operators should never be forced through the old dealership question.
-    // Dealership inventory routes keep their existing dealer-specific behaviour untouched.
-    let gateObserver: MutationObserver | null = null;
+    let flowObserver: MutationObserver | null = null;
     if (!isDealershipInventoryRoute) {
-      removeLegacyDealershipGate();
-      gateObserver = new MutationObserver(() => {
+      const repairLegacyGates = () => {
         removeLegacyDealershipGate();
-      });
-      gateObserver.observe(document.body, { childList: true, subtree: true });
+        advancePastLegacyPlanGuide();
+      };
+      repairLegacyGates();
+      flowObserver = new MutationObserver(repairLegacyGates);
+      flowObserver.observe(document.body, { childList: true, subtree: true });
     }
 
     if (!mode) {
-      return () => gateObserver?.disconnect();
+      return () => flowObserver?.disconnect();
     }
 
     let attempts = 0;
     const timer = window.setInterval(() => {
       attempts += 1;
 
+      advancePastLegacyPlanGuide();
+
       const listingChoice = document.getElementById("vehicle-listing-choice");
       if (!listingChoice) {
         const startButton = buttonWithText(document, "list your vehicle");
-        if (startButton) startButton.click();
+        if (startButton && !startButton.disabled) startButton.click();
       }
 
       const refreshedChoice = document.getElementById("vehicle-listing-choice");
       if (mode === "mobile-unit" && refreshedChoice) {
         const mobileButton = buttonWithText(refreshedChoice, "mobile unit");
-        if (mobileButton) {
+        if (mobileButton && !mobileButton.disabled) {
           mobileButton.click();
-          window.clearInterval(timer);
           window.setTimeout(() => {
             removeLegacyDealershipGate();
+            advancePastLegacyPlanGuide();
             document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
           }, 80);
+          window.clearInterval(timer);
           return;
         }
       }
@@ -96,20 +113,27 @@ export default function ListYourVehicleLayout({ children }: { children: ReactNod
         return;
       }
 
-      if (attempts >= 30) window.clearInterval(timer);
+      if (document.getElementById("vehicle-listing-form")) {
+        window.clearInterval(timer);
+        return;
+      }
+
+      if (attempts >= 50) window.clearInterval(timer);
     }, 80);
 
     return () => {
       window.clearInterval(timer);
-      gateObserver?.disconnect();
+      flowObserver?.disconnect();
     };
   }, []);
 
   return (
-    <div data-loadlink-listing-entry={entryMode || undefined} data-loadlink-listing-entry-version="private-gate-bypass-v1">
+    <div data-loadlink-listing-entry={entryMode || undefined} data-loadlink-listing-entry-version="no-plan-guide-v2">
       {children}
       <style jsx global>{`
-        [data-loadlink-legacy-dealership-gate="hidden"] {
+        [data-loadlink-legacy-dealership-gate="hidden"],
+        [data-loadlink-legacy-plan-guide="hidden"],
+        [data-loadlink-listing-entry] #plans {
           display: none !important;
         }
         [data-loadlink-listing-entry="vehicle"] #vehicle-listing-choice .grid > button:nth-child(3) {
