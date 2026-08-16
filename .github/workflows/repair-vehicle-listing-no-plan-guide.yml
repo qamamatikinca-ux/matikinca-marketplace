@@ -1,0 +1,121 @@
+name: Repair Vehicle Listing No Plan Guide
+
+on:
+  push:
+    paths:
+      - '.github/workflows/repair-vehicle-listing-no-plan-guide.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Remove legacy package guide gate and repair listing access
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('app/list-your-vehicle/LegacyVehicleListingPage.tsx')
+          text = path.read_text()
+          original = text
+
+          text = text.replace('import type { BusinessPlanId } from "@/components/BusinessPlans";\n', '')
+          text = text.replace('import { getLoadLinkIntelligence } from "@/lib/loadlinkIntelligence";\n', 'import { getVehicleListingAccess } from "@/lib/packageAccess";\n')
+
+          text = re.sub(
+              r'const BusinessPlans = dynamic\(\(\) => import\("@/components/BusinessPlans"\), \{ ssr: false, loading: \(\) => <div className="mx-auto my-6 h-28 max-w-6xl animate-pulse rounded-2xl bg-current/\[\.05\]" /> \}\);\n',
+              '',
+              text,
+          )
+
+          old_state = 'const [selectedPlan, setSelectedPlan] = useState<BusinessPlanId | null>(null);'
+          if old_state not in text:
+              raise SystemExit('selectedPlan state pattern not found')
+          text = text.replace(old_state, 'const [selectedPlan, setSelectedPlan] = useState<"pro" | "dealer" | null>("pro");')
+
+          text = text.replace('setSelectedPlan(d.selectedPlan || null);', 'setSelectedPlan(d.selectedPlan === "dealer" ? "dealer" : "pro");')
+          text = text.replace('setSelectedPlan(null);', 'setSelectedPlan("pro");')
+
+          text, choose_plan_count = re.subn(
+              r'\n  function choosePlan\(plan: BusinessPlanId\) \{.*?\n  \}\n',
+              '\n',
+              text,
+              flags=re.S,
+          )
+          if choose_plan_count != 1:
+              raise SystemExit(f'expected one choosePlan block, found {choose_plan_count}')
+
+          business_plans_pattern = r'\n\s*\{listingFlowOpen && signedIn && listingIntent && !selectedPlan \? <BusinessPlans[^\n]+\n'
+          text, business_plans_count = re.subn(business_plans_pattern, '\n', text)
+          if business_plans_count != 1:
+              raise SystemExit(f'expected one BusinessPlans render, found {business_plans_count}')
+
+          old_form_gate = '{listingFlowOpen && signedIn && listingIntent && selectedPlan ? <form id="vehicle-listing-form"'
+          if old_form_gate not in text:
+              raise SystemExit('legacy form plan gate not found')
+          text = text.replace(old_form_gate, '{listingFlowOpen && signedIn && listingIntent ? <form id="vehicle-listing-form"')
+
+          access_pattern = re.compile(
+              r'\n      const intelligence = await getLoadLinkIntelligence\(\);\n'
+              r'      if \(!intelligence\.capabilities\.can_post_vehicle\) \{.*?\n      \}\n'
+              r'      const submissionId = currentSubmissionId\(\);',
+              re.S,
+          )
+          access_replacement = '''\n      const listingAccess = await getVehicleListingAccess();
+      if (!listingAccess.allowed) {
+        throw new Error("Your vehicle details are saved. Activate Manual, Pro or Dealer in Packages before submitting this listing.");
+      }
+      const effectivePackage: "standard" | "pro" | "dealer" = listingAccess.plan === "dealer" ? "dealer" : listingAccess.plan === "pro" ? "pro" : "standard";
+      const submissionId = currentSubmissionId();'''
+          text, access_count = access_pattern.subn(access_replacement, text)
+          if access_count != 1:
+              raise SystemExit(f'expected one submission access block, found {access_count}')
+
+          old_payload = 'sponsored: packageType === "pro" || packageType === "dealer", package_type: packageType,\n        listing_kind: "vehicle", display_tier: packageType === "dealer" ? 4 : packageType === "pro" ? 3 : 1,'
+          new_payload = 'sponsored: effectivePackage === "pro" || effectivePackage === "dealer", package_type: effectivePackage,\n        listing_kind: "vehicle", display_tier: effectivePackage === "dealer" ? 4 : effectivePackage === "pro" ? 3 : 1,'
+          if old_payload not in text:
+              raise SystemExit('listing payload package block not found')
+          text = text.replace(old_payload, new_payload)
+
+          text, plan_field_count = re.subn(
+              r'<Field label="Selected plan"><div className=\{`\$\{inputClass\} flex items-center`\}>.*?</div></Field>',
+              '',
+              text,
+              flags=re.S,
+          )
+          if plan_field_count != 1:
+              raise SystemExit(f'expected one Selected plan field, found {plan_field_count}')
+
+          if 'BusinessPlans' in text:
+              raise SystemExit('BusinessPlans reference still present after patch')
+          if 'getLoadLinkIntelligence' in text:
+              raise SystemExit('old intelligence submission gate still present')
+          if text == original:
+              raise SystemExit('no changes made')
+
+          path.write_text(text)
+          print('Legacy vehicle listing page repaired.')
+          PY
+
+      - name: Commit repaired source
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No changes required"
+            exit 0
+          fi
+          git config user.name "LoadLink Repair"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/list-your-vehicle/LegacyVehicleListingPage.tsx
+          git commit -m "Remove legacy package guide from vehicle listing flow"
+          git push origin main
