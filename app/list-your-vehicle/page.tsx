@@ -154,7 +154,7 @@ export default function ListYourVehiclePage() {
   }
 
   if (!booted) {
-    return <LoadLinkLoading label="Loading LoadLink…" />;
+    return <LoadLinkLoading />;
   }
 
   // Dealership inventory routes keep their established dealer-specific listing behaviour.
@@ -215,9 +215,7 @@ export default function ListYourVehiclePage() {
     return (
       <main className={`min-h-screen ${page}`}>
         <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
-        <div className="flex min-h-[55vh] items-center justify-center px-5">
-          <LoadLinkLoading label="Checking listing access…" />
-        </div>
+        <LoadLinkLoading />
       </main>
     );
   }
