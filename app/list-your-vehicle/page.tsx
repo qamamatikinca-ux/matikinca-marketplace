@@ -6,12 +6,16 @@ import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import VehicleMarketplaceHub from "@/components/VehicleMarketplaceHub";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import { getVehicleListingAccess } from "@/lib/packageAccess";
+import { getLoadLinkIntelligence } from "@/lib/loadlinkIntelligence";
 import { getFreshAuthenticatedUser } from "@/lib/reliableSupabase";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import LegacyVehicleListingPage from "./LegacyVehicleListingPage";
 
 type EntryMode = "vehicle" | "mobile-unit" | "";
 type ListingPackage = "standard" | "pro" | "dealer";
+type DealerPostingGate = "review" | "setup" | "changes" | null;
+
+const entitledPlanStates = new Set(["active", "trial", "trialing", "grace_period", "cancelled"]);
 
 function seedLegacyListingAccess(packageType: ListingPackage) {
   try {
@@ -38,6 +42,7 @@ export default function ListYourVehiclePage() {
   const [entryMode, setEntryMode] = useState<EntryMode>("");
   const [dealershipRoute, setDealershipRoute] = useState(false);
   const [entryReady, setEntryReady] = useState(false);
+  const [dealerPostingGate, setDealerPostingGate] = useState<DealerPostingGate>(null);
 
   const page = darkMode ? "bg-black text-white" : "bg-[#fffaf0] text-black";
 
@@ -53,6 +58,7 @@ export default function ListYourVehiclePage() {
     if (!mode) {
       setDealershipRoute(false);
       setEntryReady(false);
+      setDealerPostingGate(null);
 
       let changed = false;
       for (const key of ["plan", "smart", "dealership"]) {
@@ -88,15 +94,43 @@ export default function ListYourVehiclePage() {
 
       let packageType: ListingPackage = "standard";
       try {
-        const access = await getVehicleListingAccess();
+        const [access, intelligence] = await Promise.all([
+          getVehicleListingAccess(),
+          getLoadLinkIntelligence().catch(() => null),
+        ]);
+
         packageType = access.plan === "dealer" ? "dealer" : access.plan === "pro" ? "pro" : "standard";
+
+        // Browsing is never blocked. Dealer approval is checked only after the
+        // user has explicitly chosen to post a vehicle or mobile unit.
+        if (
+          intelligence?.plan === "dealer" &&
+          entitledPlanStates.has(String(intelligence.plan_state)) &&
+          !intelligence.dealer_ready
+        ) {
+          const gate: DealerPostingGate = !intelligence.dealer_profile_id
+            ? "setup"
+            : /rejected|changes/i.test(String(intelligence.dealer_status))
+              ? "changes"
+              : "review";
+
+          seedLegacyListingAccess(packageType);
+          if (!cancelled) {
+            setDealerPostingGate(gate);
+            setEntryReady(true);
+          }
+          return;
+        }
       } catch {
         // Package access is checked again at submission. A temporary access-read failure
         // must never send the user back to a package guide or destroy their draft.
       }
 
       seedLegacyListingAccess(packageType);
-      if (!cancelled) setEntryReady(true);
+      if (!cancelled) {
+        setDealerPostingGate(null);
+        setEntryReady(true);
+      }
     }
 
     void prepareListingEntry();
@@ -112,7 +146,7 @@ export default function ListYourVehiclePage() {
 
   if (!entryMode) {
     return (
-      <main className={`min-h-screen ${page}`} data-loadlink-vehicle-portal="drivers-style-v3">
+      <main className={`min-h-screen ${page}`} data-loadlink-vehicle-portal="drivers-style-v4">
         <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
         <section className="relative flex min-h-[690px] w-full items-end overflow-hidden bg-black text-white md:min-h-[620px]">
@@ -170,14 +204,66 @@ export default function ListYourVehiclePage() {
     );
   }
 
+  if (dealerPostingGate) {
+    const title =
+      dealerPostingGate === "setup"
+        ? "Set up your dealership before posting."
+        : dealerPostingGate === "changes"
+          ? "Your dealership needs changes before stock can go live."
+          : "Your dealership is being reviewed.";
+    const detail =
+      dealerPostingGate === "setup"
+        ? "Your Dealer plan is active. Complete the dealership information LoadLink needs before stock can be published."
+        : dealerPostingGate === "changes"
+          ? "Your Dealer plan remains active. Open Dealer to review the changes required before publishing stock."
+          : "Your Dealer plan is active, but stock publishing stays locked until the dealership itself is approved in Control Centre.";
+
+    return (
+      <main className={`min-h-screen ${page}`} data-loadlink-dealer-posting-gate={dealerPostingGate}>
+        <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
+        <section className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 md:py-14">
+          <div className={`rounded-[28px] border p-6 sm:p-8 ${darkMode ? "border-white/10 bg-[#080808]" : "border-black/10 bg-white"}`}>
+            <p className={`text-[10px] font-black uppercase tracking-[.16em] ${darkMode ? "text-white/45" : "text-black/45"}`}>
+              Posting status
+            </p>
+            <h1 className="mt-3 text-[38px] font-black leading-[1.02] tracking-[-.055em] sm:text-[48px]">{title}</h1>
+            <p className={`mt-4 max-w-2xl text-sm font-semibold leading-6 ${darkMode ? "text-white/55" : "text-black/55"}`}>{detail}</p>
+
+            <div className="mt-7 grid gap-3 sm:grid-cols-2">
+              <Link
+                href="/list-your-vehicle#vehicle-marketplace"
+                className="flex min-h-[56px] items-center justify-center rounded-full bg-[#f6b800] px-5 text-center text-xs font-black uppercase tracking-[.09em] text-black"
+              >
+                View available vehicles &amp; units
+              </Link>
+              <Link
+                href="/dealer"
+                className={`flex min-h-[56px] items-center justify-center rounded-full border px-5 text-center text-xs font-black uppercase tracking-[.09em] ${darkMode ? "border-white/20 text-white" : "border-black/15 text-black"}`}
+              >
+                Open Dealer
+              </Link>
+            </div>
+
+            <Link
+              href="/list-your-vehicle"
+              className={`mt-5 inline-flex text-xs font-black underline decoration-[#f6b800] decoration-2 underline-offset-4 ${darkMode ? "text-white/55" : "text-black/55"}`}
+            >
+              Back to vehicle options
+            </Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
-    <div data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v3">
+    <div data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v4">
       <LegacyVehicleListingPage />
       <style jsx global>{`
-        [data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v3"] main > section:first-of-type {
+        [data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v4"] main > section:first-of-type {
           display: none !important;
         }
-        [data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v3"] #plans {
+        [data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v4"] #plans {
           display: none !important;
         }
       `}</style>
