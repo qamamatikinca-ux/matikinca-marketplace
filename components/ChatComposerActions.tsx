@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
+
+const MENU_WIDTH = 224;
 
 export default function ChatComposerActions() {
   const pathname = usePathname();
   const router = useRouter();
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ left: 12, bottom: 72 });
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (pathname !== "/messages") {
@@ -18,18 +22,67 @@ export default function ChatComposerActions() {
     }
 
     let observer: MutationObserver | null = null;
+    let composer: HTMLFormElement | null = null;
+    let previousPosition = "";
+    let previousZIndex = "";
+    let previousIsolation = "";
+
     const locateComposer = () => {
       const row = document.querySelector<HTMLElement>(
         "form.loadlink-chat-composer div.mx-auto.flex.w-full.max-w-3xl.items-end.gap-2",
       );
+      const nextComposer = row?.closest<HTMLFormElement>("form.loadlink-chat-composer") || null;
       setMount((current) => (current === row ? current : row));
+
+      if (nextComposer && nextComposer !== composer) {
+        if (composer) {
+          composer.style.position = previousPosition;
+          composer.style.zIndex = previousZIndex;
+          composer.style.isolation = previousIsolation;
+        }
+        composer = nextComposer;
+        previousPosition = composer.style.position;
+        previousZIndex = composer.style.zIndex;
+        previousIsolation = composer.style.isolation;
+        composer.style.position = "relative";
+        composer.style.zIndex = "500";
+        composer.style.isolation = "isolate";
+      }
     };
 
     locateComposer();
     observer = new MutationObserver(locateComposer);
     observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer?.disconnect();
+
+    return () => {
+      observer?.disconnect();
+      if (composer) {
+        composer.style.position = previousPosition;
+        composer.style.zIndex = previousZIndex;
+        composer.style.isolation = previousIsolation;
+      }
+    };
   }, [pathname]);
+
+  const syncMenuPosition = useCallback(() => {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const left = Math.min(Math.max(12, rect.left), Math.max(12, window.innerWidth - MENU_WIDTH - 12));
+    const bottom = Math.max(12, window.innerHeight - rect.top + 8);
+    setMenuPosition({ left, bottom });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    syncMenuPosition();
+    const update = () => syncMenuPosition();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open, syncMenuPosition]);
 
   if (pathname !== "/messages" || !mount) return null;
 
@@ -46,38 +99,63 @@ export default function ChatComposerActions() {
     router.push("/tools");
   }
 
+  const menu = open && typeof document !== "undefined"
+    ? createPortal(
+        <>
+          <button
+            type="button"
+            aria-label="Close chat actions"
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-[2147483000] cursor-default bg-transparent"
+          />
+          <div
+            className="fixed z-[2147483001] w-56 overflow-hidden rounded-[18px] border border-black/10 bg-white p-1.5 text-black shadow-[0_24px_70px_rgba(0,0,0,.34)] dark:border-white/15 dark:bg-[#111] dark:text-white"
+            style={{ left: menuPosition.left, bottom: menuPosition.bottom }}
+          >
+            <button
+              type="button"
+              onClick={attachMedia}
+              className="flex w-full items-center gap-3 rounded-[13px] px-3 py-3 text-left text-sm font-black hover:bg-black/[.04] active:bg-black/[.07] dark:hover:bg-white/[.06] dark:active:bg-white/[.09]"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f6b800] text-black" aria-hidden="true">▧</span>
+              <span><span className="block">Attach media</span><span className="mt-0.5 block text-[10px] font-semibold text-black/45 dark:text-white/45">Photo, document or file</span></span>
+            </button>
+            <button
+              type="button"
+              onClick={openTools}
+              className="flex w-full items-center gap-3 rounded-[13px] px-3 py-3 text-left text-sm font-black hover:bg-black/[.04] active:bg-black/[.07] dark:hover:bg-white/[.06] dark:active:bg-white/[.09]"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-[#f6b800] dark:bg-[#f6b800] dark:text-black" aria-hidden="true">↗</span>
+              <span><span className="block">Logistics tools</span><span className="mt-0.5 block text-[10px] font-semibold text-black/45 dark:text-white/45">Open LoadLink tools</span></span>
+            </button>
+          </div>
+        </>,
+        document.body,
+      )
+    : null;
+
   return createPortal(
-    <div className="relative shrink-0 self-end">
-      {open ? (
-        <div className="absolute bottom-[52px] left-0 z-[120] w-56 overflow-hidden rounded-[18px] border border-black/10 bg-white/95 p-1.5 text-black shadow-[0_20px_55px_rgba(0,0,0,.24)] backdrop-blur-2xl">
-          <button
-            type="button"
-            onClick={attachMedia}
-            className="flex w-full items-center gap-3 rounded-[13px] px-3 py-3 text-left text-sm font-black hover:bg-black/[.04] active:bg-black/[.07]"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f6b800] text-black" aria-hidden="true">▧</span>
-            <span><span className="block">Attach media</span><span className="mt-0.5 block text-[10px] font-semibold text-black/45">Photo, document or file</span></span>
-          </button>
-          <button
-            type="button"
-            onClick={openTools}
-            className="flex w-full items-center gap-3 rounded-[13px] px-3 py-3 text-left text-sm font-black hover:bg-black/[.04] active:bg-black/[.07]"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-[#f6b800]" aria-hidden="true">↗</span>
-            <span><span className="block">Logistics tools</span><span className="mt-0.5 block text-[10px] font-semibold text-black/45">Open LoadLink tools</span></span>
-          </button>
-        </div>
-      ) : null}
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-label={open ? "Close chat actions" : "Open chat actions"}
-        aria-expanded={open}
-        className="flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-[#f3f0e8] text-[25px] font-medium leading-none text-black shadow-sm transition active:scale-95"
-      >
-        <span className={`transition-transform duration-150 ${open ? "rotate-45" : ""}`} aria-hidden="true">+</span>
-      </button>
-    </div>,
+    <>
+      <div className="relative z-[520] shrink-0 self-end">
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={() => {
+            setOpen((value) => {
+              const next = !value;
+              if (next) requestAnimationFrame(syncMenuPosition);
+              return next;
+            });
+          }}
+          aria-label={open ? "Close chat actions" : "Open chat actions"}
+          aria-expanded={open}
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-[#f3f0e8] text-[25px] font-medium leading-none text-black shadow-sm transition active:scale-95"
+        >
+          <span className={`transition-transform duration-150 ${open ? "rotate-45" : ""}`} aria-hidden="true">+</span>
+        </button>
+      </div>
+      {menu}
+    </>,
     mount,
   );
 }
