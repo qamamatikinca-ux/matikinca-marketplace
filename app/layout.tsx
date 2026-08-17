@@ -32,6 +32,8 @@ import AccountSettingsGlassFix from "@/components/AccountSettingsGlassFix";
 import LoadLinkInteractionSystem from "@/components/LoadLinkInteractionSystem";
 import LoadLinkTouchScrollGuard from "@/components/LoadLinkTouchScrollGuard";
 import LoadLinkShareEnhancer from "@/components/LoadLinkShareEnhancer";
+import HomeFollowingEnhancer from "@/components/HomeFollowingEnhancer";
+import ChatComposerActions from "@/components/ChatComposerActions";
 
 export const metadata: Metadata = {
   title: "LoadLink",
@@ -58,6 +60,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <LoadLinkInteractionSystem />
         <LoadLinkTouchScrollGuard />
         <LoadLinkShareEnhancer />
+        <HomeFollowingEnhancer />
+        <ChatComposerActions />
         <Suspense fallback={null}><GlobalLoading /></Suspense>
         <SwipeDotsEnhancer />
         <AuthBootstrap />
