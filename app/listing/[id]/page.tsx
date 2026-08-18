@@ -64,12 +64,6 @@ const STATE_COPY: Record<Exclude<ListingState["state"], "active">, { title: stri
   unavailable: { title: "This listing is unavailable", detail: "LoadLink cannot find an active public listing at this link." },
 };
 
-const PUBLIC_FIELDS = [
-  "id", "title", "city", "province", "vehicle_group", "rate", "posted_by", "description", "photos", "created_at", "listing_kind", "dealership_id",
-  "price_amount", "price_type", "vehicle_type", "vehicle_year", "brand", "model", "body_type", "transmission", "fuel_type", "axle_configuration", "odometer_km", "gvm_kg", "payload_kg", "condition", "service_history",
-  "route_start", "route_end", "route_distance_km", "load_type", "required_equipment", "rate_amount", "rate_unit", "payment_terms", "work_starts_at", "work_ends_at",
-].join(",");
-
 export default function ListingPage() {
   const params = useParams<{ id: string }>();
   const id = String(params?.id || "");
@@ -91,13 +85,14 @@ export default function ListingPage() {
         setState(nextState);
         if (nextState.state !== "active") return;
 
-        const { data, error } = await supabase.from("job_listings").select(PUBLIC_FIELDS).eq("id", id).maybeSingle();
+        const response = await fetch(`/api/listings/${encodeURIComponent(id)}`, { cache: "no-store" });
+        const payload = await response.json().catch(() => ({}));
         if (!mounted) return;
-        if (error || !data) {
+        if (!response.ok || !payload?.listing) {
           setState({ state: "unavailable" });
           return;
         }
-        setListing(data as unknown as PublicListing);
+        setListing(payload.listing as PublicListing);
       } catch {
         if (mounted) setState({ state: "unavailable" });
       } finally {
@@ -210,7 +205,7 @@ export default function ListingPage() {
               </div>
 
               <div className="mt-6 grid gap-2">
-                <Link href={`/messages?listing=${encodeURIComponent(listing.id)}`} className="flex min-h-13 items-center justify-center rounded-full bg-[#f6b800] px-5 text-[11px] font-black text-black">Message on LoadLink</Link>
+                <Link href={`/messages?listing=${encodeURIComponent(listing.id)}`} className="flex min-h-[52px] items-center justify-center rounded-full bg-[#f6b800] px-5 text-[11px] font-black text-black">Message on LoadLink</Link>
                 <button type="button" onClick={() => void shareListing()} className="min-h-12 rounded-full border border-current/15 px-5 text-[11px] font-black">Share listing</button>
               </div>
 
