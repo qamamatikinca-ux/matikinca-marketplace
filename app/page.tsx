@@ -215,10 +215,9 @@ function HomeExperience() {
                 }`}
               >
                 <Link href="#">About LoadLink</Link>
-                <Link href="#">Contact us</Link>
-                <Link href="#">Work with LoadLink</Link>
-                <Link href="#">Feedback</Link>
+                <a href="mailto:loadlinksouthafrica@gmail.com">Contact support</a>
                 <Link href="/help">Help & FAQ</Link>
+                <Link href="/help">Feedback</Link>
                 <Link href="#">Industry insights</Link>
               </div>
             </details>
@@ -272,13 +271,46 @@ function HomeExperience() {
                   darkMode ? "text-white/70" : "text-black/75"
                 }`}
               >
-                <Link href="#">Safety & security</Link>
-                <Link href="#">Terms & conditions</Link>
-                <Link href="/help">Privacy and safety help</Link>
-                <Link href="#">Cookie policy</Link>
-                <Link href="#">Help centre</Link>
+                <Link href="/legal#marketplace-safety-policy">Safety centre</Link>
+                <Link href="/help">Report a problem</Link>
+                <Link href="/help">Help centre</Link>
+                <Link href="/legal#privacy-policy">Privacy & account safety</Link>
               </div>
             </details>
+
+            <details className="group py-6">
+              <summary className="flex cursor-pointer list-none items-center justify-between text-2xl font-black">
+                Legal
+                <span className="text-[#b98400] group-open:rotate-180">v</span>
+              </summary>
+
+              <div
+                className={`mt-6 grid gap-6 text-xl ${
+                  darkMode ? "text-white/70" : "text-black/75"
+                }`}
+              >
+                <Link href="/legal#terms-of-use">Terms of Use</Link>
+                <Link href="/legal#privacy-policy">Privacy Policy</Link>
+                <Link href="/legal#marketplace-safety-policy">Marketplace & Safety Policy</Link>
+                <Link href="/legal#refund-cancellation-policy">Refund & Cancellation Policy</Link>
+                <Link href="/legal#cookie-policy">Cookie Policy</Link>
+                <Link href="/legal#community-standards">Community Standards</Link>
+              </div>
+            </details>
+          </div>
+
+          <div
+            className={`mt-10 rounded-[24px] border p-5 sm:p-6 ${
+              darkMode ? "border-white/10 bg-white/[.04]" : "border-[#d7c17c] bg-[#fffaf0]"
+            }`}
+          >
+            <p className="text-lg font-black">Trade with confidence.</p>
+            <p className={`mt-2 max-w-5xl text-sm font-semibold leading-6 ${darkMode ? "text-white/65" : "text-black/65"}`}>
+              Verify the person, business, vehicle and documents before completing a transaction. LoadLink provides marketplace infrastructure and safety tools but does not automatically become a party to transactions between users.
+            </p>
+            <Link href="/help" className="mt-4 inline-flex font-black underline underline-offset-4">
+              Report suspicious activity
+            </Link>
           </div>
 
           <div className="mt-12">
@@ -347,13 +379,18 @@ function HomeExperience() {
             </Link>
           </div>
 
-          <p
-            className={`mt-12 text-base font-semibold ${
-              darkMode ? "text-white/45" : "text-black/50"
-            }`}
+          <div
+            className={`mt-12 border-t pt-7 ${darkMode ? "border-white/10 text-white/50" : "border-black/10 text-black/55"}`}
           >
-            © Copyright 2026 LoadLink
-          </p>
+            <div className="flex flex-wrap gap-x-5 gap-y-3 text-sm font-bold">
+              <Link href="/legal#terms-of-use">Terms</Link>
+              <Link href="/legal#privacy-policy">Privacy</Link>
+              <Link href="/legal#marketplace-safety-policy">Safety</Link>
+              <Link href="/legal#refund-cancellation-policy">Refunds</Link>
+              <Link href="/legal#cookie-policy">Cookies</Link>
+            </div>
+            <p className="mt-5 text-sm font-semibold">© 2026 LoadLink. All rights reserved. · South Africa</p>
+          </div>
         </div>
       </footer>
     </main>
