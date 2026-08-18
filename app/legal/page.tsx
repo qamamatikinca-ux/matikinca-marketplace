@@ -58,42 +58,38 @@ export default function LegalPage() {
         </div>
       </header>
 
-      <section className="px-5 py-12 sm:px-8 sm:py-16">
+      <section className="px-4 py-9 sm:px-8 sm:py-14">
         <div className="mx-auto max-w-6xl">
           <div className="max-w-4xl">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#8a6500]">LoadLink legal</p>
-            <h1 className="mt-3 text-4xl font-black leading-[1.02] tracking-[-0.045em] sm:text-6xl">
+            <h1 className="text-[36px] font-black leading-[1.02] tracking-[-0.045em] sm:text-6xl">
               Legal & Marketplace Policy Pack
             </h1>
-            <p className="mt-5 max-w-3xl text-base font-semibold leading-7 text-black/60 sm:text-lg">
+            <p className="mt-4 max-w-3xl text-[15px] font-semibold leading-7 text-black/60 sm:text-lg">
               Platform Terms, Safety & Marketplace Policy for the Republic of South Africa.
             </p>
+            <div className="mt-5 flex flex-wrap gap-2 text-xs font-black text-black/60">
+              <span className="rounded-full border border-black/10 bg-white px-3 py-2">Version 1.0</span>
+              <span className="rounded-full border border-black/10 bg-white px-3 py-2">Updated 18 August 2026</span>
+            </div>
           </div>
 
-          <div className="mt-8 rounded-[26px] border border-[#d7c17c] bg-[#fffaf0] p-5 sm:p-6">
-            <p className="font-black">Draft for legal review before public launch.</p>
-            <p className="mt-2 text-sm leading-6 text-black/65">
-              This page reflects LoadLink Legal & Marketplace Policy Pack Version 1.0, dated 18 August 2026. It is a commercial drafting framework and should be reviewed by a qualified South African attorney before launch. Mandatory rights under applicable law remain preserved.
-            </p>
-          </div>
-
-          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-7 grid grid-cols-2 gap-3 lg:grid-cols-3">
             {policyLinks.map(([label, href]) => (
               <Link
                 key={href}
                 href={href}
-                className="flex min-h-16 items-center justify-between rounded-2xl border border-black/10 bg-white px-5 py-4 text-sm font-black shadow-[0_8px_20px_rgba(0,0,0,.04)] transition hover:border-black/20"
+                className="group flex min-h-[82px] items-center justify-between gap-3 rounded-[20px] border border-black/10 bg-white px-4 py-4 text-[13px] font-black leading-5 shadow-[0_8px_24px_rgba(0,0,0,.045)] transition hover:-translate-y-0.5 hover:border-black/20 hover:shadow-[0_12px_28px_rgba(0,0,0,.07)] sm:min-h-[76px] sm:px-5 sm:text-sm"
               >
                 {label}
-                <span aria-hidden="true">↓</span>
+                <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black text-sm text-[#f6b800] transition group-hover:translate-y-0.5">↓</span>
               </Link>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="px-5 pb-16 sm:px-8 sm:pb-24">
-        <div className="mx-auto max-w-6xl rounded-[30px] border border-black/10 bg-white p-6 shadow-[0_18px_50px_rgba(0,0,0,.06)] sm:p-10">
+      <section className="px-4 pb-16 sm:px-8 sm:pb-24">
+        <div className="mx-auto max-w-6xl rounded-[26px] border border-black/10 bg-white p-5 shadow-[0_16px_42px_rgba(0,0,0,.055)] sm:rounded-[30px] sm:p-10">
           <div id="terms-of-use" className="scroll-mt-8 pb-8">
             <p className="text-xs font-black uppercase tracking-[0.14em] text-[#8a6500]">Terms of Use</p>
             <h2 className="mt-2 text-3xl font-black tracking-[-0.035em] sm:text-4xl">

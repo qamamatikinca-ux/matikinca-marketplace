@@ -107,8 +107,8 @@ function HomeExperience() {
         </Suspense>
       </LoadLinkBoundary>
 
-      <section className="px-4 pb-8 pt-3 sm:px-5 md:px-8 md:pb-12 md:pt-5">
-        <div className="mx-auto grid w-full max-w-7xl gap-4 md:grid-cols-2 md:gap-5">
+      <section className="px-3 pb-7 pt-3 sm:px-5 md:px-8 md:pb-12 md:pt-5">
+        <div className="mx-auto grid w-full max-w-7xl gap-3 sm:gap-4 md:grid-cols-2 md:gap-5">
           {portalCards.map((card) => {
             const activeImage = getActiveImage(card);
 
@@ -117,7 +117,7 @@ function HomeExperience() {
                 key={card.title}
                 href={card.href}
                 aria-label={`Open ${card.title}`}
-                className={`group relative block h-[56vh] min-h-[430px] max-h-[620px] overflow-hidden rounded-[34px] border shadow-[0_18px_50px_rgba(0,0,0,.12)] transition active:scale-[.995] ${
+                className={`group relative block h-[390px] overflow-hidden rounded-[28px] border shadow-[0_14px_38px_rgba(0,0,0,.11)] transition active:scale-[.995] sm:h-[460px] sm:rounded-[32px] md:h-[520px] lg:h-[560px] ${
                   darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"
                 }`}
               >
@@ -131,14 +131,14 @@ function HomeExperience() {
                 <div className="absolute inset-0 bg-black/20" />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/30 to-black/90" />
 
-                <div className="relative z-10 flex h-full w-full flex-col justify-end p-7 pb-8 text-left text-white sm:p-9">
-                  <h2 className="max-w-[90%] text-4xl font-black leading-[.96] tracking-[-.045em] sm:text-5xl md:text-5xl lg:text-6xl">
+                <div className="relative z-10 flex h-full w-full flex-col justify-end p-6 pb-7 text-left text-white sm:p-8 md:p-9">
+                  <h2 className="max-w-[92%] text-[34px] font-black leading-[.96] tracking-[-.045em] sm:text-5xl md:text-5xl lg:text-6xl">
                     {card.title}
                   </h2>
-                  <p className="mt-4 max-w-[34rem] text-[15px] font-semibold leading-7 text-white/78 sm:text-base">
+                  <p className="mt-3 max-w-[34rem] text-sm font-semibold leading-6 text-white/80 sm:mt-4 sm:text-base sm:leading-7">
                     {card.description}
                   </p>
-                  <span className="mt-6 inline-flex min-h-14 w-fit items-center justify-center rounded-full bg-[#f6b800] px-7 text-sm font-black uppercase tracking-[.08em] text-black shadow-[0_10px_24px_rgba(0,0,0,.22)] transition group-hover:translate-y-[-1px]">
+                  <span className="mt-5 inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-[#f6b800] px-6 text-[13px] font-black uppercase tracking-[.08em] text-black shadow-[0_8px_20px_rgba(0,0,0,.2)] transition group-hover:translate-y-[-1px] sm:mt-6 sm:min-h-14 sm:px-7 sm:text-sm">
                     {card.buttonText}
                   </span>
                 </div>
