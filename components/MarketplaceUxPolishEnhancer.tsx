@@ -224,6 +224,7 @@ export default function MarketplaceUxPolishEnhancer() {
       }
 
       if (packageType === "dealer" || row.dealer_package_active) {
+        if (!row.dealership_slug) actions.appendChild(sheetAction("Finish Dealer profile", () => window.location.assign("/dealer?section=showroom")));
         actions.appendChild(sheetAction("Dealer workspace", () => window.location.assign("/dealer")));
         if (row.dealership_slug) {
           actions.appendChild(sheetAction("Dealership profile & reviews", () => window.location.assign(`/dealership/${encodeURIComponent(String(row.dealership_slug))}#reviews`)));
@@ -410,7 +411,8 @@ export default function MarketplaceUxPolishEnhancer() {
       if (pathname !== "/") return;
       const title = Array.from(document.querySelectorAll<HTMLElement>("p")).find((node) => clean(node.textContent) === "Trade with confidence.");
       const card = title?.parentElement;
-      if (card && !card.dataset.loadlinkSafetyModernized) {
+      const alreadyModern = Boolean(card?.parentElement?.tagName === "SECTION" && clean(card.parentElement.className).includes("border-t") && clean(card.parentElement.className).includes("pt-8"));
+      if (card && !alreadyModern && !card.dataset.loadlinkSafetyModernized) {
         card.dataset.loadlinkSafetyModernized = "true";
         card.style.background = "transparent";
         card.style.border = "0";
