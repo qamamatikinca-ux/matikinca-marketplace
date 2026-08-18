@@ -6,11 +6,13 @@
 [class~="backdrop-blur-2xl"] { --tw-backdrop-blur: blur(24px) !important; }
 [class~="backdrop-saturate-150"] { --tw-backdrop-saturate: saturate(125%) !important; }
 
-/* Slightly reduce transparency on the reusable LoadLink glass surface without removing it. */
 .loadlink-glass {
   -webkit-backdrop-filter: blur(9px) saturate(122%) !important;
   backdrop-filter: blur(9px) saturate(122%) !important;
 }
+
+/* The tool title and stage controls already explain themselves; remove redundant gold label pills. */
+body[data-loadlink-logistics-open="true"] .loadlink-ui-label { display: none !important; }
 
 /* Keep the approved rounded homepage portals, only make them a little tighter on phones. */
 @media (max-width: 767px) {
