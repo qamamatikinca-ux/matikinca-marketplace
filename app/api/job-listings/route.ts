@@ -69,6 +69,30 @@ function sortOrder(sort: string) {
   return "created_at.desc.nullslast";
 }
 
+function searchExpression(query: string) {
+  const wildcard = query.split(" ").filter(Boolean).join("*");
+  return [
+    "title",
+    "city",
+    "province",
+    "vehicle_group",
+    "posted_by",
+    "description",
+    "vehicle_type",
+    "brand",
+    "model",
+    "route_start",
+    "route_end",
+    "load_type",
+  ].map((field) => `${field}.ilike.*${wildcard}*`).join(",");
+}
+
+function locationExpression(city: string) {
+  return ["city", "province", "route_start", "route_end"]
+    .map((field) => `${field}.ilike.*${city}*`)
+    .join(",");
+}
+
 async function supabaseRequest(url: string, key: string, path: string, attempt = 0): Promise<Response> {
   try {
     const response = await fetch(`${url}/rest/v1/${path}`, {
@@ -122,31 +146,18 @@ export async function GET(request: Request) {
   params.set("offset", String(offset));
 
   if (group) params.set("vehicle_group", `eq.${group}`);
-  if (city) params.set("or", `(city.ilike.*${city}*,province.ilike.*${city}*,route_start.ilike.*${city}*,route_end.ilike.*${city}*)`);
-  if (query) {
-    const wildcard = query.split(" ").filter(Boolean).join("*");
-    const expression = [
-      "title",
-      "city",
-      "province",
-      "vehicle_group",
-      "posted_by",
-      "description",
-      "vehicle_type",
-      "brand",
-      "model",
-      "route_start",
-      "route_end",
-      "load_type",
-    ].map((field) => `${field}.ilike.*${wildcard}*`).join(",");
 
-    if (city) {
-      // PostgREST supports one `or` key per level. When both are supplied, fold the
-      // location into the broad search while preserving the explicit equipment/kind filters.
-      params.set("or", `(${expression},city.ilike.*${city}*,province.ilike.*${city}*,route_start.ilike.*${city}*,route_end.ilike.*${city}*)`);
-    } else {
-      params.set("or", `(${expression})`);
-    }
+  const searchLogic = query ? `or(${searchExpression(query)})` : "";
+  const locationLogic = city ? `or(${locationExpression(city)})` : "";
+
+  if (searchLogic && locationLogic) {
+    // Search intent and location are separate constraints. The result must satisfy
+    // BOTH groups while matching any eligible column inside each group.
+    params.set("and", `(${searchLogic},${locationLogic})`);
+  } else if (searchLogic) {
+    params.set("or", `(${searchExpression(query)})`);
+  } else if (locationLogic) {
+    params.set("or", `(${locationExpression(city)})`);
   }
 
   try {
