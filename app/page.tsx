@@ -206,7 +206,7 @@ function HomeExperience() {
             <details open className="group py-6">
               <summary className="flex cursor-pointer list-none items-center justify-between text-2xl font-black">
                 Company
-                <span className="text-[#b98400] group-open:rotate-180">v</span>
+                <span className="opacity-35 transition group-open:rotate-180">v</span>
               </summary>
 
               <div
@@ -225,7 +225,7 @@ function HomeExperience() {
             <details className="group py-6">
               <summary className="flex cursor-pointer list-none items-center justify-between text-2xl font-black">
                 Logistics
-                <span className="text-[#b98400] group-open:rotate-180">v</span>
+                <span className="opacity-35 transition group-open:rotate-180">v</span>
               </summary>
 
               <div
@@ -244,7 +244,7 @@ function HomeExperience() {
             <details className="group py-6">
               <summary className="flex cursor-pointer list-none items-center justify-between text-2xl font-black">
                 Services
-                <span className="text-[#b98400] group-open:rotate-180">v</span>
+                <span className="opacity-35 transition group-open:rotate-180">v</span>
               </summary>
 
               <div
@@ -263,7 +263,7 @@ function HomeExperience() {
             <details className="group py-6">
               <summary className="flex cursor-pointer list-none items-center justify-between text-2xl font-black">
                 Customers
-                <span className="text-[#b98400] group-open:rotate-180">v</span>
+                <span className="opacity-35 transition group-open:rotate-180">v</span>
               </summary>
 
               <div
@@ -281,7 +281,7 @@ function HomeExperience() {
             <details className="group py-6">
               <summary className="flex cursor-pointer list-none items-center justify-between text-2xl font-black">
                 Legal
-                <span className="text-[#b98400] group-open:rotate-180">v</span>
+                <span className="opacity-35 transition group-open:rotate-180">v</span>
               </summary>
 
               <div
@@ -299,19 +299,22 @@ function HomeExperience() {
             </details>
           </div>
 
-          <div
-            className={`mt-10 rounded-[24px] border p-5 sm:p-6 ${
-              darkMode ? "border-white/10 bg-white/[.04]" : "border-[#d7c17c] bg-[#fffaf0]"
-            }`}
-          >
-            <p className="text-lg font-black">Trade with confidence.</p>
-            <p className={`mt-2 max-w-5xl text-sm font-semibold leading-6 ${darkMode ? "text-white/65" : "text-black/65"}`}>
-              Verify the person, business, vehicle and documents before completing a transaction. LoadLink provides marketplace infrastructure and safety tools but does not automatically become a party to transactions between users.
-            </p>
-            <Link href="/help" className="mt-4 inline-flex font-black underline underline-offset-4">
-              Report suspicious activity
-            </Link>
-          </div>
+          <section className={`mt-10 border-t pt-8 ${darkMode ? "border-white/10" : "border-black/10"}`}>
+            <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+              <div className="max-w-4xl">
+                <p className="text-xl font-black tracking-[-.025em]">Trade with confidence.</p>
+                <p className={`mt-2 text-sm font-semibold leading-6 ${darkMode ? "text-white/58" : "text-black/58"}`}>
+                  Verify the person, business, vehicle and documents before completing a transaction. LoadLink provides marketplace infrastructure and safety tools but does not automatically become a party to transactions between users.
+                </p>
+              </div>
+              <Link
+                href="/help"
+                className={`inline-flex min-h-11 w-fit items-center justify-center rounded-full border px-5 text-sm font-black transition active:scale-[.98] ${darkMode ? "border-white/14 bg-white/[.035]" : "border-black/10 bg-black/[.025]"}`}
+              >
+                Report suspicious activity
+              </Link>
+            </div>
+          </section>
 
           <div className="mt-12">
             <h3 className="text-2xl font-black">Download the app</h3>
@@ -335,48 +338,24 @@ function HomeExperience() {
             </div>
           </div>
 
-          <div className="mt-12 flex flex-wrap items-center gap-7">
-            <Link
-              href="#"
-              className="flex h-11 w-11 items-center justify-center bg-[#f6b800] text-lg font-black text-black"
-            >
-              f
-            </Link>
-
-            <Link
-              href="#"
-              className="flex h-11 w-11 items-center justify-center text-3xl font-black"
-            >
-              X
-            </Link>
-
-            <Link
-              href="#"
-              className="flex h-11 w-11 items-center justify-center bg-red-600 text-sm font-black text-white"
-            >
-              YT
-            </Link>
-
-            <Link
-              href="#"
-              className="flex h-11 w-11 items-center justify-center bg-[#f6b800] text-sm font-black text-black"
-            >
-              IG
-            </Link>
-
-            <Link
-              href="#"
-              className="flex h-11 w-11 items-center justify-center bg-black text-sm font-black text-white"
-            >
-              TT
-            </Link>
-
-            <Link
-              href="#"
-              className="flex h-11 w-11 items-center justify-center rounded bg-blue-700 text-sm font-black text-white"
-            >
-              in
-            </Link>
+          <div className="mt-12 flex flex-wrap items-center gap-3">
+            {[
+              ["f", "Facebook"],
+              ["X", "X"],
+              ["YT", "YouTube"],
+              ["IG", "Instagram"],
+              ["TT", "TikTok"],
+              ["in", "LinkedIn"],
+            ].map(([mark, label]) => (
+              <Link
+                key={label}
+                href="#"
+                aria-label={label}
+                className={`flex h-11 min-w-11 items-center justify-center rounded-full border px-3 text-xs font-black backdrop-blur-xl transition active:scale-[.97] ${darkMode ? "border-white/12 bg-white/[.035] text-white/76" : "border-black/10 bg-black/[.025] text-black/70"}`}
+              >
+                {mark}
+              </Link>
+            ))}
           </div>
 
           <div
