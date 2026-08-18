@@ -90,7 +90,7 @@ export default function LoadLinkCallLayer() {
       for (const candidate of pendingIceRef.current.splice(0)) await peer.addIceCandidate(candidate).catch(() => undefined);
       const answer = await peer.createAnswer();
       await peer.setLocalDescription(answer);
-      await sendSignal(sessionId, "answer", answer.toJSON() as unknown as Record<string, unknown>);
+      await sendSignal(sessionId, "answer", { type: answer.type, sdp: answer.sdp ?? "" });
       setStatus("Connected");
       return;
     }
@@ -177,7 +177,7 @@ export default function LoadLinkCallLayer() {
     if (role === "caller") {
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
-      await sendSignal(session.session_id, "offer", offer.toJSON() as unknown as Record<string, unknown>);
+      await sendSignal(session.session_id, "offer", { type: offer.type, sdp: offer.sdp ?? "" });
     }
     beginHeartbeat(session);
   }, [beginHeartbeat, endLocal, handleSignal, sendSignal]);
