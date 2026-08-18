@@ -2,15 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import LogisticsMessageTools from "@/components/LogisticsMessageTools";
+import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 const MENU_WIDTH = 224;
 
 export default function ChatComposerActions() {
   const pathname = usePathname();
-  const router = useRouter();
+  const { darkMode } = useLoadLinkTheme();
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ left: 12, bottom: 72 });
   const buttonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -18,6 +21,7 @@ export default function ChatComposerActions() {
     if (pathname !== "/messages") {
       setMount(null);
       setOpen(false);
+      setToolsOpen(false);
       return;
     }
 
@@ -94,10 +98,33 @@ export default function ChatComposerActions() {
     input?.click();
   }
 
+  function insertIntoComposer(message: string) {
+    const textarea = document.querySelector<HTMLTextAreaElement>("form.loadlink-chat-composer textarea");
+    if (textarea) {
+      const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+      descriptor?.set?.call(textarea, message);
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+      textarea.dispatchEvent(new Event("change", { bubbles: true }));
+      textarea.focus();
+      return;
+    }
+
+    const editable = document.querySelector<HTMLElement>("form.loadlink-chat-composer [contenteditable='true']");
+    if (editable) {
+      editable.textContent = message;
+      editable.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: message }));
+      editable.focus();
+    }
+  }
+
   function openTools() {
     setOpen(false);
-    router.push("/tools");
+    setToolsOpen(true);
   }
+
+  const threadId = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("conversation") || "active-loadlink-chat"
+    : "active-loadlink-chat";
 
   const menu = open && typeof document !== "undefined"
     ? createPortal(
@@ -117,7 +144,7 @@ export default function ChatComposerActions() {
               onClick={attachMedia}
               className="flex w-full items-center gap-3 rounded-[13px] px-3 py-3 text-left text-sm font-black hover:bg-black/[.04] active:bg-black/[.07] dark:hover:bg-white/[.06] dark:active:bg-white/[.09]"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f6b800] text-black" aria-hidden="true">▧</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f6b800] text-black" aria-hidden="true"><AttachmentIcon /></span>
               <span><span className="block">Attach media</span><span className="mt-0.5 block text-[10px] font-semibold text-black/45 dark:text-white/45">Photo, document or file</span></span>
             </button>
             <button
@@ -125,8 +152,8 @@ export default function ChatComposerActions() {
               onClick={openTools}
               className="flex w-full items-center gap-3 rounded-[13px] px-3 py-3 text-left text-sm font-black hover:bg-black/[.04] active:bg-black/[.07] dark:hover:bg-white/[.06] dark:active:bg-white/[.09]"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-[#f6b800] dark:bg-[#f6b800] dark:text-black" aria-hidden="true">↗</span>
-              <span><span className="block">Logistics tools</span><span className="mt-0.5 block text-[10px] font-semibold text-black/45 dark:text-white/45">Open LoadLink tools</span></span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-[#f6b800] dark:bg-[#f6b800] dark:text-black" aria-hidden="true"><TruckToolsIcon /></span>
+              <span><span className="block">Logistics tools</span><span className="mt-0.5 block text-[10px] font-semibold text-black/45 dark:text-white/45">Use tools inside this chat</span></span>
             </button>
           </div>
         </>,
@@ -155,7 +182,35 @@ export default function ChatComposerActions() {
         </button>
       </div>
       {menu}
+      <LogisticsMessageTools
+        threadId={threadId}
+        listingTitle="this LoadLink conversation"
+        role="buyer"
+        darkMode={darkMode}
+        trigger="hidden"
+        forceOpen={toolsOpen}
+        onClose={() => setToolsOpen(false)}
+        onInsert={insertIntoComposer}
+      />
     </>,
     mount,
+  );
+}
+
+function AttachmentIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M8.5 12.5 14.8 6.2a3 3 0 0 1 4.2 4.2l-8.1 8.1a5 5 0 0 1-7.1-7.1l8.4-8.4" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function TruckToolsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3 7h11v9H3V7Zm11 3h3.4L21 13.6V16h-7v-6Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <circle cx="7" cy="17.5" r="1.7" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="17.5" cy="17.5" r="1.7" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
   );
 }
