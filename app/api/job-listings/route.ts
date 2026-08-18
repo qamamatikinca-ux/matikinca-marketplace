@@ -85,7 +85,8 @@ async function tryPostService(url: string, key: string) {
     if (!response.ok) return null;
     const payload = await response.json() as { rows?: unknown[]; dealers?: Record<string, unknown> };
     const rows = Array.isArray(payload.rows) ? payload.rows : [];
-    const dealers = payload.dealers && Object.keys(payload.dealers).length ? payload.dealers : await loadDealerMap(url, key, rows);
+    const publicDealers = await loadDealerMap(url, key, rows);
+    const dealers = { ...(payload.dealers || {}), ...publicDealers };
     return { rows: enrichDealerRows(rows, dealers), dealers };
   } catch { return null; }
 }
