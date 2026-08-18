@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import ListingReportAction from "@/components/marketplace/ListingReportAction";
 import { getPublicListing, stripPublicationFields } from "@/lib/marketplace/publicListingServer";
 
 type ListingRow = {
@@ -53,5 +54,5 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 }
 
 export default function ListingLayout({ children }: { children: ReactNode }) {
-  return children;
+  return <>{children}<ListingReportAction /></>;
 }
