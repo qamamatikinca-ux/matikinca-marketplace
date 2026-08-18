@@ -3,3 +3,4 @@ Normal private vehicle and mobile-unit listings now bypass the legacy dealership
 Triggered: 2026-08-16 00:27 SAST
 Rollback redeploy trigger: 2026-08-18 12:04 SAST
 Rollback merge trigger: 2026-08-18 12:06 SAST
+Final-stage production redeploy retry: 2026-08-18 19:29 SAST
