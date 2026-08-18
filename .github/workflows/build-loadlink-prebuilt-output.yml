@@ -65,3 +65,4 @@ jobs:
 # Primary-only prebuilt deployment path repaired to link by project name/scope before build and deploy — 2026-08-16.
 # Final-stage release trigger — 2026-08-18.
 # Dealership public experience production trigger — 2026-08-18 23:35 SAST.
+# Dealer package entitlement production trigger — 2026-08-19 00:16 SAST.
