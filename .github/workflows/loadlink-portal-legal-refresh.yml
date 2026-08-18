@@ -1,0 +1,142 @@
+name: LoadLink portal and legal UI refresh
+
+on:
+  push:
+    paths:
+      - .github/workflows/loadlink-portal-legal-refresh.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply targeted UI refresh
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly 1 match, found {count}")
+              return text.replace(old, new, 1)
+
+          # Homepage portal cards: make mobile cards more compact and page-fitting
+          home_path = Path("app/page.tsx")
+          home = home_path.read_text()
+          home = replace_once(
+              home,
+              '<section className="px-4 pb-8 pt-3 sm:px-5 md:px-8 md:pb-12 md:pt-5">',
+              '<section className="px-3 pb-7 pt-3 sm:px-5 md:px-8 md:pb-12 md:pt-5">',
+              "home section spacing",
+          )
+          home = replace_once(
+              home,
+              '<div className="mx-auto grid w-full max-w-7xl gap-4 md:grid-cols-2 md:gap-5">',
+              '<div className="mx-auto grid w-full max-w-7xl gap-3 sm:gap-4 md:grid-cols-2 md:gap-5">',
+              "home portal grid",
+          )
+          home = replace_once(
+              home,
+              'className={`group relative block h-[56vh] min-h-[430px] max-h-[620px] overflow-hidden rounded-[34px] border shadow-[0_18px_50px_rgba(0,0,0,.12)] transition active:scale-[.995] ${',
+              'className={`group relative block h-[390px] overflow-hidden rounded-[28px] border shadow-[0_14px_38px_rgba(0,0,0,.11)] transition active:scale-[.995] sm:h-[460px] sm:rounded-[32px] md:h-[520px] lg:h-[560px] ${',
+              "home portal card shell",
+          )
+          home = replace_once(
+              home,
+              'className="relative z-10 flex h-full w-full flex-col justify-end p-7 pb-8 text-left text-white sm:p-9"',
+              'className="relative z-10 flex h-full w-full flex-col justify-end p-6 pb-7 text-left text-white sm:p-8 md:p-9"',
+              "home card content spacing",
+          )
+          home = replace_once(
+              home,
+              'className="max-w-[90%] text-4xl font-black leading-[.96] tracking-[-.045em] sm:text-5xl md:text-5xl lg:text-6xl"',
+              'className="max-w-[92%] text-[34px] font-black leading-[.96] tracking-[-.045em] sm:text-5xl md:text-5xl lg:text-6xl"',
+              "home card title",
+          )
+          home = replace_once(
+              home,
+              'className="mt-4 max-w-[34rem] text-[15px] font-semibold leading-7 text-white/78 sm:text-base"',
+              'className="mt-3 max-w-[34rem] text-sm font-semibold leading-6 text-white/80 sm:mt-4 sm:text-base sm:leading-7"',
+              "home card description",
+          )
+          home = replace_once(
+              home,
+              'className="mt-6 inline-flex min-h-14 w-fit items-center justify-center rounded-full bg-[#f6b800] px-7 text-sm font-black uppercase tracking-[.08em] text-black shadow-[0_10px_24px_rgba(0,0,0,.22)] transition group-hover:translate-y-[-1px]"',
+              'className="mt-5 inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-[#f6b800] px-6 text-[13px] font-black uppercase tracking-[.08em] text-black shadow-[0_8px_20px_rgba(0,0,0,.2)] transition group-hover:translate-y-[-1px] sm:mt-6 sm:min-h-14 sm:px-7 sm:text-sm"',
+              "home card action",
+          )
+          home_path.write_text(home)
+
+          # Legal page: remove pre-launch attorney advisory and tighten the navigation/UI
+          legal_path = Path("app/legal/page.tsx")
+          legal = legal_path.read_text()
+          legal = replace_once(
+              legal,
+              '<section className="px-5 py-12 sm:px-8 sm:py-16">',
+              '<section className="px-4 py-9 sm:px-8 sm:py-14">',
+              "legal hero spacing",
+          )
+          legal = replace_once(
+              legal,
+              '          <div className="max-w-4xl">\n            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#8a6500]">LoadLink legal</p>\n            <h1 className="mt-3 text-4xl font-black leading-[1.02] tracking-[-0.045em] sm:text-6xl">\n              Legal & Marketplace Policy Pack\n            </h1>\n            <p className="mt-5 max-w-3xl text-base font-semibold leading-7 text-black/60 sm:text-lg">\n              Platform Terms, Safety & Marketplace Policy for the Republic of South Africa.\n            </p>\n          </div>',
+              '          <div className="max-w-4xl">\n            <h1 className="text-[36px] font-black leading-[1.02] tracking-[-0.045em] sm:text-6xl">\n              Legal & Marketplace Policy Pack\n            </h1>\n            <p className="mt-4 max-w-3xl text-[15px] font-semibold leading-7 text-black/60 sm:text-lg">\n              Platform Terms, Safety & Marketplace Policy for the Republic of South Africa.\n            </p>\n            <div className="mt-5 flex flex-wrap gap-2 text-xs font-black text-black/60">\n              <span className="rounded-full border border-black/10 bg-white px-3 py-2">Version 1.0</span>\n              <span className="rounded-full border border-black/10 bg-white px-3 py-2">Updated 18 August 2026</span>\n            </div>\n          </div>',
+              "legal hero",
+          )
+          legal = replace_once(
+              legal,
+              '          <div className="mt-8 rounded-[26px] border border-[#d7c17c] bg-[#fffaf0] p-5 sm:p-6">\n            <p className="font-black">Draft for legal review before public launch.</p>\n            <p className="mt-2 text-sm leading-6 text-black/65">\n              This page reflects LoadLink Legal & Marketplace Policy Pack Version 1.0, dated 18 August 2026. It is a commercial drafting framework and should be reviewed by a qualified South African attorney before launch. Mandatory rights under applicable law remain preserved.\n            </p>\n          </div>\n\n',
+              '',
+              "legal attorney advisory",
+          )
+          legal = replace_once(
+              legal,
+              '<div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">',
+              '<div className="mt-7 grid grid-cols-2 gap-3 lg:grid-cols-3">',
+              "legal policy grid",
+          )
+          legal = replace_once(
+              legal,
+              'className="flex min-h-16 items-center justify-between rounded-2xl border border-black/10 bg-white px-5 py-4 text-sm font-black shadow-[0_8px_20px_rgba(0,0,0,.04)] transition hover:border-black/20"',
+              'className="group flex min-h-[82px] items-center justify-between gap-3 rounded-[20px] border border-black/10 bg-white px-4 py-4 text-[13px] font-black leading-5 shadow-[0_8px_24px_rgba(0,0,0,.045)] transition hover:-translate-y-0.5 hover:border-black/20 hover:shadow-[0_12px_28px_rgba(0,0,0,.07)] sm:min-h-[76px] sm:px-5 sm:text-sm"',
+              "legal policy card",
+          )
+          legal = replace_once(
+              legal,
+              '<span aria-hidden="true">↓</span>',
+              '<span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black text-sm text-[#f6b800] transition group-hover:translate-y-0.5">↓</span>',
+              "legal policy arrow",
+          )
+          legal = replace_once(
+              legal,
+              '<section className="px-5 pb-16 sm:px-8 sm:pb-24">',
+              '<section className="px-4 pb-16 sm:px-8 sm:pb-24">',
+              "legal body spacing",
+          )
+          legal = replace_once(
+              legal,
+              '<div className="mx-auto max-w-6xl rounded-[30px] border border-black/10 bg-white p-6 shadow-[0_18px_50px_rgba(0,0,0,.06)] sm:p-10">',
+              '<div className="mx-auto max-w-6xl rounded-[26px] border border-black/10 bg-white p-5 shadow-[0_16px_42px_rgba(0,0,0,.055)] sm:rounded-[30px] sm:p-10">',
+              "legal body card",
+          )
+          legal_path.write_text(legal)
+          PY
+
+      - name: Commit refresh
+        shell: bash
+        run: |
+          if git diff --quiet -- app/page.tsx app/legal/page.tsx; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git config user.name "LoadLink UI Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/page.tsx app/legal/page.tsx
+          git commit -m "Modernize portal cards and legal policy page"
+          git push
