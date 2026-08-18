@@ -97,7 +97,7 @@ export default function ListingPage() {
           setState({ state: "unavailable" });
           return;
         }
-        setListing(data as PublicListing);
+        setListing(data as unknown as PublicListing);
       } catch {
         if (mounted) setState({ state: "unavailable" });
       } finally {
