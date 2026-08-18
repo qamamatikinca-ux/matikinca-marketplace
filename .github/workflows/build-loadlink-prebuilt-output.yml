@@ -66,3 +66,4 @@ jobs:
 # Final-stage release trigger — 2026-08-18.
 # Dealership public experience production trigger — 2026-08-18 23:35 SAST.
 # Dealer package entitlement production trigger — 2026-08-19 00:16 SAST.
+# Marketplace card, mobile actions and Dealer profile gate release — 2026-08-19 01:30 SAST.
