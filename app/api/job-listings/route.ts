@@ -26,11 +26,30 @@ async function supabaseRequest(url: string, key: string, path: string, init?: Re
   });
 }
 
+async function tryPostService(url: string, key: string) {
+  try {
+    const response = await fetch(`${url}/functions/v1/loadlink-post-service?limit=120`, {
+      next: { revalidate: 15 },
+      headers: { apikey: key },
+    });
+    if (!response.ok) return null;
+    const payload = await response.json() as { rows?: unknown[]; dealers?: Record<string, unknown> };
+    return { rows: Array.isArray(payload.rows) ? payload.rows : [], dealers: payload.dealers || {} };
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(request: Request) {
   const limited = serverRateLimit(request, "public-listings", 180, 60_000);
   if (limited) return limited;
   const { url, key } = getSupabaseConfig();
   if (!url.startsWith("https://") || !key) return NextResponse.json({ error: "Listings are temporarily unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+
+  const service = await tryPostService(url, key);
+  if (service) {
+    return NextResponse.json({ rows: service.rows, dealers: service.dealers, source: "post-service" }, { headers: { "Cache-Control": "public, max-age=5, s-maxage=15, stale-while-revalidate=60" } });
+  }
 
   let response = await supabaseRequest(url, key, `job_listings?select=${encodeURIComponent(PUBLIC_FIELDS)}&order=created_at.desc.nullslast&limit=500`);
   if (!response.ok) response = await supabaseRequest(url, key, "rpc/get_public_job_listings", { method: "POST", body: "{}" });
@@ -48,5 +67,5 @@ export async function GET(request: Request) {
         return active && approved && current && inStock;
       }).map(toPublicRow)
     : [];
-  return NextResponse.json({ rows: visibleRows }, { headers: { "Cache-Control": "public, max-age=5, s-maxage=10, stale-while-revalidate=30" } });
+  return NextResponse.json({ rows: visibleRows, source: "fallback" }, { headers: { "Cache-Control": "public, max-age=5, s-maxage=10, stale-while-revalidate=30" } });
 }
