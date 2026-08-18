@@ -63,3 +63,4 @@ jobs:
           retention-days: 1
 
 # Primary-only prebuilt deployment path repaired to link by project name/scope before build and deploy — 2026-08-16.
+# Final-stage release trigger — 2026-08-18.
