@@ -1,3 +1,4 @@
 Deploy the complete List Your Truck three-choice portal and direct vehicle/mobile-unit entry flow to primary production.
 Normal private vehicle and mobile-unit listings now bypass the legacy dealership gate; dealership inventory routes remain unchanged.
 Triggered: 2026-08-16 00:27 SAST
+Rollback redeploy trigger: 2026-08-18 12:04 SAST
