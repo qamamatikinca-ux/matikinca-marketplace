@@ -1,0 +1,21 @@
+/* Final-stage visual balance: keep LoadLink glass, but make it calmer and cheaper to composite. */
+[class~="backdrop-blur-sm"] { --tw-backdrop-blur: blur(3px) !important; }
+[class~="backdrop-blur-md"] { --tw-backdrop-blur: blur(9px) !important; }
+[class~="backdrop-blur-lg"] { --tw-backdrop-blur: blur(13px) !important; }
+[class~="backdrop-blur-xl"] { --tw-backdrop-blur: blur(18px) !important; }
+[class~="backdrop-blur-2xl"] { --tw-backdrop-blur: blur(24px) !important; }
+[class~="backdrop-saturate-150"] { --tw-backdrop-saturate: saturate(125%) !important; }
+
+/* Slightly reduce transparency on the reusable LoadLink glass surface without removing it. */
+.loadlink-glass {
+  -webkit-backdrop-filter: blur(9px) saturate(122%) !important;
+  backdrop-filter: blur(9px) saturate(122%) !important;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .loadlink-glass,
+  [class*="backdrop-blur"] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
