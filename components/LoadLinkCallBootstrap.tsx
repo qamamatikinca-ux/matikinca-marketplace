@@ -5,6 +5,11 @@ import { usePathname } from "next/navigation";
 
 const LoadLinkCallLayer = lazy(() => import("@/components/LoadLinkCallLayer"));
 
+type IdleWindow = Window & {
+  requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+  cancelIdleCallback?: (id: number) => void;
+};
+
 export default function LoadLinkCallBootstrap() {
   const pathname = usePathname();
   const [enabled, setEnabled] = useState(false);
@@ -12,13 +17,16 @@ export default function LoadLinkCallBootstrap() {
   useEffect(() => {
     const standalone = window.matchMedia?.("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
     if (!standalone && pathname !== "/messages") { setEnabled(false); return; }
+
     const start = () => setEnabled(true);
-    if ("requestIdleCallback" in window) {
-      const id = (window as Window & { requestIdleCallback: (cb: IdleRequestCallback, options?: IdleRequestOptions) => number; cancelIdleCallback: (id: number) => void }).requestIdleCallback(start, { timeout: 1200 });
-      return () => (window as Window & { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(id);
+    const idleWindow = window as IdleWindow;
+    if (typeof idleWindow.requestIdleCallback === "function") {
+      const id = idleWindow.requestIdleCallback(start, { timeout: 1200 });
+      return () => idleWindow.cancelIdleCallback?.(id);
     }
-    const timer = window.setTimeout(start, 300);
-    return () => window.clearTimeout(timer);
+
+    const timer = globalThis.setTimeout(start, 300);
+    return () => globalThis.clearTimeout(timer);
   }, [pathname]);
 
   return enabled ? <Suspense fallback={null}><LoadLinkCallLayer /></Suspense> : null;
