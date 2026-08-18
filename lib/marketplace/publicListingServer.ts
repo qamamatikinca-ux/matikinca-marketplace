@@ -70,7 +70,7 @@ function isPublished(row: PublicListingRow) {
 
 async function requestListing(id: string, attempt = 0): Promise<PublicListingRow | null> {
   const { url, key } = config();
-  const endpoint = `${url}/rest/v1/job_listings?id=eq.${encodeURIComponent(id)}&select=${encodeURIComponent(PUBLIC_LISTING_FIELDS)}&limit=1`;
+  const endpoint = `${url}/rest/v1/loadlink_public_listings?id=eq.${encodeURIComponent(id)}&select=${encodeURIComponent(PUBLIC_LISTING_FIELDS)}&limit=1`;
 
   try {
     const response = await fetch(endpoint, {
