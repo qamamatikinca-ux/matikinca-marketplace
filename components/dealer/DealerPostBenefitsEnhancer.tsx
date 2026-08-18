@@ -10,6 +10,7 @@ type DealerListing = {
   dealership_trading_hours?: string | null;
   dealership_location?: string | null;
   dealership_logo?: string | null;
+  dealership_active_listing_count?: number | null;
 };
 
 const BENEFIT_SELECTOR = "[data-loadlink-dealer-benefits='true']";
@@ -32,22 +33,23 @@ export default function DealerPostBenefitsEnhancer() {
     let observer: MutationObserver | null = null;
     const rows = new Map<string, DealerListing>();
 
-    function openShowroom(event: Event, slug: string) {
+    function openDealer(event: Event, slug: string, hasShowroom: boolean) {
       event.preventDefault();
       event.stopPropagation();
-      window.location.assign(`/dealership/${encodeURIComponent(slug)}#showroom`);
+      window.location.assign(`/dealership/${encodeURIComponent(slug)}${hasShowroom ? "#showroom" : ""}`);
     }
 
     function decorateHost(host: HTMLElement, id: string) {
       if (!id || host.querySelector(BENEFIT_SELECTOR)) return;
       const row = rows.get(id);
       if (!row?.dealership_slug || !row.dealership_name) return;
+      const hasShowroom = Number(row.dealership_active_listing_count || 0) > 0;
 
       const bar = document.createElement("div");
       bar.dataset.loadlinkDealerBenefits = "true";
       bar.setAttribute("role", "button");
       bar.tabIndex = 0;
-      bar.setAttribute("aria-label", `View ${row.dealership_name} showroom and customer reviews`);
+      bar.setAttribute("aria-label", hasShowroom ? `View ${row.dealership_name} showroom and customer reviews` : `View ${row.dealership_name} profile and customer reviews`);
       bar.className = "m-3 mt-0 flex min-h-[54px] w-[calc(100%-1.5rem)] items-center gap-3 rounded-[17px] border px-3 py-2 text-left shadow-[0_8px_24px_rgba(0,0,0,.045)]";
 
       const avatar = document.createElement("span");
@@ -72,12 +74,12 @@ export default function DealerPostBenefitsEnhancer() {
       ].filter(Boolean).join(" · ");
       copy.appendChild(makeText("small", details, "mt-0.5 block truncate text-[10px] font-semibold opacity-55"));
 
-      const action = makeText("span", "Showroom · Reviews", "shrink-0 text-[10px] font-black underline underline-offset-4");
+      const action = makeText("span", hasShowroom ? "Showroom · Reviews" : "Profile · Reviews", "shrink-0 text-[10px] font-black underline underline-offset-4");
       bar.append(avatar, copy, action);
-      bar.addEventListener("click", (event) => openShowroom(event, row.dealership_slug!));
+      bar.addEventListener("click", (event) => openDealer(event, row.dealership_slug!, hasShowroom));
       bar.addEventListener("keydown", (event) => {
         if (!(event instanceof KeyboardEvent) || (event.key !== "Enter" && event.key !== " ")) return;
-        openShowroom(event, row.dealership_slug!);
+        openDealer(event, row.dealership_slug!, hasShowroom);
       });
       host.appendChild(bar);
     }
