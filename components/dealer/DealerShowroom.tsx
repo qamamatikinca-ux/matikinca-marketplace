@@ -87,10 +87,10 @@ export default function DealerShowroom({
   const canPublish = context.verification_status === "approved" && ["active", "past_due", "grace_period"].includes(context.subscription_status) && context.account_status === "active";
   const status = form.is_public && context.showroom_status === "live" ? "Live on LoadLink" : canPublish ? "Ready to publish" : "Private";
 
-  async function save(nextPublic = form.is_public) {
+  async function save(nextPublic = form.is_public, requireComplete = false) {
     const slugChanged = form.slug.trim() !== profile.slug;
     if (slugChanged && !window.confirm(`Change your dealership link to /${form.slug.trim()}? The old LoadLink link will redirect to the new one.`)) return;
-    if (!profileComplete) {
+    if (requireComplete && !profileComplete) {
       setDetailsOpen(true);
       setMessage(`Complete the required Dealer profile details first: ${missingRequired.join(", ")}.`);
       return;
@@ -108,7 +108,7 @@ export default function DealerShowroom({
       });
       onProfile(data.profile);
       setForm(toForm(data.profile));
-      setMessage(nextPublic ? "Dealer page is live." : "Dealer profile saved.");
+      setMessage(nextPublic ? "Dealer page saved." : "Dealer profile saved.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Dealer page could not be saved.");
     } finally {
@@ -231,8 +231,8 @@ export default function DealerShowroom({
           <div className="text-xs font-black">{profileComplete ? status : "Profile incomplete"}</div>
           <div className="mt-0.5 text-[10px] opacity-40">{profileComplete ? "Save changes before leaving." : `Add ${missingRequired.join(", ")}.`}</div>
         </div>
-        <PrimaryButton type="button" disabled={busy} onClick={() => void save(form.is_public)}>{busy ? "Saving…" : "Save changes"}</PrimaryButton>
-        {form.is_public ? <SecondaryButton darkMode={darkMode} type="button" disabled={busy} onClick={() => void save(false)}>Take offline</SecondaryButton> : <SecondaryButton darkMode={darkMode} type="button" disabled={busy || !canPublish || !profileComplete} onClick={() => void save(true)}>Publish</SecondaryButton>}
+        <PrimaryButton type="button" disabled={busy} onClick={() => void save(form.is_public, false)}>{busy ? "Saving…" : "Save changes"}</PrimaryButton>
+        {form.is_public ? <SecondaryButton darkMode={darkMode} type="button" disabled={busy} onClick={() => void save(false, false)}>Take offline</SecondaryButton> : <SecondaryButton darkMode={darkMode} type="button" disabled={busy || !canPublish || !profileComplete} onClick={() => void save(true, true)}>Publish</SecondaryButton>}
       </section>
     </div>
   );
