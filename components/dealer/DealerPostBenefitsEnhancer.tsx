@@ -38,22 +38,17 @@ export default function DealerPostBenefitsEnhancer() {
       window.location.assign(`/dealership/${encodeURIComponent(slug)}#showroom`);
     }
 
-    function decorate(anchor: HTMLAnchorElement) {
-      if (anchor.querySelector(BENEFIT_SELECTOR)) return;
-      const id = listingIdFromHref(anchor.getAttribute("href") || "");
-      if (!id) return;
+    function decorateHost(host: HTMLElement, id: string) {
+      if (!id || host.querySelector(BENEFIT_SELECTOR)) return;
       const row = rows.get(id);
       if (!row?.dealership_slug || !row.dealership_name) return;
-
-      const host = anchor.closest<HTMLElement>("article") || anchor;
-      if (host.querySelector(BENEFIT_SELECTOR)) return;
 
       const bar = document.createElement("div");
       bar.dataset.loadlinkDealerBenefits = "true";
       bar.setAttribute("role", "button");
       bar.tabIndex = 0;
       bar.setAttribute("aria-label", `View ${row.dealership_name} showroom and customer reviews`);
-      bar.className = "mt-3 flex min-h-[54px] w-full items-center gap-3 rounded-[17px] border px-3 py-2 text-left shadow-[0_8px_24px_rgba(0,0,0,.045)]";
+      bar.className = "m-3 mt-0 flex min-h-[54px] w-[calc(100%-1.5rem)] items-center gap-3 rounded-[17px] border px-3 py-2 text-left shadow-[0_8px_24px_rgba(0,0,0,.045)]";
 
       const avatar = document.createElement("span");
       avatar.className = "flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-current/10 bg-black text-[9px] font-black uppercase text-[#f6b800]";
@@ -61,10 +56,11 @@ export default function DealerPostBenefitsEnhancer() {
         const image = document.createElement("img");
         image.src = row.dealership_logo;
         image.alt = "";
+        image.loading = "lazy";
         image.className = "h-full w-full object-cover";
         avatar.appendChild(image);
       } else {
-        avatar.textContent = row.dealership_name.slice(0, 2);
+        avatar.textContent = row.dealership_name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").slice(0, 2) || "LL";
       }
 
       const copy = document.createElement("span");
@@ -83,16 +79,21 @@ export default function DealerPostBenefitsEnhancer() {
         if (!(event instanceof KeyboardEvent) || (event.key !== "Enter" && event.key !== " ")) return;
         openShowroom(event, row.dealership_slug!);
       });
-
-      if (host === anchor) anchor.appendChild(bar);
-      else host.appendChild(bar);
+      host.appendChild(bar);
     }
 
     function scan() {
       if (cancelled || !rows.size) return;
-      document
-        .querySelectorAll<HTMLAnchorElement>('a[href^="/listing/"],a[href^="/vehicles/"]')
-        .forEach(decorate);
+
+      document.querySelectorAll<HTMLElement>('article[id^="job-"]').forEach((article) => {
+        decorateHost(article, article.id.replace(/^job-/, ""));
+      });
+
+      document.querySelectorAll<HTMLAnchorElement>('a[href^="/listing/"],a[href^="/vehicles/"]').forEach((anchor) => {
+        const id = listingIdFromHref(anchor.getAttribute("href") || "");
+        const host = anchor.closest<HTMLElement>("article") || anchor;
+        decorateHost(host, id);
+      });
     }
 
     fetch(`/api/job-listings?t=${Date.now()}`, { cache: "no-store" })
