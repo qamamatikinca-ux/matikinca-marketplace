@@ -129,15 +129,20 @@ function HomeExperience() {
 
       <footer className={`border-t px-5 py-10 ${darkMode ? "border-white/10 bg-[#070707]" : "border-black/10 bg-white"}`}>
         <div className="mx-auto max-w-[1200px]">
-          <div className="grid gap-8 sm:grid-cols-[1.2fr_1fr_1fr]">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.25fr_1fr_1fr_1fr]">
             <div>
               <img src={darkMode ? "/images/loadlink-logo-dark.png" : "/images/loadlink-logo-light.png"} alt="LoadLink" className="h-auto w-[180px] object-contain" />
               <p className={`mt-4 max-w-sm text-[11px] font-semibold leading-5 ${muted}`}>A South African logistics marketplace connecting work, equipment, professional drivers and direct business communication.</p>
+              <Link href="/safety" className="mt-4 inline-flex min-h-10 items-center rounded-full border border-current/15 px-4 text-[10px] font-black">Safety Centre</Link>
             </div>
             <FooterGroup title="Marketplace" links={[["Jobs", "/jobs"], ["Contracts", "/contracts"], ["Vehicles & units", "/list-your-vehicle"], ["Drivers", "/drivers"]]} muted={muted} />
-            <FooterGroup title="Support" links={[["Help centre", "/help"], ["Messages", "/messages"], ["Account settings", "/account/settings"], ["Packages", "/packages"]]} muted={muted} />
+            <FooterGroup title="Support" links={[["Help centre", "/help"], ["Contact LoadLink", "/contact"], ["Messages", "/messages"], ["Packages", "/packages"]]} muted={muted} />
+            <FooterGroup title="Legal & safety" links={[["Terms of Use", "/terms"], ["Privacy Policy", "/privacy"], ["Cookie Policy", "/cookies"], ["Marketplace Rules", "/marketplace-rules"], ["Safety Centre", "/safety"]]} muted={muted} />
           </div>
-          <div className={`mt-9 border-t pt-5 text-[10px] font-semibold ${darkMode ? "border-white/10 text-white/35" : "border-black/10 text-black/40"}`}>© 2026 LoadLink. Policies and final legal pages will be connected before public release.</div>
+          <div className={`mt-9 flex flex-col gap-2 border-t pt-5 text-[10px] font-semibold sm:flex-row sm:items-center sm:justify-between ${darkMode ? "border-white/10 text-white/35" : "border-black/10 text-black/40"}`}>
+            <span>© 2026 LoadLink</span>
+            <span>South African logistics marketplace</span>
+          </div>
         </div>
       </footer>
     </main>
