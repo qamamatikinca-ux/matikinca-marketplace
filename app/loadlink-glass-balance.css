@@ -12,6 +12,18 @@
   backdrop-filter: blur(9px) saturate(122%) !important;
 }
 
+/* Keep the approved rounded homepage portals, only make them a little tighter on phones. */
+@media (max-width: 767px) {
+  a[href="/jobs?portal=job"][aria-label="Open Jobs"],
+  a[href="/contracts"][aria-label="Open Contracts"],
+  a[href^="/list-your-vehicle?view=marketplace"][aria-label="Open Vehicles & units"],
+  a[href="/driver-portal"][aria-label="Open Drivers"] {
+    height: 51vh !important;
+    min-height: 395px !important;
+    max-height: 570px !important;
+  }
+}
+
 @media (prefers-reduced-transparency: reduce) {
   .loadlink-glass,
   [class*="backdrop-blur"] {
