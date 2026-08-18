@@ -1,4 +1,5 @@
 /* Final-stage visual balance: keep LoadLink glass, but make it calmer and cheaper to composite. */
+/* Release candidate: final-stage-speed-services-20260818 */
 [class~="backdrop-blur-sm"] { --tw-backdrop-blur: blur(3px) !important; }
 [class~="backdrop-blur-md"] { --tw-backdrop-blur: blur(9px) !important; }
 [class~="backdrop-blur-lg"] { --tw-backdrop-blur: blur(13px) !important; }
