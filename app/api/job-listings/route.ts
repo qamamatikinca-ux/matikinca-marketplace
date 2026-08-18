@@ -4,13 +4,48 @@ import { serverRateLimit } from "@/lib/serverRateLimit";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+// Public marketplace search deliberately excludes direct phone numbers, WhatsApp,
+// user IDs, owner keys, fraud/moderation internals and payment identifiers.
 const PUBLIC_FIELDS = [
-  "id","title","city","vehicle_group","rate","posted_by","contact_number","whatsapp_number","poster_photo","description","photos","sponsored","package_type","created_at","view_count","last_viewed_at","user_id","listing_kind","status","moderation_status","expires_at","stock_status","dealership_id",
+  "id",
+  "title",
+  "city",
+  "province",
+  "vehicle_group",
+  "rate",
+  "posted_by",
+  "poster_photo",
+  "description",
+  "photos",
+  "sponsored",
+  "package_type",
+  "created_at",
+  "updated_at",
+  "view_count",
+  "listing_kind",
+  "dealership_id",
+  "verification_level",
+  "vehicle_type",
+  "vehicle_year",
+  "brand",
+  "model",
+  "body_type",
+  "transmission",
+  "fuel_type",
+  "axle_configuration",
+  "odometer_km",
+  "condition",
+  "route_start",
+  "route_end",
+  "route_distance_km",
+  "load_type",
+  "required_equipment",
+  "rate_amount",
+  "rate_unit",
+  "payment_terms",
+  "work_starts_at",
+  "work_ends_at",
 ].join(",");
-
-function toPublicRow(row: Record<string, unknown>) {
-  return Object.fromEntries(PUBLIC_FIELDS.split(",").map((field) => [field, row[field] ?? null]));
-}
 
 function getSupabaseConfig() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -18,35 +53,46 @@ function getSupabaseConfig() {
   return { url: url.replace(/\/$/, ""), key };
 }
 
-async function supabaseRequest(url: string, key: string, path: string, init?: RequestInit) {
-  return fetch(`${url}/rest/v1/${path}`, {
-    ...init,
-    next: { revalidate: 10 },
-    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...(init?.headers || {}) },
-  });
+async function supabaseRequest(url: string, key: string, path: string, attempt = 0): Promise<Response> {
+  try {
+    const response = await fetch(`${url}/rest/v1/${path}`, {
+      cache: "no-store",
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok && response.status >= 500 && attempt === 0) return supabaseRequest(url, key, path, 1);
+    return response;
+  } catch (error) {
+    if (attempt === 0) return supabaseRequest(url, key, path, 1);
+    throw error;
+  }
 }
 
 export async function GET(request: Request) {
   const limited = serverRateLimit(request, "public-listings", 180, 60_000);
   if (limited) return limited;
+
   const { url, key } = getSupabaseConfig();
-  if (!url.startsWith("https://") || !key) return NextResponse.json({ error: "Listings are temporarily unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  if (!url.startsWith("https://") || !key) {
+    return NextResponse.json({ error: "Listings are temporarily unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
 
-  let response = await supabaseRequest(url, key, `job_listings?select=${encodeURIComponent(PUBLIC_FIELDS)}&order=created_at.desc.nullslast&limit=500`);
-  if (!response.ok) response = await supabaseRequest(url, key, "rpc/get_public_job_listings", { method: "POST", body: "{}" });
-  if (!response.ok) return NextResponse.json({ error: "Listings are temporarily unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  try {
+    const response = await supabaseRequest(
+      url,
+      key,
+      `loadlink_public_listings?select=${encodeURIComponent(PUBLIC_FIELDS)}&order=created_at.desc.nullslast&limit=500`,
+    );
+    if (!response.ok) {
+      return NextResponse.json({ error: "Listings are temporarily unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    }
 
-  const rows = (await response.json()) as unknown;
-  const now = Date.now();
-  const visibleRows = Array.isArray(rows)
-    ? (rows as Array<Record<string, unknown> & { status?: string | null; moderation_status?: string | null; expires_at?: string | null; stock_status?: string | null }>).filter((row) => {
-        const active = !row.status || row.status === "active";
-        const approved = row.moderation_status === undefined || row.moderation_status === "approved";
-        const expiry = row.expires_at ? new Date(row.expires_at).getTime() : 0;
-        const current = !expiry || !Number.isFinite(expiry) || expiry > now;
-        const inStock = !row.stock_status || row.stock_status !== "removed";
-        return active && approved && current && inStock;
-      }).map(toPublicRow)
-    : [];
-  return NextResponse.json({ rows: visibleRows }, { headers: { "Cache-Control": "public, max-age=5, s-maxage=10, stale-while-revalidate=30" } });
+    const rows = await response.json();
+    return NextResponse.json(
+      { rows: Array.isArray(rows) ? rows : [] },
+      { headers: { "Cache-Control": "public, max-age=5, s-maxage=10, stale-while-revalidate=30" } },
+    );
+  } catch {
+    return NextResponse.json({ error: "Listings are temporarily unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
 }
