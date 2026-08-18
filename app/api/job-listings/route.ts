@@ -49,8 +49,6 @@ function enrichDealerRows(rows: unknown[], maps: DealerMaps) {
 
     return {
       ...row,
-      // Dealer package status is an account entitlement, not something the seller
-      // has to manually select on every post.
       package_type: "dealer",
       dealership_id: resolvedDealerId,
       dealer_package_active: true,
@@ -87,6 +85,14 @@ async function supabaseRequest(url: string, key: string, path: string, init?: Re
   });
 }
 
+function normaliseEntitlementRow(raw: unknown): DealerMeta | null {
+  if (!raw || typeof raw !== "object") return null;
+  const source = raw as Record<string, unknown>;
+  const nested = source.loadlink_public_dealer_entitlements;
+  if (nested && typeof nested === "object") return nested as DealerMeta;
+  return source as DealerMeta;
+}
+
 async function loadDealerMaps(url: string, key: string, rows: unknown[]): Promise<DealerMaps> {
   const userIds = [...new Set(rows.map((raw) => String((raw as Record<string, unknown>).user_id || "")).filter(Boolean))];
   const explicitDealerIds = [...new Set(rows.map((raw) => String((raw as Record<string, unknown>).dealership_id || "")).filter(Boolean))];
@@ -105,8 +111,8 @@ async function loadDealerMaps(url: string, key: string, rows: unknown[]): Promis
       if (!Array.isArray(payload)) return;
 
       payload.forEach((raw) => {
-        if (!raw || typeof raw !== "object") return;
-        const dealer = raw as DealerMeta;
+        const dealer = normaliseEntitlementRow(raw);
+        if (!dealer) return;
         const ownerId = String(dealer.owner_user_id || "");
         const dealerId = String(dealer.dealership_id || "");
         if (ownerId) maps.byUserId[ownerId] = dealer;
