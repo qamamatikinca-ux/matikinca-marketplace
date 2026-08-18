@@ -35,6 +35,7 @@ import LoadLinkTouchScrollGuard from "@/components/LoadLinkTouchScrollGuard";
 import LoadLinkShareEnhancer from "@/components/LoadLinkShareEnhancer";
 import HomeFollowingEnhancer from "@/components/HomeFollowingEnhancer";
 import ChatComposerActions from "@/components/ChatComposerActions";
+import LogisticsToolsFinalEnhancer from "@/components/LogisticsToolsFinalEnhancer";
 
 export const metadata: Metadata = {
   title: {
@@ -56,17 +57,13 @@ export const metadata: Metadata = {
   ],
   applicationName: "LoadLink",
   category: "business",
-  robots: {
-    index: true,
-    follow: true,
-  },
+  robots: { index: true, follow: true },
   openGraph: {
     type: "website",
     locale: "en_ZA",
     siteName: "LoadLink",
     title: "LoadLink | South African Logistics Marketplace",
-    description:
-      "Search logistics jobs, contracts, commercial vehicles, mobile units and professional drivers across South Africa.",
+    description: "Search logistics jobs, contracts, commercial vehicles, mobile units and professional drivers across South Africa.",
   },
 };
 
@@ -92,6 +89,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <LoadLinkShareEnhancer />
         <HomeFollowingEnhancer />
         <ChatComposerActions />
+        <LogisticsToolsFinalEnhancer />
         <Suspense fallback={null}><GlobalLoading /></Suspense>
         <SwipeDotsEnhancer />
         <AuthBootstrap />
