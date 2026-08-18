@@ -9,38 +9,66 @@ const PUBLIC_FIELDS = [
 ].join(",");
 
 type DealerMeta = {
-  id?: string;
-  name?: string;
-  slug?: string;
-  trading_hours?: string | null;
-  physical_location?: string | null;
-  phone_number?: string | null;
-  profile_image_url?: string | null;
+  dealership_id?: string | null;
+  owner_user_id?: string | null;
+  dealer_package_active?: boolean;
+  dealership_name?: string | null;
+  dealership_slug?: string | null;
+  dealership_trading_hours?: string | null;
+  dealership_location?: string | null;
+  dealership_phone?: string | null;
+  dealership_logo?: string | null;
   active_listing_count?: number | null;
+  review_count?: number | null;
+  review_average?: number | string | null;
+  public_profile_available?: boolean;
+  verified_dealership?: boolean;
+  showroom_available?: boolean;
+};
+
+type DealerMaps = {
+  byDealerId: Record<string, DealerMeta>;
+  byUserId: Record<string, DealerMeta>;
 };
 
 function toPublicRow(row: Record<string, unknown>) {
   return Object.fromEntries(PUBLIC_FIELDS.split(",").map((field) => [field, row[field] ?? null]));
 }
 
-function enrichDealerRows(rows: unknown[], dealers: Record<string, unknown>) {
+function enrichDealerRows(rows: unknown[], maps: DealerMaps) {
   return rows.map((raw) => {
     const row = raw as Record<string, unknown>;
     const dealershipId = String(row.dealership_id || "");
-    const dealer = dealershipId ? dealers[dealershipId] as DealerMeta | undefined : undefined;
-    if (!dealer) return row;
+    const userId = String(row.user_id || "");
+    const dealer = (dealershipId ? maps.byDealerId[dealershipId] : undefined) || (userId ? maps.byUserId[userId] : undefined);
+    if (!dealer?.dealer_package_active) return row;
+
+    const resolvedDealerId = String(dealer.dealership_id || dealershipId || "") || null;
+    const slug = dealer.public_profile_available ? dealer.dealership_slug || null : null;
+    const name = dealer.public_profile_available ? dealer.dealership_name || null : null;
 
     return {
       ...row,
-      dealership_name: dealer.name || null,
-      dealership_slug: dealer.slug || null,
-      dealership_trading_hours: dealer.trading_hours || null,
-      dealership_location: dealer.physical_location || null,
-      dealership_phone: dealer.phone_number || null,
-      dealership_logo: dealer.profile_image_url || null,
+      // Dealer package status is an account entitlement, not something the seller
+      // has to manually select on every post.
+      package_type: "dealer",
+      dealership_id: resolvedDealerId,
+      dealer_package_active: true,
+      dealership_name: name,
+      dealership_slug: slug,
+      dealership_trading_hours: dealer.public_profile_available ? dealer.dealership_trading_hours || null : null,
+      dealership_location: dealer.public_profile_available ? dealer.dealership_location || null : null,
+      dealership_phone: dealer.public_profile_available ? dealer.dealership_phone || null : null,
+      dealership_logo: dealer.public_profile_available ? dealer.dealership_logo || null : null,
+      dealership_verified: Boolean(dealer.verified_dealership),
+      dealership_public_profile_available: Boolean(dealer.public_profile_available),
+      dealership_showroom_available: Boolean(dealer.showroom_available),
       dealership_active_listing_count: Number(dealer.active_listing_count || 0),
-      dealership_showroom_url: dealer.slug ? `/dealership/${dealer.slug}#showroom` : null,
-      dealership_reviews_url: dealer.slug ? `/dealership/${dealer.slug}#reviews` : null,
+      dealership_review_count: Number(dealer.review_count || 0),
+      dealership_review_average: dealer.review_average === null || dealer.review_average === undefined ? null : Number(dealer.review_average),
+      dealership_profile_url: slug ? `/dealership/${slug}` : null,
+      dealership_showroom_url: slug && dealer.showroom_available ? `/dealership/${slug}#showroom` : null,
+      dealership_reviews_url: slug ? `/dealership/${slug}#reviews` : null,
     };
   });
 }
@@ -59,24 +87,71 @@ async function supabaseRequest(url: string, key: string, path: string, init?: Re
   });
 }
 
-async function loadDealerMap(url: string, key: string, rows: unknown[]) {
-  const ids = [...new Set(rows.map((raw) => String((raw as Record<string, unknown>).dealership_id || "")).filter(Boolean))];
-  if (!ids.length) return {} as Record<string, unknown>;
+async function loadDealerMaps(url: string, key: string, rows: unknown[]): Promise<DealerMaps> {
+  const userIds = [...new Set(rows.map((raw) => String((raw as Record<string, unknown>).user_id || "")).filter(Boolean))];
+  const explicitDealerIds = [...new Set(rows.map((raw) => String((raw as Record<string, unknown>).dealership_id || "")).filter(Boolean))];
+  const maps: DealerMaps = { byDealerId: {}, byUserId: {} };
 
-  const select = "id,name,slug,trading_hours,physical_location,phone_number,profile_image_url,active_listing_count";
-  const response = await supabaseRequest(
-    url,
-    key,
-    `public_dealership_profiles?select=${encodeURIComponent(select)}&id=in.(${ids.join(",")})`,
-  );
-  if (!response.ok) return {} as Record<string, unknown>;
+  const requests: Promise<void>[] = [];
 
-  const dealerRows = await response.json() as unknown;
-  return Object.fromEntries(
-    (Array.isArray(dealerRows) ? dealerRows : [])
-      .filter((dealer) => dealer && typeof dealer === "object" && "id" in dealer)
-      .map((dealer) => [String((dealer as DealerMeta).id), dealer]),
-  );
+  if (userIds.length) {
+    requests.push((async () => {
+      const response = await supabaseRequest(url, key, "rpc/loadlink_public_dealer_entitlements", {
+        method: "POST",
+        body: JSON.stringify({ p_user_ids: userIds }),
+      });
+      if (!response.ok) return;
+      const payload = await response.json() as unknown;
+      if (!Array.isArray(payload)) return;
+
+      payload.forEach((raw) => {
+        if (!raw || typeof raw !== "object") return;
+        const dealer = raw as DealerMeta;
+        const ownerId = String(dealer.owner_user_id || "");
+        const dealerId = String(dealer.dealership_id || "");
+        if (ownerId) maps.byUserId[ownerId] = dealer;
+        if (dealerId) maps.byDealerId[dealerId] = dealer;
+      });
+    })());
+  }
+
+  if (explicitDealerIds.length) {
+    requests.push((async () => {
+      const select = "id,name,slug,trading_hours,physical_location,phone_number,profile_image_url,active_listing_count";
+      const response = await supabaseRequest(
+        url,
+        key,
+        `public_dealership_profiles?select=${encodeURIComponent(select)}&id=in.(${explicitDealerIds.join(",")})`,
+      );
+      if (!response.ok) return;
+      const payload = await response.json() as unknown;
+      if (!Array.isArray(payload)) return;
+
+      payload.forEach((raw) => {
+        if (!raw || typeof raw !== "object") return;
+        const source = raw as Record<string, unknown>;
+        const dealerId = String(source.id || "");
+        if (!dealerId || maps.byDealerId[dealerId]) return;
+        maps.byDealerId[dealerId] = {
+          dealership_id: dealerId,
+          dealer_package_active: true,
+          public_profile_available: true,
+          verified_dealership: true,
+          showroom_available: Number(source.active_listing_count || 0) > 0,
+          dealership_name: String(source.name || "") || null,
+          dealership_slug: String(source.slug || "") || null,
+          dealership_trading_hours: source.trading_hours ? String(source.trading_hours) : null,
+          dealership_location: source.physical_location ? String(source.physical_location) : null,
+          dealership_phone: source.phone_number ? String(source.phone_number) : null,
+          dealership_logo: source.profile_image_url ? String(source.profile_image_url) : null,
+          active_listing_count: Number(source.active_listing_count || 0),
+        };
+      });
+    })());
+  }
+
+  await Promise.all(requests);
+  return maps;
 }
 
 async function tryPostService(url: string, key: string) {
@@ -85,9 +160,9 @@ async function tryPostService(url: string, key: string) {
     if (!response.ok) return null;
     const payload = await response.json() as { rows?: unknown[]; dealers?: Record<string, unknown> };
     const rows = Array.isArray(payload.rows) ? payload.rows : [];
-    const publicDealers = await loadDealerMap(url, key, rows);
-    const dealers = { ...(payload.dealers || {}), ...publicDealers };
-    return { rows: enrichDealerRows(rows, dealers), dealers };
+    const maps = await loadDealerMaps(url, key, rows);
+    const dealers = { ...(payload.dealers || {}), ...maps.byDealerId };
+    return { rows: enrichDealerRows(rows, maps), dealers };
   } catch { return null; }
 }
 
@@ -117,9 +192,9 @@ export async function GET(request: Request) {
       }).map(toPublicRow)
     : [];
 
-  const dealers = await loadDealerMap(url, key, visibleRows);
+  const maps = await loadDealerMaps(url, key, visibleRows);
   return NextResponse.json(
-    { rows: enrichDealerRows(visibleRows, dealers), dealers, source: "fallback" },
+    { rows: enrichDealerRows(visibleRows, maps), dealers: maps.byDealerId, source: "fallback" },
     { headers: { "Cache-Control": "public, max-age=5, s-maxage=10, stale-while-revalidate=30" } },
   );
 }
