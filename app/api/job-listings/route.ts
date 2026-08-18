@@ -8,8 +8,36 @@ const PUBLIC_FIELDS = [
   "id","title","city","vehicle_group","rate","posted_by","contact_number","whatsapp_number","poster_photo","description","photos","sponsored","package_type","created_at","view_count","last_viewed_at","user_id","listing_kind","status","moderation_status","expires_at","stock_status","dealership_id",
 ].join(",");
 
+type DealerMeta = { name?: string; slug?: string; trading_hours?: string | null; physical_location?: string | null; phone_number?: string | null; profile_image_url?: string | null };
+
 function toPublicRow(row: Record<string, unknown>) {
   return Object.fromEntries(PUBLIC_FIELDS.split(",").map((field) => [field, row[field] ?? null]));
+}
+
+function enrichDealerRows(rows: unknown[], dealers: Record<string, unknown>) {
+  return rows.map((raw) => {
+    const row = raw as Record<string, unknown>;
+    const dealershipId = String(row.dealership_id || "");
+    const dealer = dealershipId ? dealers[dealershipId] as DealerMeta | undefined : undefined;
+    if (!dealer || String(row.package_type || "").toLowerCase() !== "dealer") return row;
+    const details = [
+      dealer.name ? `Dealership: ${dealer.name}` : "",
+      dealer.trading_hours ? `Opening times: ${dealer.trading_hours}` : "",
+      dealer.physical_location ? `Dealership location: ${dealer.physical_location}` : "",
+    ].filter(Boolean);
+    const description = String(row.description || "");
+    const dealerBlock = details.join("\n");
+    return {
+      ...row,
+      dealership_name: dealer.name || null,
+      dealership_slug: dealer.slug || null,
+      dealership_trading_hours: dealer.trading_hours || null,
+      dealership_location: dealer.physical_location || null,
+      dealership_phone: dealer.phone_number || null,
+      dealership_logo: dealer.profile_image_url || null,
+      description: dealerBlock && !/\bOpening times:/i.test(description) ? `${description}${description ? "\n\n" : ""}${dealerBlock}` : description,
+    };
+  });
 }
 
 function getSupabaseConfig() {
@@ -28,16 +56,12 @@ async function supabaseRequest(url: string, key: string, path: string, init?: Re
 
 async function tryPostService(url: string, key: string) {
   try {
-    const response = await fetch(`${url}/functions/v1/loadlink-post-service?limit=120`, {
-      next: { revalidate: 15 },
-      headers: { apikey: key },
-    });
+    const response = await fetch(`${url}/functions/v1/loadlink-post-service?limit=120`, { next: { revalidate: 15 }, headers: { apikey: key } });
     if (!response.ok) return null;
     const payload = await response.json() as { rows?: unknown[]; dealers?: Record<string, unknown> };
-    return { rows: Array.isArray(payload.rows) ? payload.rows : [], dealers: payload.dealers || {} };
-  } catch {
-    return null;
-  }
+    const dealers = payload.dealers || {};
+    return { rows: enrichDealerRows(Array.isArray(payload.rows) ? payload.rows : [], dealers), dealers };
+  } catch { return null; }
 }
 
 export async function GET(request: Request) {
@@ -47,9 +71,7 @@ export async function GET(request: Request) {
   if (!url.startsWith("https://") || !key) return NextResponse.json({ error: "Listings are temporarily unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
 
   const service = await tryPostService(url, key);
-  if (service) {
-    return NextResponse.json({ rows: service.rows, dealers: service.dealers, source: "post-service" }, { headers: { "Cache-Control": "public, max-age=5, s-maxage=15, stale-while-revalidate=60" } });
-  }
+  if (service) return NextResponse.json({ rows: service.rows, dealers: service.dealers, source: "post-service" }, { headers: { "Cache-Control": "public, max-age=5, s-maxage=15, stale-while-revalidate=60" } });
 
   let response = await supabaseRequest(url, key, `job_listings?select=${encodeURIComponent(PUBLIC_FIELDS)}&order=created_at.desc.nullslast&limit=500`);
   if (!response.ok) response = await supabaseRequest(url, key, "rpc/get_public_job_listings", { method: "POST", body: "{}" });
