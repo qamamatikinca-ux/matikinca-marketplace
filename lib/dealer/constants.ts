@@ -8,24 +8,26 @@ export const DEALER_STATUS_LIFETIME_HOURS = 24;
 export const DEALER_STATUS_VIDEO_MAX_SECONDS = 60;
 export const DEALER_STATUS_PHOTO_SECONDS = 30;
 
+// Daily dealership work stays intentionally small. Advanced tools remain available
+// in the More menu, but they no longer compete with stock, leads and messages.
 export const DEALER_PRIMARY_NAV: Array<{ id: DealerSection; label: string }> = [
-  { id: "overview", label: "Overview" },
-  { id: "inventory", label: "Inventory" },
+  { id: "overview", label: "Home" },
+  { id: "inventory", label: "Stock" },
   { id: "leads", label: "Leads" },
-  { id: "messages", label: "Messages" },
-  { id: "analytics", label: "Analytics" },
+  { id: "messages", label: "Inbox" },
 ];
 
 export const DEALER_MORE_NAV: Array<{ id: DealerSection; label: string }> = [
+  { id: "analytics", label: "Analytics" },
   { id: "customers", label: "Customers" },
   { id: "marketing", label: "Marketing" },
+  { id: "showroom", label: "Dealer page" },
   { id: "team", label: "Team" },
-  { id: "showroom", label: "Showroom" },
   { id: "verification", label: "Verification" },
-  { id: "billing", label: "Billing" },
+  { id: "billing", label: "Plan & billing" },
   { id: "reviews", label: "Reviews" },
   { id: "activity", label: "Activity" },
-  { id: "settings", label: "Dealer settings" },
+  { id: "settings", label: "Settings" },
   { id: "support", label: "Support" },
 ];
 
