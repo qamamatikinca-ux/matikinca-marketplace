@@ -1,21 +1,16 @@
 "use client";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
-
-import HomeLogoLink from "@/components/HomeLogoLink";
-
 import Link from "next/link";
 import { lazy, Suspense, useEffect, useState } from "react";
 import RequireAuthLink from "@/components/RequireAuthLink";
-
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import LoadLinkBoundary from "@/components/platform/LoadLinkBoundary";
-import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 
 const RecentActivityPanel = lazy(() => import("@/components/RecentActivityPanel"));
 const MarketplaceDiscovery = lazy(() => import("@/components/MarketplaceDiscovery"));
 const LogisticsNews = lazy(() => import("@/components/LogisticsNews"));
-const SiteMenu = lazy(() => import("@/components/SiteMenu"));
+
 type PortalImage = {
   src: string;
   position: string;
@@ -23,6 +18,7 @@ type PortalImage = {
 
 type PortalCard = {
   title: string;
+  description: string;
   buttonText: string;
   images: PortalImage[];
   href: string;
@@ -32,18 +28,20 @@ const IMAGE_ROTATION_INTERVAL = 5 * 60 * 1000;
 
 const portalCards: PortalCard[] = [
   {
-    title: "Find Jobs",
-    buttonText: "Find available jobs",
+    title: "Jobs",
+    description: "Find transport and logistics work for trucks and mobile units.",
+    buttonText: "Open",
     images: [
       { src: "/images/jobs-1.jpg", position: "center center" },
       { src: "/images/jobs-2.jpg", position: "center center" },
       { src: "/images/jobs-3.jpg", position: "center center" },
     ],
-    href: "/jobs",
+    href: "/jobs?portal=job",
   },
   {
-    title: "Find Contracts",
-    buttonText: "Find available contracts",
+    title: "Contracts",
+    description: "Browse longer-term logistics opportunities and recurring work.",
+    buttonText: "Open",
     images: [
       { src: "/images/contracts-1.jpg", position: "center center" },
       { src: "/images/contracts-2.jpg", position: "center center" },
@@ -52,20 +50,22 @@ const portalCards: PortalCard[] = [
     href: "/contracts",
   },
   {
-    title: "Driver Profile",
-    buttonText: "View drivers or create your profile",
-    images: [{ src: "/images/driver-profile-hero.jpg", position: "center center" }],
-    href: "/driver-portal",
-  },
-  {
-    title: "List Your Vehicle",
-    buttonText: "List your vehicle",
+    title: "Vehicles & units",
+    description: "Browse commercial trucks, trailers and mobile units on LoadLink.",
+    buttonText: "Open",
     images: [
       { src: "/images/truck-1.jpg", position: "center center" },
       { src: "/images/truck-2.jpg", position: "center center" },
       { src: "/images/truck-3.jpg", position: "center center" },
     ],
-    href: "/list-your-vehicle",
+    href: "/list-your-vehicle?view=marketplace#vehicle-marketplace",
+  },
+  {
+    title: "Drivers",
+    description: "Browse approved drivers or manage your professional driver profile.",
+    buttonText: "Open",
+    images: [{ src: "/images/driver-profile-hero.jpg", position: "center center" }],
+    href: "/driver-portal",
   },
 ];
 
@@ -81,8 +81,6 @@ function HomeExperience() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
-
-
   useEffect(() => {
     const rotationTimer = window.setInterval(() => {
       setActiveImageIndex((currentIndex) => (currentIndex + 1) % 3);
@@ -91,14 +89,9 @@ function HomeExperience() {
     return () => window.clearInterval(rotationTimer);
   }, []);
 
-  function toggleDarkMode() {
-    toggleTheme();
-  }
-
   function getActiveImage(card: PortalCard) {
     return card.images[activeImageIndex % card.images.length];
   }
-
 
   return (
     <main
@@ -106,14 +99,16 @@ function HomeExperience() {
         darkMode ? "bg-black text-white" : "bg-[#fff6dc] text-black"
       }`}
     >
-  {/* TOP MENU */}
-  <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleDarkMode} />
+      <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
-      <LoadLinkBoundary name="marketplace search"><Suspense fallback={null}><MarketplaceDiscovery darkMode={darkMode} /></Suspense></LoadLinkBoundary>
+      <LoadLinkBoundary name="marketplace search">
+        <Suspense fallback={null}>
+          <MarketplaceDiscovery darkMode={darkMode} />
+        </Suspense>
+      </LoadLinkBoundary>
 
-      {/* MAIN RECTANGLE PORTAL CARDS */}
-      <section className="w-full">
-        <div className="flex w-full flex-col gap-0">
+      <section className="px-4 pb-8 pt-3 sm:px-5 md:px-8 md:pb-12 md:pt-5">
+        <div className="mx-auto grid w-full max-w-7xl gap-4 md:grid-cols-2 md:gap-5">
           {portalCards.map((card) => {
             const activeImage = getActiveImage(card);
 
@@ -121,45 +116,31 @@ function HomeExperience() {
               <Link
                 key={card.title}
                 href={card.href}
-                className="group relative block h-[52vh] min-h-[380px] w-full overflow-hidden md:h-[65vh]"
+                aria-label={`Open ${card.title}`}
+                className={`group relative block h-[56vh] min-h-[430px] max-h-[620px] overflow-hidden rounded-[34px] border shadow-[0_18px_50px_rgba(0,0,0,.12)] transition active:scale-[.995] ${
+                  darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"
+                }`}
               >
                 <img
                   src={activeImage.src}
                   alt={card.title}
                   style={{ objectPosition: activeImage.position }}
-                  className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-[1.02]"
+                  className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.02]"
                 />
 
-                <div className="absolute inset-0 bg-black/45" />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/35 to-black/75" />
+                <div className="absolute inset-0 bg-black/20" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/30 to-black/90" />
 
-                <div
-                  data-loadlink-portal-glow
-                  className="pointer-events-none absolute inset-x-[3%] -bottom-12 h-56 transform-gpu"
-                  style={{
-                    background: darkMode
-                      ? "radial-gradient(ellipse at 50% 72%, rgba(246,184,0,.21) 0%, rgba(92,67,0,.18) 40%, rgba(0,0,0,0) 76%)"
-                      : "radial-gradient(ellipse at 50% 72%, rgba(246,184,0,.26) 0%, rgba(246,184,0,.16) 40%, rgba(246,184,0,0) 76%)",
-                    filter: "blur(34px)",
-                    transform: "translate3d(0,0,0)",
-                    willChange: "transform, opacity",
-                  }}
-                />
-
-                <div className="relative z-10 flex h-full w-full flex-col items-center justify-center px-6 text-center">
-                  <h2 className="text-5xl font-black leading-tight text-white md:text-7xl">
+                <div className="relative z-10 flex h-full w-full flex-col justify-end p-7 pb-8 text-left text-white sm:p-9">
+                  <h2 className="max-w-[90%] text-4xl font-black leading-[.96] tracking-[-.045em] sm:text-5xl md:text-5xl lg:text-6xl">
                     {card.title}
                   </h2>
-
-                  <div
-                    className={`mt-6 border px-8 py-4 text-base font-black uppercase tracking-wide transition md:text-lg ${
-                      darkMode
-                        ? "border-[#5c4300] bg-black/70 text-[#f6b800]"
-                        : "border-[#f6b800] bg-black/70 text-[#f6b800]"
-                    }`}
-                  >
+                  <p className="mt-4 max-w-[34rem] text-[15px] font-semibold leading-7 text-white/78 sm:text-base">
+                    {card.description}
+                  </p>
+                  <span className="mt-6 inline-flex min-h-14 w-fit items-center justify-center rounded-full bg-[#f6b800] px-7 text-sm font-black uppercase tracking-[.08em] text-black shadow-[0_10px_24px_rgba(0,0,0,.22)] transition group-hover:translate-y-[-1px]">
                     {card.buttonText}
-                  </div>
+                  </span>
                 </div>
               </Link>
             );
@@ -167,10 +148,12 @@ function HomeExperience() {
         </div>
       </section>
 
+      <LoadLinkBoundary name="recent activity">
+        <Suspense fallback={null}>
+          <RecentActivityPanel darkMode={darkMode} />
+        </Suspense>
+      </LoadLinkBoundary>
 
-      <LoadLinkBoundary name="recent activity"><Suspense fallback={null}><RecentActivityPanel darkMode={darkMode} /></Suspense></LoadLinkBoundary>
-
-      {/* OUR MISSION SECTION */}
       <section
         className={`px-5 py-16 transition-colors duration-300 md:px-12 ${
           darkMode ? "bg-[#050505] text-white" : "bg-[#fff6dc] text-black"
@@ -191,10 +174,12 @@ function HomeExperience() {
         </div>
       </section>
 
-      <LoadLinkBoundary name="logistics news"><Suspense fallback={null}><LogisticsNews darkMode={darkMode} /></Suspense></LoadLinkBoundary>
+      <LoadLinkBoundary name="logistics news">
+        <Suspense fallback={null}>
+          <LogisticsNews darkMode={darkMode} />
+        </Suspense>
+      </LoadLinkBoundary>
 
-
-      {/* FOOTER / FINAL SECTION */}
       <footer
         className={`px-5 py-16 transition-colors duration-300 md:px-12 ${
           darkMode ? "bg-black text-white" : "bg-white text-black"
@@ -371,17 +356,16 @@ function HomeExperience() {
           </p>
         </div>
       </footer>
-</main>
+    </main>
   );
 }
-
 
 function HomeFallback() {
   const links = [
     ["Find jobs", "/jobs"],
     ["Find contracts", "/contracts"],
-    ["Driver profile", "/driver-profile"],
-    ["Driver profiles", "/drivers"],
+    ["Browse vehicles", "/list-your-vehicle?view=marketplace#vehicle-marketplace"],
+    ["View drivers", "/driver-portal"],
     ["Profile settings", "/account/settings"],
   ] as const;
 
@@ -402,14 +386,5 @@ function HomeFallback() {
         </section>
       </div>
     </main>
-  );
-}
-
-
-function MenuIcon() {
-  return (
-    <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
   );
 }

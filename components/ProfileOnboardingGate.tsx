@@ -14,12 +14,30 @@ const EXEMPT_PREFIXES = [
   "/complete-profile",
 ];
 
+const PUBLIC_BROWSE_PREFIXES = [
+  "/jobs",
+  "/contracts",
+  "/drivers",
+  "/driver-portal",
+  "/listing/",
+  "/search",
+  "/dealership/",
+  "/following",
+  "/help",
+  "/packages",
+  "/list-your-vehicle",
+];
+
 export default function ProfileOnboardingGate() {
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
-    if (!pathname || EXEMPT_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return;
+    if (!pathname) return;
+    if (pathname === "/") return;
+    if (EXEMPT_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return;
+    if (PUBLIC_BROWSE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return;
+
     let active = true;
 
     async function check() {
