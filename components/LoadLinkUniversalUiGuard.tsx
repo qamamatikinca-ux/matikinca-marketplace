@@ -14,7 +14,7 @@ function descriptor(input: HTMLInputElement) {
 }
 
 function fixNumericInput(input: HTMLInputElement) {
-  if (["date","time","datetime-local","file"].includes(input.type)) return;
+  if (["date", "time", "datetime-local", "file"].includes(input.type)) return;
   const key = descriptor(input);
   if (PHONE_TERMS.test(key)) {
     if (input.type === "text") input.type = "tel";
@@ -30,48 +30,52 @@ function fixNumericInput(input: HTMLInputElement) {
   if (DECIMAL_TERMS.test(key)) input.inputMode = "decimal";
 }
 
-function hideSeen(root: ParentNode) {
-  root.querySelectorAll<HTMLElement>("article button, article span, article div").forEach((node) => {
-    if ((node.textContent || "").trim().toLowerCase() === "seen" && node.children.length === 0) {
+function hideDeliveryBadges(root: ParentNode) {
+  root.querySelectorAll<HTMLElement>('[aria-label="Seen"], [aria-label="Sent"]').forEach((node) => {
+    node.style.setProperty("display", "none", "important");
+    node.setAttribute("aria-hidden", "true");
+  });
+
+  root.querySelectorAll<HTMLElement>("button, span, div").forEach((node) => {
+    if (node.children.length) return;
+    const text = (node.textContent || "").trim().toLowerCase();
+    if (/^(?:seen|sent)(?:\s*[✓✔]+)?$/.test(text)) {
       node.style.setProperty("display", "none", "important");
       node.setAttribute("aria-hidden", "true");
     }
   });
 }
 
-function addSliderControls(rail: HTMLElement) {
-  if (rail.children.length < 2 || rail.parentElement?.querySelector(':scope > [data-loadlink-universal-slider-controls="true"]')) return;
-  const controls = document.createElement("div");
-  controls.dataset.loadlinkUniversalSliderControls = "true";
-  controls.className = "mt-3 flex items-center justify-end gap-2";
-  const previous = document.createElement("button");
-  const next = document.createElement("button");
-  [previous,next].forEach((button) => {
-    button.type = "button";
-    button.className = "flex h-10 w-10 items-center justify-center rounded-full border border-current/15 bg-current/[.035] text-lg font-black";
-  });
-  previous.textContent = "‹"; next.textContent = "›";
-  previous.setAttribute("aria-label","Previous product"); next.setAttribute("aria-label","Next product");
-  const move = (direction:number) => rail.scrollBy({ left: direction * Math.max(270, Math.min(360, rail.clientWidth * .82)), behavior:"smooth" });
-  previous.addEventListener("click",()=>move(-1)); next.addEventListener("click",()=>move(1));
-  controls.append(previous,next);
-  rail.insertAdjacentElement("afterend",controls);
+function removeLegacySliderControls(root: ParentNode) {
+  root
+    .querySelectorAll<HTMLElement>('[data-loadlink-universal-slider-controls="true"], #loadlink-promoted-carousel-controls')
+    .forEach((node) => node.remove());
 }
 
 function polishSliders(root: ParentNode) {
-  root.querySelectorAll<HTMLElement>('[data-loadlink-swipe-dots="true"], #loadlink-promoted-carousel, [data-loadlink-product-slider="true"]').forEach((rail) => {
-    rail.dataset.loadlinkUniversalSlider = "true";
-    rail.style.scrollSnapType = "x mandatory";
-    rail.style.scrollBehavior = "smooth";
-    rail.style.overscrollBehaviorX = "contain";
-    rail.style.setProperty("-webkit-overflow-scrolling", "touch");
-    Array.from(rail.children).forEach((child) => {
-      const card = child as HTMLElement;
-      card.style.scrollSnapAlign = "start";
-      card.style.scrollSnapStop = "always";
+  let changed = false;
+  removeLegacySliderControls(root);
+
+  root
+    .querySelectorAll<HTMLElement>('[data-loadlink-swipe-dots="true"], #loadlink-promoted-carousel, [data-loadlink-product-slider="true"]')
+    .forEach((rail) => {
+      rail.dataset.loadlinkUniversalSlider = "true";
+      if (rail.getAttribute("data-loadlink-swipe-dots") !== "true") {
+        rail.setAttribute("data-loadlink-swipe-dots", "true");
+        changed = true;
+      }
+      rail.style.scrollSnapType = "x mandatory";
+      rail.style.scrollBehavior = "smooth";
+      rail.style.overscrollBehaviorX = "contain";
+      rail.style.setProperty("-webkit-overflow-scrolling", "touch");
+      Array.from(rail.children).forEach((child) => {
+        const card = child as HTMLElement;
+        card.style.scrollSnapAlign = "start";
+        card.style.scrollSnapStop = "always";
+      });
     });
-    addSliderControls(rail);
-  });
+
+  return changed;
 }
 
 function ensureSinglePageNavigation(pathname: string) {
@@ -108,11 +112,10 @@ export default function LoadLinkUniversalUiGuard() {
         }
         [data-loadlink-universal-slider="true"] { scrollbar-width: none; }
         [data-loadlink-universal-slider="true"]::-webkit-scrollbar { display:none; }
-        [data-loadlink-universal-slider-controls="true"] { max-width: 100%; }
+        [data-loadlink-universal-slider-controls="true"], #loadlink-promoted-carousel-controls { display:none !important; }
         @media (max-width: 639px) {
           [data-loadlink-universal-slider="true"] { padding-right: 9vw !important; }
           [data-loadlink-universal-slider="true"] > * { max-width: 84vw; }
-          [data-loadlink-universal-slider-controls="true"] { justify-content: flex-start; }
         }
         input, select, textarea, button { max-width: 100%; }
         img { max-width: 100%; }
@@ -123,9 +126,10 @@ export default function LoadLinkUniversalUiGuard() {
 
     const scan = (root: ParentNode = document) => {
       root.querySelectorAll<HTMLInputElement>("input").forEach(fixNumericInput);
-      hideSeen(root);
-      polishSliders(root);
+      hideDeliveryBadges(root);
+      const sliderChanged = polishSliders(root);
       ensureSinglePageNavigation(pathname);
+      if (sliderChanged) window.dispatchEvent(new Event("loadlink:content-updated"));
     };
 
     scan();
@@ -138,7 +142,10 @@ export default function LoadLinkUniversalUiGuard() {
       }));
     });
     observer.observe(document.body, { childList: true, subtree: true });
-    return () => { observer.disconnect(); timers.forEach((timer) => window.clearTimeout(timer)); };
+    return () => {
+      observer.disconnect();
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
   }, [pathname]);
 
   return null;
