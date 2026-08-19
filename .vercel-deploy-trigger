@@ -1,3 +1,4 @@
 LoadLink production deployment trigger
-2026-08-15T00:04:00Z
-Source commit: f66ba83ebce8b1b7b66212b579a0a53bbcd33f95
+2026-08-19T14:50:30Z
+Source commit: 0e1c6d605e205c2413c7e013e1cd299c3aaed804
+Fixes: showroom slug save, universal swipe dots, listing photos, removed review/profile card clutter, removed chat seen/sent badges
