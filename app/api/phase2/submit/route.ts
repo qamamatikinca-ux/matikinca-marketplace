@@ -16,14 +16,14 @@ function friendlySubmitError(message: string) {
     normalized.includes("loadlink_save_and_submit_my_driver_profile") &&
     (normalized.includes("does not exist") || normalized.includes("schema cache"))
   ) {
-    return "The LoadLink driver submission database patch is not active yet. Run the V2.5.3 SQL once, then retry.";
+    return "Driver profile submission is temporarily unavailable. Please try again shortly.";
   }
 
   if (normalized.includes("jwt") || normalized.includes("token") || normalized.includes("auth")) {
     return "Your sign-in session expired. Sign in again and retry.";
   }
 
-  return "LoadLink could not submit the driver profile. Nothing was lost; refresh once and retry.";
+  return "LoadLink could not submit the driver profile. Please refresh, check your profile status, and retry.";
 }
 
 export async function POST(request: Request) {
@@ -58,12 +58,12 @@ export async function POST(request: Request) {
 
     if (!data || data.ok !== true || data.status !== "pending") {
       console.error("[LoadLink driver submit] Unexpected response", { userId: userData.user.id, data });
-      return NextResponse.json({ error: "LoadLink did not confirm the submission. Your information is still saved; retry once." }, { status: 409 });
+      return NextResponse.json({ error: "LoadLink did not confirm the submission. Refresh and check your profile status before retrying." }, { status: 409 });
     }
 
     return NextResponse.json({ ok: true, status: "pending", profileId: data.profileId });
   } catch (error) {
     console.error("[LoadLink driver submit] Route failure", error);
-    return NextResponse.json({ error: "LoadLink could not submit the driver profile. Nothing was lost; refresh once and retry." }, { status: 500 });
+    return NextResponse.json({ error: "LoadLink could not submit the driver profile. Please refresh, check your profile status, and retry." }, { status: 500 });
   }
 }
