@@ -121,7 +121,7 @@ function findListing(item: RecentItem, catalog: ListingRow[]) {
   return catalog.find((row) => String(row.title || "").trim().toLowerCase() === title);
 }
 
-function refreshSavedItem(item: RecentItem, catalog: ListingRow[]) {
+function refreshSavedItem(item: RecentItem, catalog: ListingRow[]): RecentItem | null {
   const row = findListing(item, catalog);
   if (!row) return null;
   const fresh = toRecentItem(row);
@@ -194,7 +194,7 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
     if (!catalogReady) return source;
     return source
       .map((item) => refreshSavedItem(item, catalog))
-      .filter((item): item is RecentItem => Boolean(item))
+      .filter((item): item is RecentItem => item !== null)
       .slice(0, 12);
   }, [catalog, catalogReady, liked, posted, tab, viewed]);
 
