@@ -4,16 +4,20 @@ on:
   push:
     paths:
       - .github/workflows/loadlink-audit-repair.yml
+  issues:
+    types: [opened]
 
 permissions:
   contents: write
 
 jobs:
   repair:
+    if: github.event_name == 'push' || github.event.issue.title == '[LoadLink Repair] Run core audit patch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Repair reporting and account-owned listing controls
