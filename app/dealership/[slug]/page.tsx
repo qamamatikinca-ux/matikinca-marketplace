@@ -1,7 +1,6 @@
-"use client";
-
 import PublicDealershipExperience from "@/components/dealer/PublicDealershipExperience";
 
-export default function DealershipPage({ params }: { params: { slug: string } }) {
-  return <PublicDealershipExperience slug={params.slug} />;
+export default async function DealershipPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  return <PublicDealershipExperience slug={slug} />;
 }
