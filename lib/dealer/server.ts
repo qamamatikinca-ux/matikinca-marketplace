@@ -19,8 +19,19 @@ export async function requireDealerContext(client: SupabaseClient) {
   return data;
 }
 
+function errorText(error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    const message = String(record.message || record.error_description || record.details || record.hint || "").trim();
+    if (message) return message;
+  }
+  if (typeof error === "string" && error.trim()) return error.trim();
+  return "LoadLink could not complete that request.";
+}
+
 export function apiError(error: unknown) {
-  const message = error instanceof Error ? error.message : "LoadLink could not complete that request.";
+  const message = errorText(error);
   const authFailure = /auth|sign in|permission|dealer workspace|not allowed/i.test(message);
   return Response.json({ error: message }, { status: authFailure ? 403 : 400 });
 }
