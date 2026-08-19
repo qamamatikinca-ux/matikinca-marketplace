@@ -13,7 +13,16 @@ export async function dealerFetch<T>(path: string, init?: RequestInit): Promise<
     cache: "no-store",
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body?.error || body?.message || "LoadLink could not complete that action.");
+  if (!response.ok) {
+    const supplied = String(body?.error || body?.message || "").trim();
+    if (supplied && !/^loadlink could not complete/i.test(supplied)) throw new Error(supplied);
+    if (response.status === 400) throw new Error("Some required information is missing or invalid. Check the form and complete the highlighted fields.");
+    if (response.status === 401) throw new Error("Your session expired. Sign in again to continue.");
+    if (response.status === 403) throw new Error("This Dealer account does not have permission to complete that action yet. Check package approval and business verification.");
+    if (response.status === 409) throw new Error("This change conflicts with information already saved. Refresh the Dealer workspace and try again.");
+    if (response.status >= 500) throw new Error("LoadLink could not save this change right now. Your information is still on this screen; try again in a moment.");
+    throw new Error("This action could not be completed. Check the required information and try again.");
+  }
   return body as T;
 }
 
