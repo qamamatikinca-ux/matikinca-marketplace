@@ -7,6 +7,7 @@ const STYLE_ID = "loadlink-universal-ui-guard-style";
 const INTEGER_TERMS = /(?:year|age|quantity|qty|count|number of|fleet|seats|capacity|mileage|odometer|kilomet|postal|otp|pin|code)/i;
 const PHONE_TERMS = /(?:phone|mobile|whatsapp|contact number|telephone)/i;
 const DECIMAL_TERMS = /(?:price|rate|amount|budget|cost|weight|distance|ton|litre|liter|km)/i;
+const INTERNAL_REPAIR_TEXT = /(?:run|apply|install).{0,45}(?:loadlink|supabase|marketplace).{0,35}(?:sql|patch|migration)|(?:supabase|postgres|pgrst).{0,30}(?:repair|sql|schema cache)/i;
 
 function descriptor(input: HTMLInputElement) {
   const label = input.labels?.[0]?.textContent || "";
@@ -43,6 +44,22 @@ function hideDeliveryBadges(root: ParentNode) {
       node.style.setProperty("display", "none", "important");
       node.setAttribute("aria-hidden", "true");
     }
+  });
+}
+
+function sanitizeInternalRepairMessages(root: ParentNode) {
+  root.querySelectorAll<HTMLElement>("p, div, span, li").forEach((node) => {
+    if (node.children.length) return;
+    const text = (node.textContent || "").trim();
+    if (!text || !INTERNAL_REPAIR_TEXT.test(text)) return;
+
+    const messaging = /messag|chat|conversation/i.test(text);
+    const posting = /post|listing|vehicle|resubmit/i.test(text);
+    node.textContent = messaging
+      ? "LoadLink messaging is temporarily unavailable. Refresh once and try again."
+      : posting
+        ? "LoadLink could not save that post change right now. Your information is still safe; refresh once and try again."
+        : "LoadLink could not complete that action right now. Refresh once and try again.";
   });
 }
 
@@ -127,6 +144,7 @@ export default function LoadLinkUniversalUiGuard() {
     const scan = (root: ParentNode = document) => {
       root.querySelectorAll<HTMLInputElement>("input").forEach(fixNumericInput);
       hideDeliveryBadges(root);
+      sanitizeInternalRepairMessages(root);
       const sliderChanged = polishSliders(root);
       ensureSinglePageNavigation(pathname);
       if (sliderChanged) window.dispatchEvent(new Event("loadlink:content-updated"));
