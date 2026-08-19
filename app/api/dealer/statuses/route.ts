@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   let uploadedPath = "";
+  let createdLibraryId = "";
   try {
     const client = dealerServerClient(request);
     const context = await requireDealerContext(client);
@@ -77,17 +78,16 @@ export async function POST(request: NextRequest) {
           const path = String(item.storage_path || "");
           if (!ownedPath(path, context.dealership_id)) throw new Error("This saved video needs to be uploaded again before it can be used.");
           duration = await verifyStoredVideo(client, path);
-          await client.from("dealership_media_library").update({ duration_seconds: duration }).eq("id", item.id).eq("dealership_id", context.dealership_id);
+          const update = await client.from("dealership_media_library")
+            .update({ duration_seconds: duration })
+            .eq("id", item.id)
+            .eq("dealership_id", context.dealership_id);
+          if (update.error) throw update.error;
         }
         mediaUrl = String(item.url || "");
         if (!mediaUrl) throw new Error("Saved Dealer media is unavailable.");
       } else throw new Error("Choose media for this Status.");
     }
-
-    const payload = { ...body, media_url: mediaUrl, video_duration_seconds: duration };
-    delete payload.storage_path; delete payload.mime; delete payload.filename; delete payload.media_library_id;
-    const { data, error } = await client.rpc("loadlink_create_dealer_status", { p_payload: payload });
-    if (error) throw error;
 
     if (uploadedPath && mediaUrl && mediaType) {
       const library = await client.from("dealership_media_library").insert({
@@ -99,14 +99,27 @@ export async function POST(request: NextRequest) {
         source: "status",
         label: body.title || body.filename || null,
         duration_seconds: duration,
-      });
-      if (library.error) console.warn("Dealer media library insert failed", library.error.message);
+      }).select("id").single();
+      if (library.error) throw library.error;
+      createdLibraryId = String(library.data?.id || "");
+      if (!createdLibraryId) throw new Error("Dealer media could not be saved.");
     }
+
+    const payload = { ...body, media_url: mediaUrl, video_duration_seconds: duration };
+    delete payload.storage_path;
+    delete payload.mime;
+    delete payload.filename;
+    delete payload.media_library_id;
+    const { data, error } = await client.rpc("loadlink_create_dealer_status", { p_payload: payload });
+    if (error) throw error;
+
     return Response.json(data || { ok: true });
   } catch (error) {
-    if (uploadedPath) {
-      try { const client = dealerServerClient(request); await client.storage.from("dealership-status-media").remove([uploadedPath]); } catch {}
-    }
+    try {
+      const client = dealerServerClient(request);
+      if (createdLibraryId) await client.from("dealership_media_library").delete().eq("id", createdLibraryId);
+      if (uploadedPath) await client.storage.from("dealership-status-media").remove([uploadedPath]);
+    } catch {}
     return apiError(error);
   }
 }
