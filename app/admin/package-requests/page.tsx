@@ -24,6 +24,14 @@ const statuses: QueueStatus[] = ["pending_review", "all", "approved", "rejected"
 const money = (value?: number | null) => `R${Math.max(0, Number(value || 0) / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const label = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 
+function dealerIntent(row: RequestRow) {
+  const features = row.requested_features || {};
+  return row.recommended_plan === "dealer"
+    || features.showroom === true
+    || Number(features.teamSeats || 1) > 1
+    || Number(features.listings || 0) >= 10;
+}
+
 export default function PackageRequestsPage() {
   const [rows, setRows] = useState<RequestRow[]>([]);
   const [status, setStatus] = useState<QueueStatus>("pending_review");
@@ -53,7 +61,12 @@ export default function PackageRequestsPage() {
 
   async function review(row: RequestRow, action: "approve" | "reject") {
     let note = "";
-    let fulfilmentPlan: string | null = row.recommended_plan === "pro" || row.recommended_plan === "dealer" ? row.recommended_plan : null;
+    const requiresDealer = dealerIntent(row);
+    let fulfilmentPlan: string | null = requiresDealer
+      ? "dealer"
+      : row.recommended_plan === "pro" || row.recommended_plan === "dealer"
+        ? row.recommended_plan
+        : null;
     let finalAmountCents: number | null = null;
 
     if (action === "reject") {
@@ -71,12 +84,14 @@ export default function PackageRequestsPage() {
         }
         fulfilmentPlan = choice;
       }
-      const suggestedRand = Math.max(1, Math.round(Number(row.final_amount_cents || row.estimated_amount_cents || 0) / 100));
-      const entered = window.prompt("Approved monthly amount in rand", String(suggestedRand));
+
+      const minimumRand = requiresDealer ? 2500 : 1;
+      const suggestedRand = Math.max(minimumRand, Math.round(Number(row.final_amount_cents || row.estimated_amount_cents || 0) / 100));
+      const entered = window.prompt(`Approved monthly amount in rand${requiresDealer ? " (Dealer-tailored minimum R2 500)" : ""}`, String(suggestedRand));
       if (entered === null) return;
       const amountRand = Number(entered.replace(/[^0-9.]/g, ""));
-      if (!Number.isFinite(amountRand) || amountRand <= 0) {
-        setMessage("Enter a valid approved monthly amount.");
+      if (!Number.isFinite(amountRand) || amountRand < minimumRand) {
+        setMessage(requiresDealer ? "Dealer-tailored packages cannot be approved below R2 500 per month." : "Enter a valid approved monthly amount.");
         return;
       }
       finalAmountCents = Math.round(amountRand * 100);
@@ -124,25 +139,30 @@ export default function PackageRequestsPage() {
         {!loading && !message && rows.length === 0 ? <div className="mt-8 rounded-[24px] border border-black/10 bg-white p-9 text-center"><h2 className="text-2xl font-black">Queue clear</h2><p className="mt-2 text-sm font-semibold text-black/50">No package requests match this view.</p></div> : null}
 
         <div className="mt-6 grid gap-4">
-          {rows.map((row) => <article key={row.id} className="rounded-[24px] border border-black/10 bg-white p-5 sm:p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <div className="flex flex-wrap gap-2"><span className="rounded-full bg-black px-3 py-1 text-[10px] font-black text-white">{label(row.status)}</span><span className="rounded-full bg-[#f6b800] px-3 py-1 text-[10px] font-black text-black">{label(row.recommended_plan || "tailored")}</span></div>
-                <h2 className="mt-3 text-xl font-black">{row.user_name || "LoadLink user"}</h2>
-                <p className="mt-1 text-xs font-semibold text-black/45">{row.user_email || row.user_id}</p>
-                <p className="mt-1 text-xs font-semibold text-black/40">Submitted {new Date(row.created_at).toLocaleString("en-ZA")}</p>
+          {rows.map((row) => {
+            const requiresDealer = dealerIntent(row);
+            return <article key={row.id} className="rounded-[24px] border border-black/10 bg-white p-5 sm:p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="flex flex-wrap gap-2"><span className="rounded-full bg-black px-3 py-1 text-[10px] font-black text-white">{label(row.status)}</span><span className="rounded-full bg-[#f6b800] px-3 py-1 text-[10px] font-black text-black">{label(requiresDealer ? "dealer" : row.recommended_plan || "tailored")}</span></div>
+                  <h2 className="mt-3 text-xl font-black">{row.user_name || "LoadLink user"}</h2>
+                  <p className="mt-1 text-xs font-semibold text-black/45">{row.user_email || row.user_id}</p>
+                  <p className="mt-1 text-xs font-semibold text-black/40">Submitted {new Date(row.created_at).toLocaleString("en-ZA")}</p>
+                </div>
+                <div className="sm:text-right"><p className="text-[10px] font-black uppercase tracking-[.12em] text-black/40">Estimate</p><p className="text-3xl font-black">{money(row.estimated_amount_cents)}</p>{row.final_amount_cents ? <p className="mt-1 text-xs font-black text-emerald-700">Approved {money(row.final_amount_cents)}/mo</p> : null}</div>
               </div>
-              <div className="sm:text-right"><p className="text-[10px] font-black uppercase tracking-[.12em] text-black/40">Estimate</p><p className="text-3xl font-black">{money(row.estimated_amount_cents)}</p>{row.final_amount_cents ? <p className="mt-1 text-xs font-black text-emerald-700">Approved {money(row.final_amount_cents)}/mo</p> : null}</div>
-            </div>
 
-            <div className="mt-5 grid gap-2 rounded-[18px] bg-[#f7f5ef] p-4 sm:grid-cols-2 lg:grid-cols-3">
-              {Object.entries(row.requested_features || {}).map(([key, value]) => <div key={key} className="rounded-xl bg-white px-3 py-2"><p className="text-[9px] font-black uppercase tracking-[.1em] text-black/35">{label(key)}</p><p className="mt-1 text-xs font-bold">{typeof value === "boolean" ? (value ? "Yes" : "No") : String(value)}</p></div>)}
-              {!Object.keys(row.requested_features || {}).length ? <p className="text-xs font-semibold text-black/45">No extra feature notes were supplied.</p> : null}
-            </div>
+              {requiresDealer && row.estimated_amount_cents < 250000 ? <p className="mt-4 rounded-xl border border-amber-500/25 bg-amber-50 p-3 text-xs font-bold leading-5 text-amber-900">This older tailored estimate includes Dealer-level needs. Approval must resolve it to Dealer at R2 500/month or more.</p> : null}
 
-            {row.status === "pending_review" ? <div className="mt-5 flex flex-wrap gap-2"><button disabled={busyId === row.id} type="button" onClick={() => void review(row, "approve")} className="rounded-xl bg-[#f6b800] px-5 py-3 text-xs font-black text-black disabled:opacity-40">{busyId === row.id ? "Saving…" : "Approve / set price"}</button><button disabled={busyId === row.id} type="button" onClick={() => void review(row, "reject")} className="rounded-xl bg-black px-5 py-3 text-xs font-black text-white disabled:opacity-40">Reject with reason</button></div> : null}
-            {row.admin_note ? <p className="mt-4 rounded-xl border border-black/8 bg-[#faf9f5] p-3 text-xs font-semibold leading-5 text-black/55">Control Centre note: {row.admin_note}</p> : null}
-          </article>)}
+              <div className="mt-5 grid gap-2 rounded-[18px] bg-[#f7f5ef] p-4 sm:grid-cols-2 lg:grid-cols-3">
+                {Object.entries(row.requested_features || {}).map(([key, value]) => <div key={key} className="rounded-xl bg-white px-3 py-2"><p className="text-[9px] font-black uppercase tracking-[.1em] text-black/35">{label(key)}</p><p className="mt-1 text-xs font-bold">{typeof value === "boolean" ? (value ? "Yes" : "No") : String(value)}</p></div>)}
+                {!Object.keys(row.requested_features || {}).length ? <p className="text-xs font-semibold text-black/45">No extra feature notes were supplied.</p> : null}
+              </div>
+
+              {row.status === "pending_review" ? <div className="mt-5 flex flex-wrap gap-2"><button disabled={busyId === row.id} type="button" onClick={() => void review(row, "approve")} className="rounded-xl bg-[#f6b800] px-5 py-3 text-xs font-black text-black disabled:opacity-40">{busyId === row.id ? "Saving…" : "Approve / set price"}</button><button disabled={busyId === row.id} type="button" onClick={() => void review(row, "reject")} className="rounded-xl bg-black px-5 py-3 text-xs font-black text-white disabled:opacity-40">Reject with reason</button></div> : null}
+              {row.admin_note ? <p className="mt-4 rounded-xl border border-black/8 bg-[#faf9f5] p-3 text-xs font-semibold leading-5 text-black/55">Control Centre note: {row.admin_note}</p> : null}
+            </article>;
+          })}
         </div>
       </div>
     </main>
