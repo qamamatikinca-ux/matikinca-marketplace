@@ -14,7 +14,7 @@ function descriptor(input: HTMLInputElement) {
 }
 
 function fixNumericInput(input: HTMLInputElement) {
-  if (input.type === "date" || input.type === "time" || input.type === "datetime-local" || input.type === "file") return;
+  if (["date","time","datetime-local","file"].includes(input.type)) return;
   const key = descriptor(input);
   if (PHONE_TERMS.test(key)) {
     if (input.type === "text") input.type = "tel";
@@ -39,6 +39,25 @@ function hideSeen(root: ParentNode) {
   });
 }
 
+function addSliderControls(rail: HTMLElement) {
+  if (rail.children.length < 2 || rail.parentElement?.querySelector(':scope > [data-loadlink-universal-slider-controls="true"]')) return;
+  const controls = document.createElement("div");
+  controls.dataset.loadlinkUniversalSliderControls = "true";
+  controls.className = "mt-3 flex items-center justify-end gap-2";
+  const previous = document.createElement("button");
+  const next = document.createElement("button");
+  [previous,next].forEach((button) => {
+    button.type = "button";
+    button.className = "flex h-10 w-10 items-center justify-center rounded-full border border-current/15 bg-current/[.035] text-lg font-black";
+  });
+  previous.textContent = "‹"; next.textContent = "›";
+  previous.setAttribute("aria-label","Previous product"); next.setAttribute("aria-label","Next product");
+  const move = (direction:number) => rail.scrollBy({ left: direction * Math.max(270, Math.min(360, rail.clientWidth * .82)), behavior:"smooth" });
+  previous.addEventListener("click",()=>move(-1)); next.addEventListener("click",()=>move(1));
+  controls.append(previous,next);
+  rail.insertAdjacentElement("afterend",controls);
+}
+
 function polishSliders(root: ParentNode) {
   root.querySelectorAll<HTMLElement>('[data-loadlink-swipe-dots="true"], #loadlink-promoted-carousel, [data-loadlink-product-slider="true"]').forEach((rail) => {
     rail.dataset.loadlinkUniversalSlider = "true";
@@ -51,6 +70,7 @@ function polishSliders(root: ParentNode) {
       card.style.scrollSnapAlign = "start";
       card.style.scrollSnapStop = "always";
     });
+    addSliderControls(rail);
   });
 }
 
@@ -88,9 +108,11 @@ export default function LoadLinkUniversalUiGuard() {
         }
         [data-loadlink-universal-slider="true"] { scrollbar-width: none; }
         [data-loadlink-universal-slider="true"]::-webkit-scrollbar { display:none; }
+        [data-loadlink-universal-slider-controls="true"] { max-width: 100%; }
         @media (max-width: 639px) {
           [data-loadlink-universal-slider="true"] { padding-right: 9vw !important; }
           [data-loadlink-universal-slider="true"] > * { max-width: 84vw; }
+          [data-loadlink-universal-slider-controls="true"] { justify-content: flex-start; }
         }
         input, select, textarea, button { max-width: 100%; }
         img { max-width: 100%; }
