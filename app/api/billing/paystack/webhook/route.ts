@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
             user_id: userId,
             amount_cents: Number(verifiedData.amount),
             currency: String(verifiedData.currency || "ZAR"),
-            status: "initialized",
+            status: "pending",
             provider: "paystack",
             reference,
             external_reference: reference,
