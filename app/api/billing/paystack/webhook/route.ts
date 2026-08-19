@@ -2,30 +2,207 @@ import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import type { NextRequest } from "next/server";
 
-function obj(value:unknown):Record<string,any>{if(value&&typeof value==="object")return value as Record<string,any>;if(typeof value==="string")try{return JSON.parse(value)}catch{}return{}}
-function planFromCode(code:string){if(code&&code===process.env.PAYSTACK_DEALER_PLAN_CODE)return"dealer";if(code&&code===process.env.PAYSTACK_PRO_PLAN_CODE)return"pro";return""}
-function codeFrom(data:any){return String(data?.plan?.plan_code||data?.plan_code||obj(data?.metadata)?.paystack_plan_code||"")}
+function obj(value: unknown): Record<string, any> {
+  if (value && typeof value === "object") return value as Record<string, any>;
+  if (typeof value === "string") {
+    try { return JSON.parse(value); } catch { return {}; }
+  }
+  return {};
+}
 
-export async function POST(request:NextRequest){
- const secret=process.env.PAYSTACK_SECRET_KEY,url=process.env.NEXT_PUBLIC_SUPABASE_URL,service=process.env.SUPABASE_SERVICE_ROLE_KEY;if(!secret||!url||!service)return Response.json({error:"Payment service is not configured."},{status:503});
- const raw=await request.text(),expected=crypto.createHmac("sha512",secret).update(raw).digest("hex"),supplied=request.headers.get("x-paystack-signature")||"";if(!supplied||supplied.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(supplied),Buffer.from(expected)))return Response.json({error:"Invalid signature."},{status:401});
- const event=JSON.parse(raw),data=event?.data||{},admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
- try{
-  if(event.event==="charge.success"){
-   const reference=String(data.reference||"");if(!reference)return Response.json({ok:true});const vr=await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,{headers:{Authorization:`Bearer ${secret}`},cache:"no-store"});const v=await vr.json();if(!vr.ok||!v?.status||v?.data?.status!=="success")return Response.json({error:"Payment could not be verified."},{status:400});
-   let p=await admin.from("admin_payments").select("id,user_id,package_type,status,amount_cents,currency,reference,metadata").eq("reference",reference).maybeSingle();if(p.error)throw p.error;
-   if(!p.data){const vd=v.data||{},meta=obj(vd.metadata);let userId=String(meta.loadlink_user_id||""),plan=String(meta.loadlink_plan||"");if(!plan)plan=planFromCode(codeFrom(vd));const email=String(vd?.customer?.email||"");if(!userId&&email){const pr=await admin.from("profiles").select("id").ilike("email",email).limit(1).maybeSingle();userId=String(pr.data?.id||"")}if(!userId||!["pro","dealer"].includes(plan))return Response.json({ok:true});const expectedPlan=await admin.from("subscription_plans").select("price_cents,currency").eq("code",plan).eq("is_active",true).maybeSingle();if(!expectedPlan.data)return Response.json({ok:true});if(Number(vd.amount)!==Number(expectedPlan.data.price_cents)||String(vd.currency||"").toUpperCase()!==String(expectedPlan.data.currency||"ZAR").toUpperCase())return Response.json({error:"Recurring payment amount did not match the LoadLink plan."},{status:409});const ins=await admin.from("admin_payments").insert({user_id:userId,amount_cents:Number(vd.amount),currency:String(vd.currency||"ZAR"),status:"initialized",provider:"paystack",reference,external_reference:reference,provider_transaction_id:String(vd.id||""),payer_email:email||null,payment_type:"subscription",package_type:plan,description:`LoadLink ${plan} subscription renewal`,metadata:{recurring:true,paystack_plan_code:codeFrom(vd)||null}}).select("id,user_id,package_type,status,amount_cents,currency,reference,metadata").single();if(ins.error){p=await admin.from("admin_payments").select("id,user_id,package_type,status,amount_cents,currency,reference,metadata").eq("reference",reference).maybeSingle()}else p={data:ins.data,error:null} as any;}
-   if(!p.data)return Response.json({ok:true});if(Number(v.data.amount)!==Number(p.data.amount_cents)||String(v.data.currency||"").toUpperCase()!==String(p.data.currency||"ZAR").toUpperCase())return Response.json({error:"Payment details did not match the approved LoadLink plan."},{status:409});const f=await admin.rpc("loadlink_finalize_paid_plan",{p_payment_id:p.data.id,p_reference:reference,p_provider_transaction_id:String(v.data.id||""),p_amount_cents:Number(v.data.amount),p_currency:String(v.data.currency||"ZAR")});if(f.error)throw f.error;return Response.json({ok:true});
+function planFromCode(code: string) {
+  if (code && code === process.env.PAYSTACK_DEALER_PLAN_CODE) return "dealer";
+  if (code && code === process.env.PAYSTACK_PRO_PLAN_CODE) return "pro";
+  return "";
+}
+
+function codeFrom(data: any) {
+  return String(data?.plan?.plan_code || data?.plan_code || obj(data?.metadata)?.paystack_plan_code || "");
+}
+
+function eventKey(raw: string) {
+  return crypto.createHash("sha256").update(raw).digest("hex");
+}
+
+export async function POST(request: NextRequest) {
+  const secret = process.env.PAYSTACK_SECRET_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!secret || !url || !service) {
+    return Response.json({ error: "Payment service is not configured." }, { status: 503 });
   }
-  if(event.event==="subscription.create"){
-   const sub=String(data.subscription_code||""),planCode=codeFrom(data),plan=planFromCode(planCode),email=String(data?.customer?.email||"");if(!sub||!plan||!email)return Response.json({ok:true});const pr=await admin.from("profiles").select("id").ilike("email",email).limit(1).maybeSingle(),userId=String(pr.data?.id||"");if(!userId)return Response.json({ok:true});const row=await admin.from("user_subscriptions").select("id,metadata").eq("user_id",userId).eq("plan_code",plan).order("updated_at",{ascending:false}).limit(1).maybeSingle();if(row.data?.id)await admin.from("user_subscriptions").update({metadata:{...obj(row.data.metadata),paystack_subscription_code:sub,paystack_plan_code:planCode,paystack_customer_code:String(data?.customer?.customer_code||""),next_payment_date:data.next_payment_date||null}}).eq("id",row.data.id);return Response.json({ok:true});
+
+  const raw = await request.text();
+  const expected = crypto.createHmac("sha512", secret).update(raw).digest("hex");
+  const supplied = request.headers.get("x-paystack-signature") || "";
+  if (!supplied || supplied.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))) {
+    return Response.json({ error: "Invalid signature." }, { status: 401 });
   }
-  if(event.event==="invoice.payment_failed"){
-   const sub=String(data?.subscription?.subscription_code||data?.subscription_code||"");if(!sub)return Response.json({ok:true});const row=await admin.from("user_subscriptions").select("id,user_id,plan_code").contains("metadata",{paystack_subscription_code:sub}).limit(1).maybeSingle();if(row.data?.id){await admin.from("user_subscriptions").update({status:"past_due",suspension_reason:"Recurring payment failed"}).eq("id",row.data.id);await admin.from("loadlink_subscriptions").update({status:"past_due",suspension_reason:"Recurring payment failed"}).eq("user_id",row.data.user_id).eq("plan_code",row.data.plan_code);await admin.from("user_notifications").insert({user_id:row.data.user_id,type:"payment_failed",title:"Your LoadLink payment needs attention",message:"The latest renewal did not complete. Update your payment method to keep paid features active.",action_url:"/packages?manage=1",metadata:{plan:row.data.plan_code,subscription_code:sub}})}return Response.json({ok:true});
+
+  let event: any;
+  try {
+    event = JSON.parse(raw);
+  } catch {
+    return Response.json({ error: "Invalid webhook payload." }, { status: 400 });
   }
-  if(event.event==="subscription.not_renew"||event.event==="subscription.disable"){
-   const sub=String(data.subscription_code||"");if(!sub)return Response.json({ok:true});const row=await admin.from("user_subscriptions").select("id,user_id,plan_code").contains("metadata",{paystack_subscription_code:sub}).limit(1).maybeSingle();if(row.data?.id){const status=event.event==="subscription.not_renew"?"cancelled":"expired";await admin.from("user_subscriptions").update({status,cancelled_at:status==="cancelled"?new Date().toISOString():null}).eq("id",row.data.id);await admin.from("loadlink_subscriptions").update({status,cancelled_at:status==="cancelled"?new Date().toISOString():null}).eq("user_id",row.data.user_id).eq("plan_code",row.data.plan_code);await admin.from("user_notifications").insert({user_id:row.data.user_id,type:status==="cancelled"?"plan_cancelled":"plan_expired",title:status==="cancelled"?"Your LoadLink plan will not renew":"Your LoadLink plan has ended",message:status==="cancelled"?"Your current paid period stays available until it ends.":"Renew when you are ready to advertise vehicles again.",action_url:"/packages",metadata:{plan:row.data.plan_code,subscription_code:sub}})}return Response.json({ok:true});
+
+  const data = event?.data || {};
+  const key = eventKey(raw);
+  const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
+
+  try {
+    if (event.event === "charge.success") {
+      const reference = String(data.reference || "");
+      if (!reference) return Response.json({ ok: true });
+
+      const verifyResponse = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+        headers: { Authorization: `Bearer ${secret}` },
+        cache: "no-store",
+      });
+      const verified = await verifyResponse.json();
+      if (!verifyResponse.ok || !verified?.status || verified?.data?.status !== "success") {
+        return Response.json({ error: "Payment could not be verified." }, { status: 400 });
+      }
+
+      let payment = await admin
+        .from("admin_payments")
+        .select("id,user_id,package_type,status,amount_cents,currency,reference,metadata")
+        .eq("reference", reference)
+        .maybeSingle();
+      if (payment.error) throw payment.error;
+
+      if (!payment.data) {
+        const verifiedData = verified.data || {};
+        const metadata = obj(verifiedData.metadata);
+        let userId = String(metadata.loadlink_user_id || "");
+        let plan = String(metadata.loadlink_plan || "");
+        if (!plan) plan = planFromCode(codeFrom(verifiedData));
+        const email = String(verifiedData?.customer?.email || "");
+
+        if (!userId && email) {
+          const profile = await admin.from("profiles").select("id").ilike("email", email).limit(1).maybeSingle();
+          if (profile.error) throw profile.error;
+          userId = String(profile.data?.id || "");
+        }
+        if (!userId || !["pro", "dealer"].includes(plan)) return Response.json({ ok: true });
+
+        const expectedPlan = await admin
+          .from("subscription_plans")
+          .select("price_cents,currency")
+          .eq("code", plan)
+          .eq("is_active", true)
+          .maybeSingle();
+        if (expectedPlan.error) throw expectedPlan.error;
+        if (!expectedPlan.data) return Response.json({ ok: true });
+
+        if (
+          Number(verifiedData.amount) !== Number(expectedPlan.data.price_cents) ||
+          String(verifiedData.currency || "").toUpperCase() !== String(expectedPlan.data.currency || "ZAR").toUpperCase()
+        ) {
+          return Response.json({ error: "Recurring payment amount did not match the LoadLink plan." }, { status: 409 });
+        }
+
+        const inserted = await admin
+          .from("admin_payments")
+          .insert({
+            user_id: userId,
+            amount_cents: Number(verifiedData.amount),
+            currency: String(verifiedData.currency || "ZAR"),
+            status: "initialized",
+            provider: "paystack",
+            reference,
+            external_reference: reference,
+            provider_transaction_id: String(verifiedData.id || ""),
+            payer_email: email || null,
+            payment_type: "subscription",
+            package_type: plan,
+            description: `LoadLink ${plan} subscription renewal`,
+            metadata: { recurring: true, paystack_plan_code: codeFrom(verifiedData) || null },
+          })
+          .select("id,user_id,package_type,status,amount_cents,currency,reference,metadata")
+          .single();
+
+        if (inserted.error) {
+          if (inserted.error.code !== "23505") throw inserted.error;
+          payment = await admin
+            .from("admin_payments")
+            .select("id,user_id,package_type,status,amount_cents,currency,reference,metadata")
+            .eq("reference", reference)
+            .maybeSingle();
+          if (payment.error) throw payment.error;
+        } else {
+          payment = { data: inserted.data, error: null } as typeof payment;
+        }
+      }
+
+      if (!payment.data) throw new Error("Verified payment could not be matched to a LoadLink payment record.");
+      if (
+        Number(verified.data.amount) !== Number(payment.data.amount_cents) ||
+        String(verified.data.currency || "").toUpperCase() !== String(payment.data.currency || "ZAR").toUpperCase()
+      ) {
+        return Response.json({ error: "Payment details did not match the approved LoadLink plan." }, { status: 409 });
+      }
+
+      const finalized = await admin.rpc("loadlink_finalize_paid_plan", {
+        p_payment_id: payment.data.id,
+        p_reference: reference,
+        p_provider_transaction_id: String(verified.data.id || ""),
+        p_amount_cents: Number(verified.data.amount),
+        p_currency: String(verified.data.currency || "ZAR"),
+      });
+      if (finalized.error) throw finalized.error;
+      return Response.json({ ok: true });
+    }
+
+    if (event.event === "subscription.create") {
+      const subscriptionCode = String(data.subscription_code || "");
+      const planCode = codeFrom(data);
+      const plan = planFromCode(planCode);
+      const email = String(data?.customer?.email || "");
+      if (!subscriptionCode || !plan || !email) return Response.json({ ok: true });
+
+      const profile = await admin.from("profiles").select("id").ilike("email", email).limit(1).maybeSingle();
+      if (profile.error) throw profile.error;
+      const userId = String(profile.data?.id || "");
+      if (!userId) throw new Error("Paystack subscription customer is not linked to a LoadLink account yet.");
+
+      const applied = await admin.rpc("loadlink_apply_paystack_subscription_event", {
+        p_event_key: key,
+        p_event_type: event.event,
+        p_subscription_code: subscriptionCode,
+        p_plan_code: plan,
+        p_user_id: userId,
+        p_customer_code: String(data?.customer?.customer_code || "") || null,
+        p_next_payment_date: data.next_payment_date || null,
+      });
+      if (applied.error) throw applied.error;
+      return Response.json({ ok: true });
+    }
+
+    if (
+      event.event === "invoice.payment_failed" ||
+      event.event === "subscription.not_renew" ||
+      event.event === "subscription.disable"
+    ) {
+      const subscriptionCode = String(data?.subscription?.subscription_code || data?.subscription_code || "");
+      if (!subscriptionCode) return Response.json({ ok: true });
+
+      const applied = await admin.rpc("loadlink_apply_paystack_subscription_event", {
+        p_event_key: key,
+        p_event_type: event.event,
+        p_subscription_code: subscriptionCode,
+        p_plan_code: null,
+        p_user_id: null,
+        p_customer_code: null,
+        p_next_payment_date: null,
+      });
+      if (applied.error) throw applied.error;
+      return Response.json({ ok: true });
+    }
+
+    return Response.json({ ok: true });
+  } catch (error) {
+    console.error("LoadLink Paystack webhook error", error);
+    return Response.json({ error: "Webhook processing failed." }, { status: 500 });
   }
-  return Response.json({ok:true});
- }catch(error){console.error("LoadLink Paystack webhook error",error);return Response.json({error:"Webhook processing failed."},{status:500})}
 }
