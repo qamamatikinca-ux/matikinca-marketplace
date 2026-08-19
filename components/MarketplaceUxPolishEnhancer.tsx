@@ -51,8 +51,8 @@ function installPolishStyles() {
     html[data-loadlink-theme="dark"] [class*="bg-[#f6b800]/"] {
       background-color: rgba(246,184,0,.075) !important;
       border-color: rgba(246,184,0,.22) !important;
-      -webkit-backdrop-filter: blur(18px) saturate(125%);
-      backdrop-filter: blur(18px) saturate(125%);
+      -webkit-backdrop-filter: blur(12px) saturate(118%);
+      backdrop-filter: blur(12px) saturate(118%);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
     }
     #loadlink-promoted-carousel::-webkit-scrollbar { display: none; }
@@ -76,10 +76,13 @@ export default function MarketplaceUxPolishEnhancer() {
   const pathname = usePathname();
 
   useEffect(() => {
+    const supported = pathname === "/jobs" || pathname === "/my-posts" || pathname === "/jobs/list";
+    if (!supported) return;
+
     installPolishStyles();
     let cancelled = false;
-    let observer: MutationObserver | null = null;
-    let rows = new Map<string, ListingMeta>();
+    const timers: number[] = [];
+    const rows = new Map<string, ListingMeta>();
     let currentUserId = "";
 
     function rowForPromotedCard(card: HTMLElement) {
@@ -107,27 +110,32 @@ export default function MarketplaceUxPolishEnhancer() {
       const rail = sectionInner?.children?.[1] as HTMLElement | undefined;
       if (!heading || !sectionInner || !rail) return;
 
-      rail.id = "loadlink-promoted-carousel";
-      rail.setAttribute("role", "region");
-      rail.setAttribute("aria-label", "Promoted listings carousel");
-      Object.assign(rail.style, {
-        display: "flex",
-        gridTemplateColumns: "none",
-        gap: "12px",
-        overflowX: "auto",
-        overflowY: "hidden",
-        scrollSnapType: "x mandatory",
-        scrollBehavior: "smooth",
-        scrollbarWidth: "none",
-        paddingBottom: "8px",
-      });
-      rail.style.setProperty("-webkit-overflow-scrolling", "touch");
+      if (rail.id !== "loadlink-promoted-carousel") {
+        rail.id = "loadlink-promoted-carousel";
+        rail.setAttribute("role", "region");
+        rail.setAttribute("aria-label", "Promoted listings carousel");
+        Object.assign(rail.style, {
+          display: "flex",
+          gridTemplateColumns: "none",
+          gap: "12px",
+          overflowX: "auto",
+          overflowY: "hidden",
+          scrollSnapType: "x mandatory",
+          scrollBehavior: "smooth",
+          scrollbarWidth: "none",
+          paddingBottom: "8px",
+        });
+        rail.style.setProperty("-webkit-overflow-scrolling", "touch");
+      }
 
       Array.from(rail.children).forEach((child) => {
         const card = child as HTMLElement;
-        card.style.flex = window.innerWidth < 640 ? "0 0 min(86vw, 390px)" : "0 0 min(420px, 46vw)";
-        card.style.scrollSnapAlign = "start";
-        card.style.scrollSnapStop = "always";
+        if (card.dataset.loadlinkCarouselCard !== "true") {
+          card.dataset.loadlinkCarouselCard = "true";
+          card.style.flex = window.innerWidth < 640 ? "0 0 min(86vw, 390px)" : "0 0 min(420px, 46vw)";
+          card.style.scrollSnapAlign = "start";
+          card.style.scrollSnapStop = "always";
+        }
         addViewPostHint(card);
 
         if (card.dataset.loadlinkExactPost === "true") return;
@@ -138,7 +146,6 @@ export default function MarketplaceUxPolishEnhancer() {
         card.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();
-          if ("stopImmediatePropagation" in event) event.stopImmediatePropagation();
           window.location.assign(`/listing/${encodeURIComponent(String(row.id))}`);
         }, true);
       });
@@ -147,8 +154,8 @@ export default function MarketplaceUxPolishEnhancer() {
         const controls = document.createElement("div");
         controls.id = PROMOTED_CONTROLS_ID;
         controls.className = "mb-3 flex items-center justify-end gap-2";
-        const previous = button("‹", "flex h-10 w-10 items-center justify-center rounded-full border border-current/15 bg-current/[.035] text-xl font-black backdrop-blur-xl");
-        const next = button("›", "flex h-10 w-10 items-center justify-center rounded-full border border-current/15 bg-current/[.035] text-xl font-black backdrop-blur-xl");
+        const previous = button("‹", "flex h-10 w-10 items-center justify-center rounded-full border border-current/15 bg-current/[.035] text-xl font-black");
+        const next = button("›", "flex h-10 w-10 items-center justify-center rounded-full border border-current/15 bg-current/[.035] text-xl font-black");
         previous.setAttribute("aria-label", "Previous promoted listing");
         next.setAttribute("aria-label", "Next promoted listing");
         previous.addEventListener("click", () => rail.scrollBy({ left: -Math.max(280, rail.clientWidth * .86), behavior: "smooth" }));
@@ -197,7 +204,7 @@ export default function MarketplaceUxPolishEnhancer() {
       overlay.addEventListener("click", (event) => { if (event.target === overlay) removeOwnerSheet(); });
 
       const sheet = document.createElement("section");
-      sheet.className = "w-full max-w-md rounded-[26px] border border-white/12 bg-[#0b0b0b]/94 p-4 text-white shadow-2xl backdrop-blur-2xl";
+      sheet.className = "w-full max-w-md rounded-[26px] border border-white/12 bg-[#0b0b0b]/96 p-4 text-white shadow-2xl";
       const header = document.createElement("div");
       header.className = "mb-4 flex items-start justify-between gap-3";
       const titleWrap = document.createElement("div");
@@ -222,7 +229,6 @@ export default function MarketplaceUxPolishEnhancer() {
       if (["pro", "dealer"].includes(packageType)) {
         actions.appendChild(sheetAction("View analytics", () => window.location.assign(`/my-posts?analytics=${encodeURIComponent(String(row.id))}`)));
       }
-
       if (packageType === "dealer" || row.dealer_package_active) {
         if (!row.dealership_slug) actions.appendChild(sheetAction("Finish Dealer profile", () => window.location.assign("/dealer?section=showroom")));
         actions.appendChild(sheetAction("Dealer workspace", () => window.location.assign("/dealer")));
@@ -231,7 +237,6 @@ export default function MarketplaceUxPolishEnhancer() {
           if (row.dealership_showroom_available) actions.appendChild(sheetAction("Open showroom", () => window.location.assign(`/dealership/${encodeURIComponent(String(row.dealership_slug))}#showroom`)));
         }
       }
-
       actions.appendChild(sheetAction("Delete post", () => void deleteOwnedPost(row, article), true));
       sheet.append(header, actions);
       overlay.appendChild(sheet);
@@ -242,7 +247,7 @@ export default function MarketplaceUxPolishEnhancer() {
       if (!currentUserId || row.user_id !== currentUserId || !row.id || article.querySelector("[data-loadlink-owner-controls]")) return;
       const bar = document.createElement("div");
       bar.dataset.loadlinkOwnerControls = "true";
-      bar.className = "m-4 mt-0 grid grid-cols-[1fr_1fr_auto] gap-2 rounded-[18px] border border-current/10 bg-current/[.025] p-2 backdrop-blur-xl";
+      bar.className = "m-4 mt-0 grid grid-cols-[1fr_1fr_auto] gap-2 rounded-[18px] border border-current/10 bg-current/[.025] p-2";
 
       const view = document.createElement("a");
       view.href = `/listing/${encodeURIComponent(String(row.id))}`;
@@ -278,15 +283,12 @@ export default function MarketplaceUxPolishEnhancer() {
         const listingLink = article.querySelector<HTMLAnchorElement>('a[href^="/listing/"]');
         const id = listingIdFromHref(listingLink?.getAttribute("href") || "");
         if (id) article.id = `my-post-${id}`;
-        article.style.overflow = "visible";
-
         if (listingLink && clean(listingLink.textContent) === "View") listingLink.textContent = "View post";
 
         const more = article.querySelector<HTMLDetailsElement>('details:has(summary[aria-label="More post actions"])');
         if (more) {
-          more.style.position = "relative";
           const menu = more.querySelector<HTMLElement>("div.absolute");
-          if (menu && window.innerWidth < 768) {
+          if (menu && window.innerWidth < 768 && menu.dataset.loadlinkMobileMoreMenu !== "true") {
             menu.dataset.loadlinkMobileMoreMenu = "true";
             Object.assign(menu.style, {
               position: "fixed",
@@ -302,7 +304,6 @@ export default function MarketplaceUxPolishEnhancer() {
           }
         }
       });
-
       document.querySelectorAll<HTMLElement>("button,span").forEach((node) => {
         if (clean(node.textContent) === "Seen" && node.closest("article")) node.style.display = "none";
       });
@@ -318,15 +319,10 @@ export default function MarketplaceUxPolishEnhancer() {
 
       const auth = await supabase.auth.getUser();
       if (!auth.data.user || cancelled) return;
-
       const locate = () => document.getElementById(`my-post-${targetId}`);
       let card = locate();
       if (!card) {
-        const result = await supabase
-          .from("job_listings")
-          .select("id,created_at,status")
-          .eq("user_id", auth.data.user.id)
-          .order("created_at", { ascending: false });
+        const result = await supabase.from("job_listings").select("id,created_at,status").eq("user_id", auth.data.user.id).order("created_at", { ascending: false });
         const visible = (result.data || []).filter((item) => !["deleted", "removed"].includes(clean(item.status).toLowerCase()));
         const index = visible.findIndex((item) => item.id === targetId);
         const page = index >= 0 ? Math.floor(index / 7) + 1 : 1;
@@ -341,15 +337,12 @@ export default function MarketplaceUxPolishEnhancer() {
       if (!card) return;
       card.scrollIntoView({ behavior: "smooth", block: "center" });
       await new Promise((resolve) => window.setTimeout(resolve, 180));
-
       if (editId) {
-        const editButton = Array.from(card.querySelectorAll<HTMLButtonElement>("button")).find((node) => /edit (post|& resubmit)/i.test(clean(node.textContent)));
-        editButton?.click();
+        Array.from(card.querySelectorAll<HTMLButtonElement>("button")).find((node) => /edit (post|& resubmit)/i.test(clean(node.textContent)))?.click();
       } else if (analyticsId) {
         const details = card.querySelector<HTMLDetailsElement>('details:has(summary[aria-label="More post actions"])');
         if (details) details.open = true;
-        const analyticsButton = Array.from(card.querySelectorAll<HTMLButtonElement>("button")).find((node) => /analytics/i.test(clean(node.textContent)));
-        analyticsButton?.click();
+        Array.from(card.querySelectorAll<HTMLButtonElement>("button")).find((node) => /analytics/i.test(clean(node.textContent)))?.click();
       }
       window.history.replaceState({}, "", "/my-posts");
     }
@@ -379,9 +372,9 @@ export default function MarketplaceUxPolishEnhancer() {
 
       const overlay = document.createElement("div");
       overlay.id = DEALER_GATE_ID;
-      overlay.className = "fixed inset-0 z-[2147483550] flex items-end bg-black/74 p-3 backdrop-blur-md sm:items-center sm:justify-center";
+      overlay.className = "fixed inset-0 z-[2147483550] flex items-end bg-black/74 p-3 backdrop-blur-sm sm:items-center sm:justify-center";
       const panel = document.createElement("section");
-      panel.className = "w-full max-w-md rounded-[28px] border border-white/12 bg-[#0a0a0a]/94 p-5 text-white shadow-2xl backdrop-blur-2xl";
+      panel.className = "w-full max-w-md rounded-[28px] border border-white/12 bg-[#0a0a0a]/96 p-5 text-white shadow-2xl";
       const eyebrow = document.createElement("div");
       eyebrow.className = "text-[10px] font-black uppercase tracking-[.12em] text-white/40";
       eyebrow.textContent = "Dealer profile required";
@@ -407,45 +400,16 @@ export default function MarketplaceUxPolishEnhancer() {
       document.body.appendChild(overlay);
     }
 
-    function modernizeSafetyFooter() {
-      if (pathname !== "/") return;
-      const title = Array.from(document.querySelectorAll<HTMLElement>("p")).find((node) => clean(node.textContent) === "Trade with confidence.");
-      const card = title?.parentElement;
-      const alreadyModern = Boolean(card?.parentElement?.tagName === "SECTION" && clean(card.parentElement.className).includes("border-t") && clean(card.parentElement.className).includes("pt-8"));
-      if (card && !alreadyModern && !card.dataset.loadlinkSafetyModernized) {
-        card.dataset.loadlinkSafetyModernized = "true";
-        card.style.background = "transparent";
-        card.style.border = "0";
-        card.style.borderTop = "1px solid rgba(127,127,127,.18)";
-        card.style.borderRadius = "0";
-        card.style.boxShadow = "none";
-        card.style.paddingLeft = "0";
-        card.style.paddingRight = "0";
-        card.style.backdropFilter = "none";
-        title.classList.add("tracking-[-.02em]");
-      }
-
-      const socialLabels = new Set(["f", "X", "YT", "IG", "TT", "in"]);
-      document.querySelectorAll<HTMLAnchorElement>("footer a").forEach((link) => {
-        if (!socialLabels.has(clean(link.textContent))) return;
-        link.style.width = "44px";
-        link.style.height = "44px";
-        link.style.borderRadius = "999px";
-        link.style.background = "rgba(127,127,127,.07)";
-        link.style.color = "inherit";
-        link.style.border = "1px solid rgba(127,127,127,.18)";
-        link.style.backdropFilter = "blur(14px)";
-        link.style.boxShadow = "none";
-      });
-    }
-
     function scan() {
       if (cancelled) return;
       applyPromotedCarousel();
       applyJobsCards();
       applyMyPostsFixes();
       applyDateInputFix();
-      modernizeSafetyFooter();
+    }
+
+    function scheduleScans() {
+      [0, 100, 260, 600, 1200, 2200].forEach((delay) => timers.push(window.setTimeout(scan, delay)));
     }
 
     async function initialise() {
@@ -458,20 +422,15 @@ export default function MarketplaceUxPolishEnhancer() {
         currentUserId = auth.data.user?.id || "";
         ((listingsResponse?.rows || []) as ListingMeta[]).forEach((row) => { if (row.id) rows.set(String(row.id), row); });
       }
-
-      scan();
+      scheduleScans();
       void enforceDealerPostingProfile();
-      if (pathname === "/my-posts") window.setTimeout(() => void openMyPostsTarget(), 320);
-      observer = new MutationObserver(scan);
-      observer.observe(document.body, { childList: true, subtree: true });
-      window.addEventListener("loadlink-theme-change", scan);
+      if (pathname === "/my-posts") timers.push(window.setTimeout(() => void openMyPostsTarget(), 320));
     }
 
     void initialise();
     return () => {
       cancelled = true;
-      observer?.disconnect();
-      window.removeEventListener("loadlink-theme-change", scan);
+      timers.forEach((timer) => window.clearTimeout(timer));
       removeOwnerSheet();
       document.getElementById(DEALER_GATE_ID)?.remove();
       document.getElementById(PROMOTED_CONTROLS_ID)?.remove();
