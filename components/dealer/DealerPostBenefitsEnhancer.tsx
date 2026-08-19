@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 type DealerListing = {
   id?: string | null;
@@ -34,9 +35,14 @@ function makeText(tag: string, value: string, className: string) {
 }
 
 export default function DealerPostBenefitsEnhancer() {
+  const pathname = usePathname();
+
   useEffect(() => {
+    const supported = pathname === "/jobs" || pathname.startsWith("/listing/") || pathname.startsWith("/vehicles/");
+    if (!supported) return;
+
     let cancelled = false;
-    let observer: MutationObserver | null = null;
+    const timers: number[] = [];
     const rows = new Map<string, DealerListing>();
 
     function openDealer(event: Event, slug: string, hasShowroom: boolean) {
@@ -53,14 +59,16 @@ export default function DealerPostBenefitsEnhancer() {
       const hasShowroom = Boolean(row.dealership_showroom_available) || Number(row.dealership_active_listing_count || 0) > 0;
       const reviewCount = Number(row.dealership_review_count || 0);
       const reviewAverage = Number(row.dealership_review_average || 0);
-      const reviewLabel = reviewCount > 0 && reviewAverage > 0 ? `★ ${reviewAverage.toFixed(1)} · ${reviewCount} review${reviewCount === 1 ? "" : "s"}` : "No reviews yet";
+      const reviewLabel = reviewCount > 0 && reviewAverage > 0
+        ? `★ ${reviewAverage.toFixed(1)} · ${reviewCount} review${reviewCount === 1 ? "" : "s"}`
+        : "No reviews yet";
 
       const bar = document.createElement("div");
       bar.dataset.loadlinkDealerBenefits = "true";
       bar.setAttribute("role", "button");
       bar.tabIndex = 0;
       bar.setAttribute("aria-label", hasShowroom ? `View ${row.dealership_name} showroom, opening hours and customer reviews` : `View ${row.dealership_name} profile, opening hours and customer reviews`);
-      bar.className = "m-3 mt-0 flex min-h-[66px] w-[calc(100%-1.5rem)] items-center gap-3 rounded-[18px] border border-black/10 bg-white/58 px-3 py-2.5 text-left shadow-[0_10px_28px_rgba(0,0,0,.05)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[.045]";
+      bar.className = "m-3 mt-0 flex min-h-[66px] w-[calc(100%-1.5rem)] items-center gap-3 rounded-[18px] border border-black/10 bg-white/94 px-3 py-2.5 text-left shadow-[0_8px_22px_rgba(0,0,0,.045)] dark:border-white/10 dark:bg-white/[.045]";
 
       const avatar = document.createElement("span");
       avatar.className = "flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-current/10 bg-black text-[9px] font-black uppercase text-[#f6b800]";
@@ -77,12 +85,10 @@ export default function DealerPostBenefitsEnhancer() {
 
       const copy = document.createElement("span");
       copy.className = "min-w-0 flex-1";
-
       const top = document.createElement("span");
       top.className = "flex min-w-0 items-center gap-1.5";
       top.appendChild(makeText("strong", row.dealership_name, "min-w-0 truncate text-[12px] font-black"));
-      const packageChip = makeText("span", row.dealership_verified ? "Verified dealer" : "Dealer", "shrink-0 rounded-full border border-current/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[.04em] opacity-55");
-      top.appendChild(packageChip);
+      top.appendChild(makeText("span", row.dealership_verified ? "Verified dealer" : "Dealer", "shrink-0 rounded-full border border-current/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[.04em] opacity-55"));
       copy.appendChild(top);
 
       const details = [
@@ -107,15 +113,19 @@ export default function DealerPostBenefitsEnhancer() {
 
     function scan() {
       if (cancelled || !rows.size) return;
-
       document.querySelectorAll<HTMLElement>('article[id^="job-"]').forEach((article) => {
         decorateHost(article, article.id.replace(/^job-/, ""));
       });
-
       document.querySelectorAll<HTMLAnchorElement>('a[href^="/listing/"],a[href^="/vehicles/"]').forEach((anchor) => {
         const id = listingIdFromHref(anchor.getAttribute("href") || "");
         const host = anchor.closest<HTMLElement>("article") || anchor;
         decorateHost(host, id);
+      });
+    }
+
+    function scheduleScans() {
+      [0, 120, 320, 700, 1400, 2400].forEach((delay) => {
+        timers.push(window.setTimeout(scan, delay));
       });
     }
 
@@ -126,17 +136,15 @@ export default function DealerPostBenefitsEnhancer() {
         ((payload?.rows || []) as DealerListing[]).forEach((row) => {
           if (row.id && row.dealer_package_active && row.dealership_slug && row.dealership_name) rows.set(String(row.id), row);
         });
-        scan();
-        observer = new MutationObserver(scan);
-        observer.observe(document.body, { childList: true, subtree: true });
+        scheduleScans();
       })
       .catch(() => undefined);
 
     return () => {
       cancelled = true;
-      observer?.disconnect();
+      timers.forEach((timer) => window.clearTimeout(timer));
     };
-  }, []);
+  }, [pathname]);
 
   return null;
 }
