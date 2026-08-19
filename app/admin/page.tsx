@@ -6,7 +6,7 @@ const tools = [
   { href: "/admin/verifications", eyebrow: "Trust", title: "Identity verification", description: "Review identity, selfie and company-document submissions through the protected verification queue." },
   { href: "/admin/dealerships", eyebrow: "Dealers", title: "Dealership approvals", description: "Review dealership verification, requested changes and business-document status." },
   { href: "/admin/package-requests", eyebrow: "Plans", title: "Package approvals", description: "Review LoadLink plan and tailored package requests before payment can begin." },
-  { href: "/admin/customer-experience", eyebrow: "Support", title: "Customer experience", description: "Open customer-facing support and marketplace operations tools." },
+  { href: "/admin/support-feedback", eyebrow: "Support", title: "Customer experience", description: "Review posting feedback and customer follow-up signals through the Support and Operations workspace." },
 ];
 
 export default function AdminPage() {
