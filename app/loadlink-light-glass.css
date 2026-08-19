@@ -1,33 +1,60 @@
-/* Light-mode glass balance for LoadLink's warm cream and gold surfaces. */
+/* LoadLink light-mode surface policy.
+   Keep the marketplace predominantly white; reserve the warm cream treatment for
+   the single brand statement section on the homepage. Avoid broad backdrop blur
+   on large surfaces because it is expensive on mobile Safari. */
+
 html[data-loadlink-theme="light"] [class*="bg-[#fff6dc]"],
 html[data-loadlink-theme="light"] [class*="bg-[#f4efe3]"],
 html[data-loadlink-theme="light"] [class*="bg-[#faf8f2]"] {
-  background-color: rgba(255, 248, 229, 0.82) !important;
-  background-image: linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,.035)) !important;
-  -webkit-backdrop-filter: blur(12px) saturate(112%);
-  backdrop-filter: blur(12px) saturate(112%);
+  background-color: #fff !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
+/* Keep only the homepage "Building a smarter way..." statement warm/cream. */
+html[data-loadlink-theme="light"] main > section[class*="py-16"][class*="md:px-12"][class*="bg-[#fff6dc]"] {
+  background-color: #fff6dc !important;
+  background-image: none !important;
+}
+
+/* Primary LoadLink actions stay solid and crisp in light mode rather than
+   forcing GPU-heavy glass blur across every gold control. */
 html[data-loadlink-theme="light"] [class*="bg-[#f6b800]"] {
-  background-color: rgba(246, 184, 0, 0.88) !important;
-  background-image: linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,0)) !important;
-  -webkit-backdrop-filter: blur(8px) saturate(114%);
-  backdrop-filter: blur(8px) saturate(114%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.24);
+  background-color: #f6b800 !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 html[data-loadlink-theme="light"] [data-loadlink-dealer-benefits="true"] {
-  background: rgba(255,255,255,.72);
+  background: rgba(255,255,255,.94);
   border-color: rgba(0,0,0,.09);
-  -webkit-backdrop-filter: blur(11px) saturate(112%);
-  backdrop-filter: blur(11px) saturate(112%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* The public discovery/search area should sit on white in light mode. */
+html[data-loadlink-theme="light"] [data-loadlink-home-search-section] {
+  background: #fff !important;
+}
+
+/* Preserve the approved portal design, but make the cards fit on smaller
+   phones instead of swallowing most of the viewport. */
+@media (max-width: 639px) {
+  html[data-loadlink-theme="light"] a[aria-label="Open Jobs"],
+  html[data-loadlink-theme="light"] a[aria-label="Open Contracts"],
+  html[data-loadlink-theme="light"] a[aria-label="Open Vehicles & units"],
+  html[data-loadlink-theme="light"] a[aria-label="Open Drivers"],
+  html[data-loadlink-theme="dark"] a[aria-label="Open Jobs"],
+  html[data-loadlink-theme="dark"] a[aria-label="Open Contracts"],
+  html[data-loadlink-theme="dark"] a[aria-label="Open Vehicles & units"],
+  html[data-loadlink-theme="dark"] a[aria-label="Open Drivers"] {
+    height: 320px !important;
+  }
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  html[data-loadlink-theme="light"] [class*="bg-[#fff6dc]"],
-  html[data-loadlink-theme="light"] [class*="bg-[#f4efe3]"],
-  html[data-loadlink-theme="light"] [class*="bg-[#faf8f2]"],
-  html[data-loadlink-theme="light"] [class*="bg-[#f6b800]"],
   html[data-loadlink-theme="light"] [data-loadlink-dealer-benefits="true"] {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
