@@ -102,6 +102,11 @@
   box-shadow: none !important;
 }
 
+.messageApp :global([aria-label="Seen"]),
+.messageApp :global([aria-label="Sent"]) {
+  display: none !important;
+}
+
 @media (max-width: 420px) {
   .messageApp :global(.loadlink-logo-wrap) {
     width: clamp(124px, 31vw, 148px);
