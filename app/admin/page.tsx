@@ -2,9 +2,10 @@ import Link from "next/link";
 
 const tools = [
   { href: "/admin/listings", eyebrow: "Marketplace", title: "Listing moderation", description: "Approve or reject jobs, contracts and vehicle listings with the user-facing reason kept in sync." },
+  { href: "/admin/drivers", eyebrow: "Drivers", title: "Driver reviews", description: "Review driver profiles and private documents before approved drivers become public." },
   { href: "/admin/verifications", eyebrow: "Trust", title: "Identity verification", description: "Review identity, selfie and company-document submissions through the protected verification queue." },
   { href: "/admin/dealerships", eyebrow: "Dealers", title: "Dealership approvals", description: "Review dealership verification, requested changes and business-document status." },
-  { href: "/admin/package-requests", eyebrow: "Plans", title: "Tailored package requests", description: "Review tailored LoadLink package requests and approved pricing." },
+  { href: "/admin/package-requests", eyebrow: "Plans", title: "Package approvals", description: "Review LoadLink plan and tailored package requests before payment can begin." },
   { href: "/admin/customer-experience", eyebrow: "Support", title: "Customer experience", description: "Open customer-facing support and marketplace operations tools." },
 ];
 
