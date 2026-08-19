@@ -10,9 +10,31 @@ type IdleWindow = Window & {
   cancelIdleCallback?: (id: number) => void;
 };
 
+function bridgeMessageThreadForCalls() {
+  if (window.location.pathname !== "/messages") return;
+  const url = new URL(window.location.href);
+  const thread = url.searchParams.get("thread");
+  if (!thread || url.searchParams.get("conversation") === thread) return;
+  url.searchParams.set("conversation", thread);
+  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
 export default function LoadLinkCallBootstrap() {
   const pathname = usePathname();
   const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    if (pathname === "/messages") {
+      bridgeMessageThreadForCalls();
+      const beforeCallChoice = (event: MouseEvent) => {
+        const target = event.target;
+        if (!(target instanceof Element) || !target.closest('a[href^="tel:"]')) return;
+        bridgeMessageThreadForCalls();
+      };
+      document.addEventListener("click", beforeCallChoice, true);
+      return () => document.removeEventListener("click", beforeCallChoice, true);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     const standalone = window.matchMedia?.("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
