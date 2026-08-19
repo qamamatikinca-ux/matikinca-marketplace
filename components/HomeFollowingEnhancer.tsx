@@ -22,9 +22,9 @@ export default function HomeFollowingEnhancer() {
     if (pathname !== "/" || !isSupabaseConfigured) return;
 
     let cancelled = false;
-    let observer: MutationObserver | null = null;
     let allButton: HTMLButtonElement | null = null;
     let dealers: FollowedDealer[] = [];
+    const timers: number[] = [];
 
     function makeAvatar(dealer: FollowedDealer) {
       const button = document.createElement("button");
@@ -91,6 +91,12 @@ export default function HomeFollowingEnhancer() {
       else tabRow.prepend(rail);
     }
 
+    function scheduleApply() {
+      [0, 120, 320, 700, 1400].forEach((delay) => {
+        timers.push(window.setTimeout(applyFollowingAvatars, delay));
+      });
+    }
+
     async function initialise() {
       const { data: { user } } = await supabase.auth.getUser();
       if (cancelled || !user) return;
@@ -107,15 +113,8 @@ export default function HomeFollowingEnhancer() {
 
       const now = new Date().toISOString();
       const [profilesResult, statusesResult] = await Promise.all([
-        supabase
-          .from("public_dealership_profiles")
-          .select("id,slug,name,profile_image_url")
-          .in("id", ids),
-        supabase
-          .from("public_dealership_statuses")
-          .select("dealership_id,expires_at")
-          .in("dealership_id", ids)
-          .gt("expires_at", now),
+        supabase.from("public_dealership_profiles").select("id,slug,name,profile_image_url").in("id", ids),
+        supabase.from("public_dealership_statuses").select("dealership_id,expires_at").in("dealership_id", ids).gt("expires_at", now),
       ]);
       if (cancelled || profilesResult.error) return;
 
@@ -133,16 +132,13 @@ export default function HomeFollowingEnhancer() {
         } satisfies FollowedDealer];
       });
       if (!dealers.length) return;
-
-      applyFollowingAvatars();
-      observer = new MutationObserver(applyFollowingAvatars);
-      observer.observe(document.body, { childList: true, subtree: true });
+      scheduleApply();
     }
 
     void initialise();
     return () => {
       cancelled = true;
-      observer?.disconnect();
+      timers.forEach((timer) => window.clearTimeout(timer));
       document.getElementById(FOLLOWED_RAIL_ID)?.remove();
       if (allButton) {
         allButton.style.display = "";
