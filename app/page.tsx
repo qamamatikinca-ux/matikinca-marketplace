@@ -174,11 +174,13 @@ function HomeExperience() {
         </div>
       </section>
 
-      <LoadLinkBoundary name="logistics news">
-        <Suspense fallback={null}>
-          <LogisticsNews darkMode={darkMode} />
-        </Suspense>
-      </LoadLinkBoundary>
+      <section id="industry-insights" className="scroll-mt-24">
+        <LoadLinkBoundary name="logistics news">
+          <Suspense fallback={null}>
+            <LogisticsNews darkMode={darkMode} />
+          </Suspense>
+        </LoadLinkBoundary>
+      </section>
 
       <footer
         className={`px-5 py-16 transition-colors duration-300 md:px-12 ${
@@ -214,11 +216,11 @@ function HomeExperience() {
                   darkMode ? "text-white/70" : "text-black/75"
                 }`}
               >
-                <Link href="#">About LoadLink</Link>
+                <Link href="/about">About LoadLink</Link>
                 <a href="mailto:loadlinksouthafrica@gmail.com">Contact support</a>
                 <Link href="/help">Help & FAQ</Link>
                 <Link href="/help">Feedback</Link>
-                <Link href="#">Industry insights</Link>
+                <Link href="#industry-insights">Industry insights</Link>
               </div>
             </details>
 
@@ -236,8 +238,8 @@ function HomeExperience() {
                 <Link href="/jobs">Find jobs</Link>
                 <Link href="/contracts">Find contracts</Link>
                 <RequireAuthLink href="/list-your-vehicle">List your vehicle</RequireAuthLink>
-                <Link href="#">Truck hire</Link>
-                <Link href="#">Available loads</Link>
+                <Link href="/list-your-vehicle?view=marketplace#vehicle-marketplace">Truck hire</Link>
+                <Link href="/jobs">Available loads</Link>
               </div>
             </details>
 
@@ -252,11 +254,10 @@ function HomeExperience() {
                   darkMode ? "text-white/70" : "text-black/75"
                 }`}
               >
-                <Link href="#">Premium packages</Link>
-                <Link href="#">Pro packages</Link>
-                <Link href="#">Sponsored listings</Link>
-                <Link href="#">Business support</Link>
-                <Link href="#">Ratings & reviews</Link>
+                <Link href="/packages">Packages & plans</Link>
+                <Link href="/packages">Sponsored listings</Link>
+                <Link href="/dealer">Dealership tools</Link>
+                <Link href="/help">Business support</Link>
               </div>
             </details>
 
@@ -315,48 +316,6 @@ function HomeExperience() {
               </Link>
             </div>
           </section>
-
-          <div className="mt-12">
-            <h3 className="text-2xl font-black">Download the app</h3>
-
-            <div className="mt-5 flex flex-nowrap items-center gap-3 overflow-x-auto pb-1">
-              <Link href="#" aria-label="Download on the App Store">
-                <img
-                  src="/images/app-store-badge.png"
-                  alt="Download on the App Store"
-                  className="h-10 w-auto object-contain"
-                />
-              </Link>
-
-              <Link href="#" aria-label="Get it on Google Play">
-                <img
-                  src="/images/google-play-badge.png"
-                  alt="Get it on Google Play"
-                  className="h-10 w-auto object-contain"
-                />
-              </Link>
-            </div>
-          </div>
-
-          <div className="mt-12 flex flex-wrap items-center gap-3">
-            {[
-              ["f", "Facebook"],
-              ["X", "X"],
-              ["YT", "YouTube"],
-              ["IG", "Instagram"],
-              ["TT", "TikTok"],
-              ["in", "LinkedIn"],
-            ].map(([mark, label]) => (
-              <Link
-                key={label}
-                href="#"
-                aria-label={label}
-                className={`flex h-11 min-w-11 items-center justify-center rounded-full border px-3 text-xs font-black backdrop-blur-xl transition active:scale-[.97] ${darkMode ? "border-white/12 bg-white/[.035] text-white/76" : "border-black/10 bg-black/[.025] text-black/70"}`}
-              >
-                {mark}
-              </Link>
-            ))}
-          </div>
 
           <div
             className={`mt-12 border-t pt-7 ${darkMode ? "border-white/10 text-white/50" : "border-black/10 text-black/55"}`}
