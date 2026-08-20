@@ -42,11 +42,15 @@ jobs:
         continue-on-error: true
         run: npm ci
 
-      - name: Link primary LoadLink project locally
+      - name: Bind primary LoadLink Vercel project
         id: link
         if: steps.install.outcome == 'success'
         continue-on-error: true
-        run: npx --yes vercel@latest link --yes --project matikinca-marketplace --scope loadlink --token "$VERCEL_TOKEN"
+        shell: bash
+        run: |
+          mkdir -p .vercel
+          printf '%s\n' '{"projectId":"prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt","orgId":"team_ltBsujLbhqOPqX4dlpWDHial"}' > .vercel/project.json
+          node -e 'const p=require("./.vercel/project.json"); if(p.projectId!=="prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt"||p.orgId!=="team_ltBsujLbhqOPqX4dlpWDHial") process.exit(1)'
 
       - name: Pull production environment
         id: pull
@@ -69,7 +73,8 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          DEPLOY_URL="$(npx --yes vercel@latest deploy --prebuilt --prod --yes --scope loadlink --token "$VERCEL_TOKEN" | tail -n 1 | tr -d '\r')"
+          npx --yes vercel@latest deploy --prebuilt --prod --yes --scope loadlink --token "$VERCEL_TOKEN" 2>&1 | tee /tmp/vercel-deploy.log
+          DEPLOY_URL="$(grep -Eo 'https://[^ ]+\.vercel\.app' /tmp/vercel-deploy.log | tail -n 1 || true)"
           echo "url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
           test -n "$DEPLOY_URL"
 
@@ -80,12 +85,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 --output /dev/null https://matikinca-marketplace.vercel.app/login
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 --output /tmp/login-hero.webp https://matikinca-marketplace.vercel.app/images/loadlink-login-hero-hd.webp
+          curl --fail --silent --show-error --location --retry 8 --retry-delay 3 --output /dev/null https://matikinca-marketplace.vercel.app/login
+          curl --fail --silent --show-error --location --retry 8 --retry-delay 3 --output /tmp/login-hero.webp https://matikinca-marketplace.vercel.app/images/loadlink-login-hero-hd.webp
           test "$(wc -c < /tmp/login-hero.webp | tr -d ' ')" = "136014"
           test "$(sha256sum /tmp/login-hero.webp | awk '{print $1}')" = "aa8633917fc45b724cb82c92f3d7281a29aa4ef20d487744942467867926a6cd"
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 --output /dev/null 'https://matikinca-marketplace.vercel.app/list-your-vehicle?entry=vehicle'
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 --output /dev/null 'https://matikinca-marketplace.vercel.app/list-your-vehicle?entry=mobile-unit'
+          curl --fail --silent --show-error --location --retry 8 --retry-delay 3 --output /dev/null 'https://matikinca-marketplace.vercel.app/list-your-vehicle?entry=vehicle'
+          curl --fail --silent --show-error --location --retry 8 --retry-delay 3 --output /dev/null 'https://matikinca-marketplace.vercel.app/list-your-vehicle?entry=mobile-unit'
 
       - name: Write release receipt
         if: always()
@@ -139,4 +144,4 @@ jobs:
           test "${{ steps.deploy.outcome }}" = "success"
           test "${{ steps.verify.outcome }}" = "success"
 
-# Verified login artwork + Vehicle & Units interaction release — 2026-08-20 20:35 SAST.
+# Verified login artwork + Vehicle & Units interaction release — 2026-08-20 20:41 SAST.
