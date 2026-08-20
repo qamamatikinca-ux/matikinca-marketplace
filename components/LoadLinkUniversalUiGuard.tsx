@@ -2,12 +2,23 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 
 const STYLE_ID = "loadlink-universal-ui-guard-style";
 const INTEGER_TERMS = /(?:year|age|quantity|qty|count|number of|fleet|seats|capacity|mileage|odometer|kilomet|postal|otp|pin|code)/i;
 const PHONE_TERMS = /(?:phone|mobile|whatsapp|contact number|telephone)/i;
 const DECIMAL_TERMS = /(?:price|rate|amount|budget|cost|weight|distance|ton|litre|liter|km)/i;
 const INTERNAL_REPAIR_TEXT = /(?:run|apply|install).{0,45}(?:loadlink|supabase|marketplace).{0,35}(?:sql|patch|migration)|(?:supabase|postgres|pgrst).{0,30}(?:repair|sql|schema cache)/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const PENDING_REPORTS_KEY = "loadlink-pending-reports";
+let reportSyncBusy = false;
+
+type PendingListingReport = {
+  listingId?: string;
+  title?: string;
+  reason?: string;
+  createdAt?: string;
+};
 
 function descriptor(input: HTMLInputElement) {
   const label = input.labels?.[0]?.textContent || "";
@@ -61,6 +72,64 @@ function sanitizeInternalRepairMessages(root: ParentNode) {
         ? "LoadLink could not save that post change right now. Your information is still safe; refresh once and try again."
         : "LoadLink could not complete that action right now. Refresh once and try again.";
   });
+}
+
+async function syncPendingListingReports() {
+  if (reportSyncBusy || typeof window === "undefined") return;
+  reportSyncBusy = true;
+  try {
+    const raw = window.localStorage.getItem(PENDING_REPORTS_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    const pending: PendingListingReport[] = Array.isArray(parsed) ? parsed : [];
+    if (!pending.length) {
+      window.localStorage.removeItem(PENDING_REPORTS_KEY);
+      return;
+    }
+
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return;
+
+    const remaining: PendingListingReport[] = [];
+    let sent = 0;
+    for (const report of pending.slice(0, 20)) {
+      const listingId = String(report?.listingId || "");
+      const reason = String(report?.reason || "").trim();
+      if (!UUID_RE.test(listingId) || reason.length < 3) continue;
+
+      const result = await supabase.rpc("loadlink_report_listing", {
+        p_listing_id: listingId,
+        p_category: "other",
+        p_details: reason.slice(0, 2000),
+      });
+
+      if (result.error) {
+        if (/listing not found|own listing/i.test(result.error.message || "")) continue;
+        remaining.push(report);
+      } else {
+        sent += 1;
+      }
+    }
+    if (pending.length > 20) remaining.push(...pending.slice(20));
+
+    if (remaining.length) window.localStorage.setItem(PENDING_REPORTS_KEY, JSON.stringify(remaining));
+    else window.localStorage.removeItem(PENDING_REPORTS_KEY);
+
+    if (sent > 0) {
+      window.dispatchEvent(new CustomEvent("loadlink:toast", {
+        detail: {
+          kind: "success",
+          title: "Report sent to LoadLink",
+          message: sent === 1 ? "Your marketplace report is now in the review queue." : `${sent} marketplace reports are now in the review queue.`,
+          duration: 5200,
+        },
+      }));
+    }
+  } catch {
+    // Keep pending reports on-device until a later safe retry.
+  } finally {
+    reportSyncBusy = false;
+  }
 }
 
 function removeLegacySliderControls(root: ParentNode) {
@@ -150,8 +219,21 @@ export default function LoadLinkUniversalUiGuard() {
       if (sliderChanged) window.dispatchEvent(new Event("loadlink:content-updated"));
     };
 
+    const tryReportSync = () => void syncPendingListingReports();
+    const onDocumentClick = (event: MouseEvent) => {
+      const target = event.target instanceof Element ? event.target.closest("button,a") : null;
+      if (!target || !/report/i.test((target.textContent || target.getAttribute("aria-label") || "").trim())) return;
+      window.setTimeout(tryReportSync, 300);
+    };
+
     scan();
+    tryReportSync();
     const timers = [160, 500, 1200, 2400].map((delay) => window.setTimeout(() => scan(), delay));
+    const reportTimer = window.setInterval(tryReportSync, 15_000);
+    window.addEventListener("focus", tryReportSync);
+    window.addEventListener("loadlink-account-state-changed", tryReportSync as EventListener);
+    document.addEventListener("click", onDocumentClick);
+
     const observer = new MutationObserver((records) => {
       records.forEach((record) => record.addedNodes.forEach((node) => {
         if (!(node instanceof HTMLElement)) return;
@@ -163,6 +245,10 @@ export default function LoadLinkUniversalUiGuard() {
     return () => {
       observer.disconnect();
       timers.forEach((timer) => window.clearTimeout(timer));
+      window.clearInterval(reportTimer);
+      window.removeEventListener("focus", tryReportSync);
+      window.removeEventListener("loadlink-account-state-changed", tryReportSync as EventListener);
+      document.removeEventListener("click", onDocumentClick);
     };
   }, [pathname]);
 
