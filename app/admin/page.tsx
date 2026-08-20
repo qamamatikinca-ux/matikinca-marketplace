@@ -15,6 +15,7 @@ type Tool = {
 
 const tools: Tool[] = [
   { href: "/admin/listings", eyebrow: "Marketplace", title: "Listing moderation", description: "Approve or reject jobs, contracts and vehicle listings with the user-facing reason kept in sync.", roles: ["owner","admin","operations","moderator"] },
+  { href: "/admin/reports", eyebrow: "Safety", title: "Marketplace reports", description: "Investigate member reports, open the affected listing and record a protected resolution.", roles: ["owner","admin","operations","moderator","support"] },
   { href: "/admin/drivers", eyebrow: "Drivers", title: "Driver reviews", description: "Review driver profiles and private documents before approved drivers become public.", roles: ["owner","admin","operations","moderator","verification"] },
   { href: "/admin/verifications", eyebrow: "Trust", title: "Identity verification", description: "Review identity, selfie and company-document submissions through the protected verification queue.", roles: ["owner","admin","operations","moderator","verification"] },
   { href: "/admin/dealerships", eyebrow: "Dealers", title: "Dealership approvals", description: "Review dealership verification, requested changes and business-document status.", roles: ["owner","admin","operations","moderator","verification"] },
