@@ -44,5 +44,5 @@ export default function LoadLinkCallBootstrap() {
     return () => globalThis.clearTimeout(timer);
   }, []);
 
-  return enabled ? <Suspense fallback={null}><LoadLinkCallLayer /></Suspense> : null;
+  return enabled ? <Suspense fallback={null}><LoadLinkCallLayer key={pathname} /></Suspense> : null;
 }
