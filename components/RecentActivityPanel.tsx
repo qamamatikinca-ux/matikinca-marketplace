@@ -121,7 +121,7 @@ function findListing(item: RecentItem, catalog: ListingRow[]) {
   return catalog.find((row) => String(row.title || "").trim().toLowerCase() === title);
 }
 
-function refreshSavedItem(item: RecentItem, catalog: ListingRow[]) {
+function refreshSavedItem(item: RecentItem, catalog: ListingRow[]): RecentItem | null {
   const row = findListing(item, catalog);
   if (!row) return null;
   const fresh = toRecentItem(row);
