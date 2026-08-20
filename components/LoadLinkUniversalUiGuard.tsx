@@ -89,6 +89,20 @@ function repairLegacyRouteLinks(root: ParentNode) {
   });
 }
 
+function repairAccountClosureAction(root: ParentNode, pathname: string) {
+  if (pathname !== "/account/settings") return;
+  root.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
+    if (button.dataset.loadlinkClosureRoute === "true") return;
+    if ((button.textContent || "").trim().toLowerCase() !== "request deletion") return;
+    button.dataset.loadlinkClosureRoute = "true";
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      window.location.assign("/account/closure-request");
+    }, true);
+  });
+}
+
 function repairLegacyLocation(pathname: string) {
   if (pathname !== "/jobs/list") return false;
   const url = new URL(window.location.href);
@@ -253,6 +267,7 @@ export default function LoadLinkUniversalUiGuard() {
       hideDeliveryBadges(root);
       sanitizeInternalRepairMessages(root);
       repairLegacyRouteLinks(root);
+      repairAccountClosureAction(root, pathname);
       const sliderChanged = polishSliders(root);
       ensureSinglePageNavigation(pathname);
       if (sliderChanged) window.dispatchEvent(new Event("loadlink:content-updated"));
