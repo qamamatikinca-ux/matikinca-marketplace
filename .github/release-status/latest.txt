@@ -1,0 +1,10 @@
+source_commit=55cbc471190829914bb2f7cf3ce5b85683379065
+token=success
+install=success
+link=failure
+pull=skipped
+build=skipped
+deploy=skipped
+verify=skipped
+deployment_url=
+login_artwork_sha256=aa8633917fc45b724cb82c92f3d7281a29aa4ef20d487744942467867926a6cd
