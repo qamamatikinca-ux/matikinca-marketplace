@@ -36,21 +36,31 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
-          test -n "${VERCEL_TOKEN:-}" || { echo "VERCEL_TOKEN is missing"; exit 1; }
-          npm ci
-          npx --yes vercel@latest link --yes --project matikinca-marketplace --scope loadlink --token "$VERCEL_TOKEN"
-          npx --yes vercel@latest pull --yes --environment=production --scope loadlink --token "$VERCEL_TOKEN"
-          NEXT_TELEMETRY_DISABLED=1 npx --yes vercel@latest build --prod --yes --scope loadlink --token "$VERCEL_TOKEN"
+          set +e
+          {
+            set -euo pipefail
+            test -n "${VERCEL_TOKEN:-}" || { echo "VERCEL_TOKEN is missing"; exit 1; }
+            npm ci
+            npx --yes vercel@latest link --yes --project matikinca-marketplace --scope loadlink --token "$VERCEL_TOKEN"
+            npx --yes vercel@latest pull --yes --environment=production --scope loadlink --token "$VERCEL_TOKEN"
+            NEXT_TELEMETRY_DISABLED=1 npx --yes vercel@latest build --prod --yes --scope loadlink --token "$VERCEL_TOKEN"
+          } 2>&1 | tee loadlink-build-gate.log
+          code=${PIPESTATUS[0]}
+          summary=$(grep -E "Type error:|Failed to compile|Build error|Error:|ERR!|error TS[0-9]+|VERCEL_TOKEN is missing" loadlink-build-gate.log | tail -n 1 | tr '\n\r' ' ' | sed -E 's/[[:space:]]+/ /g' | cut -c1-118)
+          if [ -z "$summary" ]; then summary="Production build command exited with code ${code}."; fi
+          echo "summary=${summary}" >> "$GITHUB_OUTPUT"
+          exit "$code"
 
       - name: Publish LoadLink build-gate status
         if: always()
         uses: actions/github-script@v7
         env:
           BUILD_OUTCOME: ${{ steps.gate.outcome }}
+          BUILD_SUMMARY: ${{ steps.gate.outputs.summary }}
         with:
           script: |
             const passed = process.env.BUILD_OUTCOME === 'success';
+            const summary = String(process.env.BUILD_SUMMARY || '').trim();
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -59,7 +69,7 @@ jobs:
               context: 'LoadLink Release Build Gate',
               description: passed
                 ? 'Production-equivalent Vercel build completed successfully.'
-                : 'Production-equivalent Vercel build failed. Inspect the Actions run before release.'
+                : (summary || 'Production-equivalent Vercel build failed.').slice(0, 140)
             });
 
       - name: Fail workflow when build gate fails
