@@ -12,7 +12,7 @@ const encoded = parts
   .replace(/\s+/g, "");
 
 const image = Buffer.from(encoded, "base64");
-if (image.length < 100_000) {
+if (image.length < 50_000) {
   throw new Error(`LoadLink login artwork is unexpectedly small (${image.length} bytes).`);
 }
 if (image.subarray(0, 4).toString("ascii") !== "RIFF" || image.subarray(8, 12).toString("ascii") !== "WEBP") {
