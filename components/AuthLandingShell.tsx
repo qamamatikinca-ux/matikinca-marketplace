@@ -21,29 +21,29 @@ export default function AuthLandingShell({
 
   return (
     <main
-      data-loadlink-auth-landing="v288-final-artwork"
+      data-loadlink-auth-landing="v289-hd-artwork"
       className={`relative min-h-[100svh] overflow-x-hidden ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}
     >
       <div className="mx-auto min-h-[100svh] w-full max-w-[760px] lg:flex lg:max-w-none">
         <section className={`loadlink-auth-hero relative h-[54svh] min-h-[390px] overflow-hidden sm:h-[59svh] sm:min-h-[455px] lg:h-screen lg:min-h-screen lg:flex-1 ${darkMode ? "bg-[#100805]" : "bg-[#c95f17]"}`}>
           <img
-            src="/images/loadlink-login-hero-final.jpg"
+            src="/images/loadlink-login-hero-final.webp"
             alt="LoadLink logistics made easier"
-            className="loadlink-auth-hero-image absolute inset-0 h-full w-full scale-[1.035] object-cover object-center opacity-[.92] saturate-[.9] contrast-[.96]"
+            className={`loadlink-auth-hero-image absolute inset-0 h-full w-full scale-[1.015] object-cover object-center saturate-[.92] contrast-[.95] ${darkMode ? "opacity-[.72]" : "opacity-[.82]"}`}
             loading="eager"
             fetchPriority="high"
             decoding="async"
           />
-          <div className={`absolute inset-0 z-[1] ${darkMode ? "bg-black/20" : "bg-[#f4efe3]/[.035]"}`} aria-hidden="true" />
+          <div className={`absolute inset-0 z-[1] ${darkMode ? "bg-black/16" : "bg-[#f4efe3]/[.045]"}`} aria-hidden="true" />
           <div
-            className={`absolute inset-x-0 bottom-0 z-[2] h-[46%] ${darkMode ? "bg-gradient-to-b from-transparent via-black/40 to-black" : "bg-gradient-to-b from-transparent via-[#f4efe3]/28 to-[#f4efe3]"}`}
+            className={`absolute inset-x-0 bottom-0 z-[2] h-[52%] ${darkMode ? "bg-gradient-to-b from-transparent via-black/42 to-black" : "bg-gradient-to-b from-transparent via-[#f4efe3]/32 to-[#f4efe3]"}`}
             aria-hidden="true"
           />
           <div
-            className={`absolute inset-y-0 right-0 z-[2] hidden w-[34%] lg:block ${darkMode ? "bg-gradient-to-r from-transparent via-black/20 to-black" : "bg-gradient-to-r from-transparent via-[#f4efe3]/18 to-[#f4efe3]"}`}
+            className={`absolute inset-y-0 right-0 z-[2] hidden w-[38%] lg:block ${darkMode ? "bg-gradient-to-r from-transparent via-black/24 to-black" : "bg-gradient-to-r from-transparent via-[#f4efe3]/22 to-[#f4efe3]"}`}
             aria-hidden="true"
           />
-          <div className="absolute inset-0 z-[3] bg-[radial-gradient(circle_at_50%_34%,transparent_0%,transparent_38%,rgba(0,0,0,.16)_100%)]" aria-hidden="true" />
+          <div className="absolute inset-0 z-[3] bg-[radial-gradient(circle_at_50%_34%,transparent_0%,transparent_42%,rgba(0,0,0,.18)_100%)]" aria-hidden="true" />
           <div className="absolute inset-x-0 top-0 z-10 p-5 sm:p-7 lg:p-9">
             <Link
               href="/"
