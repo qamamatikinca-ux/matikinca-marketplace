@@ -1,14 +1,9 @@
 "use client";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
-
 import Link from "next/link";
 import { useMemo, useState, type ChangeEvent } from "react";
-import AuthStatusButton from "@/components/AuthStatusButton";
-import HomeLogoLink from "@/components/HomeLogoLink";
 import LinkBot from "@/components/LinkBot";
-import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
-import SiteMenu from "@/components/SiteMenu";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 const groups = [
@@ -53,6 +48,10 @@ export default function HelpPage() {
   const card = darkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white";
   const muted = darkMode ? "text-white/50" : "text-black/50";
 
+  function talkToSupport() {
+    window.dispatchEvent(new Event("loadlink:open-agent-support"));
+  }
+
   return (
     <main className={`min-h-screen ${page}`}>
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
@@ -61,7 +60,8 @@ export default function HelpPage() {
         <div className="grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
           <div>
             <h1 className="text-4xl font-black tracking-[-.05em] md:text-6xl">Help that gets you moving.</h1>
-            <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 md:text-base ${muted}`}>Search LoadLink help or open a topic. The most common posting, messaging and account questions are kept short and practical.</p>
+            <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 md:text-base ${muted}`}>Search LoadLink help, use LinkBot, or send a problem directly into the LoadLink Support queue.</p>
+            <button type="button" onClick={talkToSupport} className="mt-5 flex min-h-12 w-full max-w-sm items-center justify-center rounded-xl bg-[#f6b800] px-5 text-sm font-black text-black shadow-[0_10px_26px_rgba(0,0,0,.10)] sm:w-auto">Talk to LoadLink support</button>
             <label className="mt-6 block">
               <span className="sr-only">Search LoadLink help</span>
               <div className={`flex h-14 items-center gap-3 rounded-2xl border px-4 ${card}`}>
@@ -70,7 +70,7 @@ export default function HelpPage() {
                 {query ? <button type="button" onClick={()=>setQuery("")} className="text-xs font-black">Clear</button> : null}
               </div>
             </label>
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1" data-loadlink-swipe-dots="true">
               {QUICK.map(item => <button key={item} type="button" onClick={()=>setQuery(item)} className={`shrink-0 rounded-full border px-3 py-2 text-xs font-bold ${darkMode ? "border-white/10 bg-white/[.03]" : "border-black/10 bg-white"}`}>{item}</button>)}
             </div>
           </div>
@@ -113,8 +113,8 @@ export default function HelpPage() {
         </div>
 
         <div className={`mt-5 flex flex-col gap-3 rounded-[24px] border p-5 sm:flex-row sm:items-center sm:justify-between ${card}`}>
-          <div><h2 className="text-lg font-black">Still stuck?</h2><p className={`mt-1 text-xs font-semibold ${muted}`}>You can also return to the marketplace or review your own posts.</p></div>
-          <div className="flex gap-2"><Link href="/my-posts" className="flex h-11 items-center rounded-xl border border-current/10 px-4 text-xs font-black">My posts</Link><Link href="/jobs" className="flex h-11 items-center rounded-xl bg-black px-4 text-xs font-black text-white">Browse work</Link></div>
+          <div><h2 className="text-lg font-black">Still stuck?</h2><p className={`mt-1 text-xs font-semibold ${muted}`}>Send the issue to Support, return to the marketplace, or review your own posts.</p></div>
+          <div className="flex flex-wrap gap-2"><button type="button" onClick={talkToSupport} className="flex h-11 items-center rounded-xl bg-[#f6b800] px-4 text-xs font-black text-black">Talk to support</button><Link href="/my-posts" className="flex h-11 items-center rounded-xl border border-current/10 px-4 text-xs font-black">My posts</Link><Link href="/jobs" className="flex h-11 items-center rounded-xl bg-black px-4 text-xs font-black text-white">Browse work</Link></div>
         </div>
       </section>
     </main>
