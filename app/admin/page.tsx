@@ -20,7 +20,8 @@ const tools: Tool[] = [
   { href: "/admin/verifications", eyebrow: "Trust", title: "Identity verification", description: "Review identity, selfie and company-document submissions through the protected verification queue.", roles: ["owner","admin","operations","moderator","verification"] },
   { href: "/admin/dealerships", eyebrow: "Dealers", title: "Dealership approvals", description: "Review dealership verification, requested changes and business-document status.", roles: ["owner","admin","operations","moderator","verification"] },
   { href: "/admin/package-requests", eyebrow: "Plans", title: "Package approvals", description: "Review LoadLink plan and tailored package requests before payment can begin.", roles: ["owner","admin","operations","finance"] },
-  { href: "/admin/support-feedback", eyebrow: "Support", title: "Customer experience", description: "Review posting feedback and customer follow-up signals through the Support and Operations workspace.", roles: ["owner","admin","operations","support"] },
+  { href: "/admin/support-tickets", eyebrow: "Support", title: "Support queue", description: "Review Talk to support handovers, open the affected page and send a traceable outcome back to the user.", roles: ["owner","admin","operations","support"] },
+  { href: "/admin/support-feedback", eyebrow: "Experience", title: "Customer experience", description: "Review posting feedback and customer follow-up signals through the Support and Operations workspace.", roles: ["owner","admin","operations","support"] },
 ];
 
 export default function AdminPage() {
