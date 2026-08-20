@@ -1,1 +1,4 @@
-Exact image source re-supplied by the user on 2026-08-20. The production login asset is uploaded as a binary Git blob and committed to public/images/loadlink-login-hero-hd.jpg. This marker exists only to distinguish this exact re-upload from earlier invalid reconstruction attempts.
+Exact login artwork re-supplied by the user on 2026-08-20.
+Original JPEG SHA-256: 7b60fd62e26de51b30395c1e8ee6b3aef40adf8c659306403af194a41185d303.
+Production high-quality WebP SHA-256: aa8633917fc45b724cb82c92f3d7281a29aa4ef20d487744942467867926a6cd.
+Production build reconstructs public/images/loadlink-login-hero-hd.webp from the canonical source parts and refuses to build if the byte count, WEBP signature, or SHA-256 differs.
