@@ -1,3 +1,4 @@
+# Triggered to reconstruct the user's original supplied LoadLink artwork exactly.
 name: Finalize exact LoadLink login artwork
 
 on:
