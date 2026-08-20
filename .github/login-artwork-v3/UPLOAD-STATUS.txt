@@ -1,0 +1,1 @@
+Exact image source re-supplied by the user on 2026-08-20. The production login asset is uploaded as a binary Git blob and committed to public/images/loadlink-login-hero-hd.jpg. This marker exists only to distinguish this exact re-upload from earlier invalid reconstruction attempts.
