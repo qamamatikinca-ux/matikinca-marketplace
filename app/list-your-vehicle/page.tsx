@@ -34,6 +34,11 @@ function seedLegacyListingAccess(packageType: ListingPackage) {
   }
 }
 
+function openListingEntry(mode: Exclude<EntryMode, "">) {
+  const destination = `/list-your-vehicle?entry=${encodeURIComponent(mode)}#listing-form`;
+  window.location.assign(destination);
+}
+
 export default function ListYourVehiclePage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [booted, setBooted] = useState(false);
@@ -130,6 +135,32 @@ export default function ListYourVehiclePage() {
     };
   }, [booted, dealershipRoute, entryMode]);
 
+  useEffect(() => {
+    if (!entryMode || !entryReady || dealerPostingGate) return;
+    let cancelled = false;
+    let timer = 0;
+    let attempts = 0;
+
+    const focusForm = () => {
+      if (cancelled) return;
+      const form = document.getElementById("listing-form");
+      if (form) {
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+        const focusable = form.querySelector<HTMLElement>("input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])");
+        window.setTimeout(() => focusable?.focus({ preventScroll: true }), 260);
+        return;
+      }
+      attempts += 1;
+      if (attempts < 8) timer = window.setTimeout(focusForm, 80);
+    };
+
+    timer = window.setTimeout(focusForm, 40);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [entryMode, entryReady, dealerPostingGate]);
+
   if (!booted) return <LoadLinkLoading />;
 
   if (entryMode && dealershipRoute) return <LegacyVehicleListingPage />;
@@ -162,18 +193,20 @@ export default function ListYourVehiclePage() {
               >
                 View available vehicles &amp; units
               </a>
-              <a
-                href="/list-your-vehicle?entry=vehicle#listing-form"
+              <button
+                type="button"
+                onClick={() => openListingEntry("vehicle")}
                 className="flex min-h-[58px] items-center justify-center rounded-full border border-white/65 bg-black/78 px-6 text-center text-[13px] font-black uppercase tracking-[.08em] text-white shadow-[0_14px_34px_rgba(0,0,0,.28)] backdrop-blur-sm transition active:scale-[.99] md:text-sm"
               >
                 List vehicle
-              </a>
-              <a
-                href="/list-your-vehicle?entry=mobile-unit#listing-form"
+              </button>
+              <button
+                type="button"
+                onClick={() => openListingEntry("mobile-unit")}
                 className="flex min-h-[58px] items-center justify-center rounded-full border border-white/65 bg-black/78 px-6 text-center text-[13px] font-black uppercase tracking-[.08em] text-white shadow-[0_14px_34px_rgba(0,0,0,.28)] backdrop-blur-sm transition active:scale-[.99] md:text-sm"
               >
                 List mobile unit
-              </a>
+              </button>
             </div>
           </div>
         </section>
