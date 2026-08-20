@@ -8,7 +8,7 @@ const STYLE_ID = "loadlink-universal-ui-guard-style";
 const INTEGER_TERMS = /(?:year|age|quantity|qty|count|number of|fleet|seats|capacity|mileage|odometer|kilomet|postal|otp|pin|code)/i;
 const PHONE_TERMS = /(?:phone|mobile|whatsapp|contact number|telephone)/i;
 const DECIMAL_TERMS = /(?:price|rate|amount|budget|cost|weight|distance|ton|litre|liter|km)/i;
-const INTERNAL_REPAIR_TEXT = /(?:run|apply|install).{0,45}(?:loadlink|supabase|marketplace).{0,35}(?:sql|patch|migration)|(?:supabase|postgres|pgrst).{0,30}(?:repair|sql|schema cache)/i;
+const INTERNAL_REPAIR_TEXT = /(?:run|apply|install).{0,45}(?:loadlink|supabase|marketplace).{0,35}(?:sql|patch|migration)|(?:supabase|postgres|pgrst).{0,30}(?:repair|sql|schema cache)|(?:vapid|push-notifications-setup\.txt)/i;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PENDING_REPORTS_KEY = "loadlink-pending-reports";
 let reportSyncBusy = false;
@@ -66,11 +66,14 @@ function sanitizeInternalRepairMessages(root: ParentNode) {
 
     const messaging = /messag|chat|conversation/i.test(text);
     const posting = /post|listing|vehicle|resubmit/i.test(text);
+    const push = /push|notification|vapid/i.test(text);
     node.textContent = messaging
       ? "LoadLink messaging is temporarily unavailable. Refresh once and try again."
       : posting
         ? "LoadLink could not save that post change right now. Your information is still safe; refresh once and try again."
-        : "LoadLink could not complete that action right now. Refresh once and try again.";
+        : push
+          ? "Push notifications are not available on this deployment yet."
+          : "LoadLink could not complete that action right now. Refresh once and try again.";
   });
 }
 
@@ -80,6 +83,9 @@ function repairLegacyRouteLinks(root: ParentNode) {
   });
   root.querySelectorAll<HTMLAnchorElement>('a[href="/jobs/list?mode=asset"]').forEach((link) => {
     link.setAttribute("href", "/list-your-vehicle");
+  });
+  root.querySelectorAll<HTMLAnchorElement>('a[href="/jobs/list?upgrade=pro"]').forEach((link) => {
+    link.setAttribute("href", "/packages");
   });
 }
 
@@ -95,6 +101,10 @@ function repairLegacyLocation(pathname: string) {
     url.searchParams.delete("mode");
     url.searchParams.set("type", "contract");
     window.location.replace(`${url.pathname}?${url.searchParams.toString()}${url.hash}`);
+    return true;
+  }
+  if (url.searchParams.get("upgrade") === "pro") {
+    window.location.replace("/packages");
     return true;
   }
   return false;
