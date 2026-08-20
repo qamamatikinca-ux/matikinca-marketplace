@@ -21,29 +21,29 @@ export default function AuthLandingShell({
 
   return (
     <main
-      data-loadlink-auth-landing="v287"
+      data-loadlink-auth-landing="v288-final-artwork"
       className={`relative min-h-[100svh] overflow-x-hidden ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}
     >
       <div className="mx-auto min-h-[100svh] w-full max-w-[760px] lg:flex lg:max-w-none">
-        <section className={`loadlink-auth-hero relative h-[54svh] min-h-[390px] overflow-hidden sm:h-[59svh] sm:min-h-[455px] lg:h-screen lg:min-h-screen lg:flex-1 ${darkMode ? "bg-[#110905]" : "bg-[#d56d1d]"}`}>
+        <section className={`loadlink-auth-hero relative h-[54svh] min-h-[390px] overflow-hidden sm:h-[59svh] sm:min-h-[455px] lg:h-screen lg:min-h-screen lg:flex-1 ${darkMode ? "bg-[#100805]" : "bg-[#c95f17]"}`}>
           <img
-            src="/images/loadlink-login-hero-hd.webp"
+            src="/images/loadlink-login-hero-final.jpg"
             alt="LoadLink logistics made easier"
-            className="loadlink-auth-hero-image absolute inset-0 h-full w-full object-cover object-center"
+            className="loadlink-auth-hero-image absolute inset-0 h-full w-full scale-[1.035] object-cover object-center opacity-[.92] saturate-[.9] contrast-[.96]"
             loading="eager"
             fetchPriority="high"
             decoding="async"
           />
-          <div className="absolute inset-0 z-[1] bg-black/[.05]" aria-hidden="true" />
+          <div className={`absolute inset-0 z-[1] ${darkMode ? "bg-black/20" : "bg-[#f4efe3]/[.035]"}`} aria-hidden="true" />
           <div
-            className={`absolute inset-x-0 bottom-0 z-[2] h-[34%] ${darkMode ? "bg-gradient-to-b from-transparent via-black/30 to-black" : "bg-gradient-to-b from-transparent via-[#f4efe3]/20 to-[#f4efe3]"}`}
+            className={`absolute inset-x-0 bottom-0 z-[2] h-[46%] ${darkMode ? "bg-gradient-to-b from-transparent via-black/40 to-black" : "bg-gradient-to-b from-transparent via-[#f4efe3]/28 to-[#f4efe3]"}`}
             aria-hidden="true"
           />
           <div
-            className={`absolute inset-y-0 right-0 z-[2] hidden w-[28%] lg:block ${darkMode ? "bg-gradient-to-r from-transparent to-black" : "bg-gradient-to-r from-transparent to-[#f4efe3]"}`}
+            className={`absolute inset-y-0 right-0 z-[2] hidden w-[34%] lg:block ${darkMode ? "bg-gradient-to-r from-transparent via-black/20 to-black" : "bg-gradient-to-r from-transparent via-[#f4efe3]/18 to-[#f4efe3]"}`}
             aria-hidden="true"
           />
-          <div className="loadlink-auth-hero-vignette absolute inset-0 z-[3]" aria-hidden="true" />
+          <div className="absolute inset-0 z-[3] bg-[radial-gradient(circle_at_50%_34%,transparent_0%,transparent_38%,rgba(0,0,0,.16)_100%)]" aria-hidden="true" />
           <div className="absolute inset-x-0 top-0 z-10 p-5 sm:p-7 lg:p-9">
             <Link
               href="/"
@@ -60,9 +60,7 @@ export default function AuthLandingShell({
         </section>
 
         <section
-          className={`loadlink-glass loadlink-auth-panel relative z-20 -mt-8 rounded-t-[30px] border px-5 pb-[max(1.35rem,env(safe-area-inset-bottom))] pt-7 shadow-[0_-16px_40px_rgba(0,0,0,.08)] sm:px-8 sm:pt-8 lg:mt-0 lg:flex lg:w-[min(45vw,560px)] lg:flex-col lg:justify-center lg:rounded-none lg:border-l lg:border-t-0 lg:px-11 lg:shadow-[-18px_0_46px_rgba(0,0,0,.08)] ${
-            darkMode ? "text-white" : "text-black"
-          }`}
+          className={`loadlink-glass loadlink-auth-panel relative z-20 -mt-8 rounded-t-[30px] border px-5 pb-[max(1.35rem,env(safe-area-inset-bottom))] pt-7 shadow-[0_-16px_40px_rgba(0,0,0,.08)] sm:px-8 sm:pt-8 lg:mt-0 lg:flex lg:w-[min(45vw,560px)] lg:flex-col lg:justify-center lg:rounded-none lg:border-l lg:border-t-0 lg:px-11 lg:shadow-[-18px_0_46px_rgba(0,0,0,.08)] ${darkMode ? "text-white" : "text-black"}`}
         >
           <div className="mx-auto w-full max-w-[390px]">
             <div className="text-center">
