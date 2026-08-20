@@ -1,25 +1,50 @@
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
-const parts = [0, 1, 2, 3, 4].map((index) =>
-  join(root, ".github", "image-parts", `login-hero-0${index}.txt`),
-);
+const sourceDir = join(root, ".github", "login-artwork-v3");
+const parts = [
+  "part-00.b64",
+  "part-00-tail.b64",
+  "part-01.b64",
+  "part-02.b64",
+  "part-03.b64",
+  "part-04.b64",
+  "part-05.b64",
+  "part-06.b64",
+  "part-07.b64",
+  "part-08.b64",
+  "part-09.b64",
+  "part-10-canonical.b64",
+  "part-11-canonical.b64",
+  "part-12-canonical.b64",
+];
+
+const expectedSha256 = "aa8633917fc45b724cb82c92f3d7281a29aa4ef20d487744942467867926a6cd";
+const expectedBytes = 136_014;
 
 const encoded = parts
-  .map((path) => readFileSync(path, "utf8"))
+  .map((part) => readFileSync(join(sourceDir, part), "utf8"))
   .join("")
   .replace(/\s+/g, "");
 
 const image = Buffer.from(encoded, "base64");
-if (image.length < 50_000) {
-  throw new Error(`LoadLink login artwork is unexpectedly small (${image.length} bytes).`);
+const actualSha256 = createHash("sha256").update(image).digest("hex");
+
+if (image.length !== expectedBytes) {
+  throw new Error(`LoadLink login artwork size mismatch: expected ${expectedBytes}, received ${image.length}.`);
+}
+if (actualSha256 !== expectedSha256) {
+  throw new Error(`LoadLink login artwork checksum mismatch: expected ${expectedSha256}, received ${actualSha256}.`);
 }
 if (image.subarray(0, 4).toString("ascii") !== "RIFF" || image.subarray(8, 12).toString("ascii") !== "WEBP") {
-  throw new Error("Reconstructed LoadLink login artwork is not a valid WEBP file.");
+  throw new Error("LoadLink login artwork failed WEBP signature validation.");
 }
 
 const imagesDir = join(root, "public", "images");
 mkdirSync(imagesDir, { recursive: true });
-writeFileSync(join(imagesDir, "loadlink-login-hero-hd.webp"), image);
-console.log(`LoadLink login artwork reconstructed: ${image.length} bytes`);
+const output = join(imagesDir, "loadlink-login-hero-hd.webp");
+writeFileSync(output, image);
+
+console.log(`Verified LoadLink login artwork: ${image.length} bytes, sha256 ${actualSha256}`);
