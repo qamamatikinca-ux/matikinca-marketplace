@@ -23,17 +23,27 @@ function scrollToToolWorkspace() {
   window.setTimeout(seek, 0);
 }
 
-function restoreClassicSinglePageNavigation() {
-  const section = document.getElementById("matching-jobs");
-  if (!section || section.querySelector('[data-loadlink-pagination="true"]') || section.querySelector('[data-loadlink-classic-single-page="true"]')) return;
-  if (!section.querySelector('article[id^="job-"]')) return;
-
-  const nav = document.createElement("nav");
+function styleSinglePageNavigation(nav: HTMLElement) {
   nav.dataset.loadlinkClassicSinglePage = "true";
   nav.dataset.loadlinkPagination = "true";
   nav.setAttribute("aria-label", "Listing pages");
   nav.className = "loadlink-classic-pagination mt-7";
   nav.innerHTML = '<div class="loadlink-classic-pagination__bar"><button type="button" disabled aria-label="Previous page">‹</button><button type="button" class="is-active" aria-current="page" aria-label="Page 1">1</button><button type="button" disabled aria-label="Next page">›</button></div><p>Page 1 of 1</p>';
+}
+
+function restoreClassicSinglePageNavigation() {
+  const section = document.getElementById("matching-jobs");
+  if (!section || !section.querySelector('article[id^="job-"]')) return;
+  if (section.querySelector('[data-loadlink-pagination="true"]')) return;
+
+  const legacy = section.querySelector<HTMLElement>('[data-loadlink-single-page="true"]');
+  if (legacy) {
+    styleSinglePageNavigation(legacy);
+    return;
+  }
+
+  const nav = document.createElement("nav");
+  styleSinglePageNavigation(nav);
   section.appendChild(nav);
 }
 
@@ -75,9 +85,7 @@ export default function LoadLinkAuditUpdateBridge() {
           display: flex;
           align-items: center;
         }
-        article[data-loadlink-neat-card="true"] h3 {
-          text-wrap: balance;
-        }
+        article[data-loadlink-neat-card="true"] h3 { text-wrap: balance; }
         .loadlink-classic-pagination { display:flex; flex-direction:column; align-items:center; }
         .loadlink-classic-pagination__bar {
           display:flex; align-items:center; gap:8px; padding:8px;
