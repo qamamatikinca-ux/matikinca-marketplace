@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import VehicleMarketplaceHub from "@/components/VehicleMarketplaceHub";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
@@ -37,7 +36,6 @@ function seedLegacyListingAccess(packageType: ListingPackage) {
 
 export default function ListYourVehiclePage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
-  const searchParams = useSearchParams();
   const [booted, setBooted] = useState(false);
   const [entryMode, setEntryMode] = useState<EntryMode>("");
   const [dealershipRoute, setDealershipRoute] = useState(false);
@@ -48,7 +46,7 @@ export default function ListYourVehiclePage() {
 
   useEffect(() => {
     const url = new URL(window.location.href);
-    const requested = searchParams.get("entry");
+    const requested = url.searchParams.get("entry");
     const mode: EntryMode = requested === "vehicle" || requested === "mobile-unit" ? requested : "";
 
     setEntryMode(mode);
@@ -74,7 +72,7 @@ export default function ListYourVehiclePage() {
     }
 
     setBooted(true);
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
     if (!booted || dealershipRoute || !entryMode) return;
@@ -83,7 +81,7 @@ export default function ListYourVehiclePage() {
     async function prepareListingEntry() {
       const user = await getFreshAuthenticatedUser();
       if (!user) {
-        const returnTo = `/list-your-vehicle?entry=${entryMode}`;
+        const returnTo = `/list-your-vehicle?entry=${entryMode}#listing-form`;
         window.location.replace(`/login?returnTo=${encodeURIComponent(returnTo)}`);
         return;
       }
@@ -138,7 +136,7 @@ export default function ListYourVehiclePage() {
 
   if (!entryMode) {
     return (
-      <main className={`min-h-screen ${page}`} data-loadlink-vehicle-portal="drivers-style-v5">
+      <main className={`min-h-screen ${page}`} data-loadlink-vehicle-portal="drivers-style-v6">
         <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
         <section className="relative flex min-h-[690px] w-full items-end overflow-hidden bg-black text-white md:min-h-[620px]">
@@ -164,20 +162,18 @@ export default function ListYourVehiclePage() {
               >
                 View available vehicles &amp; units
               </a>
-              <Link
+              <a
                 href="/list-your-vehicle?entry=vehicle#listing-form"
-                scroll
                 className="flex min-h-[58px] items-center justify-center rounded-full border border-white/65 bg-black/78 px-6 text-center text-[13px] font-black uppercase tracking-[.08em] text-white shadow-[0_14px_34px_rgba(0,0,0,.28)] backdrop-blur-sm transition active:scale-[.99] md:text-sm"
               >
                 List vehicle
-              </Link>
-              <Link
+              </a>
+              <a
                 href="/list-your-vehicle?entry=mobile-unit#listing-form"
-                scroll
                 className="flex min-h-[58px] items-center justify-center rounded-full border border-white/65 bg-black/78 px-6 text-center text-[13px] font-black uppercase tracking-[.08em] text-white shadow-[0_14px_34px_rgba(0,0,0,.28)] backdrop-blur-sm transition active:scale-[.99] md:text-sm"
               >
                 List mobile unit
-              </Link>
+              </a>
             </div>
           </div>
         </section>
@@ -251,13 +247,13 @@ export default function ListYourVehiclePage() {
   }
 
   return (
-    <div id="listing-form" data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v5" className="scroll-mt-20">
+    <div id="listing-form" data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v6" className="scroll-mt-20">
       <LegacyVehicleListingPage />
       <style jsx global>{`
-        [data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v5"] main > section:first-of-type {
+        [data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v6"] main > section:first-of-type {
           display: none !important;
         }
-        [data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v5"] #plans {
+        [data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v6"] #plans {
           display: none !important;
         }
       `}</style>
