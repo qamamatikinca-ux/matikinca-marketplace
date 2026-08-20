@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import VehicleMarketplaceHub from "@/components/VehicleMarketplaceHub";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
@@ -25,8 +26,6 @@ function seedLegacyListingAccess(packageType: ListingPackage) {
       key,
       JSON.stringify({
         ...current,
-        // selectedPlan is retained only as a compatibility flag for the older form component.
-        // The package guide is no longer part of the listing journey.
         selectedPlan: packageType === "dealer" ? "dealer" : "pro",
         packageType,
       }),
@@ -38,6 +37,7 @@ function seedLegacyListingAccess(packageType: ListingPackage) {
 
 export default function ListYourVehiclePage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
+  const searchParams = useSearchParams();
   const [booted, setBooted] = useState(false);
   const [entryMode, setEntryMode] = useState<EntryMode>("");
   const [dealershipRoute, setDealershipRoute] = useState(false);
@@ -48,17 +48,15 @@ export default function ListYourVehiclePage() {
 
   useEffect(() => {
     const url = new URL(window.location.href);
-    const requested = url.searchParams.get("entry");
+    const requested = searchParams.get("entry");
     const mode: EntryMode = requested === "vehicle" || requested === "mobile-unit" ? requested : "";
 
     setEntryMode(mode);
+    setEntryReady(false);
+    setDealerPostingGate(null);
 
-    // The base vehicle route is always the Drivers-style browse-or-post portal.
-    // Old smart/dealer redirects must never bypass that choice screen.
     if (!mode) {
       setDealershipRoute(false);
-      setEntryReady(false);
-      setDealerPostingGate(null);
 
       let changed = false;
       for (const key of ["plan", "smart", "dealership"]) {
@@ -72,13 +70,11 @@ export default function ListYourVehiclePage() {
         window.history.replaceState(window.history.state, "", clean);
       }
     } else {
-      // Dealer-specific inventory is only allowed to take over after the user
-      // explicitly chooses a posting route.
       setDealershipRoute(Boolean(url.searchParams.get("dealership")));
     }
 
     setBooted(true);
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!booted || dealershipRoute || !entryMode) return;
@@ -101,8 +97,6 @@ export default function ListYourVehiclePage() {
 
         packageType = access.plan === "dealer" ? "dealer" : access.plan === "pro" ? "pro" : "standard";
 
-        // Browsing is never blocked. Dealer approval is checked only after the
-        // user has explicitly chosen to post a vehicle or mobile unit.
         if (
           intelligence?.plan === "dealer" &&
           entitledPlanStates.has(String(intelligence.plan_state)) &&
@@ -122,8 +116,7 @@ export default function ListYourVehiclePage() {
           return;
         }
       } catch {
-        // Package access is checked again at submission. A temporary access-read failure
-        // must never send the user back to a package guide or destroy their draft.
+        // Submission performs the authoritative entitlement check again.
       }
 
       seedLegacyListingAccess(packageType);
@@ -141,12 +134,11 @@ export default function ListYourVehiclePage() {
 
   if (!booted) return <LoadLinkLoading />;
 
-  // Dealer inventory can only open after an explicit posting choice.
   if (entryMode && dealershipRoute) return <LegacyVehicleListingPage />;
 
   if (!entryMode) {
     return (
-      <main className={`min-h-screen ${page}`} data-loadlink-vehicle-portal="drivers-style-v4">
+      <main className={`min-h-screen ${page}`} data-loadlink-vehicle-portal="drivers-style-v5">
         <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
         <section className="relative flex min-h-[690px] w-full items-end overflow-hidden bg-black text-white md:min-h-[620px]">
@@ -173,13 +165,15 @@ export default function ListYourVehiclePage() {
                 View available vehicles &amp; units
               </a>
               <Link
-                href="/list-your-vehicle?entry=vehicle"
+                href="/list-your-vehicle?entry=vehicle#listing-form"
+                scroll
                 className="flex min-h-[58px] items-center justify-center rounded-full border border-white/65 bg-black/78 px-6 text-center text-[13px] font-black uppercase tracking-[.08em] text-white shadow-[0_14px_34px_rgba(0,0,0,.28)] backdrop-blur-sm transition active:scale-[.99] md:text-sm"
               >
                 List vehicle
               </Link>
               <Link
-                href="/list-your-vehicle?entry=mobile-unit"
+                href="/list-your-vehicle?entry=mobile-unit#listing-form"
+                scroll
                 className="flex min-h-[58px] items-center justify-center rounded-full border border-white/65 bg-black/78 px-6 text-center text-[13px] font-black uppercase tracking-[.08em] text-white shadow-[0_14px_34px_rgba(0,0,0,.28)] backdrop-blur-sm transition active:scale-[.99] md:text-sm"
               >
                 List mobile unit
@@ -257,13 +251,13 @@ export default function ListYourVehiclePage() {
   }
 
   return (
-    <div data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v4">
+    <div id="listing-form" data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v5" className="scroll-mt-20">
       <LegacyVehicleListingPage />
       <style jsx global>{`
-        [data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v4"] main > section:first-of-type {
+        [data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v5"] main > section:first-of-type {
           display: none !important;
         }
-        [data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v4"] #plans {
+        [data-loadlink-vehicle-listing-shell="direct-no-plan-guide-v5"] #plans {
           display: none !important;
         }
       `}</style>
