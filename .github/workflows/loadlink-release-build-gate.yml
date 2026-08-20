@@ -1,0 +1,67 @@
+name: LoadLink release build gate
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/loadlink-release-build-gate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  release-build-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Prepare production environment and build
+        id: gate
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${VERCEL_TOKEN:-}" || { echo "VERCEL_TOKEN is missing"; exit 1; }
+          npm ci
+          npx --yes vercel@latest link --yes --project matikinca-marketplace --scope loadlink --token "$VERCEL_TOKEN"
+          npx --yes vercel@latest pull --yes --environment=production --scope loadlink --token "$VERCEL_TOKEN"
+          NEXT_TELEMETRY_DISABLED=1 npx --yes vercel@latest build --prod --yes --scope loadlink --token "$VERCEL_TOKEN"
+
+      - name: Publish LoadLink build-gate status
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          BUILD_OUTCOME: ${{ steps.gate.outcome }}
+        with:
+          script: |
+            const passed = process.env.BUILD_OUTCOME === 'success';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: passed ? 'success' : 'failure',
+              context: 'LoadLink Release Build Gate',
+              description: passed
+                ? 'Production-equivalent Vercel build completed successfully.'
+                : 'Production-equivalent Vercel build failed. Inspect the Actions run before release.'
+            });
+
+      - name: Fail workflow when build gate fails
+        if: steps.gate.outcome != 'success'
+        run: exit 1
