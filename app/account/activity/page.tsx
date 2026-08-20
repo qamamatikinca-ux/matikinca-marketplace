@@ -3,10 +3,6 @@
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
 import { useEffect, useMemo, useState } from "react";
-import AuthStatusButton from "@/components/AuthStatusButton";
-import HomeLogoLink from "@/components/HomeLogoLink";
-import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
-import SiteMenu from "@/components/SiteMenu";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
@@ -47,8 +43,9 @@ export default function AccountActivityPage() {
     setLoading(true);
     setError("");
     try {
-      if (!isSupabaseConfigured) throw new Error("LoadLink account services are not connected on this deployment.");
-      const { data: userData } = await supabase.auth.getUser();
+      if (!isSupabaseConfigured) throw new Error("Account activity is temporarily unavailable. Please try again later.");
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
       const user = userData.user;
       if (!user || user.is_anonymous) { window.location.href = `/login?next=${encodeURIComponent("/account/activity")}`; return; }
       setDeviceId(currentDeviceId());
@@ -60,11 +57,17 @@ export default function AccountActivityPage() {
       ]);
 
       if (!deviceResult.error) setDevices((deviceResult.data || []) as DeviceRow[]);
+      else setDevices([]);
       if (!eventResult.error) setEvents((eventResult.data || []) as ActivityRow[]);
+      else setEvents([]);
       if (!billingResult.error) setBilling((billingResult.data || []) as BillingRow[]);
-      if (deviceResult.error && /does not exist|schema cache/i.test(deviceResult.error.message)) setError("Run the latest LoadLink activity SQL once to enable device history.");
+      else setBilling([]);
+
+      const failed = [deviceResult.error && "device history", eventResult.error && "account activity", billingResult.error && "billing activity"].filter(Boolean) as string[];
+      if (failed.length) setError(`LoadLink could not load ${failed.join(", ")}. The other account records shown here are still current.`);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Account activity could not be loaded.");
+      const raw = caught instanceof Error ? caught.message : "";
+      setError(/jwt|session|auth/i.test(raw) ? "Your sign-in session could not be confirmed. Sign in again and retry." : raw || "Account activity could not be loaded.");
     } finally {
       setLoading(false);
     }
@@ -74,22 +77,39 @@ export default function AccountActivityPage() {
 
   const loginEvents = useMemo(() => events.filter((event) => event.activity_type === "login"), [events]);
   const otherEvents = useMemo(() => events.filter((event) => event.activity_type !== "login").slice(0, 12), [events]);
-
-  function handleSignOutOtherDevices(): void { void signOutOtherDevices(); }
+  const hasOtherDevices = useMemo(() => devices.some((device) => !deviceId || device.device_id !== deviceId), [devices, deviceId]);
 
   async function signOutOtherDevices() {
-    if (signingOutOthers) return;
+    if (signingOutOthers || !hasOtherDevices) return;
     setSigningOutOthers(true);
     setNotice("");
     try {
       const result = await supabase.auth.signOut({ scope: "others" });
       if (result.error) throw result.error;
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData.user) await supabase.from("loadlink_account_devices").delete().eq("user_id", userData.user.id).neq("device_id", deviceId || "__current__");
-      setDevices((current) => current.filter((device) => device.device_id === deviceId));
+
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      if (authError || !userData.user) {
+        setNotice("Other LoadLink sessions were signed out. Refresh this page to update device history.");
+        return;
+      }
+
+      const cleanup = await supabase
+        .from("loadlink_account_devices")
+        .delete()
+        .eq("user_id", userData.user.id)
+        .neq("device_id", deviceId || "__current__");
+
+      if (cleanup.error) {
+        setNotice("Other LoadLink sessions were signed out, but the device-history list could not be refreshed yet.");
+        await load();
+        return;
+      }
+
+      setDevices((current) => current.filter((device) => deviceId && device.device_id === deviceId));
       setNotice("Other LoadLink sessions were signed out.");
     } catch (caught) {
-      setNotice(caught instanceof Error ? caught.message : "Other sessions could not be signed out.");
+      const raw = caught instanceof Error ? caught.message : "";
+      setNotice(/jwt|session|auth/i.test(raw) ? "Your session could not be confirmed. Sign in again before managing other devices." : "Other sessions could not be signed out. No device history was changed.");
     } finally {
       setSigningOutOthers(false);
     }
@@ -107,7 +127,10 @@ export default function AccountActivityPage() {
 
         <div className="mt-7 grid gap-4 md:grid-cols-[1.05fr_.95fr]">
           <section className={`overflow-hidden rounded-[28px] border ${card}`}>
-            <div className={`flex items-start justify-between gap-4 border-b p-5 ${darkMode ? "border-white/10" : "border-black/10"}`}><div><p className="text-xs font-black opacity-50">Devices</p><h2 className="mt-1 text-2xl font-black tracking-[-.035em]">Recent signed-in devices</h2><p className={`mt-1 text-xs font-semibold leading-5 ${muted}`}>Devices that recently accessed this LoadLink account.</p></div><button type="button" onClick={handleSignOutOtherDevices} disabled={signingOutOthers || loading} className={`min-h-10 shrink-0 rounded-xl border px-3 text-[10px] font-black ${darkMode ? "border-white/12" : "border-black/10"}`}>{signingOutOthers ? "Signing out…" : "Sign out others"}</button></div>
+            <div className={`flex items-start justify-between gap-4 border-b p-5 ${darkMode ? "border-white/10" : "border-black/10"}`}>
+              <div><p className="text-xs font-black opacity-50">Devices</p><h2 className="mt-1 text-2xl font-black tracking-[-.035em]">Recent signed-in devices</h2><p className={`mt-1 text-xs font-semibold leading-5 ${muted}`}>Devices that recently accessed this LoadLink account.</p></div>
+              <button type="button" onClick={() => void signOutOtherDevices()} disabled={signingOutOthers || loading || !hasOtherDevices} className={`min-h-10 shrink-0 rounded-xl border px-3 text-[10px] font-black disabled:opacity-40 ${darkMode ? "border-white/12" : "border-black/10"}`}>{signingOutOthers ? "Signing out…" : "Sign out others"}</button>
+            </div>
             {loading ? <LoadingRows darkMode={darkMode} /> : devices.length ? <div className="divide-y divide-current/10">{devices.map((device) => { const current = device.device_id === deviceId; return <div key={device.id} className="flex items-center gap-4 p-4 md:p-5"><span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${current ? "bg-[#f6b800] text-black" : "bg-black text-[#f6b800]"}`}><DeviceIcon /></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-sm font-black">{device.label || "LoadLink device"}</p>{current ? <span className="rounded-full bg-emerald-500/12 px-2 py-1 text-[8px] font-black uppercase text-emerald-500">This device</span> : null}</div><p className={`mt-1 text-[10px] font-semibold ${muted}`}>Last seen {dateTime(device.last_seen)}</p></div></div>; })}</div> : <Empty copy="No device history yet. This screen will populate as you use LoadLink." muted={muted} />}
           </section>
 
