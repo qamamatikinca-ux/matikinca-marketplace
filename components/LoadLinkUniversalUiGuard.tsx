@@ -74,6 +74,32 @@ function sanitizeInternalRepairMessages(root: ParentNode) {
   });
 }
 
+function repairLegacyRouteLinks(root: ParentNode) {
+  root.querySelectorAll<HTMLAnchorElement>('a[href="/jobs/list?mode=contract"]').forEach((link) => {
+    link.setAttribute("href", "/jobs/list?type=contract");
+  });
+  root.querySelectorAll<HTMLAnchorElement>('a[href="/jobs/list?mode=asset"]').forEach((link) => {
+    link.setAttribute("href", "/list-your-vehicle");
+  });
+}
+
+function repairLegacyLocation(pathname: string) {
+  if (pathname !== "/jobs/list") return false;
+  const url = new URL(window.location.href);
+  const mode = url.searchParams.get("mode");
+  if (mode === "asset") {
+    window.location.replace("/list-your-vehicle");
+    return true;
+  }
+  if (mode === "contract" && url.searchParams.get("type") !== "contract") {
+    url.searchParams.delete("mode");
+    url.searchParams.set("type", "contract");
+    window.location.replace(`${url.pathname}?${url.searchParams.toString()}${url.hash}`);
+    return true;
+  }
+  return false;
+}
+
 async function syncPendingListingReports() {
   if (reportSyncBusy || typeof window === "undefined") return;
   reportSyncBusy = true;
@@ -182,6 +208,8 @@ export default function LoadLinkUniversalUiGuard() {
   const pathname = usePathname();
 
   useEffect(() => {
+    if (repairLegacyLocation(pathname)) return;
+
     if (!document.getElementById(STYLE_ID)) {
       const style = document.createElement("style");
       style.id = STYLE_ID;
@@ -214,6 +242,7 @@ export default function LoadLinkUniversalUiGuard() {
       root.querySelectorAll<HTMLInputElement>("input").forEach(fixNumericInput);
       hideDeliveryBadges(root);
       sanitizeInternalRepairMessages(root);
+      repairLegacyRouteLinks(root);
       const sliderChanged = polishSliders(root);
       ensureSinglePageNavigation(pathname);
       if (sliderChanged) window.dispatchEvent(new Event("loadlink:content-updated"));
