@@ -8,23 +8,21 @@ const DOTS_ATTRIBUTE = "data-loadlink-swipe-dots";
 
 type EnhancedRail = HTMLElement & { __loadlinkSwipeCleanup?: () => void };
 
-function contextText(rail: HTMLElement) {
-  return (rail.closest("section, article, main, div[data-section]")?.textContent || "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-}
-
 function shouldEnhance(rail: HTMLElement) {
   if (rail.closest("[data-loadlink-no-swipe-dots='true']")) return false;
   if (rail.getAttribute(DOTS_ATTRIBUTE) === "false") return false;
   if (rail.scrollWidth <= rail.clientWidth + 12) return false;
-  if (rail.getAttribute(DOTS_ATTRIBUTE) === "true") return true;
-  if (window.location.pathname === "/") {
-    const text = contextText(rail);
-    return /recent activity|logistics news|industry updates|headlines/.test(text);
-  }
   return true;
+}
+
+function railItems(rail: HTMLElement) {
+  return Array.from(rail.children).filter((child): child is HTMLElement => {
+    if (!(child instanceof HTMLElement)) return false;
+    if (child.hidden || child.getAttribute("aria-hidden") === "true") return false;
+    const style = window.getComputedStyle(child);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+    return child.getBoundingClientRect().width > 36;
+  });
 }
 
 function enhance(rail: EnhancedRail) {
@@ -32,7 +30,7 @@ function enhance(rail: EnhancedRail) {
 
   const dots = document.createElement("div");
   dots.className = "loadlink-swipe-dots";
-  dots.setAttribute("aria-label", "Slider pages");
+  dots.setAttribute("aria-label", "Slider items");
   Object.assign(dots.style, {
     display: "flex",
     alignItems: "center",
@@ -45,24 +43,31 @@ function enhance(rail: EnhancedRail) {
   let buttons: HTMLButtonElement[] = [];
   let frame = 0;
 
-  const pageCount = () => Math.max(1, Math.ceil(rail.scrollWidth / Math.max(1, rail.clientWidth)));
-
   const paint = (active: number) => {
     buttons.forEach((button, index) => {
       const selected = index === active;
       button.style.width = selected ? "34px" : "9px";
       button.style.background = selected ? "#f6b800" : "rgba(184,137,0,.28)";
-      button.setAttribute("aria-current", selected ? "page" : "false");
+      button.setAttribute("aria-current", selected ? "true" : "false");
     });
   };
 
+  const scrollToItem = (index: number) => {
+    const items = railItems(rail);
+    const item = items[index];
+    if (!item) return;
+    const max = Math.max(0, rail.scrollWidth - rail.clientWidth);
+    const centered = item.offsetLeft - Math.max(0, (rail.clientWidth - item.offsetWidth) / 2);
+    rail.scrollTo({ left: Math.min(max, Math.max(0, centered)), behavior: "smooth" });
+  };
+
   const rebuild = () => {
-    const count = pageCount();
+    const count = railItems(rail).length;
     dots.replaceChildren();
     buttons = Array.from({ length: count }, (_, index) => {
       const button = document.createElement("button");
       button.type = "button";
-      button.setAttribute("aria-label", `Go to slider page ${index + 1}`);
+      button.setAttribute("aria-label", `Go to item ${index + 1}`);
       Object.assign(button.style, {
         height: "9px",
         width: "9px",
@@ -72,11 +77,7 @@ function enhance(rail: EnhancedRail) {
         cursor: "pointer",
         transition: "width 160ms ease, background-color 160ms ease",
       });
-      button.addEventListener("click", () => {
-        const max = Math.max(0, rail.scrollWidth - rail.clientWidth);
-        const left = count <= 1 ? 0 : (index / (count - 1)) * max;
-        rail.scrollTo({ left, behavior: "smooth" });
-      });
+      button.addEventListener("click", () => scrollToItem(index));
       dots.appendChild(button);
       return button;
     });
@@ -85,11 +86,22 @@ function enhance(rail: EnhancedRail) {
   const update = () => {
     cancelAnimationFrame(frame);
     frame = requestAnimationFrame(() => {
-      const count = pageCount();
-      if (count !== buttons.length) rebuild();
-      const max = Math.max(0, rail.scrollWidth - rail.clientWidth);
-      const active = count <= 1 || max === 0 ? 0 : Math.round((rail.scrollLeft / max) * (count - 1));
-      paint(Math.min(count - 1, Math.max(0, active)));
+      const items = railItems(rail);
+      if (items.length !== buttons.length) rebuild();
+      if (!items.length) return;
+
+      const railCenter = rail.scrollLeft + rail.clientWidth / 2;
+      let active = 0;
+      let distance = Number.POSITIVE_INFINITY;
+      items.forEach((item, index) => {
+        const itemCenter = item.offsetLeft + item.offsetWidth / 2;
+        const nextDistance = Math.abs(itemCenter - railCenter);
+        if (nextDistance < distance) {
+          distance = nextDistance;
+          active = index;
+        }
+      });
+      paint(active);
     });
   };
 
@@ -100,7 +112,7 @@ function enhance(rail: EnhancedRail) {
   const resizeObserver = new ResizeObserver(update);
   resizeObserver.observe(rail);
   const childObserver = new MutationObserver(update);
-  childObserver.observe(rail, { childList: true });
+  childObserver.observe(rail, { childList: true, subtree: false });
   rail.addEventListener("scroll", update, { passive: true });
   update();
 
