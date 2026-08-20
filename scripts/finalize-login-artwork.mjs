@@ -22,7 +22,7 @@ const parts = [
 ];
 
 const expectedBytes = 136_014;
-const expectedOriginalSourceSha256 = "9e7877167b87cba3cdfa1250818c6101641024cbbf82bc52ee586942593edd27";
+const expectedOriginalSourceSha256 = "7b60fd62e26de51b30395c1e8ee6b3aef40adf8c659306403af194a41185d303";
 
 const sourceManifest = readFileSync(join(sourceDir, "source.sha256"), "utf8");
 if (!sourceManifest.includes(expectedOriginalSourceSha256)) {
