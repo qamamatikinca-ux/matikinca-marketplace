@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-prebuilt:
@@ -31,26 +31,91 @@ jobs:
           cache: npm
 
       - name: Require Vercel token
+        id: token
+        continue-on-error: true
         shell: bash
-        run: |
-          test -n "${VERCEL_TOKEN:-}" || { echo "VERCEL_TOKEN is missing"; exit 1; }
+        run: test -n "${VERCEL_TOKEN:-}"
 
       - name: Install dependencies
+        id: install
+        if: steps.token.outcome == 'success'
+        continue-on-error: true
         run: npm ci
 
       - name: Link primary LoadLink project locally
+        id: link
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
         run: npx --yes vercel@latest link --yes --project matikinca-marketplace --scope loadlink --token "$VERCEL_TOKEN"
 
       - name: Pull production environment
+        id: pull
+        if: steps.link.outcome == 'success'
+        continue-on-error: true
         run: npx --yes vercel@latest pull --yes --environment=production --scope loadlink --token "$VERCEL_TOKEN"
 
       - name: Build Vercel prebuilt output
+        id: build
+        if: steps.pull.outcome == 'success'
+        continue-on-error: true
         env:
           NEXT_TELEMETRY_DISABLED: "1"
         run: npx --yes vercel@latest build --prod --yes --scope loadlink --token "$VERCEL_TOKEN"
 
       - name: Deploy prebuilt output to primary production
-        run: npx --yes vercel@latest deploy --prebuilt --prod --yes --scope loadlink --token "$VERCEL_TOKEN"
+        id: deploy
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          DEPLOY_URL="$(npx --yes vercel@latest deploy --prebuilt --prod --yes --scope loadlink --token "$VERCEL_TOKEN" | tail -n 1 | tr -d '\r')"
+          echo "url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+          test -n "$DEPLOY_URL"
+
+      - name: Verify production routes
+        id: verify
+        if: steps.deploy.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 --output /dev/null https://matikinca-marketplace.vercel.app/login
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 --output /tmp/login-hero.webp https://matikinca-marketplace.vercel.app/images/loadlink-login-hero-hd.webp
+          test "$(wc -c < /tmp/login-hero.webp | tr -d ' ')" = "136014"
+          test "$(sha256sum /tmp/login-hero.webp | awk '{print $1}')" = "aa8633917fc45b724cb82c92f3d7281a29aa4ef20d487744942467867926a6cd"
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 --output /dev/null 'https://matikinca-marketplace.vercel.app/list-your-vehicle?entry=vehicle'
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 --output /dev/null 'https://matikinca-marketplace.vercel.app/list-your-vehicle?entry=mobile-unit'
+
+      - name: Write release receipt
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p .github/release-status
+          cat > .github/release-status/latest.txt <<EOF
+          source_commit=${GITHUB_SHA}
+          token=${{ steps.token.outcome }}
+          install=${{ steps.install.outcome }}
+          link=${{ steps.link.outcome }}
+          pull=${{ steps.pull.outcome }}
+          build=${{ steps.build.outcome }}
+          deploy=${{ steps.deploy.outcome }}
+          verify=${{ steps.verify.outcome }}
+          deployment_url=${{ steps.deploy.outputs.url }}
+          login_artwork_sha256=aa8633917fc45b724cb82c92f3d7281a29aa4ef20d487744942467867926a6cd
+          EOF
+
+      - name: Commit release receipt
+        if: always()
+        shell: bash
+        run: |
+          git config user.name "LoadLink Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add .github/release-status/latest.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Record LoadLink production release result [skip ci]"
+            git push origin HEAD:main
+          fi
 
       - name: Upload prebuilt output
         if: always()
@@ -62,13 +127,16 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
 
-# Primary-only prebuilt deployment path repaired to link by project name/scope before build and deploy — 2026-08-16.
-# Final-stage release trigger — 2026-08-18.
-# Dealership public experience production trigger — 2026-08-18 23:35 SAST.
-# Dealer package entitlement production trigger — 2026-08-19 00:16 SAST.
-# Marketplace card, mobile actions and Dealer profile gate release — 2026-08-19 01:30 SAST.
-# Final card/showroom/footer polish release — 2026-08-19 01:34 SAST.
-# Final production trigger after owner-action and profile-completion refinements — 2026-08-19 01:39 SAST.
-# Manual retry after Vercel build-rate-limit window — 2026-08-19 13:45 SAST.
-# Final full-stack audit prebuilt gate after account, messaging, notification and Dealer-route repairs — 2026-08-20 13:55 SAST.
-# Verified login artwork + Vehicle & Units interaction release — 2026-08-20 20:30 SAST.
+      - name: Enforce release result
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.token.outcome }}" = "success"
+          test "${{ steps.install.outcome }}" = "success"
+          test "${{ steps.link.outcome }}" = "success"
+          test "${{ steps.pull.outcome }}" = "success"
+          test "${{ steps.build.outcome }}" = "success"
+          test "${{ steps.deploy.outcome }}" = "success"
+          test "${{ steps.verify.outcome }}" = "success"
+
+# Verified login artwork + Vehicle & Units interaction release — 2026-08-20 20:35 SAST.
