@@ -17,6 +17,8 @@ jobs:
     timeout-minutes: 30
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: team_ltBsujLbhqOPqX4dlpWDHial
+      VERCEL_PROJECT_ID: prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt
     steps:
       - name: Checkout current main
         uses: actions/checkout@v4
@@ -49,14 +51,17 @@ jobs:
         shell: bash
         run: |
           mkdir -p .vercel
-          printf '%s\n' '{"projectId":"prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt","orgId":"team_ltBsujLbhqOPqX4dlpWDHial"}' > .vercel/project.json
-          node -e 'const p=require("./.vercel/project.json"); if(p.projectId!=="prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt"||p.orgId!=="team_ltBsujLbhqOPqX4dlpWDHial") process.exit(1)'
+          printf '%s\n' '{"projectId":"prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt","orgId":"team_ltBsujLbhqOPqX4dlpWDHial","projectName":"matikinca-marketplace"}' > .vercel/project.json
+          node -e 'const p=require("./.vercel/project.json"); if(p.projectId!==process.env.VERCEL_PROJECT_ID||p.orgId!==process.env.VERCEL_ORG_ID) process.exit(1)'
 
       - name: Pull production environment
         id: pull
         if: steps.link.outcome == 'success'
         continue-on-error: true
-        run: npx --yes vercel@latest pull --yes --environment=production --scope loadlink --token "$VERCEL_TOKEN"
+        shell: bash
+        run: |
+          set -o pipefail
+          npx --yes vercel@latest pull --yes --environment=production --scope loadlink --project "$VERCEL_PROJECT_ID" --token "$VERCEL_TOKEN" 2>&1 | tee /tmp/vercel-pull.log
 
       - name: Build Vercel prebuilt output
         id: build
@@ -64,7 +69,10 @@ jobs:
         continue-on-error: true
         env:
           NEXT_TELEMETRY_DISABLED: "1"
-        run: npx --yes vercel@latest build --prod --yes --scope loadlink --token "$VERCEL_TOKEN"
+        shell: bash
+        run: |
+          set -o pipefail
+          npx --yes vercel@latest build --prod --yes --scope loadlink --project "$VERCEL_PROJECT_ID" --token "$VERCEL_TOKEN" 2>&1 | tee /tmp/vercel-build.log
 
       - name: Deploy prebuilt output to primary production
         id: deploy
@@ -73,7 +81,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          npx --yes vercel@latest deploy --prebuilt --prod --yes --scope loadlink --token "$VERCEL_TOKEN" 2>&1 | tee /tmp/vercel-deploy.log
+          npx --yes vercel@latest deploy --prebuilt --prod --yes --scope loadlink --project "$VERCEL_PROJECT_ID" --token "$VERCEL_TOKEN" 2>&1 | tee /tmp/vercel-deploy.log
           DEPLOY_URL="$(grep -Eo 'https://[^ ]+\.vercel\.app' /tmp/vercel-deploy.log | tail -n 1 || true)"
           echo "url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
           test -n "$DEPLOY_URL"
@@ -97,6 +105,9 @@ jobs:
         shell: bash
         run: |
           mkdir -p .github/release-status
+          PULL_LOG="$(test -f /tmp/vercel-pull.log && tail -c 3500 /tmp/vercel-pull.log | base64 -w0 || true)"
+          BUILD_LOG="$(test -f /tmp/vercel-build.log && tail -c 3500 /tmp/vercel-build.log | base64 -w0 || true)"
+          DEPLOY_LOG="$(test -f /tmp/vercel-deploy.log && tail -c 3500 /tmp/vercel-deploy.log | base64 -w0 || true)"
           cat > .github/release-status/latest.txt <<EOF
           source_commit=${GITHUB_SHA}
           token=${{ steps.token.outcome }}
@@ -108,6 +119,9 @@ jobs:
           verify=${{ steps.verify.outcome }}
           deployment_url=${{ steps.deploy.outputs.url }}
           login_artwork_sha256=aa8633917fc45b724cb82c92f3d7281a29aa4ef20d487744942467867926a6cd
+          pull_log_b64=${PULL_LOG}
+          build_log_b64=${BUILD_LOG}
+          deploy_log_b64=${DEPLOY_LOG}
           EOF
 
       - name: Commit release receipt
@@ -144,4 +158,4 @@ jobs:
           test "${{ steps.deploy.outcome }}" = "success"
           test "${{ steps.verify.outcome }}" = "success"
 
-# Verified login artwork + Vehicle & Units interaction release — 2026-08-20 20:41 SAST.
+# Verified login artwork + Vehicle & Units interaction release — 2026-08-20 20:48 SAST.
