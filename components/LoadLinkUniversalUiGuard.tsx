@@ -13,12 +13,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 const PENDING_REPORTS_KEY = "loadlink-pending-reports";
 let reportSyncBusy = false;
 
-type PendingListingReport = {
-  listingId?: string;
-  title?: string;
-  reason?: string;
-  createdAt?: string;
-};
+type PendingListingReport = { listingId?: string; title?: string; reason?: string; createdAt?: string };
 
 function descriptor(input: HTMLInputElement) {
   const label = input.labels?.[0]?.textContent || "";
@@ -47,7 +42,6 @@ function hideDeliveryBadges(root: ParentNode) {
     node.style.setProperty("display", "none", "important");
     node.setAttribute("aria-hidden", "true");
   });
-
   root.querySelectorAll<HTMLElement>("button, span, div").forEach((node) => {
     if (node.children.length) return;
     const text = (node.textContent || "").trim().toLowerCase();
@@ -63,7 +57,6 @@ function sanitizeInternalRepairMessages(root: ParentNode) {
     if (node.children.length) return;
     const text = (node.textContent || "").trim();
     if (!text || !INTERNAL_REPAIR_TEXT.test(text)) return;
-
     const messaging = /messag|chat|conversation/i.test(text);
     const posting = /post|listing|vehicle|resubmit/i.test(text);
     const push = /push|notification|vapid/i.test(text);
@@ -78,15 +71,9 @@ function sanitizeInternalRepairMessages(root: ParentNode) {
 }
 
 function repairLegacyRouteLinks(root: ParentNode) {
-  root.querySelectorAll<HTMLAnchorElement>('a[href="/jobs/list?mode=contract"]').forEach((link) => {
-    link.setAttribute("href", "/jobs/list?type=contract");
-  });
-  root.querySelectorAll<HTMLAnchorElement>('a[href="/jobs/list?mode=asset"]').forEach((link) => {
-    link.setAttribute("href", "/list-your-vehicle");
-  });
-  root.querySelectorAll<HTMLAnchorElement>('a[href="/jobs/list?upgrade=pro"]').forEach((link) => {
-    link.setAttribute("href", "/packages");
-  });
+  root.querySelectorAll<HTMLAnchorElement>('a[href="/jobs/list?mode=contract"]').forEach((link) => link.setAttribute("href", "/jobs/list?type=contract"));
+  root.querySelectorAll<HTMLAnchorElement>('a[href="/jobs/list?mode=asset"]').forEach((link) => link.setAttribute("href", "/list-your-vehicle"));
+  root.querySelectorAll<HTMLAnchorElement>('a[href="/jobs/list?upgrade=pro"]').forEach((link) => link.setAttribute("href", "/packages"));
 }
 
 function repairAccountClosureAction(root: ParentNode, pathname: string) {
@@ -103,24 +90,37 @@ function repairAccountClosureAction(root: ParentNode, pathname: string) {
   });
 }
 
+function repairInvalidPhoneLinks(root: ParentNode) {
+  root.querySelectorAll<HTMLAnchorElement>('a[href^="tel:"]').forEach((link) => {
+    if (link.dataset.loadlinkPhoneChecked === "true") return;
+    link.dataset.loadlinkPhoneChecked = "true";
+    const value = decodeURIComponent(link.getAttribute("href")?.slice(4) || "");
+    const digits = value.replace(/\D/g, "");
+    if (digits.length >= 9 && digits.length <= 15) return;
+    link.removeAttribute("href");
+    link.setAttribute("aria-disabled", "true");
+    link.setAttribute("aria-label", "Phone number unavailable");
+    link.style.cursor = "not-allowed";
+    link.style.opacity = ".55";
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { kind: "info", title: "Phone number unavailable", message: "This poster has not added a callable phone number. Use LoadLink Message instead.", duration: 4200 } }));
+    });
+  });
+}
+
 function repairLegacyLocation(pathname: string) {
   if (pathname !== "/jobs/list") return false;
   const url = new URL(window.location.href);
   const mode = url.searchParams.get("mode");
-  if (mode === "asset") {
-    window.location.replace("/list-your-vehicle");
-    return true;
-  }
+  if (mode === "asset") { window.location.replace("/list-your-vehicle"); return true; }
   if (mode === "contract" && url.searchParams.get("type") !== "contract") {
     url.searchParams.delete("mode");
     url.searchParams.set("type", "contract");
     window.location.replace(`${url.pathname}?${url.searchParams.toString()}${url.hash}`);
     return true;
   }
-  if (url.searchParams.get("upgrade") === "pro") {
-    window.location.replace("/packages");
-    return true;
-  }
+  if (url.searchParams.get("upgrade") === "pro") { window.location.replace("/packages"); return true; }
   return false;
 }
 
@@ -132,85 +132,46 @@ async function syncPendingListingReports() {
     if (!raw) return;
     const parsed = JSON.parse(raw);
     const pending: PendingListingReport[] = Array.isArray(parsed) ? parsed : [];
-    if (!pending.length) {
-      window.localStorage.removeItem(PENDING_REPORTS_KEY);
-      return;
-    }
-
+    if (!pending.length) { window.localStorage.removeItem(PENDING_REPORTS_KEY); return; }
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) return;
-
     const remaining: PendingListingReport[] = [];
     let sent = 0;
     for (const report of pending.slice(0, 20)) {
       const listingId = String(report?.listingId || "");
       const reason = String(report?.reason || "").trim();
       if (!UUID_RE.test(listingId) || reason.length < 3) continue;
-
-      const result = await supabase.rpc("loadlink_report_listing", {
-        p_listing_id: listingId,
-        p_category: "other",
-        p_details: reason.slice(0, 2000),
-      });
-
+      const result = await supabase.rpc("loadlink_report_listing", { p_listing_id: listingId, p_category: "other", p_details: reason.slice(0, 2000) });
       if (result.error) {
         if (/listing not found|own listing/i.test(result.error.message || "")) continue;
         remaining.push(report);
-      } else {
-        sent += 1;
-      }
+      } else sent += 1;
     }
     if (pending.length > 20) remaining.push(...pending.slice(20));
-
     if (remaining.length) window.localStorage.setItem(PENDING_REPORTS_KEY, JSON.stringify(remaining));
     else window.localStorage.removeItem(PENDING_REPORTS_KEY);
-
-    if (sent > 0) {
-      window.dispatchEvent(new CustomEvent("loadlink:toast", {
-        detail: {
-          kind: "success",
-          title: "Report sent to LoadLink",
-          message: sent === 1 ? "Your marketplace report is now in the review queue." : `${sent} marketplace reports are now in the review queue.`,
-          duration: 5200,
-        },
-      }));
-    }
+    if (sent > 0) window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { kind: "success", title: "Report sent to LoadLink", message: sent === 1 ? "Your marketplace report is now in the review queue." : `${sent} marketplace reports are now in the review queue.`, duration: 5200 } }));
   } catch {
     // Keep pending reports on-device until a later safe retry.
-  } finally {
-    reportSyncBusy = false;
-  }
+  } finally { reportSyncBusy = false; }
 }
 
 function removeLegacySliderControls(root: ParentNode) {
-  root
-    .querySelectorAll<HTMLElement>('[data-loadlink-universal-slider-controls="true"], #loadlink-promoted-carousel-controls')
-    .forEach((node) => node.remove());
+  root.querySelectorAll<HTMLElement>('[data-loadlink-universal-slider-controls="true"], #loadlink-promoted-carousel-controls').forEach((node) => node.remove());
 }
 
 function polishSliders(root: ParentNode) {
   let changed = false;
   removeLegacySliderControls(root);
-
-  root
-    .querySelectorAll<HTMLElement>('[data-loadlink-swipe-dots="true"], #loadlink-promoted-carousel, [data-loadlink-product-slider="true"]')
-    .forEach((rail) => {
-      rail.dataset.loadlinkUniversalSlider = "true";
-      if (rail.getAttribute("data-loadlink-swipe-dots") !== "true") {
-        rail.setAttribute("data-loadlink-swipe-dots", "true");
-        changed = true;
-      }
-      rail.style.scrollSnapType = "x mandatory";
-      rail.style.scrollBehavior = "smooth";
-      rail.style.overscrollBehaviorX = "contain";
-      rail.style.setProperty("-webkit-overflow-scrolling", "touch");
-      Array.from(rail.children).forEach((child) => {
-        const card = child as HTMLElement;
-        card.style.scrollSnapAlign = "start";
-        card.style.scrollSnapStop = "always";
-      });
-    });
-
+  root.querySelectorAll<HTMLElement>('[data-loadlink-swipe-dots="true"], #loadlink-promoted-carousel, [data-loadlink-product-slider="true"]').forEach((rail) => {
+    rail.dataset.loadlinkUniversalSlider = "true";
+    if (rail.getAttribute("data-loadlink-swipe-dots") !== "true") { rail.setAttribute("data-loadlink-swipe-dots", "true"); changed = true; }
+    rail.style.scrollSnapType = "x mandatory";
+    rail.style.scrollBehavior = "smooth";
+    rail.style.overscrollBehaviorX = "contain";
+    rail.style.setProperty("-webkit-overflow-scrolling", "touch");
+    Array.from(rail.children).forEach((child) => { const card = child as HTMLElement; card.style.scrollSnapAlign = "start"; card.style.scrollSnapStop = "always"; });
+  });
   return changed;
 }
 
@@ -230,34 +191,19 @@ function ensureSinglePageNavigation(pathname: string) {
 
 export default function LoadLinkUniversalUiGuard() {
   const pathname = usePathname();
-
   useEffect(() => {
     if (repairLegacyLocation(pathname)) return;
-
     if (!document.getElementById(STYLE_ID)) {
       const style = document.createElement("style");
       style.id = STYLE_ID;
       style.textContent = `
-        button[aria-label="Close account menu"] {
-          background: rgba(0,0,0,.34) !important;
-          -webkit-backdrop-filter: blur(15px) saturate(112%) !important;
-          backdrop-filter: blur(15px) saturate(112%) !important;
-        }
-        button[aria-label="Close More"] {
-          background: rgba(0,0,0,.46) !important;
-          -webkit-backdrop-filter: blur(12px) saturate(110%) !important;
-          backdrop-filter: blur(12px) saturate(110%) !important;
-        }
-        [data-loadlink-universal-slider="true"] { scrollbar-width: none; }
+        button[aria-label="Close account menu"] { background:rgba(0,0,0,.34)!important; -webkit-backdrop-filter:blur(15px) saturate(112%)!important; backdrop-filter:blur(15px) saturate(112%)!important; }
+        button[aria-label="Close More"] { background:rgba(0,0,0,.46)!important; -webkit-backdrop-filter:blur(12px) saturate(110%)!important; backdrop-filter:blur(12px) saturate(110%)!important; }
+        [data-loadlink-universal-slider="true"] { scrollbar-width:none; }
         [data-loadlink-universal-slider="true"]::-webkit-scrollbar { display:none; }
-        [data-loadlink-universal-slider-controls="true"], #loadlink-promoted-carousel-controls { display:none !important; }
-        @media (max-width: 639px) {
-          [data-loadlink-universal-slider="true"] { padding-right: 9vw !important; }
-          [data-loadlink-universal-slider="true"] > * { max-width: 84vw; }
-        }
-        input, select, textarea, button { max-width: 100%; }
-        img { max-width: 100%; }
-        [role="dialog"], [aria-modal="true"] { overscroll-behavior: contain; }
+        [data-loadlink-universal-slider-controls="true"], #loadlink-promoted-carousel-controls { display:none!important; }
+        @media (max-width:639px) { [data-loadlink-universal-slider="true"] { padding-right:9vw!important; } [data-loadlink-universal-slider="true"] > * { max-width:84vw; } }
+        input,select,textarea,button { max-width:100%; } img { max-width:100%; } [role="dialog"],[aria-modal="true"] { overscroll-behavior:contain; }
       `;
       document.head.appendChild(style);
     }
@@ -268,6 +214,7 @@ export default function LoadLinkUniversalUiGuard() {
       sanitizeInternalRepairMessages(root);
       repairLegacyRouteLinks(root);
       repairAccountClosureAction(root, pathname);
+      repairInvalidPhoneLinks(root);
       const sliderChanged = polishSliders(root);
       ensureSinglePageNavigation(pathname);
       if (sliderChanged) window.dispatchEvent(new Event("loadlink:content-updated"));
@@ -287,7 +234,6 @@ export default function LoadLinkUniversalUiGuard() {
     window.addEventListener("focus", tryReportSync);
     window.addEventListener("loadlink-account-state-changed", tryReportSync as EventListener);
     document.addEventListener("click", onDocumentClick);
-
     const observer = new MutationObserver((records) => {
       records.forEach((record) => record.addedNodes.forEach((node) => {
         if (!(node instanceof HTMLElement)) return;
@@ -305,6 +251,5 @@ export default function LoadLinkUniversalUiGuard() {
       document.removeEventListener("click", onDocumentClick);
     };
   }, [pathname]);
-
   return null;
 }
