@@ -5,10 +5,6 @@ import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import HomeLogoLink from "@/components/HomeLogoLink";
-import SiteMenu from "@/components/SiteMenu";
-import AuthStatusButton from "@/components/AuthStatusButton";
-import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import { isAuthenticatedUser } from "@/lib/auth";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
@@ -38,6 +34,8 @@ export default function NotificationsPage() {
   const [notice, setNotice] = useState("");
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
   const [filter, setFilter] = useState<NotificationFilter>("all");
+  const [markingAll, setMarkingAll] = useState(false);
+  const [markingId, setMarkingId] = useState("");
 
   const unread = useMemo(() => notifications.filter((item) => !item.is_read).length, [notifications]);
   const visibleNotifications = useMemo(
@@ -48,7 +46,7 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (!isSupabaseConfigured) {
       setAuthLoading(false);
-      setNotice("Notifications are unavailable until LoadLink is connected to Supabase.");
+      setNotice("Notifications are temporarily unavailable. Please try again later.");
       return;
     }
 
@@ -59,9 +57,7 @@ export default function NotificationsPage() {
       setAuthLoading(false);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null);
       setAuthLoading(false);
     });
@@ -81,10 +77,10 @@ export default function NotificationsPage() {
 
     let active = true;
 
-    async function load() {
+    async function load(clearNotice = true) {
       if (!user) return;
       setLoading(true);
-      setNotice("");
+      if (clearNotice) setNotice("");
       const result = await supabase
         .from("user_notifications")
         .select("id,type,title,message,action_url,is_read,created_at")
@@ -106,16 +102,7 @@ export default function NotificationsPage() {
 
     const channel = supabase
       .channel(`loadlink-notifications-page-${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "user_notifications",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => void load(),
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_notifications", filter: `user_id=eq.${user.id}` }, () => void load(false))
       .subscribe();
 
     return () => {
@@ -124,24 +111,55 @@ export default function NotificationsPage() {
     };
   }, [authLoading, user]);
 
-  async function markRead(id: string) {
-    setNotifications((current) => current.map((item) => (item.id === id ? { ...item, is_read: true } : item)));
-    await supabase
-      .from("user_notifications")
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .eq("id", id);
-    window.dispatchEvent(new Event("loadlink-notifications-updated"));
+  async function persistRead(id: string) {
+    if (!user || markingId === id) return false;
+    setMarkingId(id);
+    setNotice("");
+    try {
+      const { error } = await supabase
+        .from("user_notifications")
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("user_id", user.id);
+      if (error) throw error;
+      setNotifications((current) => current.map((item) => item.id === id ? { ...item, is_read: true } : item));
+      window.dispatchEvent(new Event("loadlink-notifications-updated"));
+      return true;
+    } catch {
+      setNotice("LoadLink could not mark that notification as read. It has been left unread so its status stays accurate.");
+      return false;
+    } finally {
+      setMarkingId("");
+    }
+  }
+
+  async function openNotification(id: string, href: string) {
+    const current = notifications.find((item) => item.id === id);
+    if (current && !current.is_read) await persistRead(id);
+    window.location.assign(href);
   }
 
   async function markAllRead() {
+    if (!user || markingAll) return;
     const ids = notifications.filter((item) => !item.is_read).map((item) => item.id);
     if (!ids.length) return;
-    setNotifications((current) => current.map((item) => ({ ...item, is_read: true })));
-    await supabase
-      .from("user_notifications")
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .in("id", ids);
-    window.dispatchEvent(new Event("loadlink-notifications-updated"));
+    setMarkingAll(true);
+    setNotice("");
+    try {
+      const { error } = await supabase
+        .from("user_notifications")
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq("user_id", user.id)
+        .in("id", ids);
+      if (error) throw error;
+      const idSet = new Set(ids);
+      setNotifications((current) => current.map((item) => idSet.has(item.id) ? { ...item, is_read: true } : item));
+      window.dispatchEvent(new Event("loadlink-notifications-updated"));
+    } catch {
+      setNotice("LoadLink could not mark all notifications as read. Their existing unread states were kept.");
+    } finally {
+      setMarkingAll(false);
+    }
   }
 
   const page = darkMode ? "bg-black text-white" : "bg-[#fffaf0] text-black";
@@ -159,49 +177,22 @@ export default function NotificationsPage() {
               <div>
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-4xl font-black tracking-[-.055em] md:text-6xl">Notifications</h1>
-                  <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[.1em] ${darkMode ? "border-white/15 bg-white/[.05] text-white/70" : "border-black/10 bg-white text-black/60"}`}>
-                    {unread} unread
-                  </span>
+                  <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[.1em] ${darkMode ? "border-white/15 bg-white/[.05] text-white/70" : "border-black/10 bg-white text-black/60"}`}>{unread} unread</span>
                 </div>
-                <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>
-                  Messages, listing decisions, verification updates and account activity are kept together here.
-                </p>
+                <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Messages, listing decisions, verification updates and account activity are kept together here.</p>
               </div>
 
               {unread > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => void markAllRead()}
-                  className="min-h-11 rounded-full border border-[#f6b800] px-5 text-xs font-black uppercase tracking-[.1em] text-[#b88900] transition active:scale-[.99]"
-                >
-                  Mark all as read
+                <button type="button" onClick={() => void markAllRead()} disabled={markingAll} className="min-h-11 rounded-full border border-[#f6b800] px-5 text-xs font-black uppercase tracking-[.1em] text-[#b88900] transition active:scale-[.99] disabled:opacity-45">
+                  {markingAll ? "Updating…" : "Mark all as read"}
                 </button>
               ) : null}
             </div>
           </div>
 
           <div className={`flex items-center gap-2 border-b px-5 py-4 md:px-8 ${darkMode ? "border-white/10" : "border-black/10"}`}>
-            {([[
-              "all",
-              "All",
-            ], [
-              "unread",
-              `Unread ${unread}`,
-            ]] as [NotificationFilter, string][]).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setFilter(value)}
-                className={`rounded-full px-4 py-2 text-xs font-black uppercase tracking-[.08em] transition ${
-                  filter === value
-                    ? "bg-[#f6b800] text-black"
-                    : darkMode
-                      ? "border border-white/10 bg-white/[.04] text-white/65"
-                      : "border border-black/10 bg-black/[.03] text-black/60"
-                }`}
-              >
-                {label}
-              </button>
+            {([ ["all", "All"], ["unread", `Unread ${unread}`] ] as [NotificationFilter, string][]).map(([value, label]) => (
+              <button key={value} type="button" onClick={() => setFilter(value)} className={`rounded-full px-4 py-2 text-xs font-black uppercase tracking-[.08em] transition ${filter === value ? "bg-[#f6b800] text-black" : darkMode ? "border border-white/10 bg-white/[.04] text-white/65" : "border border-black/10 bg-black/[.03] text-black/60"}`}>{label}</button>
             ))}
           </div>
 
@@ -209,63 +200,32 @@ export default function NotificationsPage() {
 
           <div className="p-4 md:p-6">
             {authLoading || loading ? (
-              <div className="grid gap-3" aria-label="Loading notifications">
-                {[0, 1, 2].map((item) => (
-                  <div key={item} className={`h-28 animate-pulse rounded-2xl border ${darkMode ? "border-white/10 bg-white/[.04]" : "border-black/10 bg-black/[.03]"}`} />
-                ))}
-              </div>
+              <div className="grid gap-3" aria-label="Loading notifications">{[0, 1, 2].map((item) => <div key={item} className={`h-28 animate-pulse rounded-2xl border ${darkMode ? "border-white/10 bg-white/[.04]" : "border-black/10 bg-black/[.03]"}`} />)}</div>
             ) : visibleNotifications.length === 0 ? (
               <div className={`rounded-2xl border px-6 py-14 text-center ${darkMode ? "border-white/10 bg-[#111111]" : "border-black/10 bg-[#fffaf0]"}`}>
-                <span className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${darkMode ? "bg-white/[.06] text-[#f6b800]" : "bg-[#f6b800]/20 text-[#8a6500]"}`}>
-                  <BellIcon />
-                </span>
+                <span className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${darkMode ? "bg-white/[.06] text-[#f6b800]" : "bg-[#f6b800]/20 text-[#8a6500]"}`}><BellIcon /></span>
                 <h2 className="mt-5 text-2xl font-black">{filter === "unread" ? "You are all caught up" : "No notifications yet"}</h2>
-                <p className={`mx-auto mt-3 max-w-md text-sm leading-6 ${muted}`}>
-                  {filter === "unread"
-                    ? "There are no unread account updates at the moment."
-                    : "New messages, listing decisions and verification updates will appear here."}
-                </p>
+                <p className={`mx-auto mt-3 max-w-md text-sm leading-6 ${muted}`}>{filter === "unread" ? "There are no unread account updates at the moment." : "New messages, listing decisions and verification updates will appear here."}</p>
               </div>
             ) : (
               <div className="grid gap-3">
                 {visibleNotifications.map((item) => {
                   const href = safeActionHref(item.action_url);
                   const content = (
-                    <div className={`group flex gap-4 rounded-2xl border p-4 text-left transition md:p-5 ${
-                      item.is_read
-                        ? darkMode
-                          ? "border-white/10 bg-[#0b0b0b] hover:bg-[#111111]"
-                          : "border-black/10 bg-white hover:bg-[#fffaf0]"
-                        : darkMode
-                          ? "border-[#f6b800]/35 bg-[#17120a]"
-                          : "border-[#f6b800]/50 bg-[#fff7df]"
-                    }`}>
-                      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${item.is_read ? darkMode ? "bg-white/[.06] text-white/65" : "bg-black/[.04] text-black/55" : "bg-[#f6b800] text-black"}`}>
-                        <NotificationTypeIcon type={item.type} />
-                      </span>
-
+                    <div className={`group flex gap-4 rounded-2xl border p-4 text-left transition md:p-5 ${item.is_read ? darkMode ? "border-white/10 bg-[#0b0b0b] hover:bg-[#111111]" : "border-black/10 bg-white hover:bg-[#fffaf0]" : darkMode ? "border-[#f6b800]/35 bg-[#17120a]" : "border-[#f6b800]/50 bg-[#fff7df]"}`}>
+                      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${item.is_read ? darkMode ? "bg-white/[.06] text-white/65" : "bg-black/[.04] text-black/55" : "bg-[#f6b800] text-black"}`}><NotificationTypeIcon type={item.type} /></span>
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <h2 className="text-base font-black md:text-lg">{item.title}</h2>
-                          <time className={`text-[10px] font-black uppercase tracking-[.09em] ${muted}`}>{formatDate(item.created_at)}</time>
-                        </div>
+                        <div className="flex flex-wrap items-start justify-between gap-2"><h2 className="text-base font-black md:text-lg">{item.title}</h2><time className={`text-[10px] font-black uppercase tracking-[.09em] ${muted}`}>{formatDate(item.created_at)}</time></div>
                         <p className={`mt-2 text-sm leading-6 ${muted}`}>{item.message}</p>
-                        <div className="mt-3 flex items-center gap-3">
-                          {!item.is_read ? <span className="rounded-full bg-[#f6b800] px-2.5 py-1 text-[9px] font-black uppercase tracking-[.1em] text-black">Unread</span> : null}
-                          {href ? <span className="text-[10px] font-black uppercase tracking-[.1em] text-[#b88900]">Open update</span> : null}
-                        </div>
+                        <div className="mt-3 flex items-center gap-3">{!item.is_read ? <span className="rounded-full bg-[#f6b800] px-2.5 py-1 text-[9px] font-black uppercase tracking-[.1em] text-black">Unread</span> : null}{href ? <span className="text-[10px] font-black uppercase tracking-[.1em] text-[#b88900]">Open update</span> : null}{markingId === item.id ? <span className={`text-[10px] font-bold ${muted}`}>Updating…</span> : null}</div>
                       </div>
                     </div>
                   );
 
                   return href ? (
-                    <Link key={item.id} href={href} onClick={() => void markRead(item.id)}>
-                      {content}
-                    </Link>
+                    <Link key={item.id} href={href} onClick={(event) => { event.preventDefault(); void openNotification(item.id, href); }}>{content}</Link>
                   ) : (
-                    <button key={item.id} type="button" onClick={() => void markRead(item.id)} className="block w-full">
-                      {content}
-                    </button>
+                    <button key={item.id} type="button" disabled={markingId === item.id} onClick={() => void persistRead(item.id)} className="block w-full disabled:opacity-75">{content}</button>
                   );
                 })}
               </div>
@@ -280,13 +240,7 @@ export default function NotificationsPage() {
 function formatDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Recently";
-  return date.toLocaleString("en-ZA", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return date.toLocaleString("en-ZA", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 function NotificationTypeIcon({ type }: { type: string }) {
@@ -297,23 +251,7 @@ function NotificationTypeIcon({ type }: { type: string }) {
   return <BellIcon />;
 }
 
-function BellIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 6 2.5 6.5 2.5 6.5H4s2.5-.5 2.5-6.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-      <path d="M9.5 19a2.8 2.8 0 0 0 5 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function MessageIcon() {
-  return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M8 9h8M8 12h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
-}
-
-function CheckIcon() {
-  return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" /><path d="m8 12 2.5 2.5L16 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-}
-
-function DocumentIcon() {
-  return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3h7l4 4v14H7V3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M14 3v5h5M10 12h5M10 16h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
-}
+function BellIcon() { return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 6 2.5 6.5 2.5 6.5H4s2.5-.5 2.5-6.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9.5 19a2.8 2.8 0 0 0 5 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
+function MessageIcon() { return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M8 9h8M8 12h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
+function CheckIcon() { return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" /><path d="m8 12 2.5 2.5L16 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
+function DocumentIcon() { return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3h7l4 4v14H7V3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M14 3v5h5M10 12h5M10 16h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
