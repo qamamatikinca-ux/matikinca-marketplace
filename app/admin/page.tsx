@@ -30,11 +30,15 @@ export default function AdminPage() {
 
   useEffect(() => {
     let active = true;
-    void supabase.rpc("loadlink_phase2_admin_role").then(({ data }) => {
-      if (!active) return;
-      setRole(String(data || "").toLowerCase());
-      setReady(true);
-    }).catch(() => { if (active) setReady(true); });
+    void (async () => {
+      try {
+        const { data } = await supabase.rpc("loadlink_phase2_admin_role");
+        if (!active) return;
+        setRole(String(data || "").toLowerCase());
+      } finally {
+        if (active) setReady(true);
+      }
+    })();
     return () => { active = false; };
   }, []);
 
