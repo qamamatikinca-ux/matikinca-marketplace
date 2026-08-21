@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 const STYLE_ID = "loadlink-universal-ui-guard-style";
+const SEARCH_TERMS = /(?:search|find|keyword|city|town|province|location)/i;
 const INTEGER_TERMS = /(?:year|age|quantity|qty|count|number of|fleet|seats|capacity|mileage|odometer|kilomet|postal|otp|pin|code)/i;
 const PHONE_TERMS = /(?:phone|mobile|whatsapp|contact number|telephone)/i;
 const DECIMAL_TERMS = /(?:price|rate|amount|budget|cost|weight|distance|ton|litre|liter|km)/i;
@@ -21,10 +22,22 @@ function descriptor(input: HTMLInputElement) {
 }
 
 function fixNumericInput(input: HTMLInputElement) {
-  if (["date", "time", "datetime-local", "file"].includes(input.type)) return;
+  if (["date", "time", "datetime-local", "file", "password", "email"].includes(input.type)) return;
   const key = descriptor(input);
+
+  // Search/discovery controls must always summon a normal text/search keyboard.
+  // This runs before the numeric heuristics so words such as "number", "km" or
+  // "location" inside a search placeholder can never turn the field numeric.
+  if (SEARCH_TERMS.test(key) && !PHONE_TERMS.test(key)) {
+    input.type = "search";
+    input.inputMode = "search";
+    input.enterKeyHint = "search";
+    input.removeAttribute("pattern");
+    return;
+  }
+
   if (PHONE_TERMS.test(key)) {
-    if (input.type === "text") input.type = "tel";
+    if (input.type === "text" || input.type === "search") input.type = "tel";
     input.inputMode = "tel";
     input.autocomplete = input.autocomplete || "tel";
     return;
@@ -44,8 +57,8 @@ function hideDeliveryBadges(root: ParentNode) {
   });
   root.querySelectorAll<HTMLElement>("button, span, div").forEach((node) => {
     if (node.children.length) return;
-    const text = (node.textContent || "").trim().toLowerCase();
-    if (/^(?:seen|sent)(?:\s*[✓✔]+)?$/.test(text)) {
+    const value = (node.textContent || "").trim().toLowerCase();
+    if (/^(?:seen|sent)(?:\s*[✓✔]+)?$/.test(value)) {
       node.style.setProperty("display", "none", "important");
       node.setAttribute("aria-hidden", "true");
     }
@@ -55,15 +68,15 @@ function hideDeliveryBadges(root: ParentNode) {
 function sanitizeInternalRepairMessages(root: ParentNode) {
   root.querySelectorAll<HTMLElement>("p, div, span, li").forEach((node) => {
     if (node.children.length) return;
-    const text = (node.textContent || "").trim();
-    if (!text || !INTERNAL_REPAIR_TEXT.test(text)) return;
-    const messaging = /messag|chat|conversation/i.test(text);
-    const posting = /post|listing|vehicle|resubmit/i.test(text);
-    const push = /push|notification|vapid/i.test(text);
+    const value = (node.textContent || "").trim();
+    if (!value || !INTERNAL_REPAIR_TEXT.test(value)) return;
+    const messaging = /messag|chat|conversation/i.test(value);
+    const posting = /post|listing|vehicle|resubmit/i.test(value);
+    const push = /push|notification|vapid/i.test(value);
     node.textContent = messaging
       ? "LoadLink messaging is temporarily unavailable. Refresh once and try again."
       : posting
-        ? "LoadLink could not save that post change right now. Your information is still safe; refresh once and try again."
+        ? "LoadLink could not save that post change right now. Refresh once and try again."
         : push
           ? "Push notifications are not available on this deployment yet."
           : "LoadLink could not complete that action right now. Refresh once and try again.";
@@ -191,6 +204,7 @@ function ensureSinglePageNavigation(pathname: string) {
 
 export default function LoadLinkUniversalUiGuard() {
   const pathname = usePathname();
+
   useEffect(() => {
     if (repairLegacyLocation(pathname)) return;
     if (!document.getElementById(STYLE_ID)) {
@@ -234,6 +248,7 @@ export default function LoadLinkUniversalUiGuard() {
     window.addEventListener("focus", tryReportSync);
     window.addEventListener("loadlink-account-state-changed", tryReportSync as EventListener);
     document.addEventListener("click", onDocumentClick);
+
     const observer = new MutationObserver((records) => {
       records.forEach((record) => record.addedNodes.forEach((node) => {
         if (!(node instanceof HTMLElement)) return;
@@ -242,6 +257,7 @@ export default function LoadLinkUniversalUiGuard() {
       }));
     });
     observer.observe(document.body, { childList: true, subtree: true });
+
     return () => {
       observer.disconnect();
       timers.forEach((timer) => window.clearTimeout(timer));
@@ -251,5 +267,6 @@ export default function LoadLinkUniversalUiGuard() {
       document.removeEventListener("click", onDocumentClick);
     };
   }, [pathname]);
+
   return null;
 }
