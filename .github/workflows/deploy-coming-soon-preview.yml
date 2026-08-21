@@ -1,0 +1,108 @@
+name: Deploy LoadLink Coming Soon Preview
+
+on:
+  push:
+    branches:
+      - loadlink-coming-soon
+    paths:
+      - ".github/workflows/deploy-coming-soon-preview.yml"
+      - "app/**"
+      - "components/RecentActivityPanel.tsx"
+      - "public/**"
+      - "package.json"
+      - "package-lock.json"
+      - "next.config.*"
+      - "tsconfig.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: loadlink-coming-soon-preview
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      VERCEL_ORG_ID: team_ltBsujLbhqOPqX4dlpWDHial
+      VERCEL_PROJECT_ID: prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt
+      VERCEL_SCOPE: loadlink
+
+    steps:
+      - name: Checkout coming soon branch
+        uses: actions/checkout@v4
+        with:
+          ref: loadlink-coming-soon
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Link primary LoadLink Vercel project
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          rm -rf .vercel
+          vercel link \
+            --yes \
+            --project="matikinca-marketplace" \
+            --scope="$VERCEL_SCOPE" \
+            --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Pull preview environment
+        run: vercel pull --yes --environment=preview --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Build preview
+        run: vercel build --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Deploy preview
+        id: deploy
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          DEPLOY_URL="$(vercel deploy --prebuilt --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}")"
+          echo "deployment_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+          echo "Deployment URL: $DEPLOY_URL"
+
+      - name: Verify redesigned coming soon page
+        shell: bash
+        env:
+          DEPLOY_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: |
+          set -Eeuo pipefail
+          HTML="$(curl -L -sS "$DEPLOY_URL")"
+          echo "$HTML" | grep -q "South Africa moves."
+          echo "$HTML" | grep -q "LoadLink connects it."
+          echo "$HTML" | grep -q "30+"
+          echo "$HTML" | grep -q "60+"
+          echo "$HTML" | grep -q "40+"
+          if echo "$HTML" | grep -q "ChatLauncher"; then
+            echo "::error::ChatLauncher unexpectedly present in coming soon preview."
+            exit 1
+          fi
+          echo "Coming Soon preview verification: PASS"
+
+      - name: Summary
+        if: always()
+        shell: bash
+        env:
+          DEPLOY_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: |
+          {
+            echo "## LoadLink Coming Soon Preview"
+            echo ""
+            echo "- Branch: loadlink-coming-soon"
+            echo "- Vercel project: matikinca-marketplace"
+            echo "- Preview URL: ${DEPLOY_URL:-not-created}"
+          } >> "$GITHUB_STEP_SUMMARY"
