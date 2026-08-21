@@ -1,0 +1,108 @@
+name: LoadLink Coming Soon Preview
+
+on:
+  push:
+    branches:
+      - loadlink-coming-soon
+    paths:
+      - "app/page.tsx"
+      - "app/layout.tsx"
+      - ".github/workflows/loadlink-coming-soon-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: loadlink-coming-soon-preview
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout Coming Soon branch
+        uses: actions/checkout@v4
+        with:
+          ref: loadlink-coming-soon
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Link primary Vercel project for preview only
+        run: |
+          rm -rf .vercel
+          vercel link --yes --project="matikinca-marketplace" --scope="loadlink" --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Pull preview settings
+        run: vercel pull --yes --environment=preview --scope="loadlink" --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Build preview
+        run: vercel build --scope="loadlink" --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Deploy preview and assign short URL
+        id: deploy
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          DEPLOY_URL="$(vercel deploy --prebuilt --scope="loadlink" --token="${{ secrets.VERCEL_TOKEN }}")"
+          echo "deployment_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+          echo "Preview deployment: $DEPLOY_URL"
+
+          SHORT_URL=""
+          for ALIAS in loadlink-soon.vercel.app loadlink-coming.vercel.app loadlink-preview.vercel.app; do
+            if vercel alias set "$DEPLOY_URL" "$ALIAS" --scope="loadlink" --token="${{ secrets.VERCEL_TOKEN }}"; then
+              SHORT_URL="https://$ALIAS"
+              break
+            fi
+          done
+
+          if [ -z "$SHORT_URL" ]; then
+            echo "::error::Could not allocate a short Vercel alias."
+            exit 1
+          fi
+
+          echo "short_url=$SHORT_URL" >> "$GITHUB_OUTPUT"
+          echo "Short URL: $SHORT_URL"
+
+      - name: Verify short URL
+        shell: bash
+        env:
+          SHORT_URL: ${{ steps.deploy.outputs.short_url }}
+        run: |
+          set -Eeuo pipefail
+          for attempt in $(seq 1 18); do
+            CODE="$(curl -L -sS -o /tmp/loadlink-coming-soon.html -w '%{http_code}' "$SHORT_URL" || true)"
+            echo "[$attempt/18] HTTP $CODE"
+            if [ "$CODE" = "200" ] && grep -q "South Africa moves" /tmp/loadlink-coming-soon.html; then
+              grep -q "LoadLink connects it" /tmp/loadlink-coming-soon.html
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Short Coming Soon URL did not verify successfully."
+          exit 1
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## LoadLink Coming Soon"
+            echo ""
+            echo "- Branch: loadlink-coming-soon"
+            echo "- Production LoadLink app: untouched"
+            echo "- Preview deployment: ${{ steps.deploy.outputs.deployment_url }}"
+            echo "- Short URL: ${{ steps.deploy.outputs.short_url }}"
+          } >> "$GITHUB_STEP_SUMMARY"
