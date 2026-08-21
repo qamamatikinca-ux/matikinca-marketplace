@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
+import LoadLinkPagination from "@/components/LoadLinkPagination";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import {
@@ -24,6 +25,8 @@ import {
   scopeLabel,
   searchScopes,
 } from "@/lib/loadlinkSearch";
+
+const RESULTS_PER_PAGE = 7;
 
 const SEARCH_HERO: Record<SearchScope, string> = {
   all: "/images/loadlink-search-all-boxes.webp",
@@ -92,12 +95,14 @@ export default function SearchResultsClient() {
   const [drivers, setDrivers] = useState<DriverSearchRow[]>([]);
   const [dealers, setDealers] = useState<DealerSearchRow[]>([]);
   const [heroFailed, setHeroFailed] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const tabRailRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setInput(query);
     setPlace(location);
-  }, [location, query]);
+    setCurrentPage(1);
+  }, [location, query, scope]);
 
   useEffect(() => {
     setHeroFailed(false);
@@ -160,6 +165,16 @@ export default function SearchResultsClient() {
     [dealers, drivers, listings, location, query, scope],
   );
 
+  const totalPages = Math.max(1, Math.ceil(results.length / RESULTS_PER_PAGE));
+  const paginatedResults = useMemo(() => {
+    const start = (currentPage - 1) * RESULTS_PER_PAGE;
+    return results.slice(start, start + RESULTS_PER_PAGE);
+  }, [currentPage, results]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
   const visibleScopes = useMemo(
     () => searchScopes.filter((item) => item.value !== "page"),
     [],
@@ -170,6 +185,13 @@ export default function SearchResultsClient() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     router.push(routeForScope(scope, input, place));
+  }
+
+  function changePage(nextPage: number) {
+    setCurrentPage(Math.min(totalPages, Math.max(1, nextPage)));
+    requestAnimationFrame(() => {
+      document.querySelector('[data-loadlink-search-results="true"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   return (
@@ -311,7 +333,7 @@ export default function SearchResultsClient() {
             </button>
           </form>
 
-          <div className="mt-9 flex items-center justify-between gap-4">
+          <div data-loadlink-search-results="true" className="mt-9 scroll-mt-24 flex items-center justify-between gap-4">
             <h2 className="min-w-0 text-2xl font-black tracking-[-.035em] md:text-3xl">
               {scopeLabel(scope)} results
             </h2>
@@ -334,38 +356,43 @@ export default function SearchResultsClient() {
               ))}
             </div>
           ) : results.length ? (
-            <div className="mt-5 grid gap-3 md:grid-cols-2">
-              {results.map((item) => (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  className={`loadlink-search-result-card min-w-0 rounded-[22px] border p-5 shadow-[0_12px_34px_rgba(0,0,0,.06)] transition ${
-                    darkMode
-                      ? "border-white/10 bg-white/[.045] hover:bg-white/[.075]"
-                      : "border-black/[.07] bg-white/76 hover:bg-white"
-                  }`}
-                >
-                  <div className="flex min-w-0 items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="truncate text-lg font-black">{item.label}</h3>
-                      <p className={`mt-2 truncate text-sm font-semibold ${darkMode ? "text-white/50" : "text-black/50"}`}>
-                        {item.meta}
-                      </p>
-                    </div>
+            <>
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                {paginatedResults.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    className={`loadlink-search-result-card min-w-0 rounded-[22px] border p-5 shadow-[0_12px_34px_rgba(0,0,0,.06)] transition ${
+                      darkMode
+                        ? "border-white/10 bg-white/[.045] hover:bg-white/[.075]"
+                        : "border-black/[.07] bg-white/76 hover:bg-white"
+                    }`}
+                  >
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-lg font-black">{item.label}</h3>
+                        <p className={`mt-2 truncate text-sm font-semibold ${darkMode ? "text-white/50" : "text-black/50"}`}>
+                          {item.meta}
+                        </p>
+                      </div>
 
-                    <span
-                      className={`loadlink-search-result-kind shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wide ${
-                        darkMode
-                          ? "border-white/15 text-white/55"
-                          : "border-black/10 text-black/50"
-                      }`}
-                    >
-                      {scopeLabel(item.scope)}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                      <span
+                        className={`loadlink-search-result-kind shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wide ${
+                          darkMode
+                            ? "border-white/15 text-white/55"
+                            : "border-black/10 text-black/50"
+                        }`}
+                      >
+                        {scopeLabel(item.scope)}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              {results.length > RESULTS_PER_PAGE ? (
+                <LoadLinkPagination current={currentPage} total={totalPages} onChange={changePage} darkMode={darkMode} label="Search result pages" />
+              ) : null}
+            </>
           ) : (
             <div
               className={`mt-5 rounded-[22px] border p-10 text-center shadow-[0_12px_34px_rgba(0,0,0,.05)] ${
