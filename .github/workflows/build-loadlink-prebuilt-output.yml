@@ -94,7 +94,7 @@ jobs:
         run: |
           set -euo pipefail
           curl --fail --silent --show-error --location --retry 8 --retry-delay 3 --output /dev/null https://matikinca-marketplace.vercel.app/login
-          curl --fail --silent --show-error --location --retry 8 --retry-delay 3 --output /tmp/login-hero.webp https://matikinca-marketplace.vercel.app/images/loadlink-login-hero-hd.webp
+          curl --fail --silent --show-error --location --retry 8 --retry-delay 3 --output /tmp/login-hero.webp https://matikinca-marketplace.vercel.app/images/loadlink-login-hero-final.webp
           test "$(wc -c < /tmp/login-hero.webp | tr -d ' ')" = "136014"
           test "$(sha256sum /tmp/login-hero.webp | awk '{print $1}')" = "aa8633917fc45b724cb82c92f3d7281a29aa4ef20d487744942467867926a6cd"
           curl --fail --silent --show-error --location --retry 8 --retry-delay 3 --output /dev/null 'https://matikinca-marketplace.vercel.app/list-your-vehicle?entry=vehicle'
@@ -158,4 +158,4 @@ jobs:
           test "${{ steps.deploy.outcome }}" = "success"
           test "${{ steps.verify.outcome }}" = "success"
 
-# Verified login artwork + Vehicle & Units interaction release — 2026-08-20 20:48 SAST.
+# Verified login artwork + Vehicle & Units interaction release — 2026-08-21 09:36 SAST.
