@@ -54,21 +54,26 @@ function normaliseScope(value: string | null): SearchScope {
     : "all";
 }
 
+function currentPath() {
+  return window.location.pathname.replace(/\/$/, "") || "/";
+}
+
 function scopeForPage(): SearchScope | null {
-  const path = window.location.pathname;
+  const path = currentPath();
   const params = new URLSearchParams(window.location.search);
+  if (path === "/contracts") return "contract";
   if (path === "/jobs") return params.get("portal") === "contract" ? "contract" : params.get("portal") === "asset" ? "asset" : "job";
   if (path === "/search") return normaliseScope(params.get("category"));
   return null;
 }
 
 function primarySearchInput(): HTMLInputElement | null {
-  const path = window.location.pathname;
+  const path = currentPath();
   if (path === "/search") {
     const form = document.querySelector<HTMLFormElement>('main[data-loadlink-search-page="true"] form');
     return form?.querySelector<HTMLInputElement>('input:not([aria-label*="location" i])') || null;
   }
-  if (path === "/jobs") {
+  if (path === "/jobs" || path === "/contracts") {
     const shell = document.querySelector<HTMLElement>("[data-loadlink-jobs-search-shell]");
     const inputs = Array.from(shell?.querySelectorAll<HTMLInputElement>("input") || []);
     return inputs.find((input) => !/location|city|town|province/i.test(`${input.placeholder} ${input.getAttribute("aria-label") || ""}`)) || null;
@@ -92,10 +97,64 @@ function nearestCompactSurface(node: Element) {
   return node.closest<HTMLElement>('[role="alert"],article,section,div[class*="rounded"],div[class*="border"]');
 }
 
+function listingIdFromHref(href: string) {
+  const match = href.match(/\/listing\/([0-9a-f-]{36})/i);
+  return match?.[1] || "";
+}
+
+function ensureVehicleReviewHosts() {
+  document.querySelectorAll<HTMLAnchorElement>('#vehicle-marketplace a[href*="/listing/"]').forEach((card) => {
+    const id = listingIdFromHref(card.getAttribute("href") || "");
+    if (!id) return;
+    let host = Array.from(card.children).find((child) => (child as HTMLElement).dataset?.llAccountReviewHost === "true") as HTMLElement | undefined;
+    if (!host) {
+      host = document.createElement("div");
+      host.dataset.llAccountReviewHost = "true";
+      card.appendChild(host);
+    }
+    host.dataset.llAccountKind = "listing";
+    host.dataset.llAccountId = id;
+    host.dataset.llAccountCompact = "false";
+  });
+}
+
+function ensurePageLimitNote() {
+  const path = currentPath();
+  let host: HTMLElement | null = null;
+  let text = "";
+
+  if (path === "/search") {
+    host = document.querySelector<HTMLElement>('[data-loadlink-search-results="true"]');
+    text = "7 results per page";
+  } else if (path === "/jobs" || path === "/contracts") {
+    const headings = Array.from(document.querySelectorAll<HTMLElement>("h2,h3"));
+    const heading = headings.find((node) => /available (jobs|contracts|vehicles|listings)|results/i.test((node.textContent || "").trim()));
+    host = heading?.parentElement || null;
+    text = "7 posts per page";
+  } else if (path === "/list-your-vehicle" || path === "/list-your-truck") {
+    const heading = document.querySelector<HTMLElement>("#vehicle-marketplace h2");
+    host = heading?.parentElement || null;
+    text = "7 posts per page";
+  }
+
+  if (!host || !text) return;
+  let note = host.querySelector<HTMLElement>(':scope > [data-ll-page-limit-note="true"]');
+  if (!note) {
+    note = document.createElement("span");
+    note.dataset.llPageLimitNote = "true";
+    note.className = "ll-release-page-limit";
+    host.appendChild(note);
+  }
+  note.textContent = text;
+}
+
 function markLiveSurfaces() {
   const theme = liveTheme();
   document.documentElement.dataset.llFinalTheme = theme;
   document.body.dataset.llFinalTheme = theme;
+
+  ensurePageLimitNote();
+  ensureVehicleReviewHosts();
 
   document.querySelectorAll<HTMLElement>('[data-loadlink-analytics-modal="true"]').forEach((node) => {
     node.dataset.llFinalAnalytics = "true";
@@ -119,7 +178,7 @@ function markLiveSurfaces() {
     if (surface) surface.dataset.llFinalInactive = "true";
   });
 
-  document.querySelectorAll<HTMLElement>('article[id^="job-"],article[data-listing-card],.loadlink-search-result-card,[data-post-card]').forEach((card) => {
+  document.querySelectorAll<HTMLElement>('article[id^="job-"],article[data-listing-card],.loadlink-search-result-card,[data-post-card],#vehicle-marketplace a[href*="/listing/"]').forEach((card) => {
     card.dataset.llFinalPostCard = "true";
   });
 
@@ -147,18 +206,27 @@ export default function LoadLinkReleaseRecovery20260821() {
   }, [filter, scope]);
 
   useEffect(() => {
-    const scan = () => markLiveSurfaces();
+    let frame = 0;
+    const scan = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(markLiveSurfaces);
+    };
     scan();
-    const observer = new MutationObserver(() => window.requestAnimationFrame(scan));
+    const observer = new MutationObserver(scan);
     observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "data-loadlink-theme"] });
+    const timer = window.setInterval(scan, 1000);
     window.addEventListener("loadlink-theme-changed", scan as EventListener);
     window.addEventListener("loadlink-theme-change", scan as EventListener);
     window.addEventListener("popstate", scan);
+    window.addEventListener("hashchange", scan);
     return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearInterval(timer);
       observer.disconnect();
       window.removeEventListener("loadlink-theme-changed", scan as EventListener);
       window.removeEventListener("loadlink-theme-change", scan as EventListener);
       window.removeEventListener("popstate", scan);
+      window.removeEventListener("hashchange", scan);
     };
   }, []);
 
