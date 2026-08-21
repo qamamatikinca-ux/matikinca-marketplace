@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import LoadLinkPagination from "@/components/LoadLinkPagination";
 import { formatListingRate } from "@/lib/formatCurrency";
 
 type VehicleRow = {
@@ -21,6 +22,7 @@ type SortMode = "newest" | "price_low" | "price_high";
 
 const SEEN_KEY = "loadlink-seen-listings-v2";
 const RECENT_KEY = "loadlink-recent-viewed-jobs";
+const LISTINGS_PER_PAGE = 7;
 
 function readMeta(description: string | null | undefined, label: string) {
   return String(description || "").match(new RegExp(`^${label}:\\s*([^\\n]+)`, "im"))?.[1]?.trim() || "";
@@ -63,6 +65,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
   const [mode, setMode] = useState<ViewMode>("all");
   const [sort, setSort] = useState<SortMode>("newest");
   const [seen, setSeen] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const refreshSeen = () => setSeen(readSeenIds());
@@ -106,6 +109,27 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
     });
   }, [mode, rows, sort]);
 
+  const totalPages = Math.max(1, Math.ceil(visible.length / LISTINGS_PER_PAGE));
+  const paginatedVisible = useMemo(() => {
+    const start = (currentPage - 1) * LISTINGS_PER_PAGE;
+    return visible.slice(start, start + LISTINGS_PER_PAGE);
+  }, [currentPage, visible]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [mode, sort]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
+  function changePage(nextPage: number) {
+    setCurrentPage(Math.min(totalPages, Math.max(1, nextPage)));
+    requestAnimationFrame(() => {
+      document.getElementById("vehicle-marketplace")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   function markSeen(id: string) {
     setSeen((current) => {
       const next = new Set(current);
@@ -120,7 +144,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
   const muted = darkMode ? "text-white/50" : "text-black/50";
 
   return (
-    <section id="vehicle-marketplace" className={`border-t px-4 py-10 md:px-6 md:py-14 ${darkMode ? "border-white/10 bg-[#050505]" : "border-black/10 bg-[#f4efe3]"}`}>
+    <section id="vehicle-marketplace" className={`scroll-mt-24 border-t px-4 py-10 md:px-6 md:py-14 ${darkMode ? "border-white/10 bg-[#050505]" : "border-black/10 bg-[#f4efe3]"}`}>
       <span id="vehicle-marketplace-vehicles" className="block scroll-mt-24" aria-hidden="true" />
       <span id="vehicle-marketplace-units" className="block scroll-mt-24" aria-hidden="true" />
       <div className="mx-auto max-w-5xl">
@@ -145,31 +169,43 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
           ))}
         </div>
 
+        {!loading && visible.length ? (
+          <div className={`mt-5 flex items-center justify-between text-xs font-bold ${muted}`}>
+            <span>{visible.length} approved listing{visible.length === 1 ? "" : "s"}</span>
+            <span>7 per page</span>
+          </div>
+        ) : null}
+
         {loading ? (
           <div className="mt-6 grid gap-4 sm:grid-cols-2">{[0, 1, 2, 3].map((item) => <div key={item} className={`h-72 animate-pulse rounded-[24px] border ${surface}`} />)}</div>
         ) : visible.length ? (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {visible.map((row) => {
-              const type = readMeta(row.description, "Vehicle subtype") || readMeta(row.description, "Listing type") || row.vehicle_group || "Commercial vehicle";
-              const offer = readMeta(row.description, "Offer") || "Available";
-              const wasSeen = seen.has(String(row.id));
-              return (
-                <Link key={row.id} href={`/listing/${row.id}`} onClick={() => markSeen(String(row.id))} className={`loadlink-glass group overflow-hidden rounded-[24px] border shadow-[0_12px_34px_rgba(0,0,0,.06)] ${surface}`}>
-                  <div className="relative aspect-[16/10] overflow-hidden bg-black/10">
-                    {row.photos?.[0] ? <img src={row.photos[0]} alt={row.title || "LoadLink vehicle"} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.015]" /> : <img src="/images/truck-1.jpg" alt="Commercial vehicle" className="h-full w-full object-cover" />}
-                    {wasSeen ? <span data-loadlink-seen-badge="true" className="absolute left-3 top-3 rounded-xl border border-white/10 bg-black/72 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">Seen</span> : null}
-                    <span className="absolute right-3 top-3 rounded-full bg-black/82 px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] text-white">{offer}</span>
-                  </div>
-                  <div className="p-4">
-                    <p className={`text-[10px] font-black uppercase tracking-[.1em] ${muted}`}>{type} · {row.city || "South Africa"}</p>
-                    <h3 className="mt-2 text-xl font-black tracking-[-.03em]">{row.title || "Commercial vehicle"}</h3>
-                    <p className="mt-3 text-2xl font-black">{formatListingRate(row.rate)}</p>
-                    <span className="mt-4 inline-block text-xs font-black underline underline-offset-4">View full details</span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+          <>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              {paginatedVisible.map((row) => {
+                const type = readMeta(row.description, "Vehicle subtype") || readMeta(row.description, "Listing type") || row.vehicle_group || "Commercial vehicle";
+                const offer = readMeta(row.description, "Offer") || "Available";
+                const wasSeen = seen.has(String(row.id));
+                return (
+                  <Link key={row.id} href={`/listing/${row.id}`} onClick={() => markSeen(String(row.id))} className={`loadlink-glass group overflow-hidden rounded-[24px] border shadow-[0_12px_34px_rgba(0,0,0,.06)] ${surface}`}>
+                    <div className="relative aspect-[16/10] overflow-hidden bg-black/10">
+                      {row.photos?.[0] ? <img src={row.photos[0]} alt={row.title || "LoadLink vehicle"} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.015]" /> : <img src="/images/truck-1.jpg" alt="Commercial vehicle" className="h-full w-full object-cover" />}
+                      {wasSeen ? <span data-loadlink-seen-badge="true" className="absolute left-3 top-3 rounded-xl border border-white/10 bg-black/72 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">Seen</span> : null}
+                      <span className="absolute right-3 top-3 rounded-full bg-black/82 px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] text-white">{offer}</span>
+                    </div>
+                    <div className="p-4">
+                      <p className={`text-[10px] font-black uppercase tracking-[.1em] ${muted}`}>{type} · {row.city || "South Africa"}</p>
+                      <h3 className="mt-2 text-xl font-black tracking-[-.03em]">{row.title || "Commercial vehicle"}</h3>
+                      <p className="mt-3 text-2xl font-black">{formatListingRate(row.rate)}</p>
+                      <span className="mt-4 inline-block text-xs font-black underline underline-offset-4">View full details</span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+            {visible.length > LISTINGS_PER_PAGE ? (
+              <LoadLinkPagination current={currentPage} total={totalPages} onChange={changePage} darkMode={darkMode} label="Vehicle listing pages" />
+            ) : null}
+          </>
         ) : (
           <div className={`loadlink-glass mt-6 rounded-[24px] border p-8 text-center ${surface}`}>
             <h3 className="text-xl font-black">No approved listings in this category yet</h3>
