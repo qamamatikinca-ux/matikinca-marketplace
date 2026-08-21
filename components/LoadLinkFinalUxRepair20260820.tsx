@@ -75,6 +75,7 @@ function fixSearchKeyboards() {
     input.type = "search";
     input.inputMode = "search";
     input.enterKeyHint = "search";
+    input.removeAttribute("pattern");
   });
 }
 
@@ -97,27 +98,43 @@ function idFromHref(value: string) {
   return UUID_RE.test(id) ? id : "";
 }
 
-async function bindPromotedPosts() {
+function promotedSectionFor(node: Element) {
+  const section = node.closest<HTMLElement>("section");
+  if (!section) return null;
+  return /promoted (?:posts|listings)/i.test(text(section.querySelector("h1,h2,h3"))) ? section : null;
+}
+
+async function promotedHref(card: HTMLElement) {
+  const preset = card.dataset.loadlinkExactPost;
+  if (preset) return preset;
+
+  const directId = card instanceof HTMLAnchorElement ? idFromHref(card.getAttribute("href") || "") : "";
+  if (directId) return `/listing/${encodeURIComponent(directId)}`;
+
+  const title = normalise(text(card.querySelector("h2,h3")));
+  if (!title) return "";
+  const meta = normalise(text(card.querySelector("p")));
   const rows = await publicListings();
-  if (!rows.length) return;
+  const exact = rows.filter((row) => normalise(String(row.title || "")) === title);
+  const cityMatch = exact.find((row) => row.city && meta.includes(normalise(String(row.city))));
+  const row = cityMatch || (exact.length === 1 ? exact[0] : null);
+  const id = String(row?.id || "");
+  return UUID_RE.test(id) ? `/listing/${encodeURIComponent(id)}` : "";
+}
+
+async function bindPromotedPosts() {
   const sections = Array.from(document.querySelectorAll<HTMLElement>("section")).filter((section) => /promoted (?:posts|listings)/i.test(text(section.querySelector("h1,h2,h3"))));
+  if (!sections.length) return;
 
   for (const section of sections) {
-    const cards = Array.from(section.querySelectorAll<HTMLElement>(":scope button, :scope a, :scope div > button, :scope div > a")).filter((node) => Boolean(node.querySelector("h2,h3")));
+    const cards = Array.from(section.querySelectorAll<HTMLElement>("button,a")).filter((node) => Boolean(node.querySelector("h2,h3")));
     for (const card of cards) {
       if (card.dataset.loadlinkExactPost) continue;
-      const directId = card instanceof HTMLAnchorElement ? idFromHref(card.getAttribute("href") || "") : "";
-      const title = normalise(text(card.querySelector("h2,h3")));
-      const meta = normalise(text(card.querySelector("p")));
-      const matches = directId
-        ? rows.filter((row) => row.id === directId)
-        : rows.filter((row) => normalise(String(row.title || "")) === title && (!row.city || !meta || meta.includes(normalise(String(row.city)))));
-      const row = matches.length === 1 ? matches[0] : rows.find((candidate) => normalise(String(candidate.title || "")) === title);
-      const id = String(row?.id || "");
-      if (!UUID_RE.test(id)) continue;
-      const href = `/listing/${encodeURIComponent(id)}`;
+      const href = await promotedHref(card);
+      if (!href) continue;
       card.dataset.loadlinkExactPost = href;
-      card.dataset.listingId = id;
+      const id = idFromHref(href);
+      if (id) card.dataset.listingId = id;
       if (card instanceof HTMLAnchorElement) card.href = href;
     }
   }
@@ -141,7 +158,10 @@ export default function LoadLinkFinalUxRepair20260820() {
     observer.observe(document.body, { childList: true, subtree: true });
 
     const click = (event: MouseEvent) => {
-      const exact = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-loadlink-exact-post]') : null;
+      const element = event.target instanceof Element ? event.target : null;
+      if (!element) return;
+
+      const exact = element.closest<HTMLElement>('[data-loadlink-exact-post]');
       if (exact?.dataset.loadlinkExactPost) {
         event.preventDefault();
         event.stopPropagation();
@@ -150,7 +170,28 @@ export default function LoadLinkFinalUxRepair20260820() {
         return;
       }
 
-      const target = event.target instanceof Element ? event.target.closest<HTMLButtonElement>("button") : null;
+      const promotedCard = element.closest<HTMLElement>("button,a");
+      if (promotedCard && promotedSectionFor(promotedCard) && promotedCard.querySelector("h2,h3")) {
+        if (promotedCard.dataset.loadlinkPromotedBypass === "true") {
+          delete promotedCard.dataset.loadlinkPromotedBypass;
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        void promotedHref(promotedCard).then((href) => {
+          if (href) {
+            promotedCard.dataset.loadlinkExactPost = href;
+            window.location.assign(href);
+            return;
+          }
+          promotedCard.dataset.loadlinkPromotedBypass = "true";
+          promotedCard.click();
+        });
+        return;
+      }
+
+      const target = element.closest<HTMLButtonElement>("button");
       const sheet = target?.closest<HTMLElement>(".loadlink-logistics-sheet");
       if (!target || !sheet) return;
       const isToolCard = Boolean(target.closest(".grid")) && Boolean(target.querySelector("svg"));
