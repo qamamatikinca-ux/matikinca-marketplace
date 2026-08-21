@@ -1,4 +1,4 @@
-// LoadLink production deployment retry — 2026-08-19 16:19 SAST
+// LoadLink release recovery mounted — 2026-08-21
 import NetworkRecovery from "@/components/platform/NetworkRecovery";
 import type { Metadata } from "next";
 import { Suspense } from "react";
