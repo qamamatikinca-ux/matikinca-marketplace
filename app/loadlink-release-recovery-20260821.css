@@ -1,0 +1,152 @@
+/* LoadLink release recovery — binds the final polish to the selectors used by the live app. */
+
+/* The older polish expected data-ll-repair-* attributes that the live repair layer never creates.
+   These selectors target the actual live analytics/quote/call/toast surfaces instead. */
+
+[data-loadlink-analytics-modal="true"],
+[data-ll-final-analytics="true"] {
+  border-radius:28px!important;
+  border:1px solid var(--ll-final-border,rgba(17,17,17,.10))!important;
+  box-shadow:0 26px 86px rgba(0,0,0,.22)!important;
+  overflow:hidden!important;
+}
+html[data-loadlink-theme="light"] [data-loadlink-analytics-modal="true"],
+html[data-loadlink-theme="light"] [data-ll-final-analytics="true"] {
+  background:#fff!important;
+  color:#111!important;
+  border-color:rgba(17,17,17,.10)!important;
+}
+html[data-loadlink-theme="light"] [data-loadlink-analytics-modal="true"] :is(h1,h2,h3,h4,p,span,strong,small,b),
+html[data-loadlink-theme="light"] [data-ll-final-analytics="true"] :is(h1,h2,h3,h4,p,span,strong,small,b) {
+  color:inherit;
+}
+html[data-loadlink-theme="light"] [data-loadlink-analytics-modal="true"] [class*="text-white"],
+html[data-loadlink-theme="light"] [data-ll-final-analytics="true"] [class*="text-white"] {
+  color:#111!important;
+}
+html[data-loadlink-theme="light"] [data-loadlink-analytics-modal="true"] [class*="border-white"],
+html[data-loadlink-theme="light"] [data-ll-final-analytics="true"] [class*="border-white"] {
+  border-color:rgba(17,17,17,.10)!important;
+}
+html[data-loadlink-theme="light"] [data-loadlink-analytics-modal="true"] [class*="bg-white/5"],
+html[data-loadlink-theme="light"] [data-ll-final-analytics="true"] [class*="bg-white/5"] {
+  background:rgba(17,17,17,.035)!important;
+}
+html[data-loadlink-theme="dark"] [data-loadlink-analytics-modal="true"],
+html[data-loadlink-theme="dark"] [data-ll-final-analytics="true"] {
+  background:#0d0d0d!important;
+  color:#f7f7f7!important;
+  border-color:rgba(255,255,255,.12)!important;
+}
+[data-loadlink-analytics-modal="true"] h2,
+[data-ll-final-analytics="true"] h2 { letter-spacing:-.04em!important; }
+[data-loadlink-analytics-modal="true"] button,
+[data-ll-final-analytics="true"] button { border-radius:14px!important; }
+
+/* Message quotes: actual marker created by LoadLinkFinalUxRepair20260820. */
+[data-loadlink-chat-quote="true"],
+[data-ll-final-quote="true"] {
+  border-radius:15px!important;
+  opacity:1!important;
+}
+html[data-loadlink-theme="light"] [data-loadlink-chat-quote="true"],
+html[data-loadlink-theme="light"] [data-ll-final-quote="true"] {
+  color:#111!important;
+  background:#fffaf0!important;
+  border-color:rgba(163,116,0,.22)!important;
+}
+html[data-loadlink-theme="dark"] [data-loadlink-chat-quote="true"],
+html[data-loadlink-theme="dark"] [data-ll-final-quote="true"] {
+  color:#fff!important;
+  background:#121212!important;
+  border-color:rgba(246,184,0,.22)!important;
+}
+
+/* Inactive / approval state surfaces. */
+[data-ll-final-inactive="true"] {
+  max-width:min(720px,calc(100vw - 24px))!important;
+  margin:12px auto!important;
+  padding:13px 15px!important;
+  border-radius:18px!important;
+  border:1px solid rgba(246,184,0,.24)!important;
+  box-shadow:0 12px 34px rgba(0,0,0,.10)!important;
+}
+html[data-loadlink-theme="light"] [data-ll-final-inactive="true"] { background:#fffaf0!important;color:#111!important; }
+html[data-loadlink-theme="dark"] [data-ll-final-inactive="true"] { background:#111!important;color:#fff!important; }
+[data-ll-final-inactive="true"] :is(h1,h2,h3,p,span,strong,small,a,button){color:inherit!important;}
+
+/* Live marketplace cards: quieter hierarchy without changing their core concept. */
+[data-ll-final-post-card="true"] {
+  border-radius:24px!important;
+  border-color:var(--ll-final-border,rgba(17,17,17,.10))!important;
+  overflow:hidden!important;
+  box-shadow:0 10px 32px rgba(0,0,0,.065)!important;
+}
+html[data-loadlink-theme="light"] [data-ll-final-post-card="true"] { background:#fff!important;color:#111!important; }
+html[data-loadlink-theme="dark"] [data-ll-final-post-card="true"] { background:#0b0b0b!important;color:#fff!important;border-color:rgba(255,255,255,.11)!important; }
+[data-ll-final-post-card="true"] :is(h2,h3,h4){letter-spacing:-.03em!important;line-height:1.13!important;}
+[data-ll-final-post-card="true"] details,[data-ll-final-post-card="true"] [class*="grid"]{border-color:var(--ll-final-border,rgba(17,17,17,.10))!important;}
+
+/* Real call overlay marker created by the recovery layer. */
+[data-ll-call-surface="true"] {
+  align-items:stretch!important;
+  padding:0!important;
+  background:radial-gradient(circle at 50% 16%,rgba(246,184,0,.10),transparent 29%),#050505!important;
+}
+[data-ll-call-surface="true"] > section {
+  width:100%!important;
+  max-width:520px!important;
+  min-height:100dvh!important;
+  margin:0 auto!important;
+  padding:max(22px,env(safe-area-inset-top)) 22px calc(22px + env(safe-area-inset-bottom))!important;
+  display:flex!important;
+  flex-direction:column!important;
+}
+[data-ll-call-surface="true"] button { border-radius:999px!important; }
+[data-ll-call-surface="true"] [class*="text-5xl"],
+[data-ll-call-surface="true"] [class*="text-6xl"] { letter-spacing:-.05em!important; }
+
+/* Toasts now respect light and dark mode instead of always rendering as a dark block. */
+[data-loadlink-toast-center="true"] > section,
+[data-ll-toast-card="true"] {
+  border-radius:22px!important;
+  box-shadow:0 20px 64px rgba(0,0,0,.22)!important;
+}
+html[data-loadlink-theme="light"] [data-loadlink-toast-center="true"] > section,
+html[data-loadlink-theme="light"] [data-ll-toast-card="true"] {
+  background:rgba(255,255,255,.94)!important;
+  color:#111!important;
+  border-color:rgba(17,17,17,.10)!important;
+}
+html[data-loadlink-theme="light"] [data-loadlink-toast-center="true"] > section :is(p,span,strong,small),
+html[data-loadlink-theme="light"] [data-ll-toast-card="true"] :is(p,span,strong,small) { color:inherit!important; }
+html[data-loadlink-theme="dark"] [data-loadlink-toast-center="true"] > section,
+html[data-loadlink-theme="dark"] [data-ll-toast-card="true"] {
+  background:rgba(14,14,14,.94)!important;
+  color:#fff!important;
+  border-color:rgba(255,255,255,.12)!important;
+}
+
+/* Recovery search chooser — deliberately bound to /search and the Jobs/Contracts portal search. */
+.ll-recovery-search-sheet{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:flex-end;justify-content:center;color:var(--ll-final-text,#111)}
+.ll-recovery-search-backdrop{position:absolute;inset:0;border:0;background:rgba(0,0,0,.45);backdrop-filter:blur(8px)}
+.ll-recovery-search-panel{position:relative;z-index:1;width:min(680px,100%);max-height:min(91dvh,860px);display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--ll-final-border,rgba(17,17,17,.10));border-radius:30px 30px 0 0;background:var(--ll-final-surface,#fff);box-shadow:0 -26px 86px rgba(0,0,0,.25)}
+.ll-recovery-search-header{min-height:80px;display:flex;align-items:center;gap:13px;padding:14px 18px;border-bottom:1px solid var(--ll-final-border,rgba(17,17,17,.10))}
+.ll-recovery-search-header>button{width:43px;height:43px;flex:0 0 43px;border:1px solid var(--ll-final-border,rgba(17,17,17,.10));border-radius:50%;background:var(--ll-final-surface-2,#f3f1eb);color:inherit;font-size:29px;line-height:1}
+.ll-recovery-search-header div{min-width:0;display:flex;flex-direction:column}
+.ll-recovery-search-header strong{font-size:19px;letter-spacing:-.03em}
+.ll-recovery-search-header span{margin-top:3px;color:var(--ll-final-muted,rgba(17,17,17,.58));font-size:11px;font-weight:700;line-height:1.4}
+.ll-recovery-search-filter{margin:14px 16px 8px;height:52px;display:flex;align-items:center;gap:9px;padding:0 15px;border:1px solid var(--ll-final-border,rgba(17,17,17,.10));border-radius:16px;background:var(--ll-final-surface-2,#f3f1eb)}
+.ll-recovery-search-filter>span{font-size:23px;opacity:.52}
+.ll-recovery-search-filter input{width:100%;height:100%;border:0!important;outline:0!important;background:transparent!important;color:inherit!important;font-size:15px;font-weight:700}
+.ll-recovery-search-options{overflow:auto;overscroll-behavior:contain;padding:5px 12px 16px}
+.ll-recovery-search-options>button{width:100%;min-height:72px;display:grid;grid-template-columns:26px 1fr 18px;align-items:center;gap:12px;padding:11px 10px;border:0;border-bottom:1px solid var(--ll-final-border,rgba(17,17,17,.10));background:transparent;color:inherit;text-align:left}
+.ll-recovery-search-options>button>i{width:23px;height:23px;border:2px solid color-mix(in srgb,currentColor 30%,transparent);border-radius:7px;position:relative}
+.ll-recovery-search-options>button.is-selected{border-radius:15px;background:color-mix(in srgb,#f6b800 9%,transparent)}
+.ll-recovery-search-options>button.is-selected>i{background:#f6b800;border-color:#f6b800}
+.ll-recovery-search-options>button.is-selected>i:after{content:"";position:absolute;left:6px;top:3px;width:6px;height:10px;border:solid #111;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.ll-recovery-search-options>button span{min-width:0}.ll-recovery-search-options>button strong{display:block;font-size:15px;letter-spacing:-.015em}.ll-recovery-search-options>button small{display:block;margin-top:4px;color:var(--ll-final-muted,rgba(17,17,17,.58));font-size:11px;font-weight:650;line-height:1.45}.ll-recovery-search-options>button b{color:var(--ll-final-muted,rgba(17,17,17,.58));font-size:24px;font-weight:400}.ll-recovery-search-options>p{padding:30px 16px;text-align:center;color:var(--ll-final-muted,rgba(17,17,17,.58));font-size:13px;font-weight:700}
+.ll-recovery-search-footer{display:grid;grid-template-columns:auto auto 1fr;gap:8px;padding:12px 14px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--ll-final-border,rgba(17,17,17,.10));background:color-mix(in srgb,var(--ll-final-surface,#fff) 95%,transparent);backdrop-filter:blur(20px)}
+.ll-recovery-search-footer button{min-height:48px;border:1px solid var(--ll-final-border,rgba(17,17,17,.10));border-radius:15px;padding:0 15px;background:var(--ll-final-surface-2,#f3f1eb);color:inherit;font-size:12px;font-weight:850;white-space:nowrap}.ll-recovery-search-footer button.is-primary{background:#f6b800;border-color:#f6b800;color:#111;font-size:14px}
+body:has(.ll-recovery-search-sheet) .ll-final-search-sheet{display:none!important}
+@media(min-width:700px){.ll-recovery-search-sheet{align-items:center;padding:24px}.ll-recovery-search-panel{border-radius:30px;max-height:min(82dvh,760px)}}
