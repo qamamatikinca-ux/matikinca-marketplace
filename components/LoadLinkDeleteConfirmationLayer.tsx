@@ -79,16 +79,16 @@ export default function LoadLinkDeleteConfirmationLayer() {
   const eyebrow = isSignOut ? "Sign out" : isAccountDeletion ? "Account deletion" : "Confirm deletion";
   const title = isSignOut ? "Sign out of LoadLink?" : isAccountDeletion ? "Request account deletion?" : "Delete this item?";
   const description = isSignOut
-    ? "You’ll be signed out on this device."
+    ? "You’ll be signed out on this device. You can sign back in at any time."
     : isAccountDeletion
-      ? "LoadLink will review the request before the account is removed."
-      : `${subject ? `Delete ${subject.toLowerCase()}?` : "Delete this item?"} This action may not be reversible.`;
+      ? "This sends an account-deletion request to LoadLink. Your account is not removed instantly; the request must be reviewed first."
+      : `${subject ? `You’re about to delete ${subject.toLowerCase()}.` : "You’re about to delete this item."} This action may not be reversible.`;
   const confirmLabel = isSignOut ? "Sign out" : isAccountDeletion ? "Request deletion" : "Delete";
 
   return (
     <div
       data-loadlink-confirmation-layer="true"
-      className="fixed inset-0 z-[2147483600] flex items-center justify-center bg-black/42 px-4 py-8 backdrop-blur-[10px]"
+      className="fixed inset-0 z-[2147483600] flex items-center justify-center bg-black/30 px-4 py-8 backdrop-blur-[18px]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="loadlink-confirm-title"
@@ -97,38 +97,36 @@ export default function LoadLinkDeleteConfirmationLayer() {
       }}
     >
       <section
-        className={`w-full max-w-[365px] rounded-[24px] border p-5 text-white shadow-[0_24px_70px_rgba(0,0,0,.38)] backdrop-blur-2xl ${
+        className={`w-full max-w-[410px] overflow-hidden rounded-[30px] border p-5 text-white shadow-[0_28px_90px_rgba(0,0,0,.34)] backdrop-blur-3xl backdrop-saturate-150 sm:p-6 ${
           destructive
-            ? "border-red-400/18 bg-[#151515]/95"
-            : "border-white/12 bg-[#151515]/95"
+            ? "border-red-300/14 bg-[linear-gradient(145deg,rgba(23,23,23,.62),rgba(8,8,8,.43))]"
+            : "border-white/14 bg-[linear-gradient(145deg,rgba(28,28,28,.58),rgba(8,8,8,.42))]"
         }`}
       >
-        <div className="flex items-start gap-3.5">
-          <div
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border ${
-              destructive
-                ? "border-red-400/24 bg-red-400/[.06] text-red-300"
-                : "border-[#f6b800]/28 bg-[#f6b800]/[.06] text-[#f6b800]"
-            }`}
-          >
-            <LoadLinkIcon name={isSignOut ? "logout" : "trash"} size={21} strokeWidth={1.8} />
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <p className={`text-[9px] font-black uppercase tracking-[.15em] ${destructive ? "text-red-300" : "text-[#f6b800]"}`}>{eyebrow}</p>
-            <h2 id="loadlink-confirm-title" className="mt-1 text-[22px] font-black leading-tight tracking-[-.035em]">{title}</h2>
-            <p className="mt-2 text-[13px] font-semibold leading-5 text-white/62">{description}</p>
-          </div>
+        <div
+          className={`mx-auto flex h-13 w-13 items-center justify-center rounded-full border backdrop-blur-xl ${
+            destructive
+              ? "border-red-400/28 bg-red-400/[.065] text-red-300"
+              : "border-[#f6b800]/32 bg-[#f6b800]/[.075] text-[#f6b800]"
+          }`}
+        >
+          <LoadLinkIcon name={isSignOut ? "logout" : "trash"} size={23} strokeWidth={1.8} />
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-2">
+        <div className="mt-4 text-center">
+          <p className={`text-[9px] font-black uppercase tracking-[.16em] ${destructive ? "text-red-300" : "text-[#f6b800]"}`}>{eyebrow}</p>
+          <h2 id="loadlink-confirm-title" className="mt-2 text-[25px] font-black tracking-[-.045em]">{title}</h2>
+          <p className="mx-auto mt-2 max-w-[340px] text-[13px] font-semibold leading-5 text-white/68">{description}</p>
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-2.5">
           <button
             type="button"
             onClick={() => setPending(null)}
-            className={`h-11 rounded-[14px] border text-[13px] font-black transition active:scale-[.985] ${
+            className={`h-11 rounded-[15px] border text-[13px] font-black transition active:scale-[.985] ${
               isSignOut
                 ? "border-[#f6b800] bg-[#f6b800] text-black"
-                : "border-white/12 bg-white/[.045] text-white"
+                : "border-white/14 bg-white/[.055] text-white"
             }`}
           >
             {isSignOut ? "Stay signed in" : "Cancel"}
@@ -136,10 +134,10 @@ export default function LoadLinkDeleteConfirmationLayer() {
           <button
             type="button"
             onClick={confirm}
-            className={`h-11 rounded-[14px] border text-[13px] font-black transition active:scale-[.985] ${
+            className={`h-11 rounded-[15px] border text-[13px] font-black transition active:scale-[.985] ${
               destructive
-                ? "border-red-400/30 bg-red-400/[.06] text-red-300"
-                : "border-white/12 bg-white/[.045] text-white"
+                ? "border-red-400/40 bg-red-400/[.075] text-red-300"
+                : "border-white/14 bg-white/[.055] text-white"
             }`}
           >
             {confirmLabel}
