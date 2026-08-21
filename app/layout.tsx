@@ -18,6 +18,7 @@ import "./loadlink-glass-balance.css";
 import "./loadlink-light-glass.css";
 import "./loadlink-final-release-polish-20260821.css";
 import "./loadlink-call-history-20260821.css";
+import "./loadlink-release-completion-20260821.css";
 import GlobalLoading from "@/components/GlobalLoading";
 import ChatLauncher from "@/components/ChatLauncher";
 import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";
@@ -54,6 +55,7 @@ import LoadLinkAuditUpdateBridge from "@/components/LoadLinkAuditUpdateBridge";
 import LoadLinkCriticalInteractionFixes from "@/components/LoadLinkCriticalInteractionFixes";
 import LoadLinkFinalUxRepair20260820 from "@/components/LoadLinkFinalUxRepair20260820";
 import LoadLinkFinalReleasePolishBootstrap20260821 from "@/components/LoadLinkFinalReleasePolishBootstrap20260821";
+import LoadLinkReleaseCompletion20260821 from "@/components/LoadLinkReleaseCompletion20260821";
 
 export const metadata: Metadata = {
   title: { default: "LoadLink | South African Logistics Marketplace", template: "%s | LoadLink" },
@@ -74,7 +76,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var k='loadlink-theme',t=localStorage.getItem(k);if(t!=='dark'&&t!=='light'){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}var r=document.documentElement;r.dataset.loadlinkTheme=t;r.classList.toggle('dark',t==='dark');r.style.colorScheme=t;r.dataset.loadlinkSimple=localStorage.getItem('loadlink-simple-mode')==='true'?'true':'false';var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',t==='dark'?'#050505':'#ffffff')}catch(e){}})();` }} />
       </head>
       <body>
-        <ThemeCoordinator /><LoadLinkUiRepairV273 /><SimpleModeCoordinator /><AccountActivityTracker /><AuthMfaGate /><ProfileOnboardingGate /><MarketplaceRestrictionGuard /><AccountSettingsGlassFix /><LoadLinkSelectLabelFix /><LoadLinkInteractionSystem /><LoadLinkTouchScrollGuard /><LoadLinkShareEnhancer /><HomeFollowingEnhancer /><DealerPostBenefitsEnhancer /><MarketplaceUxPolishEnhancer /><PhotoGalleryModernizer /><LoadLinkUniversalUiGuard /><LoadLinkAuditUpdateBridge /><LoadLinkCriticalInteractionFixes /><LoadLinkFinalUxRepair20260820 /><LoadLinkFinalReleasePolishBootstrap20260821 /><ListingReportGuard /><ChatComposerActions /><LogisticsToolsFinalEnhancer /><DealerWorkspaceNavigationEnhancer /><DealerPackageDetailsEnhancer /><LoadLinkCallBootstrap /><LoadLinkCallHistoryStrip20260821 />
+        <ThemeCoordinator /><LoadLinkUiRepairV273 /><SimpleModeCoordinator /><AccountActivityTracker /><AuthMfaGate /><ProfileOnboardingGate /><MarketplaceRestrictionGuard /><AccountSettingsGlassFix /><LoadLinkSelectLabelFix /><LoadLinkInteractionSystem /><LoadLinkTouchScrollGuard /><LoadLinkShareEnhancer /><HomeFollowingEnhancer /><DealerPostBenefitsEnhancer /><MarketplaceUxPolishEnhancer /><PhotoGalleryModernizer /><LoadLinkUniversalUiGuard /><LoadLinkAuditUpdateBridge /><LoadLinkCriticalInteractionFixes /><LoadLinkFinalUxRepair20260820 /><LoadLinkFinalReleasePolishBootstrap20260821 /><LoadLinkReleaseCompletion20260821 /><ListingReportGuard /><ChatComposerActions /><LogisticsToolsFinalEnhancer /><DealerWorkspaceNavigationEnhancer /><DealerPackageDetailsEnhancer /><LoadLinkCallBootstrap /><LoadLinkCallHistoryStrip20260821 />
         <Suspense fallback={null}><GlobalLoading /></Suspense>
         <SwipeDotsEnhancer /><AuthBootstrap /><NotificationCenter /><ChatLauncher /><LoadLinkToastCenter /><LoadLinkDeleteConfirmationLayer /><NetworkRecovery />
         {children}
