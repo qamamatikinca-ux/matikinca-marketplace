@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import LogisticsMessageTools from "@/components/LogisticsMessageTools";
+import LoadLinkIcon from "@/components/LoadLinkIcon";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 const MENU_WIDTH = 224;
@@ -123,7 +124,9 @@ export default function ChatComposerActions() {
   }
 
   const threadId = typeof window !== "undefined"
-    ? new URLSearchParams(window.location.search).get("conversation") || "active-loadlink-chat"
+    ? new URLSearchParams(window.location.search).get("thread")
+      || new URLSearchParams(window.location.search).get("conversation")
+      || "active-loadlink-chat"
     : "active-loadlink-chat";
 
   const menu = open && typeof document !== "undefined"
@@ -144,16 +147,26 @@ export default function ChatComposerActions() {
               onClick={attachMedia}
               className="flex w-full items-center gap-3 rounded-[13px] px-3 py-3 text-left text-sm font-black hover:bg-black/[.04] active:bg-black/[.07] dark:hover:bg-white/[.06] dark:active:bg-white/[.09]"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f6b800] text-black" aria-hidden="true"><AttachmentIcon /></span>
-              <span><span className="block">Attach media</span><span className="mt-0.5 block text-[10px] font-semibold text-black/45 dark:text-white/45">Photo, document or file</span></span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f6b800] text-black" aria-hidden="true">
+                <LoadLinkIcon name="paperclip" size={17} />
+              </span>
+              <span>
+                <span className="block">Attach media</span>
+                <span className="mt-0.5 block text-[10px] font-semibold text-black/45 dark:text-white/45">Photo, document or file</span>
+              </span>
             </button>
             <button
               type="button"
               onClick={openTools}
               className="flex w-full items-center gap-3 rounded-[13px] px-3 py-3 text-left text-sm font-black hover:bg-black/[.04] active:bg-black/[.07] dark:hover:bg-white/[.06] dark:active:bg-white/[.09]"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-[#f6b800] dark:bg-[#f6b800] dark:text-black" aria-hidden="true"><TruckToolsIcon /></span>
-              <span><span className="block">Logistics tools</span><span className="mt-0.5 block text-[10px] font-semibold text-black/45 dark:text-white/45">Use tools inside this chat</span></span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-[#f6b800] dark:bg-[#f6b800] dark:text-black" aria-hidden="true">
+                <LoadLinkIcon name="tools" size={18} />
+              </span>
+              <span>
+                <span className="block">Logistics tools</span>
+                <span className="mt-0.5 block text-[10px] font-semibold text-black/45 dark:text-white/45">Use tools inside this chat</span>
+              </span>
             </button>
           </div>
         </>,
@@ -176,9 +189,11 @@ export default function ChatComposerActions() {
           }}
           aria-label={open ? "Close chat actions" : "Open chat actions"}
           aria-expanded={open}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-[#f3f0e8] text-[25px] font-medium leading-none text-black shadow-sm transition active:scale-95"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-[#f3f0e8] text-black shadow-sm transition active:scale-95 dark:border-white/12 dark:bg-[#151515] dark:text-[#f6b800]"
         >
-          <span className={`transition-transform duration-150 ${open ? "rotate-45" : ""}`} aria-hidden="true">+</span>
+          <span className={`transition-transform duration-150 ${open ? "rotate-45" : ""}`} aria-hidden="true">
+            <LoadLinkIcon name="plus" size={22} strokeWidth={2.2} />
+          </span>
         </button>
       </div>
       {menu}
@@ -194,23 +209,5 @@ export default function ChatComposerActions() {
       />
     </>,
     mount,
-  );
-}
-
-function AttachmentIcon() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M8.5 12.5 14.8 6.2a3 3 0 0 1 4.2 4.2l-8.1 8.1a5 5 0 0 1-7.1-7.1l8.4-8.4" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function TruckToolsIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M3 7h11v9H3V7Zm11 3h3.4L21 13.6V16h-7v-6Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-      <circle cx="7" cy="17.5" r="1.7" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="17.5" cy="17.5" r="1.7" stroke="currentColor" strokeWidth="1.8" />
-    </svg>
   );
 }
