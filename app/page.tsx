@@ -5,42 +5,91 @@ const featureGroups = [
   {
     number: "01",
     title: "Marketplace",
-    copy: "Jobs · Contracts · Vehicles & mobile units · Drivers · Dealerships",
+    intro: "Find work, equipment and people without jumping between unrelated platforms.",
+    features: [
+      "Jobs",
+      "Contracts",
+      "Commercial vehicles",
+      "Mobile units",
+      "Driver profiles",
+      "Dealerships",
+      "Predictive search",
+      "Featured and sponsored listings",
+      "Recently viewed",
+      "My Posts",
+    ],
   },
   {
     number: "02",
-    title: "Deal flow",
-    copy: "Direct messaging · Notifications · Listing management · Saved & archived conversations",
+    title: "Messages and deal flow",
+    intro: "Keep the conversation connected to the listing and move from discovery to a real deal faster.",
+    features: [
+      "Direct messaging",
+      "Post-linked conversations",
+      "Images and files",
+      "Voice notes",
+      "Unread counts",
+      "Potential deals",
+      "Conversation archive",
+      "Activity status",
+      "Typical response time",
+      "Notifications",
+    ],
   },
   {
     number: "03",
     title: "Logistics tools",
-    copy: "Rate quotes · Trip briefs · Load checklists · Collection & delivery briefs · Driver handovers · ETA & incident updates · Cost, payment & POD tools · Truck finance calculator",
+    intro: "Practical tools that can be used inside LoadLink or shared when the work moves outside the platform.",
+    features: [
+      "Rate quotes",
+      "Trip briefs",
+      "Load checklists",
+      "Collection briefs",
+      "Delivery briefs",
+      "Driver handovers",
+      "ETA updates",
+      "Incident updates",
+      "Cost breakdowns",
+      "Payment terms",
+      "POD requests",
+      "Document requests",
+      "Truck finance calculator",
+    ],
   },
   {
     number: "04",
-    title: "Documents & trust",
-    copy: "LoadLink-branded PDF exports · Optional business branding · Profile verification · Listing moderation · Reporting · Account controls · Packages & Pro insights",
+    title: "Business and documents",
+    intro: "Tools for operators and dealerships that need more than a basic classifieds listing.",
+    features: [
+      "LoadLink-branded PDF exports",
+      "Optional business logo branding",
+      "Dealership workspace",
+      "Listing management",
+      "Packages",
+      "Pro analytics",
+      "Performance insights",
+      "Quote reuse from existing posts",
+      "Shareable operational documents",
+    ],
+  },
+  {
+    number: "05",
+    title: "Trust and account control",
+    intro: "More context before users decide who to work with and better controls around the account itself.",
+    features: [
+      "Profile verification",
+      "Phone OTP",
+      "Identity and document checks",
+      "Listing moderation",
+      "Reporting",
+      "Block and flag controls",
+      "Login and device activity",
+      "Account controls",
+      "Dark and light mode",
+      "Simple Mode",
+    ],
   },
 ];
-
-function Arrow() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 12h14" />
-      <path d="m13 6 6 6-6 6" />
-    </svg>
-  );
-}
 
 export default function Home() {
   return (
@@ -51,8 +100,8 @@ export default function Home() {
           alt="Commercial truck on the road"
           className="absolute inset-0 h-full w-full object-cover object-[62%_center] sm:object-center"
         />
-        <div className="absolute inset-0 bg-black/40" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/72 to-black/5" />
+        <div className="absolute inset-0 bg-black/42" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/74 to-black/5" />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-black/55" />
 
         <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-[1500px] flex-col px-5 sm:px-8 lg:px-12">
@@ -64,16 +113,16 @@ export default function Home() {
               height={391}
               className="h-auto w-[148px] object-contain sm:w-[168px]"
             />
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f6b800]">Coming soon · South Africa</p>
+            <div className="text-right">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f6b800]">Coming soon</p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/48">South Africa</p>
+            </div>
           </header>
 
           <div className="flex flex-1 items-end pb-8 pt-20 sm:pb-10 lg:pb-12">
             <div className="w-full">
               <div className="max-w-5xl">
-                <p className="flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.16em] text-white/55">
-                  <span className="h-px w-8 bg-[#f6b800]" />
-                  Logistics, made easier
-                </p>
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-white/55">Logistics, made easier</p>
 
                 <h1 className="mt-5 text-[clamp(4rem,10.2vw,9.5rem)] font-black leading-[0.78] tracking-[-0.075em]">
                   South Africa moves.
@@ -83,31 +132,30 @@ export default function Home() {
 
                 <div className="mt-8 grid max-w-4xl gap-6 border-t border-white/20 pt-6 md:grid-cols-[1fr_auto] md:items-end">
                   <p className="max-w-2xl text-base font-semibold leading-7 text-white/70 sm:text-lg sm:leading-8">
-                    Work, vehicles, drivers, dealerships and practical logistics tools — brought into one focused marketplace.
+                    Jobs, contracts, vehicles, mobile units, drivers, dealerships and practical logistics tools in one focused marketplace.
                   </p>
 
                   <a
                     href={FREE_TRIAL_EMAIL}
-                    className="group inline-flex min-h-12 w-fit items-center gap-3 bg-[#f6b800] px-5 py-3 text-sm font-black text-black transition hover:bg-[#ffc62b]"
+                    className="inline-flex min-h-12 w-fit items-center bg-[#f6b800] px-5 py-3 text-sm font-black text-black transition hover:bg-[#ffc62b]"
                   >
                     Apply for free trial
-                    <span className="transition group-hover:translate-x-0.5"><Arrow /></span>
                   </a>
                 </div>
               </div>
 
               <div className="mt-10 grid border-y border-white/16 bg-black/20 backdrop-blur-sm sm:grid-cols-3">
-                <div className="flex items-baseline gap-3 border-b border-white/14 px-4 py-4 sm:border-b-0 sm:border-r sm:px-5">
-                  <span className="text-2xl font-black tracking-[-0.04em]">30+</span>
-                  <span className="text-xs font-bold text-white/55">Gauteng dealerships</span>
+                <div className="border-b border-white/14 px-4 py-4 sm:border-b-0 sm:border-r sm:px-5">
+                  <p className="text-2xl font-black tracking-[-0.04em]">30+</p>
+                  <p className="mt-1 text-xs font-bold text-white/55">Gauteng dealerships</p>
                 </div>
-                <div className="flex items-baseline gap-3 border-b border-white/14 px-4 py-4 sm:border-b-0 sm:border-r sm:px-5">
-                  <span className="text-2xl font-black tracking-[-0.04em]">60+</span>
-                  <span className="text-xs font-bold text-white/55">Mpumalanga dealerships</span>
+                <div className="border-b border-white/14 px-4 py-4 sm:border-b-0 sm:border-r sm:px-5">
+                  <p className="text-2xl font-black tracking-[-0.04em]">60+</p>
+                  <p className="mt-1 text-xs font-bold text-white/55">Mpumalanga dealerships</p>
                 </div>
-                <div className="flex items-baseline gap-3 px-4 py-4 sm:px-5">
-                  <span className="text-2xl font-black tracking-[-0.04em]">40+</span>
-                  <span className="text-xs font-bold text-white/55">Western Cape dealerships</span>
+                <div className="px-4 py-4 sm:px-5">
+                  <p className="text-2xl font-black tracking-[-0.04em]">40+</p>
+                  <p className="mt-1 text-xs font-bold text-white/55">Western Cape dealerships</p>
                 </div>
               </div>
             </div>
@@ -119,34 +167,36 @@ export default function Home() {
         <div className="mx-auto w-full max-w-[1500px]">
           <div className="grid gap-8 border-b border-black/15 pb-10 lg:grid-cols-[1.05fr_.95fr] lg:items-end">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-black/42">What is coming</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-black/42">What LoadLink is bringing</p>
               <h2 className="mt-4 max-w-4xl text-5xl font-black leading-[0.88] tracking-[-0.06em] sm:text-6xl md:text-7xl">
-                The useful parts of logistics. In one place.
+                The platform, without the noise.
               </h2>
             </div>
             <p className="max-w-xl text-base font-semibold leading-8 text-black/56 lg:ml-auto sm:text-lg">
-              LoadLink is being built as a working platform, not a crowded classifieds page. The full product is there — presented simply.
+              The Coming Soon page stays simple. The product does not. These are the main capabilities being prepared for launch.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4">
-            {featureGroups.map((group, index) => (
-              <article
-                key={group.number}
-                className={`py-8 md:py-10 lg:min-h-[330px] lg:py-12 ${index < featureGroups.length - 1 ? "border-b border-black/15 md:border-b-0 md:border-r" : ""} ${index === 1 ? "md:border-r-0 lg:border-r" : ""} ${index === 2 ? "md:border-t md:border-black/15 lg:border-t-0" : ""}`}
-              >
-                <div className="md:px-6 lg:px-7 first:pl-0">
-                  <p className="text-[10px] font-black tracking-[0.15em] text-black/30">{group.number}</p>
-                  <h3 className="mt-5 text-3xl font-black tracking-[-0.04em]">{group.title}</h3>
-                  <p className="mt-5 max-w-sm text-sm font-semibold leading-7 text-black/55 sm:text-base">{group.copy}</p>
+          <div>
+            {featureGroups.map((group) => (
+              <article key={group.number} className="grid gap-6 border-b border-black/15 py-9 md:grid-cols-[90px_0.8fr_1.4fr] md:items-start md:py-11">
+                <p className="pt-1 text-[10px] font-black tracking-[0.15em] text-black/30">{group.number}</p>
+                <div>
+                  <h3 className="text-3xl font-black tracking-[-0.04em] sm:text-4xl">{group.title}</h3>
+                  <p className="mt-4 max-w-md text-sm font-semibold leading-7 text-black/52 sm:text-base">{group.intro}</p>
+                </div>
+                <div className="md:pl-6">
+                  <p className="max-w-3xl text-sm font-black leading-7 tracking-[-0.01em] text-black/72 sm:text-base sm:leading-8">
+                    {group.features.join("   /   ")}
+                  </p>
                 </div>
               </article>
             ))}
           </div>
 
-          <div className="border-t border-black/15 pt-7">
+          <div className="pt-8">
             <p className="max-w-4xl text-sm font-bold leading-7 text-black/48 sm:text-base">
-              Quotes can become clean LoadLink-branded PDF documents with optional business branding. Operational tools can be copied or shared outside the platform when the job needs to keep moving.
+              LoadLink quotes can become clean branded PDF documents with an optional business logo. Logistics tools can be copied or shared outside LoadLink when the work needs to keep moving.
             </p>
           </div>
         </div>
@@ -158,7 +208,7 @@ export default function Home() {
           alt="Commercial logistics in South Africa"
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
-        <div className="absolute inset-0 bg-black/72" />
+        <div className="absolute inset-0 bg-black/74" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/94 via-black/62 to-transparent" />
 
         <div className="relative mx-auto flex min-h-[500px] w-full max-w-[1500px] items-center px-5 py-20 sm:px-8 lg:px-12">
@@ -172,10 +222,9 @@ export default function Home() {
             </p>
             <a
               href={FREE_TRIAL_EMAIL}
-              className="group mt-8 inline-flex min-h-12 items-center gap-3 bg-[#f6b800] px-5 py-3 text-sm font-black text-black transition hover:bg-[#ffc62b]"
+              className="mt-8 inline-flex min-h-12 items-center bg-[#f6b800] px-5 py-3 text-sm font-black text-black transition hover:bg-[#ffc62b]"
             >
               Apply for free trial
-              <span className="transition group-hover:translate-x-0.5"><Arrow /></span>
             </a>
           </div>
         </div>
@@ -194,7 +243,7 @@ export default function Home() {
             <a href="mailto:loadlinksouthafrica@gmail.com" className="transition hover:text-white">
               loadlinksouthafrica@gmail.com
             </a>
-            <p className="mt-1 text-xs text-white/28">South African logistics marketplace · Coming soon</p>
+            <p className="mt-1 text-xs text-white/28">South African logistics marketplace. Coming soon.</p>
           </div>
         </div>
       </footer>
