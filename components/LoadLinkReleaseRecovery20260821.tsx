@@ -57,7 +57,7 @@ function normaliseScope(value: string | null): SearchScope {
 function scopeForPage(): SearchScope | null {
   const path = window.location.pathname;
   const params = new URLSearchParams(window.location.search);
-  if (path === "/jobs") return params.get("portal") === "contract" ? "contract" : "job";
+  if (path === "/jobs") return params.get("portal") === "contract" ? "contract" : params.get("portal") === "asset" ? "asset" : "job";
   if (path === "/search") return normaliseScope(params.get("category"));
   return null;
 }
@@ -69,7 +69,7 @@ function primarySearchInput(): HTMLInputElement | null {
     return form?.querySelector<HTMLInputElement>('input:not([aria-label*="location" i])') || null;
   }
   if (path === "/jobs") {
-    const shell = document.querySelector<HTMLElement>('[data-loadlink-jobs-search-shell="true"]');
+    const shell = document.querySelector<HTMLElement>("[data-loadlink-jobs-search-shell]");
     const inputs = Array.from(shell?.querySelectorAll<HTMLInputElement>("input") || []);
     return inputs.find((input) => !/location|city|town|province/i.test(`${input.placeholder} ${input.getAttribute("aria-label") || ""}`)) || null;
   }
@@ -152,10 +152,12 @@ export default function LoadLinkReleaseRecovery20260821() {
     const observer = new MutationObserver(() => window.requestAnimationFrame(scan));
     observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "data-loadlink-theme"] });
     window.addEventListener("loadlink-theme-changed", scan as EventListener);
+    window.addEventListener("loadlink-theme-change", scan as EventListener);
     window.addEventListener("popstate", scan);
     return () => {
       observer.disconnect();
       window.removeEventListener("loadlink-theme-changed", scan as EventListener);
+      window.removeEventListener("loadlink-theme-change", scan as EventListener);
       window.removeEventListener("popstate", scan);
     };
   }, []);
@@ -171,7 +173,6 @@ export default function LoadLinkReleaseRecovery20260821() {
       const pageScope = scopeForPage();
       if (!pageScope) return;
 
-      event.stopImmediatePropagation();
       if (allowNativeFocusRef.current) {
         allowNativeFocusRef.current = false;
         return;
@@ -212,7 +213,7 @@ export default function LoadLinkReleaseRecovery20260821() {
         form.requestSubmit();
         return;
       }
-      const shell = input.closest<HTMLElement>('[data-loadlink-jobs-search-shell="true"]');
+      const shell = input.closest<HTMLElement>("[data-loadlink-jobs-search-shell]");
       const button = Array.from(shell?.querySelectorAll<HTMLButtonElement>("button") || []).find((candidate) => /search/i.test(candidate.textContent || ""));
       button?.click();
     }, 55);
