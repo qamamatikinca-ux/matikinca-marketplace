@@ -1,0 +1,111 @@
+/* LoadLink combined release: direct selectors for the native marketplace pages. */
+
+.ll-release-page-limit{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:max-content;
+  min-height:30px;
+  margin-top:10px;
+  padding:0 11px;
+  border:1px solid rgba(17,17,17,.10);
+  border-radius:999px;
+  background:rgba(255,255,255,.76);
+  color:rgba(17,17,17,.58);
+  font-size:10px;
+  font-weight:850;
+  letter-spacing:.02em;
+  white-space:nowrap;
+}
+html[data-loadlink-theme="dark"] .ll-release-page-limit,
+html.dark .ll-release-page-limit{
+  border-color:rgba(255,255,255,.12);
+  background:rgba(255,255,255,.055);
+  color:rgba(255,255,255,.62);
+}
+
+/* Directly modernise the native Jobs / Contracts search surface. */
+[data-loadlink-jobs-search-shell]{
+  border-radius:24px!important;
+  box-shadow:0 18px 52px rgba(0,0,0,.16)!important;
+}
+[data-loadlink-jobs-search-shell] input,
+[data-loadlink-jobs-search-shell] select,
+[data-loadlink-jobs-search-shell] button{
+  border-radius:14px!important;
+}
+[data-loadlink-jobs-search-shell] input:focus{
+  border-color:#f6b800!important;
+  box-shadow:0 0 0 3px rgba(246,184,0,.12)!important;
+}
+
+/* These are the actual card selectors rendered by the native pages. */
+article[id^="job-"],
+#vehicle-marketplace a[href*="/listing/"],
+main[data-loadlink-search-page="true"] .loadlink-search-result-card{
+  border-radius:24px!important;
+  overflow:hidden!important;
+  box-shadow:0 12px 34px rgba(0,0,0,.06)!important;
+}
+html[data-loadlink-theme="light"] article[id^="job-"],
+html[data-loadlink-theme="light"] #vehicle-marketplace a[href*="/listing/"],
+html[data-loadlink-theme="light"] main[data-loadlink-search-page="true"] .loadlink-search-result-card{
+  border-color:rgba(17,17,17,.09)!important;
+  background:#fff!important;
+}
+html[data-loadlink-theme="dark"] article[id^="job-"],
+html[data-loadlink-theme="dark"] #vehicle-marketplace a[href*="/listing/"],
+html[data-loadlink-theme="dark"] main[data-loadlink-search-page="true"] .loadlink-search-result-card{
+  border-color:rgba(255,255,255,.11)!important;
+  background:#0b0b0b!important;
+  box-shadow:0 14px 38px rgba(0,0,0,.28)!important;
+}
+
+/* Keep the account/review footer visually attached to the listing it belongs to. */
+#vehicle-marketplace [data-ll-account-review-host="true"] .ll-account-footer{
+  margin:0 14px 14px!important;
+}
+article[id^="job-"] [data-ll-account-review-host="true"] .ll-account-footer{
+  margin-top:14px!important;
+}
+
+/* Direct analytics treatment so it no longer depends on a repair-only selector. */
+[data-loadlink-analytics-modal="true"]{
+  border-radius:28px!important;
+  overflow:hidden!important;
+  box-shadow:0 26px 86px rgba(0,0,0,.22)!important;
+}
+html[data-loadlink-theme="light"] [data-loadlink-analytics-modal="true"]{
+  border-color:rgba(17,17,17,.10)!important;
+  background:#fff!important;
+  color:#111!important;
+}
+html[data-loadlink-theme="dark"] [data-loadlink-analytics-modal="true"]{
+  border-color:rgba(255,255,255,.12)!important;
+  background:#0d0d0d!important;
+  color:#f7f7f7!important;
+}
+
+/* Direct toast treatment. */
+[data-loadlink-toast-center="true"] > section{
+  border-radius:22px!important;
+  box-shadow:0 20px 64px rgba(0,0,0,.22)!important;
+}
+html[data-loadlink-theme="light"] [data-loadlink-toast-center="true"] > section{
+  border-color:rgba(17,17,17,.10)!important;
+  background:rgba(255,255,255,.96)!important;
+  color:#111!important;
+}
+html[data-loadlink-theme="dark"] [data-loadlink-toast-center="true"] > section{
+  border-color:rgba(255,255,255,.12)!important;
+  background:rgba(14,14,14,.96)!important;
+  color:#fff!important;
+}
+
+@media (max-width:720px){
+  .ll-release-page-limit{min-height:28px;margin-top:8px;font-size:9px}
+  [data-loadlink-jobs-search-shell]{border-radius:20px!important}
+  article[id^="job-"],
+  #vehicle-marketplace a[href*="/listing/"],
+  main[data-loadlink-search-page="true"] .loadlink-search-result-card{border-radius:20px!important}
+}
