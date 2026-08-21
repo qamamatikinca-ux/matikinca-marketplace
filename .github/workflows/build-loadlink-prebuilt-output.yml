@@ -61,7 +61,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          npx --yes vercel@latest pull --yes --environment=production --project "$VERCEL_PROJECT_ID" --token "$VERCEL_TOKEN" 2>&1 | tee /tmp/vercel-pull.log
+          npx --yes vercel@latest pull --yes --environment=production --scope loadlink --project "$VERCEL_PROJECT_ID" --token "$VERCEL_TOKEN" 2>&1 | tee /tmp/vercel-pull.log
 
       - name: Build Vercel prebuilt output
         id: build
@@ -72,7 +72,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          npx --yes vercel@latest build --prod --yes --project "$VERCEL_PROJECT_ID" --token "$VERCEL_TOKEN" 2>&1 | tee /tmp/vercel-build.log
+          npx --yes vercel@latest build --prod --yes --scope loadlink --project "$VERCEL_PROJECT_ID" --token "$VERCEL_TOKEN" 2>&1 | tee /tmp/vercel-build.log
 
       - name: Deploy prebuilt output to primary production
         id: deploy
@@ -81,7 +81,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          npx --yes vercel@latest deploy --prebuilt --prod --yes --project "$VERCEL_PROJECT_ID" --token "$VERCEL_TOKEN" 2>&1 | tee /tmp/vercel-deploy.log
+          npx --yes vercel@latest deploy --prebuilt --prod --yes --scope loadlink --project "$VERCEL_PROJECT_ID" --token "$VERCEL_TOKEN" 2>&1 | tee /tmp/vercel-deploy.log
           DEPLOY_URL="$(grep -Eo 'https://[^ ]+\.vercel\.app' /tmp/vercel-deploy.log | tail -n 1 || true)"
           echo "url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
           test -n "$DEPLOY_URL"
@@ -158,4 +158,4 @@ jobs:
           test "${{ steps.deploy.outcome }}" = "success"
           test "${{ steps.verify.outcome }}" = "success"
 
-# Verified login artwork + Vehicle & Units interaction release — 2026-08-21 09:51 SAST.
+# Verified login artwork + Vehicle & Units interaction release — 2026-08-21 09:53 SAST.
