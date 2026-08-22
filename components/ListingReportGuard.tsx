@@ -13,6 +13,24 @@ function caseNumberFrom(data: unknown) {
   return String((value as { case_number?: unknown }).case_number || "").trim();
 }
 
+function reportContext(button: Element) {
+  const host = button.closest<HTMLElement>("[data-listing-id], article, main");
+  const candidates = [
+    host?.dataset.listingId || "",
+    host?.id?.replace(/^(job|contract|vehicle|listing)-/, "") || "",
+    ...(host ? Array.from(host.querySelectorAll<HTMLAnchorElement>('a[href*="/listing/"],a[href*="/vehicles/"],a[href*="/contracts/"]')).map((anchor) => anchor.getAttribute("href") || "") : []),
+    window.location.pathname,
+  ];
+  let listingId = "";
+  for (const candidate of candidates) {
+    if (LISTING_ID.test(candidate)) { listingId = candidate; break; }
+    const match = String(candidate).match(/\/(?:listing|vehicles|contracts)\/([0-9a-f-]{36})(?:[/?#]|$)/i);
+    if (match && LISTING_ID.test(match[1])) { listingId = match[1]; break; }
+  }
+  const heading = host?.querySelector<HTMLElement>("h1,h2,h3,[data-loadlink-listing-title]");
+  return { listingId, title: (heading?.textContent || "listing").replace(/\s+/g, " ").trim() || "listing" };
+}
+
 export default function ListingReportGuard() {
   const { darkMode } = useLoadLinkTheme();
   const pending = useRef(new Set<string>());
@@ -36,20 +54,16 @@ export default function ListingReportGuard() {
     function onClick(event: MouseEvent) {
       const target = event.target;
       if (!(target instanceof Element)) return;
-      const button = target.closest("button");
-      if (!button || button.textContent?.trim().toLowerCase() !== "report") return;
-      const article = button.closest('article[id^="job-"]');
-      if (!article) return;
-      const id = article.id.slice(4);
-      if (!LISTING_ID.test(id)) return;
+      const button = target.closest("button,[role='button']");
+      if (!button || !/^report(?: listing)?$/i.test((button.textContent || "").replace(/\s+/g, " ").trim())) return;
+      const context = reportContext(button);
+      if (!context.listingId) return;
 
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-
-      const heading = article.querySelector<HTMLElement>("h1,h2,h3,[data-loadlink-listing-title]");
-      setListingTitle((heading?.textContent || "listing").trim() || "listing");
-      setListingId(id);
+      setListingTitle(context.title);
+      setListingId(context.listingId);
       setReason("");
       setNotice("");
       setReference("");
@@ -142,19 +156,10 @@ export default function ListingReportGuard() {
           ) : (
             <>
               <label className="block text-xs font-black">What is wrong with this listing?</label>
-              <textarea
-                autoFocus
-                value={reason}
-                onChange={(event) => { setReason(event.target.value.slice(0, 600)); setNotice(""); }}
-                placeholder="Tell LoadLink what you noticed…"
-                className={`mt-2 min-h-[126px] w-full resize-none rounded-[16px] border p-3.5 text-base font-medium outline-none transition focus:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.045] text-white placeholder:text-white/35" : "border-black/10 bg-[#fafafa] text-black placeholder:text-black/35"}`}
-              />
+              <textarea autoFocus value={reason} onChange={(event) => { setReason(event.target.value.slice(0, 600)); setNotice(""); }} placeholder="Tell LoadLink what you noticed…" className={`mt-2 min-h-[126px] w-full resize-none rounded-[16px] border p-3.5 text-base font-medium outline-none transition focus:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.045] text-white placeholder:text-white/35" : "border-black/10 bg-[#fafafa] text-black placeholder:text-black/35"}`} />
               <div className={`mt-2 flex items-center justify-between text-[10px] font-semibold ${darkMode ? "text-white/35" : "text-black/35"}`}><span>Minimum 8 characters</span><span>{reason.length}/600</span></div>
               {notice ? <p className="mt-3 rounded-[12px] border border-red-400/20 bg-red-400/[.06] px-3 py-2 text-xs font-bold text-red-600 dark:text-red-200">{notice}</p> : null}
-              <div className="mt-5 grid grid-cols-[.8fr_1.2fr] gap-2">
-                <button type="button" onClick={close} disabled={submitting} className="h-12 rounded-[13px] border border-current/12 text-sm font-black disabled:opacity-40">Cancel</button>
-                <button type="button" onClick={() => void submit()} disabled={submitting || reason.trim().length < 8} className="h-12 rounded-[13px] bg-[#f6b800] text-sm font-black text-black disabled:opacity-40">{submitting ? "Submitting…" : "Submit report"}</button>
-              </div>
+              <div className="mt-5 grid grid-cols-[.8fr_1.2fr] gap-2"><button type="button" onClick={close} disabled={submitting} className="h-12 rounded-[13px] border border-current/12 text-sm font-black disabled:opacity-40">Cancel</button><button type="button" onClick={() => void submit()} disabled={submitting || reason.trim().length < 8} className="h-12 rounded-[13px] bg-[#f6b800] text-sm font-black text-black disabled:opacity-40">{submitting ? "Submitting…" : "Submit report"}</button></div>
             </>
           )}
         </div>
