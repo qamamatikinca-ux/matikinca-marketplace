@@ -3,7 +3,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
-const LoadLinkCallLayer = lazy(() => import("@/components/LoadLinkCallLayer"));
+const LoadLinkCallLayer = lazy(() => import("@/components/LoadLinkCallLayer20260822"));
 
 type IdleWindow = Window & {
   requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
@@ -32,8 +32,6 @@ export default function LoadLinkCallBootstrap() {
   }, [pathname]);
 
   useEffect(() => {
-    // Keep the lightweight call listener available across LoadLink so an incoming
-    // accepted-chat call can ring even when the recipient is browsing another page.
     const start = () => setEnabled(true);
     const idleWindow = window as IdleWindow;
     if (typeof idleWindow.requestIdleCallback === "function") {
