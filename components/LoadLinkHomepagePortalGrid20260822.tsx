@@ -46,7 +46,7 @@ export default function LoadLinkHomepagePortalGrid20260822({ darkMode }: { darkM
   }, []);
 
   return (
-    <section data-loadlink-home-portals="final-revision" className="px-0 pb-8 pt-2 sm:px-4 md:px-6 md:pb-12">
+    <section data-loadlink-home-portals="approved-geometry" className="px-0 pb-8 pt-2 sm:px-4 md:px-6 md:pb-12">
       <div className="mx-auto grid w-full max-w-[1440px] gap-px bg-black/10 md:grid-cols-2">
         {portals.map((portal) => {
           const src = portal.images[imageIndex % portal.images.length];
@@ -55,7 +55,8 @@ export default function LoadLinkHomepagePortalGrid20260822({ darkMode }: { darkM
               key={portal.title}
               href={portal.href}
               aria-label={`Open ${portal.title}`}
-              className={`group relative block h-[255px] overflow-hidden rounded-none transition active:scale-[.998] sm:h-[285px] md:h-[310px] lg:h-[340px] ${darkMode ? "bg-[#090909]" : "bg-white"}`}
+              data-loadlink-home-portal-card={portal.title.toLowerCase().replaceAll(" ", "-")}
+              className={`group relative block h-[290px] min-h-[290px] overflow-hidden rounded-none transition active:scale-[.998] sm:h-[330px] sm:min-h-[330px] md:h-[380px] md:min-h-[380px] lg:h-[420px] lg:min-h-[420px] ${darkMode ? "bg-[#090909]" : "bg-white"}`}
             >
               <img
                 src={src}
