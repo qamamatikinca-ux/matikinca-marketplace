@@ -18,21 +18,21 @@ const portals: Portal[] = [
     images: ["/images/jobs-1.jpg", "/images/jobs-2.jpg", "/images/jobs-3.jpg"],
   },
   {
-    title: "Drivers",
-    description: "Browse approved drivers or manage your professional driver profile.",
-    href: "/driver-portal",
-    images: ["/images/driver-profile-hero.jpg"],
-  },
-  {
     title: "Contracts",
     description: "Browse longer-term logistics opportunities and recurring work.",
     href: "/contracts",
     images: ["/images/contracts-1.jpg", "/images/contracts-2.jpg", "/images/contracts-3.jpg"],
   },
   {
-    title: "Vehicles & units",
-    description: "Browse commercial trucks, trailers and mobile units on LoadLink.",
-    href: "/list-your-vehicle?view=marketplace#vehicle-marketplace",
+    title: "Drivers",
+    description: "Browse approved drivers or manage your professional driver profile.",
+    href: "/driver-portal",
+    images: ["/images/driver-profile-hero.jpg"],
+  },
+  {
+    title: "List vehicle",
+    description: "List a commercial vehicle or mobile unit on LoadLink.",
+    href: "/list-your-vehicle",
     images: ["/images/truck-1.jpg", "/images/truck-2.jpg", "/images/truck-3.jpg"],
   },
 ];
@@ -60,7 +60,7 @@ export default function LoadLinkHomepagePortalGrid20260822({ darkMode }: { darkM
               <img
                 src={src}
                 alt=""
-                loading={portal.title === "Jobs" || portal.title === "Drivers" ? "eager" : "lazy"}
+                loading={portal.title === "Jobs" || portal.title === "Contracts" ? "eager" : "lazy"}
                 className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 ease-out group-hover:scale-[1.025]"
                 onError={(event) => { event.currentTarget.style.opacity = "0"; }}
               />
