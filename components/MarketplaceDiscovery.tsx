@@ -19,6 +19,7 @@ import {
   listingToSearchResult,
   loadLinkSitePages,
   placeholderForScope,
+  routeForScope,
   scopeLabel,
   searchScopes,
 } from "@/lib/loadlinkSearch";
@@ -136,8 +137,8 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
 
   function chooseScope(value: SearchScope) {
     setScope(value);
-    setShowSuggestions(Boolean(query.trim()));
-    window.requestAnimationFrame(() => searchInputRef.current?.focus());
+    setShowSuggestions(false);
+    router.push(routeForScope(value, query, location));
   }
 
   const resultLabel = searchReady
@@ -177,7 +178,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
             </div>
           ) : null}
 
-          <div className={`${hasDealerUpdates ? "mt-3" : "mt-3"} max-w-5xl`}>
+          <div className="mt-3 max-w-5xl">
             <div
               data-loadlink-autotrader-search="true"
               className={`rounded-[18px] border p-2.5 shadow-[0_10px_28px_rgba(0,0,0,.07)] ${
@@ -210,7 +211,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                     }}
                     autoComplete="off"
                     placeholder={placeholderForScope(scope)}
-                    className={`h-full min-w-0 border-0 bg-transparent px-1 pr-3 text-[15px] font-medium outline-none ${
+                    className={`h-full min-w-0 border-0 bg-transparent px-1 pr-3 text-base font-medium outline-none ${
                       darkMode ? "text-white placeholder:text-white/38" : "text-black placeholder:text-black/38"
                     }`}
                   />
@@ -290,7 +291,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                     darkMode={darkMode}
                     placeholder="City, town or province"
                     ariaLabel="South African city, town or province"
-                    className={`h-11 w-full rounded-[12px] border px-3 text-[14px] font-medium outline-none transition focus:border-[#f6b800] ${
+                    className={`h-11 w-full rounded-[12px] border px-3 text-base font-medium outline-none transition focus:border-[#f6b800] ${
                       darkMode
                         ? "border-white/10 bg-[#171717] text-white placeholder:text-white/38"
                         : "border-black/10 bg-[#fafafa] text-black placeholder:text-black/38"
