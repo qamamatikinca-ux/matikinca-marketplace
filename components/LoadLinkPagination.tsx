@@ -46,7 +46,6 @@ export default function LoadLinkPagination({
         ))}
         <button type="button" className={button} disabled={safeCurrent === safeTotal} onClick={() => onChange(safeCurrent + 1)} aria-label="Next page">›</button>
       </div>
-      <p className={`mt-2 text-center text-[10px] font-bold ${darkMode ? "text-white/35" : "text-black/35"}`}>Page {safeCurrent} of {safeTotal}</p>
     </nav>
   );
 }
