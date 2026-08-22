@@ -160,17 +160,6 @@ export default function LoadLinkCallLayerReliable20260822() {
     window.dispatchEvent(new CustomEvent("loadlink-call-history-updated", { detail: { conversationId: conversationId || incoming?.conversation_id || currentConversationId() } }));
   }, [conversationId, incoming?.conversation_id]);
 
-  const clearAllTimers = useCallback(() => {
-    for (const ref of [signalPollRef, incomingPollRef, heartbeatRef, durationRef]) {
-      if (ref.current) window.clearInterval(ref.current);
-      ref.current = null;
-    }
-    for (const ref of [ringTimeoutRef, connectTimeoutRef]) {
-      if (ref.current) window.clearTimeout(ref.current);
-      ref.current = null;
-    }
-  }, []);
-
   const endLocal = useCallback((message = "Call ended") => {
     if (signalPollRef.current) window.clearInterval(signalPollRef.current);
     if (heartbeatRef.current) window.clearInterval(heartbeatRef.current);
@@ -371,7 +360,7 @@ export default function LoadLinkCallLayerReliable20260822() {
 
     const audio = document.createElement("audio");
     audio.autoplay = true;
-    audio.playsInline = true;
+    audio.setAttribute("playsinline", "true");
     audio.style.display = "none";
     document.body.appendChild(audio);
     remoteAudioRef.current = audio;
@@ -419,10 +408,17 @@ export default function LoadLinkCallLayerReliable20260822() {
   const recoverIncoming = useCallback(async (userId: string) => {
     if (activeRef.current) return;
     const { data, error } = await supabase.from("call_sessions").select("id,conversation_id,caller_user_id,callee_user_id,max_seconds,started_at,status,end_reason").eq("callee_user_id", userId).eq("status", "active").order("started_at", { ascending: false }).limit(1).maybeSingle();
-    if (error || !data) return;
+    if (error) return;
+    if (!data) {
+      setIncoming(null);
+      return;
+    }
     const row = data as IncomingRow;
     const elapsed = Math.max(0, Math.floor((Date.now() - new Date(row.started_at).getTime()) / 1000));
-    if (elapsed > 55) return;
+    if (elapsed > 55) {
+      setIncoming(null);
+      return;
+    }
     setIncoming(row);
     void loadContactForSession(row.id);
   }, [loadContactForSession]);
@@ -571,7 +567,7 @@ export default function LoadLinkCallLayerReliable20260822() {
               <button type="button" onClick={() => setChooserOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/12"><LoadLinkIcon name="close" size={17} /></button>
             </div>
             {notice ? <p className="mt-4 rounded-xl border border-red-400/20 bg-red-400/[.07] px-3 py-2.5 text-xs font-bold text-red-100">{notice}</p> : null}
-            <button type="button" disabled={busy} onClick={() => void startInApp()} className="mt-5 flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-[#f6b800] px-4 text-sm font-black text-black disabled:opacity-50"><LoadLinkIcon name="phone" size={19} />{busy ? "Starting call…" : `Call ${contact.name}`}</button>
+            <button type="button" disabled={busy} onClick={() => void startInApp()} className="mt-5 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-[#f6b800] px-4 text-sm font-black text-black disabled:opacity-50"><LoadLinkIcon name="phone" size={19} />{busy ? "Starting call…" : `Call ${contact.name}`}</button>
           </section>
         </div>
       ) : null}
@@ -603,7 +599,7 @@ export default function LoadLinkCallLayerReliable20260822() {
             <div className="flex items-center justify-between"><p className="text-[10px] font-black uppercase tracking-[.12em] text-white/35">LoadLink audio</p><button onClick={() => setMinimized(true)} className="h-10 rounded-full border border-white/12 px-4 text-xs font-black text-white/65">Back to chat</button></div>
             <div className="flex flex-1 flex-col items-center justify-center py-6 text-center"><Avatar contact={contact} /><h2 className="mt-5 max-w-full truncate text-3xl font-black">{contact.name}</h2><p className={`mt-2 text-sm font-black ${status === "Connected" ? "text-[#f6b800]" : "text-white/48"}`}>{status}</p><p className="mt-5 text-4xl font-black tabular-nums">{duration}</p><p className="mt-2 text-[11px] font-bold text-white/38">{remainingLabel}</p>{notice ? <p className="mt-4 rounded-xl border border-red-400/20 bg-red-400/[.06] px-3 py-2 text-xs font-bold text-red-100">{notice}</p> : null}</div>
             <div className="grid grid-cols-3 gap-3"><button type="button" onClick={toggleMute} className={`flex min-h-20 flex-col items-center justify-center gap-2 rounded-full border text-xs font-black ${muted ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-white/12 bg-white/[.04]"}`}><LoadLinkIcon name="mic" size={21} />{muted ? "Unmute" : "Mute"}</button><button type="button" onClick={toggleSpeaker} className={`flex min-h-20 flex-col items-center justify-center gap-2 rounded-full border text-xs font-black ${speakerOn ? "border-[#f6b800]/45 text-[#f6b800]" : "border-white/12 text-white/55"}`}><LoadLinkIcon name="volume" size={21} />Speaker</button><button type="button" onClick={() => setMinimized(true)} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-full border border-white/12 text-xs font-black"><LoadLinkIcon name="message" size={21} />Chat</button></div>
-            <button type="button" onClick={() => void terminateCurrent(connectedRef.current ? "ended" : "cancelled", "Call ended")} className="mx-auto mt-5 flex min-h-13 w-44 items-center justify-center gap-2 rounded-full bg-[#e34545] text-sm font-black text-white"><LoadLinkIcon name="phone" size={18} />End call</button>
+            <button type="button" onClick={() => void terminateCurrent(connectedRef.current ? "ended" : "cancelled", "Call ended")} className="mx-auto mt-5 flex min-h-[52px] w-44 items-center justify-center gap-2 rounded-full bg-[#e34545] text-sm font-black text-white"><LoadLinkIcon name="phone" size={18} />End call</button>
           </section>
         </div>
       ) : null}
