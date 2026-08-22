@@ -1,132 +1,145 @@
 "use client";
 
-import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
-
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-
-import AuthStatusButton from "@/components/AuthStatusButton";
-import HomeLogoLink from "@/components/HomeLogoLink";
-import LoadLinkLogo from "@/components/LoadLinkLogo";
-import SiteMenu from "@/components/SiteMenu";
-import LoadLinkLoading from "@/components/LoadLinkLoading";
-import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
+import { useEffect, useState } from "react";
+import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import { supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 type ListingState = {
-  state: "active" | "deleted" | "rejected" | "pending" | "closed" | "unavailable";
+  state?: "active" | "deleted" | "rejected" | "unavailable" | string;
+  id?: string | null;
   title?: string | null;
   city?: string | null;
   vehicle_group?: string | null;
-  checked_at?: string | null;
+  rate?: string | null;
+  posted_by?: string | null;
+  created_at?: string | null;
+  rejection_reason?: string | null;
+  rejected_at?: string | null;
+  deleted_at?: string | null;
 };
 
-const COPY: Record<ListingState["state"], { eyebrow: string; title: string; copy: string }> = {
-  active: {
-    eyebrow: "LoadLink listing",
-    title: "Opening post",
-    copy: "This post is active. Taking you to the live listing now.",
-  },
-  deleted: {
-    eyebrow: "Post removed",
-    title: "This post has been deleted",
-    copy: "The poster removed this post from LoadLink. It is no longer active or available on the marketplace.",
-  },
-  rejected: {
-    eyebrow: "LoadLink review",
-    title: "This post was not approved",
-    copy: "This post did not pass LoadLink review and is not publicly available.",
-  },
-  pending: {
-    eyebrow: "LoadLink review",
-    title: "This post is still under review",
-    copy: "The post has not been approved for the public marketplace yet.",
-  },
-  closed: {
-    eyebrow: "Post closed",
-    title: "This post is no longer active",
-    copy: "The opportunity was closed or marked as completed by the poster.",
-  },
-  unavailable: {
-    eyebrow: "Post unavailable",
-    title: "This post is no longer available",
-    copy: "LoadLink cannot find an active public post at this link.",
-  },
+type MarketplaceListing = {
+  id?: string | null;
+  listing_kind?: string | null;
+  description?: string | null;
+  vehicle_group?: string | null;
 };
 
-export default function ListingStatePage() {
+function firstRow(data: unknown): ListingState | null {
+  if (Array.isArray(data)) return (data[0] as ListingState | undefined) || null;
+  if (data && typeof data === "object") return data as ListingState;
+  return null;
+}
+
+function isVehicle(row: MarketplaceListing | undefined) {
+  if (!row) return false;
+  const kind = String(row.listing_kind || "").toLowerCase();
+  if (["vehicle", "asset", "truck_sale", "vehicle_listing"].includes(kind)) return true;
+  return /^Listing type:\s*(Truck|Trailer|Mobile Unit)/im.test(String(row.description || ""));
+}
+
+function isContract(row: MarketplaceListing | undefined) {
+  if (!row) return false;
+  const kind = String(row.listing_kind || "").toLowerCase();
+  return kind === "contract" || /^Listing type:\s*Contract/im.test(String(row.description || ""));
+}
+
+async function destinationForActiveListing(id: string) {
+  try {
+    const response = await fetch(`/api/job-listings?t=${Date.now()}`, { cache: "no-store" });
+    const payload = await response.json().catch(() => ({}));
+    const row = ((payload.rows || []) as MarketplaceListing[]).find((item) => String(item.id || "") === id);
+    if (isVehicle(row)) return `/vehicles/${encodeURIComponent(id)}`;
+    if (isContract(row)) return `/jobs?portal=contract#job-${encodeURIComponent(id)}`;
+  } catch {}
+  return `/jobs?portal=job#job-${encodeURIComponent(id)}`;
+}
+
+export default function ListingCanonicalPage() {
   const params = useParams<{ id: string }>();
   const id = String(params?.id || "");
   const { darkMode, toggleTheme } = useLoadLinkTheme();
-  const [data, setData] = useState<ListingState | null>(null);
+  const [state, setState] = useState<ListingState | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!id) return;
     let active = true;
-    (async () => {
-      try {
-        const result = await supabase.rpc("loadlink_listing_public_state", { p_listing_id: id });
-        if (!active) return;
-        if (result.error || !result.data) {
-          setData({ state: "unavailable" });
-          return;
-        }
-        const next = result.data as ListingState;
-        if (next.state === "active") {
-          window.location.replace(`/jobs#job-${encodeURIComponent(id)}`);
-          return;
-        }
-        setData(next);
-      } catch {
-        if (active) setData({ state: "unavailable" });
-      } finally {
-        if (active) setLoading(false);
+
+    async function load() {
+      setLoading(true);
+      const { data, error } = await supabase.rpc("loadlink_listing_public_state", { p_listing_id: id });
+      if (!active) return;
+      if (error) {
+        setState({ state: "unavailable" });
+        setLoading(false);
+        return;
       }
-    })();
+      const next = firstRow(data) || { state: "unavailable" };
+      if (next.state === "active") {
+        const destination = await destinationForActiveListing(id);
+        if (active) window.location.replace(destination);
+        return;
+      }
+      setState(next);
+      setLoading(false);
+    }
+
+    void load();
     return () => { active = false; };
   }, [id]);
 
-  const copy = useMemo(() => COPY[data?.state || "unavailable"], [data?.state]);
-  const page = darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black";
-  const surface = darkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white";
-  const muted = darkMode ? "text-white/52" : "text-black/52";
-
-  if (loading) return <main className={`min-h-screen ${page}`}><LoadLinkLoading /></main>;
+  const page = darkMode ? "bg-black text-white" : "bg-[#fff7df] text-black";
+  const surface = darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white";
+  const muted = darkMode ? "text-white/55" : "text-black/55";
+  const currentState = state?.state || "unavailable";
+  const heading = currentState === "deleted" ? "This post has been deleted" : currentState === "rejected" ? "This post is not available" : "This post is unavailable";
+  const detail = currentState === "deleted"
+    ? "The poster removed this listing, so it is no longer visible on the marketplace."
+    : currentState === "rejected"
+      ? "LoadLink removed this listing from the public marketplace."
+      : "This listing may have expired, been removed, or is no longer publicly available.";
 
   return (
     <main className={`min-h-screen ${page}`}>
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
-
-      <section className="mx-auto flex min-h-[calc(100vh-80px)] max-w-3xl items-center px-4 py-10 md:px-7">
-        <div className={`w-full overflow-hidden rounded-[28px] border ${surface}`}>
-          <div className={`h-1.5 w-full ${data?.state === "rejected" || data?.state === "deleted" ? "bg-red-500" : "bg-[#f6b800]"}`} />
-          <div className="p-6 md:p-9">
-            <div className="flex min-h-14 items-center">
-              {data?.state === "deleted" || data?.state === "rejected" ? (
-                <span className={`flex h-12 w-12 items-center justify-center rounded-full border text-xl font-black ${data.state === "deleted" ? "border-red-500/30 text-red-500" : "border-red-500/30 text-red-500"}`}>{data.state === "deleted" ? "×" : "!"}</span>
-              ) : (
-                <LoadLinkLogo theme={darkMode ? "dark" : "light"} showGlow={false} containerClassName="!w-[132px]" />
-              )}
+      <section className="mx-auto max-w-3xl px-5 py-16 md:px-8 md:py-24">
+        <div className={`rounded-[28px] border p-7 shadow-[0_18px_55px_rgba(0,0,0,.08)] md:p-10 ${surface}`}>
+          {loading ? (
+            <div className="space-y-4" aria-label="Loading listing">
+              <div className={`h-3 w-28 rounded-full ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
+              <div className={`h-10 w-4/5 rounded-2xl ${darkMode ? "bg-white/10" : "bg-black/10"}`} />
+              <div className={`h-20 w-full rounded-2xl ${darkMode ? "bg-white/[.07]" : "bg-black/[.06]"}`} />
             </div>
-            <p className={`mt-5 text-xs font-black ${data?.state === "rejected" || data?.state === "deleted" ? "text-red-500" : muted}`}>{copy.eyebrow}</p>
-            <h1 className="mt-2 text-3xl font-black tracking-[-.045em] md:text-5xl">{copy.title}</h1>
-            <p className={`mt-4 max-w-xl text-sm font-semibold leading-7 md:text-base ${muted}`}>{copy.copy}</p>
+          ) : (
+            <>
+              <span className="inline-flex rounded-full border border-[#f6b800]/45 bg-[#f6b800]/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.12em] text-[#b88900]">Listing update</span>
+              <h1 className="mt-5 text-4xl font-black tracking-[-.045em] md:text-5xl">{heading}</h1>
+              <p className={`mt-4 text-sm font-semibold leading-7 ${muted}`}>{detail}</p>
 
-            {data?.title ? (
-              <div className={`mt-6 rounded-2xl border p-4 ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-black/[.025]"}`}>
-                <p className={`text-[9px] font-black uppercase tracking-[.13em] ${muted}`}>Post</p>
-                <p className="mt-1 text-base font-black">{data.title}</p>
-                {(data.city || data.vehicle_group) ? <p className={`mt-1 text-xs font-semibold ${muted}`}>{[data.city, data.vehicle_group].filter(Boolean).join(" · ")}</p> : null}
+              {state?.title ? (
+                <div className={`mt-7 rounded-[20px] border p-4 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/[.07] bg-black/[.02]"}`}>
+                  <p className="text-lg font-black">{state.title}</p>
+                  <p className={`mt-1 text-xs font-semibold ${muted}`}>{[state.city, state.vehicle_group].filter(Boolean).join(" · ") || "LoadLink listing"}</p>
+                </div>
+              ) : null}
+
+              {currentState === "rejected" && state?.rejection_reason ? (
+                <div className="mt-5 rounded-[18px] border border-red-500/20 bg-red-500/[.06] p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[.12em] text-red-500">Reason</p>
+                  <p className={`mt-2 text-sm font-semibold leading-6 ${darkMode ? "text-white/72" : "text-black/72"}`}>{state.rejection_reason}</p>
+                </div>
+              ) : null}
+
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Link href="/jobs?portal=job" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#f6b800] px-5 text-xs font-black uppercase text-black">Browse current jobs</Link>
+                <Link href="/list-your-vehicle?view=marketplace#vehicle-marketplace" className={`inline-flex min-h-12 items-center justify-center rounded-xl border px-5 text-xs font-black uppercase ${darkMode ? "border-white/15" : "border-black/12"}`}>Browse vehicles</Link>
               </div>
-            ) : null}
-
-            <div className="mt-7 grid gap-2 sm:grid-cols-2">
-              <Link href="/jobs" className="flex h-12 items-center justify-center rounded-xl bg-[#f6b800] px-5 text-xs font-black uppercase tracking-[.08em] text-black">Browse active posts</Link>
-              <Link href="/messages" className={`flex h-12 items-center justify-center rounded-xl border px-5 text-xs font-black uppercase tracking-[.08em] ${darkMode ? "border-white/15" : "border-black/15"}`}>Open messages</Link>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       </section>
     </main>
