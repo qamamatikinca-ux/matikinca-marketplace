@@ -53,7 +53,7 @@ async function destinationForActiveListing(id: string) {
     const payload = await response.json().catch(() => ({}));
     const row = ((payload.rows || []) as MarketplaceListing[]).find((item) => String(item.id || "") === id);
     if (isVehicle(row)) return `/vehicles/${encodeURIComponent(id)}`;
-    if (isContract(row)) return `/jobs?portal=contract#job-${encodeURIComponent(id)}`;
+    if (isContract(row)) return `/contracts/${encodeURIComponent(id)}`;
   } catch {}
   return `/jobs?portal=job#job-${encodeURIComponent(id)}`;
 }
@@ -136,6 +136,7 @@ export default function ListingCanonicalPage() {
 
               <div className="mt-7 flex flex-wrap gap-3">
                 <Link href="/jobs?portal=job" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#f6b800] px-5 text-xs font-black uppercase text-black">Browse current jobs</Link>
+                <Link href="/contracts" className={`inline-flex min-h-12 items-center justify-center rounded-xl border px-5 text-xs font-black uppercase ${darkMode ? "border-white/15" : "border-black/12"}`}>Browse contracts</Link>
                 <Link href="/list-your-vehicle?view=marketplace#vehicle-marketplace" className={`inline-flex min-h-12 items-center justify-center rounded-xl border px-5 text-xs font-black uppercase ${darkMode ? "border-white/15" : "border-black/12"}`}>Browse vehicles</Link>
               </div>
             </>
