@@ -15,6 +15,8 @@ type VehicleRow = {
   photos?: string[] | null;
   listing_kind?: string | null;
   created_at?: string | null;
+  posted_by?: string | null;
+  poster_photo?: string | null;
 };
 
 type ViewMode = "all" | "vehicles" | "units";
@@ -57,6 +59,12 @@ function readSeenIds() {
     if (Array.isArray(recent)) recent.forEach((item) => item?.id && ids.add(String(item.id)));
   } catch {}
   return ids;
+}
+
+function postedLabel(value: string | null | undefined) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return "Recently listed";
+  return new Intl.DateTimeFormat("en-ZA", { day: "numeric", month: "short" }).format(date);
 }
 
 export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean }) {
@@ -115,19 +123,12 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
     return visible.slice(start, start + LISTINGS_PER_PAGE);
   }, [currentPage, visible]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [mode, sort]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(totalPages);
-  }, [currentPage, totalPages]);
+  useEffect(() => { setCurrentPage(1); }, [mode, sort]);
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages); }, [currentPage, totalPages]);
 
   function changePage(nextPage: number) {
     setCurrentPage(Math.min(totalPages, Math.max(1, nextPage)));
-    requestAnimationFrame(() => {
-      document.getElementById("vehicle-marketplace")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    requestAnimationFrame(() => document.getElementById("vehicle-marketplace")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   function markSeen(id: string) {
@@ -140,8 +141,9 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
     window.dispatchEvent(new Event("loadlink-seen-listings-updated"));
   }
 
-  const surface = darkMode ? "border-white/10 bg-black/62 text-white" : "border-white/75 bg-white/70 text-black";
-  const muted = darkMode ? "text-white/50" : "text-black/50";
+  const surface = darkMode ? "border-white/10 bg-[#0b0b0b] text-white" : "border-black/10 bg-white text-black";
+  const muted = darkMode ? "text-white/52" : "text-black/52";
+  const softPill = darkMode ? "bg-white/10 text-white" : "bg-[#eef2f8] text-[#263246]";
 
   return (
     <section id="vehicle-marketplace" className={`scroll-mt-24 border-t px-4 py-10 md:px-6 md:py-14 ${darkMode ? "border-white/10 bg-[#050505]" : "border-black/10 bg-[#f4efe3]"}`}>
@@ -151,7 +153,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
         <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="text-4xl font-black tracking-[-.05em] md:text-5xl">Vehicles and mobile units available</h2>
-            <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Browse approved trucks, trailers and commercial mobile units from the same portal used to list stock.</p>
+            <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Approved commercial stock, presented with the same clear marketplace pattern as LoadLink jobs.</p>
           </div>
           <label className={`loadlink-sort-control w-fit border ${surface}`}>
             <span>Sort by</span>
@@ -169,11 +171,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
           ))}
         </div>
 
-        {!loading && visible.length ? (
-          <div className={`mt-5 text-xs font-bold ${muted}`}>
-            {visible.length} approved listing{visible.length === 1 ? "" : "s"}
-          </div>
-        ) : null}
+        {!loading && visible.length ? <div className={`mt-5 text-xs font-bold ${muted}`}>{visible.length} approved listing{visible.length === 1 ? "" : "s"}</div> : null}
 
         {loading ? (
           <div className="mt-6 grid gap-4 sm:grid-cols-2">{[0, 1, 2, 3].map((item) => <div key={item} className={`h-72 animate-pulse rounded-[24px] border ${surface}`} />)}</div>
@@ -184,26 +182,42 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
                 const type = readMeta(row.description, "Vehicle subtype") || readMeta(row.description, "Listing type") || row.vehicle_group || "Commercial vehicle";
                 const offer = readMeta(row.description, "Offer") || "Available";
                 const wasSeen = seen.has(String(row.id));
+                const href = `/vehicles/${row.id}`;
                 return (
-                  <Link key={row.id} href={`/listing/${row.id}`} onClick={() => markSeen(String(row.id))} className={`loadlink-glass group overflow-hidden rounded-[24px] border shadow-[0_12px_34px_rgba(0,0,0,.06)] ${surface}`}>
-                    <div className="relative aspect-[16/10] overflow-hidden bg-black/10">
-                      {row.photos?.[0] ? <img src={row.photos[0]} alt={row.title || "LoadLink vehicle"} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.015]" /> : <img src="/images/truck-1.jpg" alt="Commercial vehicle" className="h-full w-full object-cover" />}
-                      {wasSeen ? <span data-loadlink-seen-badge="true" className="absolute left-3 top-3 rounded-xl border border-white/10 bg-black/72 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">Seen</span> : null}
-                      <span className="absolute right-3 top-3 rounded-full bg-black/82 px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] text-white">{offer}</span>
+                  <article
+                    key={row.id}
+                    data-listing-card="true"
+                    data-loadlink-vehicle-card="true"
+                    data-listing-id={row.id}
+                    className={`overflow-hidden border ${surface}`}
+                  >
+                    <Link href={href} onClick={() => markSeen(String(row.id))} className="group relative block w-full overflow-hidden bg-black text-left">
+                      <div className="aspect-[4/3] w-full overflow-hidden md:aspect-[16/9]">
+                        <img src={row.photos?.[0] || "/images/truck-1.jpg"} alt={row.title || "LoadLink vehicle"} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" />
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/45" />
+                      <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[9px] font-black uppercase tracking-[.12em] text-black">{offer}</span>
+                      {wasSeen ? <span className="absolute bottom-3 right-3 rounded-full bg-black/75 px-3 py-1.5 text-[10px] font-black text-white backdrop-blur">Seen</span> : null}
+                    </Link>
+
+                    <div className="p-5">
+                      <p className="text-3xl font-black tracking-[-.04em] text-[#b88900]">{formatListingRate(row.rate)}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className="rounded-full bg-[#2f9f5b] px-3 py-1.5 text-[10px] font-black uppercase text-white">Vehicle</span>
+                        <span className={`rounded-full px-3 py-1.5 text-[10px] font-black uppercase ${softPill}`}>{type}</span>
+                      </div>
+                      <Link href={href} onClick={() => markSeen(String(row.id))} className="mt-4 block text-2xl font-black tracking-[-.03em] hover:underline hover:underline-offset-4">{row.title || "Commercial vehicle"}</Link>
+                      <p className={`mt-2 text-sm font-semibold ${muted}`}>{row.city || "South Africa"} · {postedLabel(row.created_at)}</p>
+                      {row.posted_by ? <p className={`mt-2 text-sm ${muted}`}>Listed by <strong className={darkMode ? "text-white" : "text-black"}>{row.posted_by}</strong></p> : null}
+                      <Link href={href} onClick={() => markSeen(String(row.id))} className={`mt-5 flex min-h-12 w-full items-center justify-between border-t pt-4 text-sm font-black ${darkMode ? "border-white/10" : "border-black/10"}`}>
+                        <span>View full details</span><span aria-hidden="true">→</span>
+                      </Link>
                     </div>
-                    <div className="p-4">
-                      <p className={`text-[10px] font-black uppercase tracking-[.1em] ${muted}`}>{type} · {row.city || "South Africa"}</p>
-                      <h3 className="mt-2 text-xl font-black tracking-[-.03em]">{row.title || "Commercial vehicle"}</h3>
-                      <p className="mt-3 text-2xl font-black">{formatListingRate(row.rate)}</p>
-                      <span className="mt-4 inline-block text-xs font-black underline underline-offset-4">View full details</span>
-                    </div>
-                  </Link>
+                  </article>
                 );
               })}
             </div>
-            {visible.length > LISTINGS_PER_PAGE ? (
-              <LoadLinkPagination current={currentPage} total={totalPages} onChange={changePage} darkMode={darkMode} label="Vehicle listing pages" />
-            ) : null}
+            {visible.length > LISTINGS_PER_PAGE ? <LoadLinkPagination current={currentPage} total={totalPages} onChange={changePage} darkMode={darkMode} label="Vehicle listing pages" /> : null}
           </>
         ) : (
           <div className={`loadlink-glass mt-6 rounded-[24px] border p-8 text-center ${surface}`}>

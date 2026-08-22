@@ -160,8 +160,8 @@ export default function ChatComposerActions() {
               onClick={openTools}
               className="flex w-full items-center gap-3 rounded-[13px] px-3 py-3 text-left text-sm font-black hover:bg-black/[.04] active:bg-black/[.07] dark:hover:bg-white/[.06] dark:active:bg-white/[.09]"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-[#f6b800] dark:bg-[#f6b800] dark:text-black" aria-hidden="true">
-                <LoadLinkIcon name="tools" size={18} />
+              <span data-loadlink-logistics-tools-icon="true" className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-[#f6b800]" aria-hidden="true">
+                <LoadLinkIcon name="tools" size={18} strokeWidth={2} />
               </span>
               <span>
                 <span className="block">Logistics tools</span>

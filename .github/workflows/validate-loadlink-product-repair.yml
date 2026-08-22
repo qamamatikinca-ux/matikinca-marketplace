@@ -1,0 +1,32 @@
+name: Validate LoadLink product repair
+
+on:
+  push:
+    branches:
+      - fix/marketplace-calls-search-20260822
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repair branch
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build LoadLink
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
