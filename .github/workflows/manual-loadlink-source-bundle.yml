@@ -1,0 +1,33 @@
+name: Bundle LoadLink source for manual Vercel deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/manual-loadlink-source-bundle.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Upload exact source bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: loadlink-manual-source
+          path: |
+            .
+            !.git/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
