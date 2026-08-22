@@ -63,15 +63,20 @@ export async function POST(request: NextRequest) {
       if (!verifyResponse.ok || !verified?.status || verified?.data?.status !== "success") {
         return Response.json({ error: "Payment could not be verified." }, { status: 400 });
       }
+      if (String(verified?.data?.reference || "") !== reference) {
+        return Response.json({ error: "Payment reference did not match." }, { status: 409 });
+      }
 
       let payment = await admin
         .from("admin_payments")
-        .select("id,user_id,package_type,status,amount_cents,currency,reference,metadata")
+        .select("id,user_id,package_type,payment_type,status,amount_cents,currency,reference,metadata")
         .eq("reference", reference)
         .maybeSingle();
       if (payment.error) throw payment.error;
 
       if (!payment.data) {
+        // Only genuine Paystack recurring Pro/Dealer charges may be reconstructed.
+        // Manual credits must always have a server-created LoadLink order first.
         const verifiedData = verified.data || {};
         const metadata = obj(verifiedData.metadata);
         let userId = String(metadata.loadlink_user_id || "");
@@ -84,7 +89,9 @@ export async function POST(request: NextRequest) {
           if (profile.error) throw profile.error;
           userId = String(profile.data?.id || "");
         }
-        if (!userId || !["pro", "dealer"].includes(plan)) return Response.json({ ok: true });
+        if (!userId || !["pro", "dealer"].includes(plan) || !codeFrom(verifiedData)) {
+          return Response.json({ ok: true });
+        }
 
         const expectedPlan = await admin
           .from("subscription_plans")
@@ -107,7 +114,7 @@ export async function POST(request: NextRequest) {
           .insert({
             user_id: userId,
             amount_cents: Number(verifiedData.amount),
-            currency: String(verifiedData.currency || "ZAR"),
+            currency: String(verifiedData.currency || "ZAR").toUpperCase(),
             status: "pending",
             provider: "paystack",
             reference,
@@ -119,14 +126,14 @@ export async function POST(request: NextRequest) {
             description: `LoadLink ${plan} subscription renewal`,
             metadata: { recurring: true, paystack_plan_code: codeFrom(verifiedData) || null },
           })
-          .select("id,user_id,package_type,status,amount_cents,currency,reference,metadata")
+          .select("id,user_id,package_type,payment_type,status,amount_cents,currency,reference,metadata")
           .single();
 
         if (inserted.error) {
           if (inserted.error.code !== "23505") throw inserted.error;
           payment = await admin
             .from("admin_payments")
-            .select("id,user_id,package_type,status,amount_cents,currency,reference,metadata")
+            .select("id,user_id,package_type,payment_type,status,amount_cents,currency,reference,metadata")
             .eq("reference", reference)
             .maybeSingle();
           if (payment.error) throw payment.error;
@@ -140,16 +147,29 @@ export async function POST(request: NextRequest) {
         Number(verified.data.amount) !== Number(payment.data.amount_cents) ||
         String(verified.data.currency || "").toUpperCase() !== String(payment.data.currency || "ZAR").toUpperCase()
       ) {
-        return Response.json({ error: "Payment details did not match the approved LoadLink plan." }, { status: 409 });
+        return Response.json({ error: "Payment details did not match the approved LoadLink order." }, { status: 409 });
       }
 
-      const finalized = await admin.rpc("loadlink_finalize_paid_plan", {
-        p_payment_id: payment.data.id,
-        p_reference: reference,
-        p_provider_transaction_id: String(verified.data.id || ""),
-        p_amount_cents: Number(verified.data.amount),
-        p_currency: String(verified.data.currency || "ZAR"),
-      });
+      let finalized;
+      if (payment.data.payment_type === "manual_listing_credit" && payment.data.package_type === "manual") {
+        finalized = await admin.rpc("loadlink_finalize_manual_credit_payment", {
+          p_payment_id: payment.data.id,
+          p_reference: reference,
+          p_provider_transaction_id: String(verified.data.id || ""),
+          p_amount_cents: Number(verified.data.amount),
+          p_currency: String(verified.data.currency || "ZAR").toUpperCase(),
+        });
+      } else if (payment.data.payment_type === "subscription" && ["pro", "dealer"].includes(String(payment.data.package_type))) {
+        finalized = await admin.rpc("loadlink_finalize_paid_plan", {
+          p_payment_id: payment.data.id,
+          p_reference: reference,
+          p_provider_transaction_id: String(verified.data.id || ""),
+          p_amount_cents: Number(verified.data.amount),
+          p_currency: String(verified.data.currency || "ZAR").toUpperCase(),
+        });
+      } else {
+        return Response.json({ error: "Verified payment did not map to a supported LoadLink entitlement." }, { status: 409 });
+      }
       if (finalized.error) throw finalized.error;
       return Response.json({ ok: true });
     }

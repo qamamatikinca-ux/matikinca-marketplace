@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import LoadLinkPagination from "@/components/LoadLinkPagination";
+import DealershipListingActions20260822 from "@/components/DealershipListingActions20260822";
 import { formatListingRate } from "@/lib/formatCurrency";
 
 type VehicleRow = {
@@ -17,6 +18,10 @@ type VehicleRow = {
   created_at?: string | null;
   posted_by?: string | null;
   poster_photo?: string | null;
+  dealership_id?: string | null;
+  dealership_name?: string | null;
+  dealership_slug?: string | null;
+  dealership_logo?: string | null;
 };
 
 type ViewMode = "all" | "vehicles" | "units";
@@ -208,7 +213,15 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
                       </div>
                       <Link href={href} onClick={() => markSeen(String(row.id))} className="mt-4 block text-2xl font-black tracking-[-.03em] hover:underline hover:underline-offset-4">{row.title || "Commercial vehicle"}</Link>
                       <p className={`mt-2 text-sm font-semibold ${muted}`}>{row.city || "South Africa"} · {postedLabel(row.created_at)}</p>
-                      {row.posted_by ? <p className={`mt-2 text-sm ${muted}`}>Listed by <strong className={darkMode ? "text-white" : "text-black"}>{row.posted_by}</strong></p> : null}
+                      {row.posted_by ? <p className={`mt-2 text-sm ${muted}`}>Listed by <strong className={darkMode ? "text-white" : "text-black"}>{row.dealership_name || row.posted_by}</strong></p> : null}
+
+                      <DealershipListingActions20260822
+                        dealershipId={row.dealership_id}
+                        dealershipSlug={row.dealership_slug}
+                        dealershipName={row.dealership_name}
+                        darkMode={darkMode}
+                      />
+
                       <Link href={href} onClick={() => markSeen(String(row.id))} className={`mt-5 flex min-h-12 w-full items-center justify-between border-t pt-4 text-sm font-black ${darkMode ? "border-white/10" : "border-black/10"}`}>
                         <span>View full details</span><span aria-hidden="true">→</span>
                       </Link>
