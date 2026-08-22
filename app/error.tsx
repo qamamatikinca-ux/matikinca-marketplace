@@ -1,47 +1,28 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 
-import { createErrorReference } from "@/lib/core";
-
-export default function RouteError({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
-  const reference = useMemo(
-    () => error.digest || createErrorReference("LL-WEB"),
-    [error.digest],
-  );
-
+export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    console.error(`[LoadLink ${reference}]`, error);
-  }, [error, reference]);
+    console.error("LoadLink route error", error.digest || error.message);
+  }, [error]);
 
   return (
-    <main className="grid min-h-screen place-items-center bg-black px-5 py-10 text-white">
-      <section className="w-full max-w-lg border border-[#f6b800]/45 bg-[#0d0d0d] p-7 text-center sm:p-10">
-        <h1 className=" text-3xl font-black">This page could not finish loading.</h1>
-        <p className="mt-4 text-sm leading-6 text-white/65">
-          Your account and existing information have not been changed. Retry the page or return home.
-        </p>
-        <div className="mt-7 grid gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={reset}
-            className="bg-[#f6b800] px-5 py-3 font-black text-black"
-          >
-            Try again
-          </button>
-          <Link href="/" className="border border-white/25 px-5 py-3 font-black">
-            Go home
-          </Link>
-        </div>
-        <p className="mt-6 text-xs text-white/40">Reference {reference}</p>
-      </section>
+    <main className="min-h-screen bg-[#f4efe3] px-5 py-8 text-black dark:bg-black dark:text-white">
+      <div className="mx-auto flex min-h-[82vh] max-w-3xl items-center justify-center">
+        <section className="w-full border-y border-black/10 py-10 text-center dark:border-white/10 sm:py-14">
+          <img src="/images/loadlink-logo-light.png" alt="LoadLink" className="mx-auto h-12 w-auto object-contain dark:hidden" />
+          <img src="/images/loadlink-logo-dark.png" alt="LoadLink" className="mx-auto hidden h-12 w-auto object-contain dark:block" />
+          <p className="mt-9 text-xs font-black uppercase tracking-[.18em] text-[#bd8b00]">LoadLink could not finish that request</p>
+          <h1 className="mx-auto mt-3 max-w-2xl text-4xl font-black tracking-[-.055em] sm:text-5xl">Something interrupted the route.</h1>
+          <p className="mx-auto mt-4 max-w-xl text-sm font-semibold leading-6 opacity-55">Your account or form should not be assumed lost. Try the request again. If it keeps failing, open the Help Centre so Support can trace the affected route.</p>
+          <div className="mt-7 flex flex-wrap justify-center gap-2">
+            <button type="button" onClick={reset} className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#f6b800] px-5 text-sm font-black text-black">Try again</button>
+            <button type="button" onClick={() => window.location.assign("/")} className="inline-flex min-h-12 items-center justify-center rounded-xl border border-current/15 px-5 text-sm font-black">Go home</button>
+            <button type="button" onClick={() => window.location.assign("/help")} className="inline-flex min-h-12 items-center justify-center rounded-xl border border-current/15 px-5 text-sm font-black">Help Centre</button>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }
