@@ -15,6 +15,7 @@ const baseAccess: PackageAccess = {
   allowed: false,
   plan: null,
   source: null,
+  manualCreditBalance: 0,
   activeListingLimit: 0,
   activeManualListings: 0,
   photoLimit: 0,
@@ -65,7 +66,9 @@ export default function PackageStatusPage() {
     : currentPlan === "Pro"
       ? "Your Pro vehicle listing and performance tools are active."
       : currentPlan === "Manual"
-        ? access.expiresAt ? `Your manual vehicle access is active until ${shortDate(access.expiresAt)}.` : "Your manual vehicle listing access is active."
+        ? access.source === "manual_credit"
+          ? `You have ${access.manualCreditBalance} Manual listing ${access.manualCreditBalance === 1 ? "credit" : "credits"} available. Each credit activates one listing for 10 days.`
+          : access.expiresAt ? `Your legacy manual vehicle access is active until ${shortDate(access.expiresAt)}.` : "Your manual vehicle listing access is active."
         : "Job posting and standard messaging are available. Vehicle listing access is added only when you choose a vehicle plan.";
 
   const primaryHref = currentPlan === "Dealer" ? "/dealer" : currentPlan === "Pro" ? "/packages" : "/packages#plan-guide";
@@ -90,7 +93,8 @@ export default function PackageStatusPage() {
 
             <div className={`mt-7 divide-y rounded-2xl border ${darkMode ? "divide-white/10 border-white/10" : "divide-black/10 border-black/10"}`}>
               <AccessRow label="Messages" value={messageLimit} note={access.dailyMessageLimit === null ? "No daily message cap on this plan" : "Daily messaging allowance"}/>
-              <AccessRow label="Vehicle listings" value={vehicleAccess} note={access.allowed ? `Live access from ${access.source === "subscription" ? "your subscription" : "manual access"}` : "Choose Manual, Pro or Dealer to list vehicles"}/>
+              <AccessRow label="Vehicle listings" value={vehicleAccess} note={access.allowed ? `Live access from ${access.source === "subscription" ? "your subscription" : access.source === "manual_credit" ? "your Manual listing credits" : "legacy Manual access"}` : "Choose Manual, Pro or Dealer to list vehicles"}/>
+              {access.source === "manual_credit" ? <AccessRow label="Manual credits" value={String(access.manualCreditBalance)} note="One credit activates one Manual listing for 10 days"/> : null}
               <AccessRow label="Active listing limit" value={listingLimit} note="Applies to the currently active vehicle access"/>
               <AccessRow label="Photos" value={photoAllowance} note="Per vehicle listing"/>
               <AccessRow label="Analytics" value={analytics} note={access.analyticsEnabled ? "Listing performance tools are available" : "Available with an eligible plan"}/>
