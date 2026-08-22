@@ -27,9 +27,9 @@ export const searchScopes: { label: string; value: SearchScope }[] = [
 
 export const loadLinkSitePages: SearchResult[] = [
   { id: "page-home", label: "LoadLink homepage", meta: "Main marketplace", href: "/", searchable: "home homepage loadlink marketplace start", scope: "page", priority: 82 },
-  { id: "page-jobs", label: "Find logistics jobs", meta: "Jobs for truck and mobile-unit owners", href: "/jobs", searchable: "jobs job work loads opportunities logistics truck mobile unit owner operator find work transport work", scope: "page", priority: 96 },
+  { id: "page-jobs", label: "Find logistics jobs", meta: "Jobs for truck and mobile-unit owners", href: "/jobs?portal=job", searchable: "jobs job work loads opportunities logistics truck mobile unit owner operator find work transport work", scope: "page", priority: 96 },
   { id: "page-contracts", label: "Find transport contracts", meta: "Recurring and project logistics work", href: "/contracts", searchable: "contracts contract tenders tender recurring project work opportunities loads transport agreement subcontract", scope: "page", priority: 96 },
-  { id: "page-vehicles", label: "Commercial vehicles and units", meta: "Browse or list commercial vehicles and mobile units", href: "/list-your-vehicle#vehicle-marketplace", searchable: "vehicles vehicle trucks truck trailer trailers mobile unit units side tipper superlink tautliner flatbed bakkie tractor horse commercial vehicle buy sell browse", scope: "page", priority: 96 },
+  { id: "page-vehicles", label: "Commercial vehicles and units", meta: "Browse or list commercial vehicles and mobile units", href: "/list-your-vehicle?view=marketplace#vehicle-marketplace", searchable: "vehicles vehicle trucks truck trailer trailers mobile unit units side tipper superlink tautliner flatbed bakkie tractor horse commercial vehicle buy sell browse", scope: "page", priority: 96 },
   { id: "page-drivers", label: "Available drivers", meta: "Approved drivers ready for work", href: "/drivers", searchable: "drivers driver code 14 code 10 prdp pdp licence license experience hire employ operator", scope: "page", priority: 96 },
   { id: "page-driver-profile", label: "Create or manage driver profile", meta: "Driver experience and availability", href: "/driver-profile", searchable: "create driver profile manage cv licence experience availability", scope: "page", priority: 88 },
   { id: "page-driver-portal", label: "Driver options", meta: "View drivers or manage your profile", href: "/driver-portal", searchable: "driver portal options view available create profile", scope: "page", priority: 78 },
@@ -67,39 +67,30 @@ export function inferSearchScope(query: string): SearchScope {
   const clean = normaliseSearch(query);
   if (!clean) return "all";
 
-  const scores: Record<Exclude<SearchScope, "all" | "page">, number> = {
-    job: 0,
-    contract: 0,
-    asset: 0,
-    driver: 0,
-    dealer: 0,
-  };
-
+  const scores: Record<Exclude<SearchScope, "all" | "page">, number> = { job: 0, contract: 0, asset: 0, driver: 0, dealer: 0 };
   for (const [scope, terms] of Object.entries(INTENT_TERMS) as Array<[keyof typeof scores, Array<[string, number]>]>) {
-    for (const [term, weight] of terms) {
-      if (clean.includes(normaliseSearch(term))) scores[scope] += weight;
-    }
+    for (const [term, weight] of terms) if (clean.includes(normaliseSearch(term))) scores[scope] += weight;
   }
 
-  // Explicit marketplace intent wins over generic nouns such as "truck".
-  if (/\bjobs?\b/.test(clean)) scores.job += 14;
-  if (/\bcontracts?\b|\btenders?\b/.test(clean)) scores.contract += 15;
-  if (/\bdrivers?\b|\bcode\s*14\b|\bprdp\b/.test(clean)) scores.driver += 15;
-  if (/\bdealerships?\b|\bdealers?\b/.test(clean)) scores.dealer += 15;
-  if (/\b(for sale|buy|sell)\b/.test(clean) && /\b(truck|vehicle|trailer|unit)\b/.test(clean)) scores.asset += 15;
+  if (/\bjobs?\b/.test(clean)) scores.job += 18;
+  if (/\bcontracts?\b|\btenders?\b|\bsubcontracts?\b/.test(clean)) scores.contract += 20;
+  if (/\bdrivers?\b|\bcode\s*14\b|\bcode\s*10\b|\bprdp\b|\bpdp\b/.test(clean)) scores.driver += 20;
+  if (/\bdealerships?\b|\bdealers?\b|\bshowrooms?\b/.test(clean)) scores.dealer += 20;
+  if (/\b(for sale|buy|sell|vehicle|vehicles|trailer|trailers|mobile unit|mobile units)\b/.test(clean) && !/\bjobs?\b|\bcontracts?\b/.test(clean)) scores.asset += 18;
 
   const ranked = (Object.entries(scores) as Array<[keyof typeof scores, number]>).sort((a, b) => b[1] - a[1]);
   if (!ranked[0] || ranked[0][1] < 6) return "all";
-  if (ranked[1] && ranked[0][1] - ranked[1][1] < 3) return "all";
+  if (ranked[1] && ranked[0][1] - ranked[1][1] < 4) return "all";
   return ranked[0][0];
 }
 
 export function listingScope(item: ListingSearchRow): "job" | "contract" | "asset" {
-  const stored = String(item.listing_kind || "").toLowerCase();
+  const stored = String(item.listing_kind || "").toLowerCase().trim();
   if (["vehicle", "asset", "truck_sale", "vehicle_listing"].includes(stored)) return "asset";
   if (stored === "contract") return "contract";
-  const match = String(item.description || "").match(/^Listing type:\s*([^\n]+)/i);
-  const described = String(match?.[1] || "").toLowerCase();
+  if (stored === "job") return "job";
+
+  const described = String(String(item.description || "").match(/^Listing type:\s*([^\n]+)/im)?.[1] || "").toLowerCase();
   if (described.includes("contract")) return "contract";
   if (described.includes("vehicle") || described.includes("truck") || described.includes("trailer") || described.includes("mobile unit")) return "asset";
   return "job";
@@ -117,8 +108,10 @@ export function listingToSearchResult(item: ListingSearchRow): SearchResult {
   const title = item.title || "LoadLink listing";
   const city = item.city || "South Africa";
   const href = scope === "asset"
-    ? `/listing/${item.id}`
-    : `/jobs?portal=${scope}&search=${encodeURIComponent(`${title} ${city}`)}#job-${item.id}`;
+    ? `/vehicles/${encodeURIComponent(item.id)}`
+    : scope === "contract"
+      ? `/contracts/${encodeURIComponent(item.id)}`
+      : `/listing/${encodeURIComponent(item.id)}`;
   return {
     id: `listing-${item.id}`,
     label: title,
@@ -127,19 +120,19 @@ export function listingToSearchResult(item: ListingSearchRow): SearchResult {
     searchable: `${title} ${locationSearchTerms(city)} ${item.vehicle_group || ""} ${item.rate || ""} ${item.posted_by || ""} ${item.description || ""}`,
     location: city,
     scope,
-    priority: 140,
+    priority: 150,
   };
 }
 
 export function driverToSearchResult(driver: DriverSearchRow): SearchResult {
   const name = driver.full_name || "Approved LoadLink driver";
   const place = [driver.city, driver.province].filter(Boolean).join(", ") || "South Africa";
-  return { id: `driver-${driver.id}`, label: name, meta: `${place} · Licence ${driver.licence_code || "on request"}`, href: `/drivers?search=${encodeURIComponent(name)}`, searchable: `${name} ${driver.headline || ""} ${locationSearchTerms(driver.city || driver.province)} ${driver.city || ""} ${driver.province || ""} ${driver.licence_code || ""} ${(driver.vehicle_types || []).join(" ")} ${driver.years_experience || ""} ${driver.availability || ""}`, location: driver.city || driver.province || "", scope: "driver", priority: 138 };
+  return { id: `driver-${driver.id}`, label: name, meta: `${place} · Licence ${driver.licence_code || "on request"}`, href: `/drivers?search=${encodeURIComponent(name)}`, searchable: `${name} ${driver.headline || ""} ${locationSearchTerms(driver.city || driver.province)} ${driver.city || ""} ${driver.province || ""} ${driver.licence_code || ""} ${(driver.vehicle_types || []).join(" ")} ${driver.years_experience || ""} ${driver.availability || ""}`, location: driver.city || driver.province || "", scope: "driver", priority: 148 };
 }
 
 export function dealerToSearchResult(dealer: DealerSearchRow): SearchResult {
   const name = dealer.name || "Approved LoadLink dealership";
-  return { id: `dealer-${dealer.id}`, label: name, meta: `${dealer.physical_location || dealer.province || "South Africa"} · Approved dealership`, href: dealer.slug ? `/dealership/${dealer.slug}` : "/dealer", searchable: `${name} ${dealer.short_bio || ""} ${dealer.business_description || ""} ${locationSearchTerms(dealer.physical_location || dealer.province)} ${dealer.physical_location || ""} ${dealer.province || ""} dealership dealer vehicles stock`, location: dealer.physical_location || dealer.province || "", scope: "dealer", priority: 136 };
+  return { id: `dealer-${dealer.id}`, label: name, meta: `${dealer.physical_location || dealer.province || "South Africa"} · Approved dealership`, href: dealer.slug ? `/dealership/${dealer.slug}` : "/dealer", searchable: `${name} ${dealer.short_bio || ""} ${dealer.business_description || ""} ${locationSearchTerms(dealer.physical_location || dealer.province)} ${dealer.physical_location || ""} ${dealer.province || ""} dealership dealer vehicles stock`, location: dealer.physical_location || dealer.province || "", scope: "dealer", priority: 146 };
 }
 
 export function scoreSearchResult(item: SearchResult, query: string, location = "") {
@@ -150,30 +143,43 @@ export function scoreSearchResult(item: SearchResult, query: string, location = 
   const searchable = normaliseSearch(`${item.label} ${item.meta} ${item.searchable}`);
   const matches = tokens.filter((token) => tokenMatches(searchable, token)).length;
   if (!flexibleMatch(searchable, combined) && matches === 0) return -1;
-  let score = item.priority + matches * 20;
-  const cleanQuery = normaliseSearch(query);
-  if (cleanQuery && normaliseSearch(item.label).startsWith(cleanQuery)) score += 42;
-  if (cleanQuery && searchable.includes(cleanQuery)) score += 24;
-  if (location.trim() && item.scope !== "page") score += 18;
+
+  let score = item.priority + matches * 22;
+  const cleanLabel = normaliseSearch(item.label);
+  if (cleanLabel === combined) score += 90;
+  else if (cleanLabel.startsWith(combined)) score += 48;
+  if (searchable.includes(combined)) score += 30;
+  if (location.trim() && item.scope !== "page") score += 20;
 
   const inferred = inferSearchScope(query);
   if (inferred !== "all") {
-    if (item.scope === inferred) score += 62;
-    if (item.scope === "page" && searchable.includes(normaliseSearch(scopeLabel(inferred)))) score += 50;
+    if (item.scope === inferred) score += 90;
+    else if (item.scope !== "page") score -= 100;
+    if (item.scope === "page" && searchable.includes(normaliseSearch(scopeLabel(inferred)))) score += 38;
   }
 
   return score;
 }
 
 export function filterAndRankResults(items: SearchResult[], scope: SearchScope, query: string, location = "") {
-  return items.filter((item) => scope === "all" || item.scope === scope || (scope === "page" && item.scope === "page")).map((item) => ({ item, score: scoreSearchResult(item, query, location) })).filter(({ score }) => score >= 0).sort((a, b) => b.score - a.score || a.item.label.localeCompare(b.item.label)).map(({ item }) => item);
+  const inferred = scope === "all" ? inferSearchScope(query) : scope;
+  return items
+    .filter((item) => {
+      if (scope !== "all") return item.scope === scope || (scope === "page" && item.scope === "page");
+      if (inferred === "all") return true;
+      if (item.scope === inferred) return true;
+      if (item.scope === "page") return normaliseSearch(item.searchable).includes(normaliseSearch(scopeLabel(inferred)));
+      return false;
+    })
+    .map((item) => ({ item, score: scoreSearchResult(item, query, location) }))
+    .filter(({ score }) => score >= 0)
+    .sort((a, b) => b.score - a.score || a.item.label.localeCompare(b.item.label))
+    .map(({ item }) => item);
 }
 
 function withSearchParams(path: string, params: Record<string, string>) {
   const search = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value.trim()) search.set(key, value.trim());
-  });
+  Object.entries(params).forEach(([key, value]) => { if (value.trim()) search.set(key, value.trim()); });
   const queryString = search.toString();
   return `${path}${queryString ? `?${queryString}` : ""}`;
 }
@@ -183,22 +189,14 @@ export function routeForScope(scope: SearchScope, query: string, location: strin
   const cleanQuery = query.trim();
   const cleanLocation = location.trim();
 
-  if (effective === "job") {
-    return withSearchParams("/jobs", { portal: "job", search: cleanQuery, city: cleanLocation });
-  }
-  if (effective === "contract") {
-    return withSearchParams("/contracts", { search: cleanQuery, city: cleanLocation });
-  }
+  if (effective === "job") return withSearchParams("/jobs", { portal: "job", search: cleanQuery, city: cleanLocation });
+  if (effective === "contract") return withSearchParams("/contracts", { search: cleanQuery, city: cleanLocation });
   if (effective === "asset") {
     const base = withSearchParams("/list-your-vehicle", { search: cleanQuery, city: cleanLocation, view: "marketplace" });
     return `${base}#vehicle-marketplace`;
   }
-  if (effective === "driver") {
-    return withSearchParams("/drivers", { search: cleanQuery, city: cleanLocation });
-  }
-  if (effective === "dealer") {
-    return withSearchParams("/search", { q: cleanQuery, location: cleanLocation, category: "dealer" });
-  }
+  if (effective === "driver") return withSearchParams("/drivers", { search: cleanQuery, city: cleanLocation });
+  if (effective === "dealer") return withSearchParams("/search", { q: cleanQuery, location: cleanLocation, category: "dealer" });
 
   const params = new URLSearchParams();
   if (cleanQuery) params.set("q", cleanQuery);
@@ -219,7 +217,7 @@ export function scopeLabel(scope: SearchScope) {
 }
 
 export function placeholderForScope(scope: SearchScope) {
-  if (scope === "all") return "Try ‘truck jobs in Pretoria’ or ‘Code 14 driver’";
+  if (scope === "all") return "Search jobs, contracts, vehicles, drivers or dealerships";
   if (scope === "contract") return "Search logistics contracts";
   if (scope === "asset") return "Search commercial vehicles or mobile units";
   if (scope === "driver") return "Search approved drivers";
