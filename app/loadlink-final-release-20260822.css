@@ -1,0 +1,439 @@
+/* LoadLink final release polish — 2026-08-22
+   Keeps the existing call/session logic intact and replaces only the presentation layer. */
+
+:root {
+  --ll-call-gold: #f6b800;
+  --ll-call-red: #e34545;
+  --ll-call-ink: #050505;
+  --ll-call-panel: rgba(15,15,15,.93);
+  --ll-call-border: rgba(255,255,255,.12);
+  --ll-call-muted: rgba(255,255,255,.52);
+}
+
+/* Pagination stays functional but never advertises the implementation detail. */
+.ll-release-page-limit,
+[data-ll-page-limit-note="true"] {
+  display: none !important;
+}
+
+/* Shared marketplace finish. */
+body[data-loadlink-path="/jobs"] article[id^="job-"],
+#vehicle-marketplace a[href*="/listing/"],
+main[data-loadlink-search-page="true"] .loadlink-search-result-card {
+  border-radius: 24px !important;
+  box-shadow: 0 14px 38px rgba(0,0,0,.09) !important;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease !important;
+}
+
+@media (hover:hover) {
+  body[data-loadlink-path="/jobs"] article[id^="job-"]:hover,
+  #vehicle-marketplace a[href*="/listing/"]:hover,
+  main[data-loadlink-search-page="true"] .loadlink-search-result-card:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 20px 50px rgba(0,0,0,.13) !important;
+  }
+}
+
+/* Edit, analytics and confirmation surfaces use the same final LoadLink hierarchy. */
+[data-loadlink-edit-modal="true"],
+[data-loadlink-analytics-modal="true"] {
+  border-radius: 28px !important;
+  box-shadow: 0 28px 90px rgba(0,0,0,.38) !important;
+}
+
+[data-loadlink-toast-center="true"] > section,
+[data-loadlink-confirmation-layer="true"] > section {
+  border-radius: 20px !important;
+  box-shadow: 0 18px 56px rgba(0,0,0,.28) !important;
+}
+
+/* CALL CHOOSER — compact native-feeling sheet. */
+div[class*="z-[2147483200]"][class*="fixed"][class*="inset-0"] {
+  background: rgba(0,0,0,.64) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(118%) !important;
+  backdrop-filter: blur(22px) saturate(118%) !important;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)) !important;
+}
+
+div[class*="z-[2147483200]"][class*="fixed"][class*="inset-0"] > section {
+  width: min(100%, 420px) !important;
+  max-width: 420px !important;
+  border: 1px solid var(--ll-call-border) !important;
+  border-radius: 30px !important;
+  background:
+    radial-gradient(circle at 14% 0%, rgba(246,184,0,.12), transparent 34%),
+    linear-gradient(155deg, rgba(25,25,25,.97), rgba(5,5,5,.97)) !important;
+  padding: 22px !important;
+  box-shadow: 0 32px 100px rgba(0,0,0,.58), inset 0 1px 0 rgba(255,255,255,.07) !important;
+  overflow: hidden !important;
+}
+
+div[class*="z-[2147483200]"] > section > div:first-child > span {
+  width: 50px !important;
+  height: 50px !important;
+  border-radius: 17px !important;
+  color: var(--ll-call-gold) !important;
+  background: rgba(246,184,0,.09) !important;
+  border-color: rgba(246,184,0,.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+
+div[class*="z-[2147483200]"] > section > div:first-child > button {
+  width: 40px !important;
+  height: 40px !important;
+  color: rgba(255,255,255,.7) !important;
+  background: rgba(255,255,255,.045) !important;
+  border-color: rgba(255,255,255,.1) !important;
+}
+
+div[class*="z-[2147483200]"] > section > h2 {
+  margin-top: 22px !important;
+  font-size: 28px !important;
+  line-height: 1.04 !important;
+  letter-spacing: -.045em !important;
+}
+
+div[class*="z-[2147483200]"] > section > h2 + p {
+  color: var(--ll-call-muted) !important;
+  max-width: 300px !important;
+  margin-top: 7px !important;
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+}
+
+div[class*="z-[2147483200]"] > section > button:not([aria-label="Close call"]) {
+  min-height: 56px !important;
+  border-radius: 17px !important;
+  margin-top: 22px !important;
+  background: var(--ll-call-gold) !important;
+  color: #070707 !important;
+  box-shadow: 0 12px 30px rgba(246,184,0,.16) !important;
+}
+
+div[class*="z-[2147483200]"] > section > a[href^="tel:"] {
+  min-height: 48px !important;
+  margin-top: 9px !important;
+  border: 1px solid rgba(255,255,255,.11) !important;
+  border-radius: 15px !important;
+  color: rgba(255,255,255,.62) !important;
+  background: rgba(255,255,255,.035) !important;
+  text-decoration: none !important;
+}
+
+/* INCOMING CALL — calm, clear and immediately actionable. */
+div[class*="z-[2147483250]"][class*="fixed"][class*="inset-0"] {
+  background: rgba(0,0,0,.72) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(118%) !important;
+  backdrop-filter: blur(24px) saturate(118%) !important;
+  padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)) !important;
+}
+
+div[class*="z-[2147483250]"] > section {
+  width: min(100%, 410px) !important;
+  max-width: 410px !important;
+  border-radius: 31px !important;
+  border: 1px solid var(--ll-call-border) !important;
+  background:
+    radial-gradient(circle at 50% -5%, rgba(246,184,0,.14), transparent 34%),
+    linear-gradient(155deg, rgba(24,24,24,.98), rgba(5,5,5,.98)) !important;
+  padding: 28px 24px 24px !important;
+  box-shadow: 0 34px 110px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.06) !important;
+}
+
+div[class*="z-[2147483250]"] > section > div:first-child {
+  position: relative !important;
+  width: 78px !important;
+  height: 78px !important;
+  color: var(--ll-call-gold) !important;
+  background: rgba(246,184,0,.08) !important;
+  border-color: rgba(246,184,0,.3) !important;
+  box-shadow: 0 0 0 10px rgba(246,184,0,.035), 0 18px 42px rgba(0,0,0,.28) !important;
+}
+
+div[class*="z-[2147483250]"] > section > div:first-child::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 999px;
+  border: 1px solid rgba(246,184,0,.16);
+  animation: ll-call-ring 1.8s ease-out infinite;
+}
+
+div[class*="z-[2147483250]"] > section > p:first-of-type {
+  margin-top: 22px !important;
+  color: rgba(255,255,255,.46) !important;
+  letter-spacing: .12em !important;
+  font-size: 9px !important;
+}
+
+div[class*="z-[2147483250]"] > section > h2 {
+  margin-top: 7px !important;
+  font-size: 27px !important;
+  letter-spacing: -.04em !important;
+}
+
+div[class*="z-[2147483250]"] > section > div:last-child {
+  gap: 10px !important;
+  margin-top: 24px !important;
+}
+
+div[class*="z-[2147483250]"] > section > div:last-child > button {
+  min-height: 56px !important;
+  height: 56px !important;
+  border-radius: 17px !important;
+  font-size: 13px !important;
+}
+
+div[class*="z-[2147483250]"] > section > div:last-child > button:first-child {
+  color: #fff !important;
+  background: rgba(227,69,69,.09) !important;
+  border-color: rgba(227,69,69,.32) !important;
+}
+
+div[class*="z-[2147483250]"] > section > div:last-child > button:last-child {
+  color: #070707 !important;
+  background: var(--ll-call-gold) !important;
+  border-color: var(--ll-call-gold) !important;
+  box-shadow: 0 12px 30px rgba(246,184,0,.15) !important;
+}
+
+/* ACTIVE CALL — dedicated, spacious audio surface instead of a generic modal. */
+div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] {
+  isolation: isolate !important;
+  align-items: stretch !important;
+  padding: 0 !important;
+  background:
+    radial-gradient(circle at 50% 31%, rgba(246,184,0,.10), transparent 22%),
+    radial-gradient(circle at 15% 8%, rgba(255,255,255,.035), transparent 18%),
+    linear-gradient(180deg, #0c0c0c 0%, #050505 58%, #020202 100%) !important;
+}
+
+div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size: 42px 42px;
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.35), transparent 55%);
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,.35), transparent 55%);
+}
+
+div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] > section {
+  position: relative !important;
+  z-index: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  max-width: 460px !important;
+  min-height: 100dvh !important;
+  margin: 0 auto !important;
+  padding: max(18px, env(safe-area-inset-top)) 18px calc(18px + env(safe-area-inset-bottom)) !important;
+}
+
+div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] > section > div:first-child {
+  min-height: 46px !important;
+  align-items: center !important;
+}
+
+div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] > section > div:first-child > button {
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 15px !important;
+  border-radius: 999px !important;
+  color: rgba(255,255,255,.68) !important;
+  background: rgba(255,255,255,.035) !important;
+  border-color: rgba(255,255,255,.1) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  backdrop-filter: blur(16px) !important;
+}
+
+div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] > section > div:nth-child(2) {
+  display: flex !important;
+  flex: 1 !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  padding: 24px 0 30px !important;
+}
+
+div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] > section > div:nth-child(2) > div:first-child {
+  position: relative !important;
+  width: 116px !important;
+  height: 116px !important;
+  color: var(--ll-call-gold) !important;
+  background: radial-gradient(circle at 35% 25%, rgba(246,184,0,.17), rgba(246,184,0,.045) 65%) !important;
+  border: 1px solid rgba(246,184,0,.27) !important;
+  box-shadow: 0 0 0 12px rgba(246,184,0,.025), 0 28px 70px rgba(0,0,0,.42) !important;
+}
+
+div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] > section > div:nth-child(2) > div:first-child::after {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border-radius: 999px;
+  border: 1px solid rgba(246,184,0,.11);
+  animation: ll-call-ring 2.2s ease-out infinite;
+}
+
+div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] h2 {
+  margin-top: 30px !important;
+  font-size: clamp(28px, 7vw, 34px) !important;
+  line-height: 1.04 !important;
+  letter-spacing: -.045em !important;
+}
+
+div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] h2 + p {
+  margin-top: 10px !important;
+  color: rgba(255,255,255,.94) !important;
+  font-size: clamp(38px, 11vw, 48px) !important;
+  line-height: 1 !important;
+  letter-spacing: -.045em !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] > section > div[class*="grid-cols-3"] {
+  gap: 10px !important;
+  margin-top: auto !important;
+}
+
+div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] > section > div[class*="grid-cols-3"] > button {
+  min-height: 86px !important;
+  border-radius: 23px !important;
+  border-color: rgba(255,255,255,.1) !important;
+  background: rgba(255,255,255,.04) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035) !important;
+  -webkit-backdrop-filter: blur(15px) !important;
+  backdrop-filter: blur(15px) !important;
+}
+
+div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] > section > div[class*="grid-cols-3"] > button[class*="bg-[#f6b800]"] {
+  color: #090909 !important;
+  background: var(--ll-call-gold) !important;
+  border-color: var(--ll-call-gold) !important;
+}
+
+div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] > section > div[class*="grid-cols-3"] > button[class*="text-[#f6b800]"] {
+  color: var(--ll-call-gold) !important;
+  background: rgba(246,184,0,.075) !important;
+  border-color: rgba(246,184,0,.24) !important;
+}
+
+div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] > section > button:last-child {
+  min-height: 58px !important;
+  margin-top: 12px !important;
+  border-radius: 19px !important;
+  color: #fff !important;
+  background: var(--ll-call-red) !important;
+  box-shadow: 0 14px 34px rgba(227,69,69,.17) !important;
+}
+
+/* MINIMIZED CALL — one compact persistent call rail above the composer. */
+div[class*="z-[2147483300]"][class*="fixed"][class*="bottom-"] {
+  width: min(520px, calc(100vw - 20px)) !important;
+  max-width: 520px !important;
+  inset-inline: 0 !important;
+  bottom: calc(env(safe-area-inset-bottom) + 76px) !important;
+  gap: 10px !important;
+  padding: 9px !important;
+  border-radius: 19px !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  color: #fff !important;
+  background: rgba(13,13,13,.91) !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,.44), inset 0 1px 0 rgba(255,255,255,.055) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(130%) !important;
+  backdrop-filter: blur(24px) saturate(130%) !important;
+}
+
+div[class*="z-[2147483300]"][class*="fixed"][class*="bottom-"] > button:first-child > span:first-child {
+  width: 42px !important;
+  height: 42px !important;
+  color: #080808 !important;
+  background: var(--ll-call-gold) !important;
+  box-shadow: 0 8px 20px rgba(246,184,0,.15) !important;
+}
+
+div[class*="z-[2147483300]"][class*="fixed"][class*="bottom-"] > button:last-child {
+  min-width: 64px !important;
+  height: 42px !important;
+  border-radius: 14px !important;
+  padding: 0 14px !important;
+  color: #fff !important;
+  background: var(--ll-call-red) !important;
+  letter-spacing: .04em !important;
+}
+
+/* Call history belongs to the conversation, not a separate dashboard. */
+[data-loadlink-call-history-host="true"] {
+  border-top-color: rgba(127,127,127,.14) !important;
+}
+
+.ll-final-call-history {
+  gap: 8px !important;
+  padding: 9px 12px !important;
+  scrollbar-width: none !important;
+}
+
+.ll-final-call-history::-webkit-scrollbar {
+  display: none !important;
+}
+
+.ll-final-call-event {
+  min-width: 176px !important;
+  border-radius: 15px !important;
+  padding: 9px 10px !important;
+  box-shadow: none !important;
+}
+
+html[data-loadlink-theme="dark"] .ll-final-call-event {
+  color: #fff !important;
+  background: rgba(255,255,255,.035) !important;
+  border-color: rgba(255,255,255,.09) !important;
+}
+
+html[data-loadlink-theme="light"] .ll-final-call-event {
+  color: #111 !important;
+  background: rgba(0,0,0,.025) !important;
+  border-color: rgba(0,0,0,.08) !important;
+}
+
+.ll-final-call-icon {
+  width: 31px !important;
+  height: 31px !important;
+  flex-basis: 31px !important;
+  border-radius: 10px !important;
+  color: #8f6900 !important;
+  background: rgba(246,184,0,.13) !important;
+}
+
+@keyframes ll-call-ring {
+  0% { opacity: .8; transform: scale(.92); }
+  75%,100% { opacity: 0; transform: scale(1.18); }
+}
+
+@media (max-width: 639px) {
+  div[class*="z-[2147483200]"][class*="fixed"][class*="inset-0"],
+  div[class*="z-[2147483250]"][class*="fixed"][class*="inset-0"] {
+    align-items: flex-end !important;
+  }
+
+  div[class*="z-[2147483200]"] > section,
+  div[class*="z-[2147483250]"] > section {
+    border-radius: 28px !important;
+  }
+
+  div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] > section {
+    padding-inline: 16px !important;
+  }
+
+  div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] > section > div[class*="grid-cols-3"] > button {
+    min-height: 80px !important;
+    border-radius: 21px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  div[class*="z-[2147483250]"] > section > div:first-child::after,
+  div[class*="z-[2147483300]"][class*="fixed"][class*="inset-0"] > section > div:nth-child(2) > div:first-child::after {
+    animation: none !important;
+  }
+}

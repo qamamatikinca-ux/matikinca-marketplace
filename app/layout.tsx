@@ -21,6 +21,7 @@ import "./loadlink-call-history-20260821.css";
 import "./loadlink-release-completion-20260821.css";
 import "./loadlink-release-recovery-20260821.css";
 import "./loadlink-visible-combined-20260822.css";
+import "./loadlink-final-release-20260822.css";
 import GlobalLoading from "@/components/GlobalLoading";
 import ChatLauncher from "@/components/ChatLauncher";
 import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";

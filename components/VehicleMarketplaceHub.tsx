@@ -170,9 +170,8 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
         </div>
 
         {!loading && visible.length ? (
-          <div className={`mt-5 flex items-center justify-between text-xs font-bold ${muted}`}>
-            <span>{visible.length} approved listing{visible.length === 1 ? "" : "s"}</span>
-            <span>7 per page</span>
+          <div className={`mt-5 text-xs font-bold ${muted}`}>
+            {visible.length} approved listing{visible.length === 1 ? "" : "s"}
           </div>
         ) : null}
 
