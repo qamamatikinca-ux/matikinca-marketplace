@@ -1,0 +1,288 @@
+/* LoadLink focused mobile/product correction — 2026-08-22. Loaded last. */
+
+/* The old Truck / Event / Logistics / Mining row duplicated the real marketplace scopes. */
+[data-loadlink-hidden-legacy-quick-links="true"]{
+  display:none!important;
+}
+
+/* Homepage search: one clean AutoTrader-style control, no light block pasted into dark mode. */
+[data-loadlink-home-search-row="true"]{
+  display:grid!important;
+  grid-template-columns:48px minmax(0,1fr) auto!important;
+  min-height:56px!important;
+  overflow:hidden!important;
+  border-radius:17px!important;
+  box-shadow:0 10px 28px rgba(0,0,0,.10)!important;
+}
+[data-loadlink-home-search-row="true"]>span:first-child{
+  width:48px!important;
+  min-width:48px!important;
+  background:#111!important;
+  color:#f6b800!important;
+}
+[data-loadlink-home-search-input="true"],
+[data-loadlink-home-search-input]{
+  width:100%!important;
+  min-width:0!important;
+  height:56px!important;
+  padding:0 12px!important;
+  border:0!important;
+  border-radius:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+}
+[data-loadlink-home-search-row="true"]>button:last-child{
+  align-self:center!important;
+  min-width:86px!important;
+  height:46px!important;
+  margin:5px!important;
+  padding:0 15px!important;
+  border-radius:13px!important;
+  text-transform:none!important;
+  letter-spacing:0!important;
+  font-size:14px!important;
+}
+html[data-loadlink-theme="dark"] [data-loadlink-home-search-row="true"]{
+  border-color:rgba(255,255,255,.13)!important;
+  background:#0e0e0e!important;
+  box-shadow:0 14px 34px rgba(0,0,0,.36)!important;
+}
+html[data-loadlink-theme="dark"] [data-loadlink-home-search-input="true"],
+html[data-loadlink-theme="dark"] [data-loadlink-home-search-input]{
+  background:#0e0e0e!important;
+  color:#fff!important;
+  caret-color:#f6b800!important;
+}
+html[data-loadlink-theme="dark"] [data-loadlink-home-search-input]::placeholder{
+  color:rgba(255,255,255,.38)!important;
+}
+html[data-loadlink-theme="dark"] #loadlink-marketplace-location{
+  border-color:rgba(255,255,255,.13)!important;
+  background:#0e0e0e!important;
+  color:#fff!important;
+  box-shadow:none!important;
+}
+html[data-loadlink-theme="dark"] #loadlink-marketplace-location::placeholder{
+  color:rgba(255,255,255,.38)!important;
+}
+[data-loadlink-home-search-section] [aria-label="Search category"] button{
+  font-weight:800!important;
+}
+
+@media (max-width:420px){
+  [data-loadlink-home-search-section]{padding-left:18px!important;padding-right:18px!important}
+  [data-loadlink-home-search-row="true"]{grid-template-columns:44px minmax(0,1fr) 82px!important;min-height:54px!important}
+  [data-loadlink-home-search-row="true"]>span:first-child{width:44px!important;min-width:44px!important}
+  [data-loadlink-home-search-input]{height:54px!important;padding:0 10px!important;font-size:15px!important}
+  [data-loadlink-home-search-row="true"]>button:last-child{min-width:74px!important;height:44px!important;padding:0 11px!important;font-size:13px!important}
+}
+
+/* Quote/document preview: the document itself is always a readable white document, even inside dark UI. */
+[data-loadlink-document-preview="v2714"] article{
+  background:#fff!important;
+  color:#111!important;
+  border-color:rgba(0,0,0,.10)!important;
+  color-scheme:light!important;
+}
+[data-loadlink-document-preview="v2714"] article h1,
+[data-loadlink-document-preview="v2714"] article h2,
+[data-loadlink-document-preview="v2714"] article h3,
+[data-loadlink-document-preview="v2714"] article strong,
+[data-loadlink-document-preview="v2714"] article p{
+  color:#171717!important;
+}
+[data-loadlink-document-preview="v2714"] article [class*="text-black/"]{
+  color:rgba(17,17,17,.58)!important;
+}
+[data-loadlink-document-preview="v2714"] article [class*="bg-[#fff8dc]"]{
+  background:#fff8dc!important;
+}
+[data-loadlink-document-preview="v2714"] article [class*="bg-[#f7f7f5]"]{
+  background:#f7f7f5!important;
+}
+[data-loadlink-document-preview="v2714"] article img[alt="LoadLink"]{
+  filter:none!important;
+  opacity:1!important;
+}
+
+/* Calls: lighter, more current mobile audio surface. */
+[data-loadlink-call-avatar="true"]{
+  border-radius:999px!important;
+  box-shadow:none!important;
+}
+[data-loadlink-call-avatar="true"] img{
+  border-radius:999px!important;
+}
+[data-loadlink-call-active="true"]{
+  background:radial-gradient(circle at 50% 30%,rgba(246,184,0,.10),transparent 30%),linear-gradient(180deg,#080808 0%,#020202 100%)!important;
+}
+[data-loadlink-call-active="true"]>section{
+  max-width:420px!important;
+  padding-left:22px!important;
+  padding-right:22px!important;
+}
+[data-loadlink-call-active="true"]>section>div:first-child>p{
+  font-size:9px!important;
+  letter-spacing:.11em!important;
+  opacity:.72!important;
+}
+[data-loadlink-call-active="true"]>section>div:first-child>button{
+  height:38px!important;
+  border-radius:12px!important;
+  padding:0 13px!important;
+  background:rgba(255,255,255,.055)!important;
+  font-size:10px!important;
+}
+[data-loadlink-call-active="true"]>section>div:nth-child(2){
+  padding-top:22px!important;
+  padding-bottom:22px!important;
+}
+[data-loadlink-call-active="true"]>section>div:nth-child(2) [data-loadlink-call-avatar="true"]{
+  width:96px!important;
+  height:96px!important;
+}
+[data-loadlink-call-active="true"]>section>div:nth-child(2)>h2{
+  margin-top:20px!important;
+  font-size:28px!important;
+  line-height:1.05!important;
+}
+[data-loadlink-call-active="true"]>section>div:nth-child(2)>p:nth-of-type(1){
+  margin-top:7px!important;
+  font-size:12px!important;
+}
+[data-loadlink-call-active="true"]>section>div:nth-child(2)>p:nth-of-type(2){
+  margin-top:18px!important;
+  font-size:38px!important;
+  line-height:1!important;
+}
+[data-loadlink-call-active="true"]>section>div:nth-child(2)>p:nth-of-type(3){
+  margin-top:8px!important;
+  font-size:10px!important;
+}
+[data-loadlink-call-active="true"]>section>div:nth-child(3){
+  justify-items:center!important;
+  gap:12px!important;
+}
+[data-loadlink-call-active="true"]>section>div:nth-child(3)>button{
+  width:78px!important;
+  min-height:78px!important;
+  height:78px!important;
+  border-radius:999px!important;
+  gap:5px!important;
+  padding:0!important;
+  font-size:10px!important;
+  background:rgba(255,255,255,.055)!important;
+}
+[data-loadlink-call-active="true"]>section>button:last-child{
+  width:170px!important;
+  min-height:52px!important;
+  margin:18px auto 0!important;
+  border-radius:999px!important;
+  font-size:13px!important;
+}
+[data-loadlink-call-incoming="true"] section,
+[data-loadlink-call-chooser="true"] section{
+  border-radius:24px!important;
+  box-shadow:0 24px 70px rgba(0,0,0,.48)!important;
+}
+[data-loadlink-call-incoming="true"] [data-loadlink-call-avatar="true"]{
+  width:88px!important;
+  height:88px!important;
+}
+
+/* Call activity should read like a subtle chat timeline event. */
+.ll-final-call-history{
+  margin:8px auto!important;
+  max-width:680px!important;
+  padding:0 12px!important;
+}
+.ll-final-call-event{
+  min-height:42px!important;
+  border:0!important;
+  border-radius:13px!important;
+  background:rgba(127,127,127,.08)!important;
+  box-shadow:none!important;
+}
+html[data-loadlink-theme="dark"] .ll-final-call-event{
+  background:rgba(255,255,255,.055)!important;
+}
+.ll-final-call-event-copy strong{font-size:11px!important}
+.ll-final-call-event-copy small{font-size:9px!important;opacity:.48!important}
+
+/* Chat composer: one state, one border. Remove the square textarea block inside the rounded composer. */
+.loadlink-chat-composer .loadlink-message-input{
+  overflow:hidden!important;
+  border-radius:20px!important;
+  border:1px solid rgba(127,127,127,.18)!important;
+  background:rgba(255,255,255,.88)!important;
+  box-shadow:none!important;
+}
+html[data-loadlink-theme="dark"] .loadlink-chat-composer .loadlink-message-input{
+  border-color:rgba(255,255,255,.13)!important;
+  background:rgba(255,255,255,.055)!important;
+}
+.loadlink-chat-composer .loadlink-message-input textarea,
+.loadlink-chat-composer textarea[data-loadlink-message-composer="true"]{
+  width:100%!important;
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+  color:inherit!important;
+  border-radius:0!important;
+  appearance:none!important;
+  -webkit-appearance:none!important;
+}
+html[data-loadlink-theme="dark"] .loadlink-chat-composer textarea[data-loadlink-message-composer="true"]::placeholder{
+  color:rgba(255,255,255,.38)!important;
+}
+
+/* Public dealership showroom: same showroom idea, but calmer and easier to scan. */
+[data-loadlink-public-showroom="true"]>div>section:first-of-type{
+  min-height:250px!important;
+  border-radius:22px!important;
+}
+[data-loadlink-public-showroom="true"]>div>section:first-of-type>div:last-child{
+  min-height:250px!important;
+  padding:18px!important;
+}
+[data-loadlink-public-showroom="true"]>div>section:first-of-type h1{
+  font-size:clamp(28px,8vw,42px)!important;
+  line-height:1!important;
+}
+[data-loadlink-public-showroom="true"]>div>section:first-of-type p{
+  max-width:34rem!important;
+}
+[data-loadlink-public-showroom="true"]>div>section:first-of-type [class*="h-24"][class*="w-24"]{
+  width:76px!important;
+  height:76px!important;
+}
+[data-loadlink-public-showroom="true"]>div>section:nth-of-type(2){
+  gap:8px!important;
+}
+[data-loadlink-public-showroom="true"]>div>section:nth-of-type(2)>div{
+  min-height:76px!important;
+  padding:12px!important;
+  border-radius:16px!important;
+}
+[data-loadlink-public-showroom="true"] #showroom{
+  padding-top:30px!important;
+}
+[data-loadlink-public-showroom="true"] #showroom h2{
+  font-size:26px!important;
+}
+[data-loadlink-public-showroom="true"] #showroom input,
+[data-loadlink-public-showroom="true"] #showroom select{
+  border-radius:14px!important;
+}
+@media(max-width:640px){
+  [data-loadlink-public-showroom="true"]>div{padding-left:12px!important;padding-right:12px!important}
+  [data-loadlink-public-showroom="true"]>div>section:first-of-type{min-height:230px!important}
+  [data-loadlink-public-showroom="true"]>div>section:first-of-type>div:last-child{min-height:230px!important;padding:16px!important}
+  [data-loadlink-public-showroom="true"]>div>section:first-of-type [class*="items-end"][class*="gap-4"]{align-items:center!important;gap:12px!important}
+  [data-loadlink-public-showroom="true"]>div>section:first-of-type [class*="flex gap-2 overflow-x-auto"]{margin-top:2px!important;padding-bottom:2px!important}
+  [data-loadlink-public-showroom="true"]>div>section:first-of-type [class*="flex gap-2 overflow-x-auto"]>*{height:40px!important;padding-left:15px!important;padding-right:15px!important}
+  [data-loadlink-public-showroom="true"] #showroom>div:first-child{gap:12px!important}
+  [data-loadlink-public-showroom="true"] #showroom>div:first-child>div:last-child{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;width:100%!important}
+  [data-loadlink-public-showroom="true"] #showroom [class*="grid grid-cols-3"]{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+}
