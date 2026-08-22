@@ -19,10 +19,18 @@ import {
   listingToSearchResult,
   loadLinkSitePages,
   placeholderForScope,
-  routeForScope,
   scopeLabel,
   searchScopes,
 } from "@/lib/loadlinkSearch";
+
+function searchResultsRoute(scope: SearchScope, query: string, location: string) {
+  const params = new URLSearchParams();
+  if (query.trim()) params.set("q", query.trim());
+  if (location.trim()) params.set("location", location.trim());
+  if (scope !== "all") params.set("category", scope);
+  const value = params.toString();
+  return `/search${value ? `?${value}` : ""}`;
+}
 
 export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }) {
   const router = useRouter();
@@ -114,7 +122,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
       id: `browse-${scope}`,
       label: scope === "all" ? "Search all of LoadLink" : `Browse all ${scopeLabel(scope).toLowerCase()}`,
       meta: location ? `Results around ${location}` : "Open the full LoadLink results page",
-      href: routeForScope(scope, query, location),
+      href: searchResultsRoute(scope, query, location),
       searchable: `${scopeLabel(scope)} ${query} ${location} search all LoadLink`,
       scope,
       priority: 70,
@@ -125,13 +133,14 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
   function launchSearch(destination?: string) {
     setShowSuggestions(false);
     setActiveSearchField(null);
-    router.push(destination || routeForScope(scope, query, location));
+    router.push(destination || searchResultsRoute(scope, query, location));
   }
 
   function chooseScope(value: SearchScope) {
     setScope(value);
     setShowSuggestions(false);
     setActiveSearchField(null);
+    router.push(searchResultsRoute(value, query, location));
   }
 
   return (
@@ -143,37 +152,37 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
         <div className="mx-auto max-w-7xl">
           <LoadLinkDealerUpdateRail20260822 darkMode={darkMode} onAvailabilityChange={setHasDealerUpdates} />
 
-          <div className={`${hasDealerUpdates ? "mt-3" : "mt-0"} no-scrollbar overflow-x-auto py-1`} aria-label="Search category">
-            <div className="flex min-w-max items-center gap-2 px-0.5">
-              {visibleScopes.map((item) => (
-                <button
-                  key={item.value}
-                  type="button"
-                  onClick={() => chooseScope(item.value)}
-                  aria-current={scope === item.value ? "page" : undefined}
-                  className={`h-10 shrink-0 rounded-full border px-4 text-[13px] font-semibold tracking-[-.01em] transition duration-150 active:scale-[.98] ${
-                    scope === item.value
-                      ? "border-[#f6b800] bg-[#f6b800] text-black"
-                      : darkMode
-                        ? "border-white/15 bg-transparent text-white/72"
-                        : "border-black/15 bg-white/55 text-black/68"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
+          {!hasDealerUpdates ? (
+            <div className="no-scrollbar overflow-x-auto py-1" aria-label="Search category">
+              <div className="flex min-w-max items-center gap-2 px-0.5">
+                {visibleScopes.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => chooseScope(item.value)}
+                    aria-pressed={scope === item.value}
+                    className={`shrink-0 rounded-full border transition duration-150 active:scale-[.98] ${
+                      scope === item.value
+                        ? "border-[#f6b800] bg-[#f6b800] text-black"
+                        : darkMode
+                          ? "border-white/15 bg-transparent text-white/72"
+                          : "border-black/15 bg-white text-black/68"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : null}
 
-          <div className="mt-4 max-w-4xl">
+          <div className={`${hasDealerUpdates ? "mt-3" : "mt-4"} max-w-4xl`}>
             <div ref={searchWrapperRef} className="relative">
               <div
                 data-loadlink-home-search-row
-                className={`grid h-[56px] w-full grid-cols-[52px_minmax(0,1fr)_92px] overflow-hidden rounded-[16px] border shadow-[0_8px_24px_rgba(0,0,0,.07)] sm:grid-cols-[56px_minmax(0,1fr)_112px] ${
-                  darkMode ? "border-white/15 bg-[#111]" : "border-black/15 bg-white"
-                }`}
+                className="flex min-h-[56px] w-full overflow-hidden rounded-[18px] border border-black/15 bg-white shadow-[0_6px_18px_rgba(0,0,0,.07)]"
               >
-                <span className="flex h-full items-center justify-center bg-[#171717] text-[#f6b800]">
+                <span className="flex w-12 shrink-0 items-center justify-center text-black/45">
                   <SearchIcon />
                 </span>
                 <label htmlFor="loadlink-marketplace-search" className="sr-only">Search LoadLink</label>
@@ -200,14 +209,12 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                   }}
                   autoComplete="off"
                   placeholder={placeholderForScope(scope)}
-                  className={`h-full min-w-0 border-0 bg-transparent px-3 text-[15px] font-medium outline-none sm:px-4 sm:text-[16px] ${
-                    darkMode ? "text-white placeholder:text-white/38" : "text-black placeholder:text-black/38"
-                  }`}
+                  className="h-[56px] min-w-0 flex-1 border-0 bg-white px-1 pr-2 text-[16px] font-medium text-black outline-none placeholder:text-black/40"
                 />
                 <button
                   type="button"
                   onClick={() => launchSearch()}
-                  className="flex h-full w-full items-center justify-center bg-[#f6b800] px-3 text-[14px] font-semibold text-black transition hover:bg-[#ffbf00] active:bg-[#e5aa00] sm:text-[15px]"
+                  className="m-[5px] ml-0 min-w-[94px] shrink-0 rounded-[15px] bg-[#f6b800] px-3 text-[13px] font-medium text-black transition hover:bg-[#ffbf00] active:bg-[#e5aa00] sm:min-w-[112px] sm:px-5 sm:text-[14px]"
                 >
                   Search
                 </button>
@@ -260,11 +267,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                 darkMode={darkMode}
                 placeholder="City, town or province"
                 ariaLabel="South African city, town or province"
-                className={`h-[54px] w-full rounded-[16px] border px-4 text-[15px] font-medium outline-none transition focus:border-[#f6b800] ${
-                  darkMode
-                    ? "border-white/15 bg-[#111] text-white placeholder:text-white/38"
-                    : "border-black/15 bg-white text-black placeholder:text-black/38"
-                }`}
+                className="h-[54px] w-full rounded-[18px] border border-black/15 bg-white px-4 text-[16px] font-medium text-black outline-none transition focus:border-[#f6b800] placeholder:text-black/40"
               />
             </div>
           </div>
