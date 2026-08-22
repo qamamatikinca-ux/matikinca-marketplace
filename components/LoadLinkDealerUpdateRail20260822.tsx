@@ -70,16 +70,9 @@ export default function LoadLinkDealerUpdateRail20260822({ darkMode, onAvailabil
   if (!loaded || updates.length === 0) return null;
 
   return (
-    <div data-loadlink-dealer-update-rail className="mb-5">
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-black uppercase tracking-[.13em] text-[#b78300]">Dealership updates</p>
-          <p className={`mt-1 text-[12px] font-semibold ${darkMode ? "text-white/48" : "text-black/48"}`}>New from dealerships you follow</p>
-        </div>
-      </div>
-
+    <div data-loadlink-dealer-update-rail className="mb-4">
       <div className="no-scrollbar -mx-1 overflow-x-auto px-1 pb-1" aria-label="Updates from followed dealerships">
-        <div className="flex min-w-max gap-4 pr-2">
+        <div className="flex min-w-max gap-3 pr-2">
           {updates.map((update) => {
             const initial = update.dealership_name.trim().charAt(0).toUpperCase() || "L";
             return (
@@ -87,17 +80,17 @@ export default function LoadLinkDealerUpdateRail20260822({ darkMode, onAvailabil
                 key={update.status_id}
                 type="button"
                 onClick={() => void openShowroom(update)}
-                className="group w-[78px] shrink-0 text-center outline-none"
+                className="group w-[66px] shrink-0 text-center outline-none"
                 aria-label={`Open ${update.dealership_name} showroom${update.seen ? "" : ", new update"}`}
               >
                 <span
-                  className={`relative mx-auto block h-[68px] w-[68px] rounded-full p-[3px] transition group-active:scale-[.97] ${
+                  className={`relative mx-auto block h-[56px] w-[56px] rounded-full p-[2px] transition group-active:scale-[.97] ${
                     update.seen
-                      ? darkMode ? "bg-white/18" : "bg-black/15"
-                      : "bg-[#f6b800] shadow-[0_0_0_1px_rgba(246,184,0,.16),0_8px_24px_rgba(246,184,0,.12)]"
+                      ? darkMode ? "bg-white/16" : "bg-black/12"
+                      : "bg-[#f6b800] shadow-[0_5px_18px_rgba(246,184,0,.12)]"
                   }`}
                 >
-                  <span className={`relative flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2 text-lg font-black ${darkMode ? "border-black bg-[#171717] text-white" : "border-[#fff6dc] bg-white text-black"}`}>
+                  <span className={`relative flex h-full w-full items-center justify-center overflow-hidden rounded-full border text-sm font-extrabold ${darkMode ? "border-black bg-[#171717] text-white" : "border-[#fff6dc] bg-white text-black"}`}>
                     {initial}
                     {update.image_url ? (
                       <img
@@ -110,7 +103,7 @@ export default function LoadLinkDealerUpdateRail20260822({ darkMode, onAvailabil
                     ) : null}
                   </span>
                 </span>
-                <span className={`mt-2 block truncate text-[11px] font-black tracking-[-.01em] ${darkMode ? "text-white/82" : "text-black/82"}`}>
+                <span className={`mt-1.5 block truncate text-[10px] font-semibold tracking-[-.01em] ${darkMode ? "text-white/68" : "text-black/68"}`}>
                   {update.dealership_name}
                 </span>
               </button>
