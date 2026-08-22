@@ -43,6 +43,10 @@ function titleFor(row: CallRow, outgoing: boolean, contactName: string) {
   return `Call with ${contactName} ended`;
 }
 
+function hasNonConnectionReason(reason: string) {
+  return /not_answered|no_answer|ring_timeout|declin|reject|connection_failed|network|fail|error|cancel/.test(reason);
+}
+
 export default function LoadLinkCallHistoryStrip20260821() {
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [rows, setRows] = useState<CallRow[]>([]);
@@ -90,7 +94,30 @@ export default function LoadLinkCallHistoryStrip20260821() {
         .limit(5);
 
       if (!error && active) {
-        const nextRows = (data || []) as CallRow[];
+        const rawRows = (data || []) as CallRow[];
+        const sessionIds = rawRows.map((row) => row.id);
+        const answeredIds = new Set<string>();
+
+        if (sessionIds.length) {
+          const { data: answers } = await supabase
+            .from("call_signals")
+            .select("session_id")
+            .in("session_id", sessionIds)
+            .eq("signal_type", "answer");
+          (answers || []).forEach((answer) => answeredIds.add(String(answer.session_id || "")));
+        }
+
+        // Older failed calls were stored with the generic `ended` reason even when
+        // the recipient never returned an SDP answer. Correct the presentation in
+        // chat without rewriting historical records.
+        const nextRows = rawRows.map((row) => {
+          const reason = String(row.end_reason || row.status || "").toLowerCase();
+          if (!answeredIds.has(row.id) && !hasNonConnectionReason(reason)) {
+            return { ...row, end_reason: "not_answered" };
+          }
+          return row;
+        });
+
         setRows(nextRows);
         const identityPairs = await Promise.all(nextRows.map(async (row) => {
           const { data: identityData } = await supabase.rpc("loadlink_call_contact_identity", { p_session_id: row.id });
@@ -130,7 +157,7 @@ export default function LoadLinkCallHistoryStrip20260821() {
         const outgoing = row.caller_user_id === userId;
         const identity = identities[row.id] || { name: "LoadLink contact", avatarUrl: "" };
         const reason = String(row.end_reason || row.status || "").toLowerCase();
-        const connected = !/not_answered|no_answer|ring_timeout|declin|reject|connection_failed|network|fail|error|cancel/.test(reason);
+        const connected = !hasNonConnectionReason(reason);
         return (
           <div className="ll-final-call-event" key={row.id} data-loadlink-call-event="true">
             <span className="ll-final-call-icon" aria-hidden="true"><LoadLinkIcon name="phone" size={15} strokeWidth={2} /></span>
