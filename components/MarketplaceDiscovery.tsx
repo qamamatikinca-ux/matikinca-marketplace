@@ -24,13 +24,6 @@ import {
   searchScopes,
 } from "@/lib/loadlinkSearch";
 
-const quickLinks = [
-  { label: "Truck", scope: "asset" as SearchScope, query: "truck" },
-  { label: "Event / Catering", scope: "job" as SearchScope, query: "event catering" },
-  { label: "Logistics", scope: "job" as SearchScope, query: "logistics" },
-  { label: "Mining / Farming", scope: "job" as SearchScope, query: "mining farming" },
-];
-
 export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -139,71 +132,48 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
     setScope(value);
     setShowSuggestions(false);
     setActiveSearchField(null);
-    router.push(routeForScope(value, query, location));
   }
 
   return (
     <>
       <section
         data-loadlink-home-search-section
-        className={`px-5 py-6 md:px-12 md:py-8 ${darkMode ? "bg-[#050505] text-white" : "bg-[#fff6dc] text-black"}`}
+        className={`px-4 py-5 sm:px-5 md:px-12 md:py-7 ${darkMode ? "bg-[#050505] text-white" : "bg-[#fff6dc] text-black"}`}
       >
         <div className="mx-auto max-w-7xl">
           <LoadLinkDealerUpdateRail20260822 darkMode={darkMode} onAvailabilityChange={setHasDealerUpdates} />
 
-          {!hasDealerUpdates ? (
-            <>
-              <div className="no-scrollbar overflow-x-auto py-1" aria-label="Search category">
-                <div className="flex min-w-max gap-3 px-0.5">
-                  {visibleScopes.map((item) => (
-                    <button
-                      key={item.value}
-                      type="button"
-                      onClick={() => chooseScope(item.value)}
-                      aria-current={scope === item.value ? "page" : undefined}
-                      className={`min-h-[48px] min-w-[104px] shrink-0 rounded-full border px-5 py-3 text-[14px] font-semibold tracking-[-.01em] backdrop-blur-xl backdrop-saturate-150 transition duration-200 active:scale-[.985] ${
-                        scope === item.value
-                          ? "border-[#f6b800] bg-[#f6b800] text-black shadow-[0_10px_28px_rgba(246,184,0,.18)]"
-                          : darkMode
-                            ? "border-white/[.18] bg-white/[.045] text-white/74"
-                            : "border-black/[.16] bg-white/68 text-black/66"
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <div className={`${hasDealerUpdates ? "mt-3" : "mt-0"} no-scrollbar overflow-x-auto py-1`} aria-label="Search category">
+            <div className="flex min-w-max items-center gap-2 px-0.5">
+              {visibleScopes.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => chooseScope(item.value)}
+                  aria-current={scope === item.value ? "page" : undefined}
+                  className={`h-10 shrink-0 rounded-full border px-4 text-[13px] font-semibold tracking-[-.01em] transition duration-150 active:scale-[.98] ${
+                    scope === item.value
+                      ? "border-[#f6b800] bg-[#f6b800] text-black"
+                      : darkMode
+                        ? "border-white/15 bg-transparent text-white/72"
+                        : "border-black/15 bg-white/55 text-black/68"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-              <div className="mt-4">
-                <p className={`mb-2 text-[10px] font-black uppercase tracking-[.12em] ${darkMode ? "text-white/42" : "text-black/42"}`}>Quick links</p>
-                <div className="no-scrollbar overflow-x-auto pb-1">
-                  <div className="flex min-w-max gap-2">
-                    {quickLinks.map((item) => (
-                      <button
-                        key={item.label}
-                        type="button"
-                        onClick={() => launchSearch(routeForScope(item.scope, item.query, location))}
-                        className={`min-h-9 rounded-full border px-4 text-[11px] font-black transition active:scale-[.98] ${darkMode ? "border-white/12 bg-white/[.035] text-white/66" : "border-black/10 bg-white/55 text-black/62"}`}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : null}
-
-          <div className={hasDealerUpdates ? "mt-1 max-w-4xl" : "mt-5 max-w-4xl"}>
-            <p className="mb-3 text-[13px] font-black uppercase tracking-[.12em] text-[#d49b00]">Search LoadLink</p>
-
+          <div className="mt-4 max-w-4xl">
             <div ref={searchWrapperRef} className="relative">
               <div
                 data-loadlink-home-search-row
-                className="flex min-h-[60px] w-full overflow-hidden rounded-[18px] border border-black/15 bg-white shadow-[0_12px_30px_rgba(0,0,0,.08)]"
+                className={`grid h-[56px] w-full grid-cols-[52px_minmax(0,1fr)_92px] overflow-hidden rounded-[16px] border shadow-[0_8px_24px_rgba(0,0,0,.07)] sm:grid-cols-[56px_minmax(0,1fr)_112px] ${
+                  darkMode ? "border-white/15 bg-[#111]" : "border-black/15 bg-white"
+                }`}
               >
-                <span className="flex w-14 shrink-0 items-center justify-center bg-[#1c1c1c] text-white/65">
+                <span className="flex h-full items-center justify-center bg-[#171717] text-[#f6b800]">
                   <SearchIcon />
                 </span>
                 <label htmlFor="loadlink-marketplace-search" className="sr-only">Search LoadLink</label>
@@ -230,33 +200,51 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                   }}
                   autoComplete="off"
                   placeholder={placeholderForScope(scope)}
-                  className="h-[60px] min-w-0 flex-1 border-0 bg-white px-3 text-[16px] font-semibold text-black outline-none placeholder:text-black/40"
+                  className={`h-full min-w-0 border-0 bg-transparent px-3 text-[15px] font-medium outline-none sm:px-4 sm:text-[16px] ${
+                    darkMode ? "text-white placeholder:text-white/38" : "text-black placeholder:text-black/38"
+                  }`}
                 />
-                <button type="button" onClick={() => launchSearch()} className="m-1.5 ml-0 min-w-[92px] shrink-0 rounded-[15px] bg-[#f6b800] px-4 text-[14px] font-black uppercase tracking-[.04em] text-black sm:min-w-[112px] sm:px-6 sm:text-[15px]">Search</button>
+                <button
+                  type="button"
+                  onClick={() => launchSearch()}
+                  className="flex h-full w-full items-center justify-center bg-[#f6b800] px-3 text-[14px] font-semibold text-black transition hover:bg-[#ffbf00] active:bg-[#e5aa00] sm:text-[15px]"
+                >
+                  Search
+                </button>
               </div>
 
               {showSuggestions && activeSearchField === "query" ? (
                 <div
                   data-loadlink-home-search-suggestions
-                  className={`absolute inset-x-0 top-[68px] z-40 max-h-[330px] overflow-y-auto rounded-[18px] border shadow-[0_24px_65px_rgba(0,0,0,.24)] backdrop-blur-2xl backdrop-saturate-150 ${darkMode ? "border-white/12 bg-black/68 text-white" : "border-black/[.08] bg-white/82 text-black"}`}
+                  className={`absolute inset-x-0 top-[64px] z-40 max-h-[330px] overflow-y-auto rounded-[16px] border shadow-[0_20px_55px_rgba(0,0,0,.22)] ${
+                    darkMode ? "border-white/12 bg-[#111] text-white" : "border-black/[.08] bg-white text-black"
+                  }`}
                 >
                   {suggestions.length ? suggestions.map((item) => (
-                    <button key={item.id} type="button" onClick={() => launchSearch(item.href)} className={`flex w-full items-center justify-between gap-4 border-b px-4 py-3.5 text-left last:border-b-0 ${darkMode ? "border-white/[.08] hover:bg-white/[.06]" : "border-black/[.05] hover:bg-white/75"}`}>
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => launchSearch(item.href)}
+                      className={`flex w-full items-center justify-between gap-4 border-b px-4 py-3 text-left last:border-b-0 ${
+                        darkMode ? "border-white/[.08] hover:bg-white/[.05]" : "border-black/[.05] hover:bg-black/[.025]"
+                      }`}
+                    >
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-black">{item.label}</span>
-                        <span className={`mt-1 block truncate text-[11px] font-semibold ${darkMode ? "text-white/48" : "text-black/48"}`}>{item.meta}</span>
+                        <span className="block truncate text-[14px] font-semibold">{item.label}</span>
+                        <span className={`mt-1 block truncate text-[11px] font-medium ${darkMode ? "text-white/48" : "text-black/48"}`}>{item.meta}</span>
                       </span>
                       <ArrowIcon />
                     </button>
                   )) : (
-                    <div className={`px-4 py-5 text-sm font-semibold ${darkMode ? "text-white/50" : "text-black/50"}`}>No matching public result was found. Try a simpler search.</div>
+                    <div className={`px-4 py-5 text-sm font-medium ${darkMode ? "text-white/50" : "text-black/50"}`}>
+                      No matching public result was found. Try a simpler search.
+                    </div>
                   )}
                 </div>
               ) : null}
             </div>
 
-            <div className="mt-5" data-loadlink-home-location>
-              <p className="mb-3 text-[13px] font-black uppercase tracking-[.12em] text-[#d49b00]">Location</p>
+            <div className="mt-3" data-loadlink-home-location>
               <SouthAfricaLocationInput
                 id="loadlink-marketplace-location"
                 value={location}
@@ -272,7 +260,11 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                 darkMode={darkMode}
                 placeholder="City, town or province"
                 ariaLabel="South African city, town or province"
-                className="h-[58px] w-full rounded-[18px] border border-black/15 bg-white px-4 text-[16px] font-semibold text-black outline-none shadow-[0_10px_26px_rgba(0,0,0,.05)] focus:border-[#f6b800] placeholder:text-black/40"
+                className={`h-[54px] w-full rounded-[16px] border px-4 text-[15px] font-medium outline-none transition focus:border-[#f6b800] ${
+                  darkMode
+                    ? "border-white/15 bg-[#111] text-white placeholder:text-white/38"
+                    : "border-black/15 bg-white text-black placeholder:text-black/38"
+                }`}
               />
             </div>
           </div>
@@ -294,7 +286,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
 }
 
 function SearchIcon() {
-  return <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.2" stroke="currentColor" strokeWidth="2" /><path d="m15.2 15.2 4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
+  return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.2" stroke="currentColor" strokeWidth="2" /><path d="m15.2 15.2 4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
 }
 
 function ArrowIcon() {
