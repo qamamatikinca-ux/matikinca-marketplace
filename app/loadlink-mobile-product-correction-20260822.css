@@ -286,3 +286,5 @@ html[data-loadlink-theme="dark"] .loadlink-chat-composer textarea[data-loadlink-
   [data-loadlink-public-showroom="true"] #showroom>div:first-child>div:last-child{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;width:100%!important}
   [data-loadlink-public-showroom="true"] #showroom [class*="grid grid-cols-3"]{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
 }
+
+/* Production redeploy trigger — 2026-08-22 18:44 SAST. */
