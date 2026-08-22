@@ -3,9 +3,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
-// This bootstrap intentionally stays light; the call engine is loaded only after the page is interactive.
-// Production release trigger: no runtime behavior changed.
-const LoadLinkCallLayer = lazy(() => import("@/components/LoadLinkCallLayer20260822"));
+const LoadLinkCallLayer = lazy(() => import("@/components/LoadLinkCallLayerReliable20260822"));
 
 type IdleWindow = Window & {
   requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
