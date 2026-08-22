@@ -1,4 +1,4 @@
-// LoadLink release push — 2026-08-22 01:00 SAST
+// LoadLink combined final revision — 2026-08-22
 import NetworkRecovery from "@/components/platform/NetworkRecovery";
 import type { Metadata } from "next";
 import { Suspense } from "react";
@@ -63,6 +63,7 @@ import LoadLinkReleaseCompletion20260821 from "@/components/LoadLinkReleaseCompl
 import LoadLinkReleaseRecovery20260821 from "@/components/LoadLinkReleaseRecovery20260821";
 import LoadLinkHomepageSearchChooser20260822 from "@/components/LoadLinkHomepageSearchChooser20260822";
 import LoadLinkProductRepair20260822 from "@/components/LoadLinkProductRepair20260822";
+import LoadLinkCookieConsent20260822 from "@/components/LoadLinkCookieConsent20260822";
 
 export const metadata: Metadata = {
   title: { default: "LoadLink | South African Logistics Marketplace", template: "%s | LoadLink" },
@@ -82,8 +83,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <meta name="theme-color" content="#ffffff" />
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var k='loadlink-theme',t=localStorage.getItem(k);if(t!=='dark'&&t!=='light'){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}var r=document.documentElement;r.dataset.loadlinkTheme=t;r.classList.toggle('dark',t==='dark');r.style.colorScheme=t;r.dataset.loadlinkSimple=localStorage.getItem('loadlink-simple-mode')==='true'?'true':'false';var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',t==='dark'?'#050505':'#ffffff')}catch(e){}})();` }} />
       </head>
-      <body data-loadlink-release="20260822-product-repair">
-        <ThemeCoordinator /><LoadLinkUiRepairV273 /><SimpleModeCoordinator /><AccountActivityTracker /><AuthMfaGate /><ProfileOnboardingGate /><MarketplaceRestrictionGuard /><AccountSettingsGlassFix /><LoadLinkSelectLabelFix /><LoadLinkInteractionSystem /><LoadLinkTouchScrollGuard /><LoadLinkShareEnhancer /><HomeFollowingEnhancer /><DealerPostBenefitsEnhancer /><MarketplaceUxPolishEnhancer /><PhotoGalleryModernizer /><LoadLinkUniversalUiGuard /><LoadLinkAuditUpdateBridge /><LoadLinkCriticalInteractionFixes /><LoadLinkFinalUxRepair20260820 /><LoadLinkFinalReleasePolishBootstrap20260821 /><LoadLinkReleaseCompletion20260821 /><LoadLinkReleaseRecovery20260821 /><LoadLinkHomepageSearchChooser20260822 /><LoadLinkProductRepair20260822 /><ListingReportGuard /><ChatComposerActions /><LogisticsToolsFinalEnhancer /><DealerWorkspaceNavigationEnhancer /><DealerPackageDetailsEnhancer /><LoadLinkCallBootstrap /><LoadLinkCallHistoryStrip20260821 />
+      <body data-loadlink-release="20260822-final-revision">
+        <ThemeCoordinator /><LoadLinkUiRepairV273 /><SimpleModeCoordinator /><AccountActivityTracker /><AuthMfaGate /><ProfileOnboardingGate /><MarketplaceRestrictionGuard /><AccountSettingsGlassFix /><LoadLinkSelectLabelFix /><LoadLinkInteractionSystem /><LoadLinkTouchScrollGuard /><LoadLinkShareEnhancer /><HomeFollowingEnhancer /><DealerPostBenefitsEnhancer /><MarketplaceUxPolishEnhancer /><PhotoGalleryModernizer /><LoadLinkUniversalUiGuard /><LoadLinkAuditUpdateBridge /><LoadLinkCriticalInteractionFixes /><LoadLinkFinalUxRepair20260820 /><LoadLinkFinalReleasePolishBootstrap20260821 /><LoadLinkReleaseCompletion20260821 /><LoadLinkReleaseRecovery20260821 /><LoadLinkHomepageSearchChooser20260822 /><LoadLinkProductRepair20260822 /><ListingReportGuard /><ChatComposerActions /><LogisticsToolsFinalEnhancer /><DealerWorkspaceNavigationEnhancer /><DealerPackageDetailsEnhancer /><LoadLinkCallBootstrap /><LoadLinkCallHistoryStrip20260821 /><LoadLinkCookieConsent20260822 />
         <Suspense fallback={null}><GlobalLoading /></Suspense>
         <SwipeDotsEnhancer /><AuthBootstrap /><NotificationCenter /><ChatLauncher /><LoadLinkToastCenter /><LoadLinkDeleteConfirmationLayer /><NetworkRecovery />
         {children}
