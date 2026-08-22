@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   bundle:
@@ -21,6 +21,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 1
+
       - name: Upload exact source bundle
         uses: actions/upload-artifact@v4
         with:
@@ -31,3 +32,14 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
+
+      - name: Record bundle run id
+        shell: bash
+        run: |
+          printf '%s\n' "${GITHUB_RUN_ID}" > .github/manual-bundle-run.txt
+          printf '%s\n' "${GITHUB_SHA}" >> .github/manual-bundle-run.txt
+          git config user.name "LoadLink Manual Deploy"
+          git config user.email "actions@users.noreply.github.com"
+          git add .github/manual-bundle-run.txt
+          git commit -m "Record manual source bundle run [skip ci]"
+          git push origin HEAD:main
