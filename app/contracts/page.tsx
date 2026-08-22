@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import LoadLinkPagination from "@/components/LoadLinkPagination";
 import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
@@ -63,13 +62,18 @@ function posted(value: string | null | undefined) {
 
 export default function ContractsPage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
-  const params = useSearchParams();
   const [rows, setRows] = useState<ContractRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [query, setQuery] = useState(() => params.get("search") || "");
-  const [city, setCity] = useState(() => params.get("city") || "");
+  const [query, setQuery] = useState("");
+  const [city, setCity] = useState("");
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setQuery(params.get("search") || "");
+    setCity(params.get("city") || "");
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -176,7 +180,7 @@ export default function ContractsPage() {
           <section className={`mt-7 rounded-[22px] border p-8 text-center ${surface}`}><h2 className="text-xl font-black">No matching contracts</h2><p className={`mt-2 text-sm font-semibold ${muted}`}>Try a broader keyword or location. Jobs are intentionally not mixed into this page.</p></section>
         )}
 
-        {totalPages > 1 ? <div className="mt-8"><LoadLinkPagination currentPage={page} totalPages={totalPages} onPageChange={setPage} /></div> : null}
+        {totalPages > 1 ? <LoadLinkPagination current={page} total={totalPages} onChange={setPage} darkMode={darkMode} label="Contract pages" /> : null}
       </div>
     </main>
   );
