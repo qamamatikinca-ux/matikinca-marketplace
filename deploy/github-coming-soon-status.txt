@@ -1,0 +1,7 @@
+LoadLink Coming Soon GitHub deploy status
+Source branch: loadlink-coming-soon
+Source SHA: fde37d9db5d5e3214ebfa69774deda47dc905f34
+Requested: 2026-08-23T01:05:27Z
+Stage: vercel link
+Result: FAILED
+Error: Error: Not able to load user because of unexpected error: User not found. (404)
