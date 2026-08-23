@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       amount,
       currency,
       reference,
-      callback_url: `${origin(request)}/packages?payment=return`,
+      callback_url: `${origin(request)}/payments/status`,
       metadata: {
         loadlink_payment_id: paymentId,
         loadlink_user_id: auth.user.id,
