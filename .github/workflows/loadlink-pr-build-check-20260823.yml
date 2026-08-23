@@ -1,0 +1,49 @@
+name: LoadLink completion PR build
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: team_ltBsujLbhqOPqX4dlpWDHial
+      VERCEL_PROJECT_ID: prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt
+    steps:
+      - name: Checkout pull request
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bind primary LoadLink project
+        shell: bash
+        run: |
+          test -n "${VERCEL_TOKEN:-}"
+          mkdir -p .vercel
+          printf '%s\n' '{"projectId":"prj_3qeAZGhTEQcQUtFQm9r70suN1Xzt","orgId":"team_ltBsujLbhqOPqX4dlpWDHial","projectName":"matikinca-marketplace"}' > .vercel/project.json
+
+      - name: Pull production environment
+        shell: bash
+        run: npx --yes vercel@latest pull --yes --environment=production --scope loadlink --project "$VERCEL_PROJECT_ID" --token "$VERCEL_TOKEN"
+
+      - name: Production-equivalent build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        shell: bash
+        run: npx --yes vercel@latest build --prod --yes --scope loadlink --project "$VERCEL_PROJECT_ID" --token "$VERCEL_TOKEN"
