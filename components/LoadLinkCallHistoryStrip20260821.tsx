@@ -60,13 +60,14 @@ export default function LoadLinkCallHistoryStrip20260821() {
 
     const findHost = () => {
       const viewport = document.querySelector<HTMLElement>(".loadlink-message-viewport");
-      if (!viewport?.parentElement) return;
-      let node = viewport.parentElement.querySelector<HTMLElement>(":scope > [data-loadlink-call-history-host]");
+      if (!viewport) return;
+      let node = viewport.querySelector<HTMLElement>(":scope > [data-loadlink-call-history-host]");
       if (!node) {
         node = document.createElement("div");
         node.dataset.loadlinkCallHistoryHost = "true";
         node.setAttribute("aria-live", "polite");
-        viewport.insertAdjacentElement("afterend", node);
+        node.setAttribute("role", "log");
+        viewport.appendChild(node);
       }
       if (active) setHost(node);
     };
@@ -129,6 +130,10 @@ export default function LoadLinkCallHistoryStrip20260821() {
         setRows(nextRows);
         setAnswers(answerTimes);
         setIdentities(Object.fromEntries(identityPairs));
+        window.requestAnimationFrame(() => {
+          const viewport = document.querySelector<HTMLElement>(".loadlink-message-viewport");
+          if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+        });
       }
     };
 
