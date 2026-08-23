@@ -1,0 +1,264 @@
+/* LoadLink major product update — 2026-08-23 */
+:root {
+  --ll-glass-bg: rgba(255,255,255,.62);
+  --ll-glass-strong: rgba(255,255,255,.82);
+  --ll-glass-border: rgba(18,18,18,.10);
+  --ll-glass-shadow: 0 18px 58px rgba(30,24,10,.10);
+  --ll-muted: rgba(0,0,0,.56);
+  --ll-panel: #f6f3eb;
+}
+html.dark, html[data-loadlink-theme="dark"] {
+  --ll-glass-bg: rgba(18,18,18,.62);
+  --ll-glass-strong: rgba(12,12,12,.84);
+  --ll-glass-border: rgba(255,255,255,.11);
+  --ll-glass-shadow: 0 22px 70px rgba(0,0,0,.38);
+  --ll-muted: rgba(255,255,255,.58);
+  --ll-panel: #080808;
+}
+
+/* Logged-out users should never see account-only affordances. */
+html[data-loadlink-auth="signed-out"] [data-loadlink-auth-only="true"],
+html[data-loadlink-auth="signed-out"] [data-auth-only="true"],
+html[data-loadlink-auth="signed-out"] .loadlink-auth-only { display: none !important; }
+
+/* Numeric controls: preserve a clear mobile keypad target and stop browser text styling. */
+input[data-loadlink-numeric-keypad="true"] { font-variant-numeric: tabular-nums; }
+
+/* Transparent glass is the common surface language. */
+.loadlink-glass,
+[data-loadlink-notification-panel="true"],
+[data-loadlink-cookie-consent] {
+  background: var(--ll-glass-bg) !important;
+  border-color: var(--ll-glass-border) !important;
+  box-shadow: var(--ll-glass-shadow) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(1.25) !important;
+  backdrop-filter: blur(24px) saturate(1.25) !important;
+}
+
+/* Vehicle portal must read at the same scale as the other primary portals. */
+[data-loadlink-vehicle-portal] > section:first-of-type {
+  min-height: min(820px, 84svh) !important;
+}
+[data-loadlink-vehicle-portal] > section:first-of-type > div:last-child {
+  max-width: 76rem !important;
+}
+@media (max-width: 767px) {
+  [data-loadlink-vehicle-portal] > section:first-of-type { min-height: 82svh !important; }
+  [data-loadlink-vehicle-portal] > section:first-of-type h1 { max-width: 22rem !important; }
+}
+
+/* Native date fields stay functional, but visually belong to LoadLink. */
+input[type="date"], input[type="datetime-local"], input[type="time"] {
+  border-radius: 15px !important;
+  color-scheme: light;
+}
+html.dark input[type="date"], html.dark input[type="datetime-local"], html.dark input[type="time"],
+html[data-loadlink-theme="dark"] input[type="date"], html[data-loadlink-theme="dark"] input[type="datetime-local"], html[data-loadlink-theme="dark"] input[type="time"] {
+  color-scheme: dark;
+}
+
+/* Public dealership: one blended hero composition instead of stacked image clutter. */
+html[data-loadlink-route^="dealership/"] main > div > section:first-of-type {
+  border: 1px solid var(--ll-glass-border) !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,.18) !important;
+  isolation: isolate;
+}
+html[data-loadlink-route^="dealership/"] main > div > section:first-of-type > img {
+  opacity: .72 !important;
+  filter: saturate(.88) contrast(.98) !important;
+  transform: scale(1.01);
+}
+html[data-loadlink-route^="dealership/"] main > div > section:first-of-type::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,.05) 10%, rgba(0,0,0,.28) 48%, rgba(0,0,0,.92) 100%);
+}
+html[data-loadlink-route^="dealership/"] main > div > section:first-of-type > div { z-index: 1; }
+html[data-loadlink-route^="dealership/"] main img { image-rendering: auto; }
+
+/* Dealer status rings: modern, circular, subtle. */
+[data-loadlink-dealer-update-rail] button > span:first-of-type {
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+}
+[data-loadlink-dealer-update-rail] img { border-radius: 999px !important; }
+
+/* Notification centre — especially light mode. */
+[data-loadlink-notification-panel="true"] {
+  bottom: 72px !important;
+  border-radius: 28px !important;
+  overflow: clip !important;
+}
+html:not(.dark) [data-loadlink-notification-panel="true"] {
+  background: rgba(255,255,255,.86) !important;
+  border-color: rgba(0,0,0,.08) !important;
+  box-shadow: 0 28px 90px rgba(27,22,10,.16) !important;
+}
+[data-loadlink-notification-panel="true"] > div:first-child {
+  background: transparent !important;
+}
+[data-loadlink-notification-panel="true"] a,
+[data-loadlink-notification-panel="true"] button { -webkit-tap-highlight-color: transparent; }
+
+/* Cookie prompt: compact floating glass card instead of a banner. */
+[data-loadlink-cookie-consent] {
+  width: min(calc(100vw - 24px), 660px) !important;
+  inset-inline: 0 !important;
+  border-radius: 24px !important;
+  padding: 15px 16px !important;
+}
+[data-loadlink-cookie-consent] button {
+  min-height: 42px !important;
+  border-radius: 999px !important;
+}
+html.dark [data-loadlink-cookie-consent], html[data-loadlink-theme="dark"] [data-loadlink-cookie-consent] {
+  color: white !important;
+}
+html.dark [data-loadlink-cookie-consent] p, html[data-loadlink-theme="dark"] [data-loadlink-cookie-consent] p {
+  color: rgba(255,255,255,.58) !important;
+}
+
+/* Help centre: calm hierarchy and fewer competing panels. */
+html[data-loadlink-route="help"] main section,
+html[data-loadlink-route="help"] main article {
+  border-radius: 24px !important;
+}
+html[data-loadlink-route="help"] main [class*="grid"] { gap: 14px !important; }
+html[data-loadlink-route="help"] main h1 { letter-spacing: -.055em !important; }
+html[data-loadlink-route="help"] main p { line-height: 1.65 !important; }
+html[data-loadlink-route="help"] main [class*="bg-[#f6b800]"] { box-shadow: none !important; }
+
+/* Quick Links: neutral glass, no repeated gold typography. */
+html[data-loadlink-route^="quick-links/"] main {
+  background: var(--ll-panel) !important;
+}
+html[data-loadlink-route^="quick-links/"] main article,
+html[data-loadlink-route^="quick-links/"] main section [class*="border"] {
+  background: var(--ll-glass-bg) !important;
+  border-color: var(--ll-glass-border) !important;
+  box-shadow: var(--ll-glass-shadow) !important;
+  -webkit-backdrop-filter: blur(22px) !important;
+  backdrop-filter: blur(22px) !important;
+}
+html[data-loadlink-route^="quick-links/"] main [class*="text-[#f6b800]"]:not(button):not(a),
+html[data-loadlink-route^="quick-links/"] main [class*="text-[#b78300]"]:not(button):not(a) {
+  color: var(--ll-muted) !important;
+}
+
+/* Messages: LoadLink glass UI, not platform-native/iOS chrome. */
+.loadlink-messages .loadlink-chat-header,
+.loadlink-messages .loadlink-chat-composer,
+.loadlink-messages .loadlink-listing-context {
+  background: var(--ll-glass-strong) !important;
+  border-color: var(--ll-glass-border) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(1.2) !important;
+  backdrop-filter: blur(24px) saturate(1.2) !important;
+}
+.loadlink-messages [data-loadlink-conversation-info-trigger="true"] {
+  border-color: var(--ll-glass-border) !important;
+  background: var(--ll-glass-bg) !important;
+  box-shadow: none !important;
+}
+.loadlink-messages [data-loadlink-conversation-info-trigger="true"] svg { opacity: .82; }
+[data-loadlink-conversation-info-panel="true"] {
+  position: fixed !important;
+  top: max(10px, env(safe-area-inset-top)) !important;
+  right: 10px !important;
+  bottom: max(10px, env(safe-area-inset-bottom)) !important;
+  height: auto !important;
+  max-height: calc(100dvh - max(20px, env(safe-area-inset-top) + env(safe-area-inset-bottom))) !important;
+  border-radius: 26px !important;
+  overflow: hidden !important;
+  background: var(--ll-glass-strong) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.2) !important;
+  backdrop-filter: blur(28px) saturate(1.2) !important;
+}
+[data-loadlink-conversation-info-panel="true"] > div:first-child { background: transparent !important; }
+@media (max-width: 640px) {
+  [data-loadlink-conversation-info-panel="true"] { left: 10px !important; width: auto !important; }
+}
+
+/* Call records stay in the chat flow and cannot cover the composer/messages. */
+[data-loadlink-call-history-host] {
+  position: static !important;
+  inset: auto !important;
+  width: 100% !important;
+  max-width: 48rem !important;
+  margin: 8px auto 14px !important;
+  pointer-events: auto !important;
+  z-index: auto !important;
+}
+.ll-final-call-history {
+  position: static !important;
+  border-radius: 18px !important;
+  border: 1px solid var(--ll-glass-border) !important;
+  background: var(--ll-glass-bg) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  backdrop-filter: blur(18px) !important;
+}
+
+/* WhatsApp-inspired call composition, LoadLink branded. */
+[data-loadlink-call-active="true"],
+[data-loadlink-call-incoming="true"] {
+  background: radial-gradient(circle at 50% 20%, #343434 0, #161616 32%, #080808 72%, #020202 100%) !important;
+  color: white !important;
+}
+[data-loadlink-call-active="true"] > div,
+[data-loadlink-call-incoming="true"] > div {
+  width: min(100%, 520px) !important;
+}
+[data-loadlink-call-avatar="true"] {
+  width: 118px !important;
+  height: 118px !important;
+  border-radius: 999px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255,255,255,.20) !important;
+  box-shadow: 0 18px 55px rgba(0,0,0,.36) !important;
+}
+[data-loadlink-call-avatar="true"] img { width: 100% !important; height: 100% !important; object-fit: cover !important; border-radius: 999px !important; }
+[data-loadlink-call-active="true"] button,
+[data-loadlink-call-incoming="true"] button,
+[data-loadlink-call-chooser="true"] button {
+  -webkit-tap-highlight-color: transparent;
+}
+[data-loadlink-call-active="true"] button:not([aria-label*="End"]),
+[data-loadlink-call-active="true"] button:not([aria-label*="end"]) {
+  box-shadow: 0 12px 28px rgba(0,0,0,.20);
+}
+[data-loadlink-call-chooser="true"] > div {
+  border-radius: 28px !important;
+  border-color: var(--ll-glass-border) !important;
+  background: var(--ll-glass-strong) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.2) !important;
+  backdrop-filter: blur(28px) saturate(1.2) !important;
+}
+[data-loadlink-call-minimized="true"] {
+  border-radius: 999px !important;
+  background: rgba(16,16,16,.82) !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  box-shadow: 0 14px 40px rgba(0,0,0,.28) !important;
+  -webkit-backdrop-filter: blur(22px) !important;
+  backdrop-filter: blur(22px) !important;
+}
+
+/* Broken-image fallback never collapses the intended media space. */
+img[data-loadlink-image-failed="true"] {
+  min-width: 32px;
+  min-height: 32px;
+  background: linear-gradient(135deg, rgba(127,127,127,.10), rgba(127,127,127,.03));
+}
+
+/* Packages and dealer centre: reduce visual noise; reserve gold for primary actions/status only. */
+html[data-loadlink-route="packages"] main [class*="uppercase"][class*="text-[#f6b800]"],
+html[data-loadlink-route="packages/guide"] main [class*="uppercase"][class*="text-[#f6b800]"],
+html[data-loadlink-route^="dealer"] main [class*="uppercase"][class*="text-[#f6b800]"] {
+  color: var(--ll-muted) !important;
+}
+html[data-loadlink-route^="dealer"] main [class*="rounded"] { scroll-margin-top: 88px; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-loadlink-call-active="true"] *, [data-loadlink-call-incoming="true"] * { animation: none !important; transition: none !important; }
+}
