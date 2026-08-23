@@ -1,92 +1,33 @@
 "use client";
 
-import { useState } from "react";
-
 export type PackageRecommendation = "manual" | "pro" | "dealer";
 
-type Identity = "individual" | "operator" | "dealer";
-type Frequency = "occasional" | "regular";
+const options: Array<{ plan: PackageRecommendation; title: string; detail: string }> = [
+  { plan: "manual", title: "I list occasionally", detail: "Pay R15 for one 10-day Manual listing credit." },
+  { plan: "pro", title: "I advertise regularly", detail: "For owners and operators who need ongoing listings, analytics and messaging." },
+  { plan: "dealer", title: "I run a dealership", detail: "Showroom, stock, leads, team tools and dealership management." },
+];
 
-export default function PackageGuide({
-  darkMode = false,
-  onComplete,
-}: {
-  darkMode?: boolean;
-  onComplete: (plan: PackageRecommendation) => void;
-}) {
-  const [step, setStep] = useState(0);
-  const [identity, setIdentity] = useState<Identity | null>(null);
-  const [frequency, setFrequency] = useState<Frequency | null>(null);
+export default function PackageGuide({ darkMode = false, onComplete }: { darkMode?: boolean; onComplete: (plan: PackageRecommendation) => void }) {
   const muted = darkMode ? "text-white/52" : "text-black/52";
-  const surface = darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white";
-  const progress = ((step + 1) / 3) * 100;
-
-  function finish(needsBusinessTools: boolean) {
-    const recommendation: PackageRecommendation =
-      identity === "dealer" || needsBusinessTools
-        ? "dealer"
-        : frequency === "regular"
-          ? "pro"
-          : "manual";
-    onComplete(recommendation);
-  }
+  const surface = darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-white/72";
 
   return (
-    <section className={`overflow-hidden rounded-[26px] border ${surface}`} data-loadlink-package-questions="v275">
-      <div className="h-1 bg-current/5">
-        <div className="h-full bg-[#f6b800] transition-all duration-300" style={{ width: `${progress}%` }} />
+    <section className={`rounded-[22px] border p-4 backdrop-blur-xl sm:p-5 ${surface}`} data-loadlink-package-questions="major-20260823">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-lg font-black tracking-[-.03em]">Which sounds like you?</h2>
+          <p className={`mt-1 text-[11px] font-semibold ${muted}`}>One choice. LoadLink will show the most relevant plan.</p>
+        </div>
       </div>
-      <div className="p-5 sm:p-7">
-        <p className={`text-[10px] font-black uppercase tracking-[.12em] ${muted}`}>Find the right LoadLink option</p>
-
-        {step === 0 ? (
-          <>
-            <h1 className="mt-3 text-[30px] font-black tracking-[-.05em] sm:text-[38px]">Which best describes how you use vehicles?</h1>
-            <p className={`mt-2 max-w-xl text-sm font-semibold leading-6 ${muted}`}>This only changes the recommendation. You can still compare every LoadLink option afterwards.</p>
-            <div className="mt-6 grid gap-2 sm:grid-cols-3">
-              <Choice label="Individual owner" detail="I advertise my own vehicle when needed" onClick={() => { setIdentity("individual"); setStep(1); }} />
-              <Choice label="Transport operator" detail="I advertise vehicles as part of my business" onClick={() => { setIdentity("operator"); setStep(1); }} />
-              <Choice label="Dealership" detail="I sell or manage vehicle stock" onClick={() => { setIdentity("dealer"); setStep(1); }} />
-            </div>
-          </>
-        ) : null}
-
-        {step === 1 ? (
-          <>
-            <h2 className="text-[28px] font-black tracking-[-.045em]">How often do you expect to advertise vehicles?</h2>
-            <div className="mt-6 grid gap-2 sm:grid-cols-2">
-              <Choice label="Only when I need it" detail="Occasional or one-off advertising" onClick={() => { setFrequency("occasional"); setStep(2); }} />
-              <Choice label="Regularly" detail="Ongoing vehicle advertising" onClick={() => { setFrequency("regular"); setStep(2); }} />
-            </div>
-            <Back onClick={() => setStep(0)} />
-          </>
-        ) : null}
-
-        {step === 2 ? (
-          <>
-            <h2 className="text-[28px] font-black tracking-[-.045em]">Do you need dealership-style business tools?</h2>
-            <p className={`mt-2 max-w-xl text-sm font-semibold leading-6 ${muted}`}>This includes a public showroom, staff access, lead management and dealership sales tools.</p>
-            <div className="mt-6 grid grid-cols-2 gap-2">
-              <Choice label="Yes" onClick={() => finish(true)} />
-              <Choice label="No" onClick={() => finish(false)} />
-            </div>
-            <Back onClick={() => setStep(1)} />
-          </>
-        ) : null}
+      <div className="mt-4 grid gap-2 md:grid-cols-3">
+        {options.map((option) => (
+          <button key={option.plan} type="button" onClick={() => onComplete(option.plan)} className="min-h-[84px] rounded-[17px] border border-current/10 px-4 py-3.5 text-left transition hover:border-[#f6b800]/60 active:scale-[.99]">
+            <span className="block text-[13px] font-black">{option.title}</span>
+            <span className={`mt-1 block text-[10px] font-semibold leading-4 ${muted}`}>{option.detail}</span>
+          </button>
+        ))}
       </div>
     </section>
   );
-}
-
-function Choice({ label, detail, onClick }: { label: string; detail?: string; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} className="min-h-[82px] rounded-[18px] border border-current/10 px-4 py-4 text-left transition active:scale-[.99] hover:border-[#f6b800]/70">
-      <span className="block text-sm font-black">{label}</span>
-      {detail ? <span className="mt-1.5 block text-[10px] font-semibold leading-4 opacity-50">{detail}</span> : null}
-    </button>
-  );
-}
-
-function Back({ onClick }: { onClick: () => void }) {
-  return <button type="button" onClick={onClick} className="mt-5 text-[11px] font-black opacity-50">Back</button>;
 }
