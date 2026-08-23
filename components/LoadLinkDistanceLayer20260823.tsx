@@ -67,9 +67,15 @@ function drawBadges(user: Point, rows: ListingPoint[]) {
   });
 }
 
+function isOnlyDistanceDecoration(mutations: MutationRecord[]) {
+  const changedNodes = mutations.flatMap((mutation) => [...Array.from(mutation.addedNodes), ...Array.from(mutation.removedNodes)]);
+  return changedNodes.length > 0 && changedNodes.every((node) => node instanceof HTMLElement && (node.dataset.loadlinkDistanceBadge === "true" || node.closest?.('[data-loadlink-distance-badge="true"]')));
+}
+
 export default function LoadLinkDistanceLayer20260823() {
   const pathname = usePathname();
-  const eligible = MARKETPLACE_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+  const isPostingRoute = pathname === "/jobs/list" || pathname === "/contracts/post";
+  const eligible = !isPostingRoute && MARKETPLACE_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -120,7 +126,8 @@ export default function LoadLinkDistanceLayer20260823() {
 
   useEffect(() => {
     if (!eligible || !enabled) return;
-    const observer = new MutationObserver(() => {
+    const observer = new MutationObserver((mutations) => {
+      if (isOnlyDistanceDecoration(mutations)) return;
       if (refreshTimer.current) window.clearTimeout(refreshTimer.current);
       refreshTimer.current = window.setTimeout(() => void refreshDistances(), 280);
     });
