@@ -8,327 +8,266 @@ const INSTAGRAM_URL =
 const LINKEDIN_URL =
   "https://www.linkedin.com/in/loadlink-sa-102b763a1?utm_source=share_via&utm_content=profile&utm_medium=member_ios";
 
-const platform = [
+type IconName = "market" | "message" | "tools" | "file" | "business" | "shield";
+
+const features: Array<{
+  icon: IconName;
+  title: string;
+  description: string;
+  detail: string;
+}> = [
   {
-    number: "01",
+    icon: "market",
     title: "Marketplace",
-    intro:
-      "Find transport work, recurring contracts, commercial vehicles, mobile units, drivers and dealerships without jumping between unrelated classifieds and groups.",
-    detail:
-      "LoadLink is structured around commercial logistics rather than general classifieds. Jobs and contracts sit beside the vehicles, units, drivers and businesses that may be needed to complete them. Search and discovery are designed to help users move from an opportunity to the right capacity or supplier with less friction.",
-    benefit:
-      "A more relevant starting point for commercial logistics discovery, with less time spent searching across disconnected platforms.",
+    description: "Jobs, contracts, vehicles, mobile units, drivers and dealerships in one logistics-focused marketplace.",
+    detail: "Instead of moving between general classifieds, groups and separate supplier lists, LoadLink keeps commercial logistics discovery in one place so a business can move from opportunity to capacity faster.",
   },
   {
-    number: "02",
+    icon: "message",
     title: "Messaging",
-    intro:
-      "Keep the conversation connected to the listing, job or opportunity that started it.",
-    detail:
-      "A user can move from a listing into a dedicated conversation instead of starting a separate chat with no context. Images, files and voice notes stay with the enquiry, while potential-deal conversations and archived threads help keep serious opportunities easier to manage.",
-    benefit:
-      "Clearer deal context, fewer repeated questions and an easier way to follow an enquiry from first contact to decision.",
+    description: "Keep enquiries attached to the listing or opportunity that started them.",
+    detail: "Conversations can carry images, files and voice notes while preserving the context of the job, vehicle, contract or dealership enquiry, making follow-up easier and reducing repeated questions.",
   },
   {
-    number: "03",
+    icon: "tools",
     title: "Logistics tools",
-    intro:
-      "Use practical tools for the work that happens once an enquiry starts becoming a real job.",
-    detail:
-      "LoadLink includes rate quotes, trip briefs, collection and delivery briefs, load checklists, driver handovers, ETA updates, incident updates, POD requests, cost breakdowns, payment terms and a truck-finance calculator. The tools are meant to support real operational tasks rather than act as decorative dashboard widgets.",
-    benefit:
-      "Move from discussion to a usable operational document or calculation without rebuilding the same information every time.",
+    description: "Operational tools for the work that starts after an enquiry becomes real.",
+    detail: "Create rate quotes, trip briefs, load checklists, delivery notes, handovers, ETA updates, cost breakdowns, payment terms and other practical logistics documents from one toolkit.",
   },
   {
-    number: "04",
+    icon: "file",
     title: "Documents",
-    intro:
-      "Turn information already entered on LoadLink into professional documents you can use outside the platform.",
-    detail:
-      "Quotes and operational information can be exported as clean LoadLink-branded PDFs, with business or dealership branding where available. Reusable listing information can be carried into documents so vehicle, route or business details do not have to be typed repeatedly.",
-    benefit:
-      "Less duplicated admin and a more professional way to present quotes and operational information to clients or partners.",
+    description: "Turn information already on LoadLink into clean, reusable business documents.",
+    detail: "Export quotes and operational information as professional LoadLink-branded PDFs and reuse vehicle, route or business details instead of entering the same information repeatedly.",
   },
   {
-    number: "05",
+    icon: "business",
     title: "Dealership & business tools",
-    intro:
-      "Give commercial businesses a workspace that does more than simply display a listing.",
-    detail:
-      "Dealerships can manage stock, listings and enquiries from one area while business-facing tools support branding and performance visibility. Pro and dealership features are designed for teams that need to manage commercial activity, while Simple Mode keeps essential tasks easier to use when a lighter interface is preferred.",
-    benefit:
-      "A cleaner workflow for sales teams, dealerships and businesses that need more structure than a basic classifieds page.",
+    description: "Manage commercial stock, listings, enquiries and business visibility from one workspace.",
+    detail: "Dealership and Pro tools are designed for businesses that need more than a basic listing page, including structured listing management, business presentation and performance visibility.",
   },
   {
-    number: "06",
+    icon: "shield",
     title: "Trust & controls",
-    intro:
-      "Give users more context and platform accountability before they decide to work with someone.",
-    detail:
-      "LoadLink combines profile verification, phone OTP, identity or document checks where required, listing moderation, reporting, flagging and login activity controls. These controls do not replace normal commercial due diligence, but they add more structure and accountability than an open listing board.",
-    benefit:
-      "More information before a deal moves forward, stronger moderation and better control over account and platform activity.",
+    description: "More context and accountability before users decide to work together.",
+    detail: "Profile verification, phone OTP, moderation, reporting, flagging and account activity controls add structure to the marketplace while still requiring normal commercial due diligence.",
   },
 ];
 
-const stats = [
-  ["30+", "Gauteng"],
-  ["60+", "Mpumalanga"],
-  ["40+", "Western Cape"],
-] as const;
+function PlatformIcon({ name }: { name: IconName }) {
+  const common = {
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.7,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    className: "h-5 w-5",
+    "aria-hidden": true,
+  };
 
-function NavLink({ href, label }: { href: string; label: string }) {
+  if (name === "market") {
+    return (
+      <svg {...common}>
+        <path d="M4 8h16l-1.2 4H5.2L4 8Z" />
+        <path d="M6 12v7h12v-7M9 19v-4h6v4M7 8l1.5-4h7L17 8" />
+      </svg>
+    );
+  }
+  if (name === "message") {
+    return (
+      <svg {...common}>
+        <path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H10l-5 3v-3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+        <path d="M8 10h8M8 13h5" />
+      </svg>
+    );
+  }
+  if (name === "tools") {
+    return (
+      <svg {...common}>
+        <path d="M14.5 6.5a4 4 0 0 0-5-5l2.1 2.1-2.8 2.8-2.1-2.1a4 4 0 0 0 5 5l-7.4 7.4a2 2 0 1 0 2.8 2.8l7.4-7.4a4 4 0 0 0 5-5l-2.1 2.1-2.8-2.8 2.1-2.1Z" />
+      </svg>
+    );
+  }
+  if (name === "file") {
+    return (
+      <svg {...common}>
+        <path d="M6 3h8l4 4v14H6V3Z" />
+        <path d="M14 3v5h5M9 13h6M9 17h6" />
+      </svg>
+    );
+  }
+  if (name === "business") {
+    return (
+      <svg {...common}>
+        <path d="M4 21V5h10v16M14 9h6v12" />
+        <path d="M7 9h3M7 13h3M7 17h3M17 13h1M17 17h1" />
+      </svg>
+    );
+  }
   return (
-    <a
-      href={href}
-      className="whitespace-nowrap rounded-full px-3 py-2 text-xs font-normal text-white/58 transition hover:bg-white/[0.06] hover:text-white"
-    >
-      {label}
-    </a>
+    <svg {...common}>
+      <path d="M12 3 4.5 6v5.5c0 4.7 3 7.6 7.5 9.5 4.5-1.9 7.5-4.8 7.5-9.5V6L12 3Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
+function InstagramIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.8" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function LinkedInIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6" fill="currentColor">
+      <rect x="4" y="9" width="3.4" height="11" rx=".5" />
+      <circle cx="5.7" cy="5.7" r="1.8" />
+      <path d="M10 9h3.2v1.5h.1c.5-.9 1.6-1.9 3.4-1.9 3.6 0 4.3 2.3 4.3 5.4v6h-3.4v-5.3c0-1.3 0-3-1.9-3s-2.2 1.4-2.2 2.9V20H10V9Z" />
+    </svg>
   );
 }
 
 export default function Home() {
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#070809] text-white selection:bg-[#f6b800] selection:text-black">
+    <main className="min-h-screen overflow-x-hidden bg-[#08090a] text-white selection:bg-[#f6b800] selection:text-black">
       <LaunchConfetti />
 
-      <section id="overview" className="relative min-h-[92svh] overflow-hidden">
-        <img
-          src="/images/truck-1.jpg"
-          alt="Commercial truck on the road"
-          className="absolute inset-0 h-full w-full object-cover object-[66%_center] opacity-30 sm:object-center"
-        />
-        <div className="absolute inset-0 bg-[#050607]/64" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#050607] via-[#050607]/78 to-[#050607]/38" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#070809] via-transparent to-[#050607]/35" />
+      <section className="relative min-h-[92svh] overflow-hidden border-b border-white/[0.07]">
+        <img src="/images/truck-1.jpg" alt="Commercial truck" className="absolute inset-0 h-full w-full object-cover object-[65%_center] opacity-35" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#08090a] via-[#08090a]/85 to-[#08090a]/35" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#08090a] via-transparent to-black/35" />
 
-        <div className="relative z-10 mx-auto flex min-h-[92svh] w-full max-w-[1380px] flex-col px-4 pb-7 pt-4 sm:px-7 sm:pt-6 lg:px-10">
-          <header className="sticky top-3 z-40 rounded-[20px] border border-white/[0.09] bg-black/28 px-4 py-3 backdrop-blur-2xl sm:px-5">
-            <div className="flex items-center justify-between gap-4">
-              <a href="#overview" aria-label="LoadLink home" className="shrink-0">
-                <img
-                  src="/images/loadlink-logo-dark.png"
-                  alt="LoadLink"
-                  width={1200}
-                  height={391}
-                  className="h-auto w-[136px] object-contain sm:w-[154px]"
-                />
-              </a>
-
-              <nav className="hidden items-center gap-1 md:flex">
-                <NavLink href="#platform" label="Platform" />
-                <NavLink href="#business" label="For business" />
-                <NavLink href="#follow" label="Follow" />
-              </nav>
-
-              <a
-                href={FREE_TRIAL_EMAIL}
-                className="inline-flex min-h-10 items-center justify-center rounded-full bg-[#f6b800] px-4 text-xs font-medium text-black transition hover:-translate-y-0.5 hover:bg-[#ffc62b] sm:px-5 sm:text-sm"
-              >
-                Free trial
-              </a>
-            </div>
+        <div className="relative z-10 mx-auto flex min-h-[92svh] max-w-[1280px] flex-col px-5 pb-8 pt-5 sm:px-8 lg:px-10">
+          <header className="flex items-center justify-between gap-4 border-b border-white/[0.09] pb-4">
+            <img src="/images/loadlink-logo-dark.png" alt="LoadLink" width={1200} height={391} className="h-auto w-[138px] sm:w-[154px]" />
+            <a href={FREE_TRIAL_EMAIL} className="rounded-full bg-[#f6b800] px-4 py-2.5 text-xs font-medium text-black sm:px-5 sm:text-sm">
+              Free trial
+            </a>
           </header>
 
-          <div className="grid flex-1 gap-7 py-10 lg:grid-cols-[1.08fr_.92fr] lg:items-center lg:py-14">
-            <div className="max-w-4xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/22 px-3 py-2 text-[10px] font-normal uppercase tracking-[0.12em] text-white/62 backdrop-blur-xl">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#f6b800]" />
-                Selected early access
-              </div>
-
-              <h1 className="mt-6 max-w-4xl text-[clamp(2.9rem,7vw,6.2rem)] font-medium leading-[0.93] tracking-[-0.052em] text-white">
+          <div className="grid flex-1 gap-10 py-12 lg:grid-cols-[1.05fr_.95fr] lg:items-end lg:py-16">
+            <div className="max-w-4xl self-center">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-white/48">Selected early access</p>
+              <h1 className="mt-5 text-[clamp(3rem,7vw,6rem)] font-medium leading-[0.94] tracking-[-0.055em]">
                 Logistics business,
-                <br />
-                better connected.
+                <br />better connected.
               </h1>
-
-              <p className="mt-6 max-w-2xl text-[15px] font-normal leading-7 text-white/66 sm:text-lg sm:leading-8">
-                LoadLink brings the practical parts of commercial logistics closer together: finding work, sourcing vehicles or drivers, handling enquiries, preparing documents and using operational tools when the work starts moving.
+              <p className="mt-6 max-w-2xl text-[15px] leading-7 text-white/62 sm:text-lg sm:leading-8">
+                LoadLink brings marketplace discovery, enquiries, commercial vehicles, drivers, logistics tools and business documents into one focused platform built around the way logistics work actually moves.
               </p>
-
-              <div className="mt-8 max-w-[430px]">
-                <a
-                  href={FREE_TRIAL_EMAIL}
-                  className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-medium text-black transition hover:-translate-y-0.5 hover:bg-[#ffc62b] sm:w-auto"
-                >
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <a href={FREE_TRIAL_EMAIL} className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-medium text-black sm:w-auto">
                   Activate free trial
                 </a>
-                <a
-                  href="#platform"
-                  className="mt-4 block text-center text-sm font-normal text-white/58 underline decoration-white/20 underline-offset-4 transition hover:text-white sm:inline-block sm:pl-5 sm:text-left"
-                >
-                  See what LoadLink includes
+                <a href="#platform" className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/12 px-6 text-sm text-white/68 transition hover:bg-white/[0.05] hover:text-white sm:w-auto">
+                  Explore the platform
                 </a>
               </div>
             </div>
 
-            <aside className="lg:justify-self-end lg:max-w-[510px]">
-              <div className="rounded-[26px] border border-white/10 bg-black/28 p-5 backdrop-blur-2xl sm:p-6">
-                <p className="text-[10px] font-normal uppercase tracking-[0.13em] text-white/40">Your invitation</p>
-                <h2 className="mt-2 max-w-md text-[1.7rem] font-medium leading-[1.08] tracking-[-0.03em] sm:text-[2rem]">
-                  Your business has been selected for complimentary early access.
-                </h2>
-                <p className="mt-3 max-w-md text-sm font-normal leading-6 text-white/52">
-                  Use the trial to test the parts that matter to your business before public launch. You do not need to change your entire workflow or commit to a package to understand where LoadLink can help.
-                </p>
-
-                <div className="mt-5 grid grid-cols-3 gap-2 border-t border-white/10 pt-5">
-                  {stats.map(([value, province]) => (
-                    <div key={province} className="min-w-0">
-                      <p className="text-[1.55rem] font-medium tracking-[-0.035em]">{value}</p>
-                      <p className="mt-1 truncate text-[11px] font-normal text-white/40 sm:whitespace-normal sm:leading-4">
-                        {province}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-3 text-[11px] font-normal leading-5 text-white/30">Dealerships signed up across the selected trial regions.</p>
+            <div className="border-t border-white/10 pt-6 lg:max-w-[470px] lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+              <p className="text-sm leading-6 text-white/48">Congratulations — your business has been selected for complimentary early access before public launch.</p>
+              <div className="mt-6 grid grid-cols-3 gap-4">
+                <div><p className="text-2xl font-medium">30+</p><p className="mt-1 text-[11px] text-white/38">Gauteng</p></div>
+                <div><p className="text-2xl font-medium">60+</p><p className="mt-1 text-[11px] text-white/38">Mpumalanga</p></div>
+                <div><p className="text-2xl font-medium">40+</p><p className="mt-1 text-[11px] text-white/38">Western Cape</p></div>
               </div>
-            </aside>
-          </div>
-
-          <div className="flex justify-center gap-1 border-t border-white/[0.07] pt-4 md:hidden">
-            <NavLink href="#platform" label="Platform" />
-            <NavLink href="#business" label="For business" />
-            <NavLink href="#follow" label="Follow" />
+              <p className="mt-4 text-[11px] leading-5 text-white/28">Dealerships signed up across the selected trial regions.</p>
+            </div>
           </div>
         </div>
       </section>
 
-      <section id="platform" className="relative scroll-mt-24 border-t border-white/[0.07] py-14 sm:py-18">
-        <img
-          src="/images/jobs-2.jpg"
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 h-full w-full object-cover opacity-[0.055]"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#070809]/97 via-[#070809]/94 to-[#070809]" />
-
-        <div className="relative z-10 mx-auto w-full max-w-[1180px] px-5 sm:px-8 lg:px-10">
-          <div className="max-w-3xl border-b border-white/10 pb-8">
-            <p className="text-[10px] font-normal uppercase tracking-[0.13em] text-white/35">Inside LoadLink</p>
-            <h2 className="mt-3 text-3xl font-medium leading-[1] tracking-[-0.04em] sm:text-5xl">
-              What the platform actually does.
-            </h2>
-            <p className="mt-4 max-w-2xl text-sm font-normal leading-7 text-white/54 sm:text-base">
-              The platform is split into six practical areas. Each one has a specific job, so the page below stays easy to scan instead of turning every feature into another card or button.
+      <section id="platform" className="relative border-b border-white/[0.07] py-16 sm:py-20">
+        <img src="/images/jobs-2.jpg" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-[0.05]" />
+        <div className="absolute inset-0 bg-[#08090a]/95" />
+        <div className="relative z-10 mx-auto max-w-[1180px] px-5 sm:px-8 lg:px-10">
+          <div className="max-w-3xl">
+            <p className="text-[11px] uppercase tracking-[0.17em] text-white/34">Inside LoadLink</p>
+            <h2 className="mt-3 text-3xl font-medium tracking-[-0.04em] sm:text-5xl">What your business can actually use.</h2>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/50 sm:text-base">
+              Six practical parts, each with a clear purpose. No feature theatre and no dashboard clutter.
             </p>
           </div>
 
-          <div className="divide-y divide-white/10">
-            {platform.map((item) => (
-              <details key={item.title} className="group">
-                <summary className="flex cursor-pointer list-none items-start gap-4 py-6 sm:items-center sm:gap-6">
-                  <span className="w-8 shrink-0 pt-1 text-xs font-normal tabular-nums text-white/28 sm:pt-0">{item.number}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-lg font-medium tracking-[-0.02em] sm:text-xl">{item.title}</span>
-                    <span className="mt-1.5 block max-w-3xl text-sm font-normal leading-6 text-white/48">{item.intro}</span>
-                  </span>
-                  <span className="mt-1 shrink-0 text-xl font-light text-white/30 transition group-open:rotate-45 group-open:text-white/65 sm:mt-0">+</span>
-                </summary>
-
-                <div className="grid gap-4 pb-7 pl-12 sm:pl-14 lg:grid-cols-[1fr_.7fr] lg:gap-8">
-                  <p className="text-sm font-normal leading-7 text-white/62 sm:text-[15px]">{item.detail}</p>
-                  <div className="border-l border-white/10 pl-4 sm:pl-5">
-                    <p className="text-[10px] font-normal uppercase tracking-[0.12em] text-white/30">Why it matters</p>
-                    <p className="mt-2 text-sm font-normal leading-6 text-white/52">{item.benefit}</p>
-                  </div>
+          <div className="mt-10 divide-y divide-white/10 border-y border-white/10">
+            {features.map((item) => (
+              <div key={item.title} className="grid gap-4 py-7 sm:grid-cols-[54px_0.8fr_1.2fr] sm:items-start sm:gap-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.035] text-white/75">
+                  <PlatformIcon name={item.icon} />
                 </div>
-              </details>
+                <div>
+                  <h3 className="text-lg font-medium tracking-[-0.02em]">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-white/48">{item.description}</p>
+                </div>
+                <p className="text-sm leading-7 text-white/58 sm:text-[15px]">{item.detail}</p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="business" className="scroll-mt-24 py-14 sm:py-18">
-        <div className="mx-auto w-full max-w-[1180px] px-5 sm:px-8 lg:px-10">
-          <div className="grid gap-8 border-y border-white/10 py-9 lg:grid-cols-[.85fr_1.15fr] lg:items-start">
-            <div>
-              <p className="text-[10px] font-normal uppercase tracking-[0.13em] text-white/35">For business</p>
-              <h2 className="mt-3 max-w-md text-3xl font-medium leading-[1.02] tracking-[-0.04em] sm:text-5xl">
-                Useful before, during and after a deal.
-              </h2>
-            </div>
-
-            <div className="grid gap-7 sm:grid-cols-3">
-              <div>
-                <h3 className="text-base font-medium">Find</h3>
-                <p className="mt-2 text-sm font-normal leading-6 text-white/50">Search logistics-specific jobs, contracts, vehicles, units, drivers and dealerships from one environment.</p>
-              </div>
-              <div>
-                <h3 className="text-base font-medium">Discuss</h3>
-                <p className="mt-2 text-sm font-normal leading-6 text-white/50">Keep files, images, voice notes and enquiry context attached to the opportunity that started the conversation.</p>
-              </div>
-              <div>
-                <h3 className="text-base font-medium">Operate</h3>
-                <p className="mt-2 text-sm font-normal leading-6 text-white/50">Prepare quotes, briefs, checklists and operational documents using information already available in LoadLink.</p>
-              </div>
-            </div>
+      <section className="py-16 sm:py-20">
+        <div className="mx-auto grid max-w-[1180px] gap-10 px-5 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:px-10">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.17em] text-white/34">Why it matters</p>
+            <h2 className="mt-3 text-3xl font-medium leading-[1.02] tracking-[-0.04em] sm:text-5xl">Useful before, during and after a deal.</h2>
+          </div>
+          <div className="grid gap-8 sm:grid-cols-3">
+            <div><h3 className="text-base font-medium">Find</h3><p className="mt-2 text-sm leading-6 text-white/48">Discover logistics-specific jobs, contracts, vehicles, units, drivers and dealerships from one environment.</p></div>
+            <div><h3 className="text-base font-medium">Discuss</h3><p className="mt-2 text-sm leading-6 text-white/48">Keep messages, files and enquiry context connected to the opportunity that started the conversation.</p></div>
+            <div><h3 className="text-base font-medium">Operate</h3><p className="mt-2 text-sm leading-6 text-white/48">Prepare quotes, briefs, checklists and branded operational documents from information already in LoadLink.</p></div>
           </div>
         </div>
       </section>
 
-      <section id="follow" className="scroll-mt-24 pb-14 sm:pb-18">
-        <div className="mx-auto w-full max-w-[1180px] px-5 sm:px-8 lg:px-10">
-          <div className="flex flex-col gap-6 rounded-[24px] border border-white/[0.09] bg-white/[0.035] p-5 backdrop-blur-2xl sm:p-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-xl">
-              <p className="text-[10px] font-normal uppercase tracking-[0.13em] text-white/35">Follow LoadLink</p>
-              <h2 className="mt-2 text-2xl font-medium tracking-[-0.03em] sm:text-3xl">Stay close to the launch.</h2>
-              <p className="mt-2 text-sm font-normal leading-6 text-white/48">Follow product progress, dealership onboarding and launch updates.</p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <a
-                href={INSTAGRAM_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="flex min-w-[200px] items-center gap-3 rounded-[18px] border border-white/[0.08] bg-black/20 p-3 transition hover:bg-white/[0.06]"
-              >
-                <img src="/images/instagram-badge-upscaled.webp" alt="Instagram" className="h-11 w-11 rounded-[12px] object-cover" />
-                <div>
-                  <p className="text-sm font-medium">Instagram</p>
-                  <p className="mt-0.5 text-xs font-normal text-white/38">@loadlinkza</p>
-                </div>
-              </a>
-
-              <a
-                href={LINKEDIN_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="flex min-w-[200px] items-center gap-3 rounded-[18px] border border-white/[0.08] bg-black/20 p-3 transition hover:bg-white/[0.06]"
-              >
-                <img src="/images/linkedin-badge-upscaled.webp" alt="LinkedIn" className="h-11 w-11 rounded-[12px] object-cover" />
-                <div>
-                  <p className="text-sm font-medium">LinkedIn</p>
-                  <p className="mt-0.5 text-xs font-normal text-white/38">LoadLink SA</p>
-                </div>
-              </a>
-            </div>
+      <section className="border-t border-white/[0.07] py-12">
+        <div className="mx-auto flex max-w-[1180px] flex-col gap-8 px-5 sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:px-10">
+          <div className="max-w-xl">
+            <p className="text-[11px] uppercase tracking-[0.17em] text-white/34">Follow LoadLink</p>
+            <h2 className="mt-2 text-2xl font-medium tracking-[-0.03em] sm:text-3xl">Stay close to the launch.</h2>
+            <p className="mt-2 text-sm leading-6 text-white/45">Product progress, dealership onboarding and launch updates.</p>
           </div>
-
-          <div className="relative mt-5 overflow-hidden rounded-[26px] border border-white/[0.09] p-6 sm:p-8">
-            <img src="/images/jobs-2.jpg" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-[0.10]" />
-            <div className="absolute inset-0 bg-black/80" />
-            <div className="relative z-10 max-w-2xl">
-              <p className="text-[10px] font-normal uppercase tracking-[0.13em] text-white/35">Complimentary trial</p>
-              <h2 className="mt-3 text-3xl font-medium leading-[1.02] tracking-[-0.04em] sm:text-4xl">Test the parts that matter to your business.</h2>
-              <p className="mt-4 text-sm font-normal leading-7 text-white/54 sm:text-base">Use early access to explore the marketplace, dealership tools, messaging, logistics documents or operational planning before public launch.</p>
-              <a href={FREE_TRIAL_EMAIL} className="mt-6 inline-flex min-h-12 items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-medium text-black transition hover:-translate-y-0.5 hover:bg-[#ffc62b]">Activate free trial</a>
-            </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center gap-3 rounded-full border border-white/10 px-5 text-sm text-white/78 transition hover:bg-white/[0.05] hover:text-white">
+              <InstagramIcon /> Instagram
+            </a>
+            <a href={LINKEDIN_URL} target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center gap-3 rounded-full border border-white/10 px-5 text-sm text-white/78 transition hover:bg-white/[0.05] hover:text-white">
+              <LinkedInIcon /> LinkedIn
+            </a>
           </div>
-
-          <footer className="mt-7 flex flex-col gap-5 border-t border-white/[0.08] pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <img src="/images/loadlink-logo-dark.png" alt="LoadLink" width={1200} height={391} className="h-auto w-[120px] object-contain" />
-            <div className="flex flex-wrap gap-5 text-xs font-normal text-white/34">
-              <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className="hover:text-white">Instagram</a>
-              <a href={LINKEDIN_URL} target="_blank" rel="noreferrer" className="hover:text-white">LinkedIn</a>
-              <a href="mailto:loadlinksouthafrica@gmail.com" className="hover:text-white">Email</a>
-            </div>
-          </footer>
         </div>
       </section>
+
+      <section className="relative overflow-hidden border-t border-white/[0.07] py-16">
+        <img src="/images/jobs-2.jpg" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-[0.1]" />
+        <div className="absolute inset-0 bg-black/84" />
+        <div className="relative z-10 mx-auto max-w-[1180px] px-5 sm:px-8 lg:px-10">
+          <div className="max-w-2xl">
+            <p className="text-[11px] uppercase tracking-[0.17em] text-white/34">Complimentary trial</p>
+            <h2 className="mt-3 text-3xl font-medium leading-[1.02] tracking-[-0.04em] sm:text-5xl">Test LoadLink with the way your business already works.</h2>
+            <p className="mt-4 text-sm leading-7 text-white/52 sm:text-base">Start with the parts that matter to you — marketplace discovery, dealership tools, messaging, logistics documents or operational planning — and decide where LoadLink adds value before public launch.</p>
+            <a href={FREE_TRIAL_EMAIL} className="mt-7 inline-flex min-h-12 items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-medium text-black">Activate free trial</a>
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t border-white/[0.07] py-7">
+        <div className="mx-auto flex max-w-[1180px] flex-col gap-5 px-5 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10">
+          <img src="/images/loadlink-logo-dark.png" alt="LoadLink" width={1200} height={391} className="h-auto w-[118px]" />
+          <div className="flex flex-wrap gap-5 text-xs text-white/32">
+            <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className="hover:text-white">Instagram</a>
+            <a href={LINKEDIN_URL} target="_blank" rel="noreferrer" className="hover:text-white">LinkedIn</a>
+            <a href="mailto:loadlinksouthafrica@gmail.com" className="hover:text-white">Email</a>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
