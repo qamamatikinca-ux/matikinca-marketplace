@@ -74,6 +74,7 @@ function applyConversationPin(panel: HTMLElement) {
     if (pinned.has(thread)) pinned.delete(thread); else pinned.add(thread);
     localStorage.setItem(PIN_STORAGE_KEY, JSON.stringify(Array.from(pinned)));
     render();
+    window.dispatchEvent(new CustomEvent("loadlink:pins-changed", { detail: { conversationId: thread, pinned: pinned.has(thread) } }));
     window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { kind: "success", title: pinned.has(thread) ? "Chat pinned" : "Chat unpinned", message: pinned.has(thread) ? "This conversation is pinned on this device." : "This conversation was removed from pinned chats.", duration: 2600 } }));
   });
   render();
