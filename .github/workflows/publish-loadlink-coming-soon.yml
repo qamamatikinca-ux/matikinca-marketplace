@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: publish-loadlink-coming-soon
@@ -24,6 +24,7 @@ jobs:
     env:
       VERCEL_SCOPE: loadlink
       VERCEL_PROJECT: matikinca-marketplace
+      STATUS_FILE: deploy/github-coming-soon-status.txt
 
     steps:
       - name: Checkout latest Coming Soon branch
@@ -31,6 +32,7 @@ jobs:
         with:
           ref: loadlink-coming-soon
           fetch-depth: 1
+          persist-credentials: true
 
       - name: Confirm selected-trial source
         shell: bash
@@ -58,50 +60,100 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
-      - name: Link primary project in preview mode
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          rm -rf .vercel
-          vercel link --yes --project="$VERCEL_PROJECT" --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}"
-          vercel pull --yes --environment=preview --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}"
-
-      - name: Build preview on GitHub runner
-        run: vercel build --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}"
-
-      - name: Deploy prebuilt preview
+      - name: Attempt GitHub-to-Vercel deployment
         id: deploy
         shell: bash
         run: |
-          set -Eeuo pipefail
-          DEPLOY_URL="$(vercel deploy --prebuilt --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}")"
-          echo "deployment_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
-          echo "Deployment: $DEPLOY_URL"
+          set +e
+          mkdir -p deploy
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          {
+            echo "LoadLink Coming Soon GitHub deploy status"
+            echo "Source branch: loadlink-coming-soon"
+            echo "Source SHA: $SOURCE_SHA"
+            echo "Requested: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          } > "$STATUS_FILE"
 
-      - name: Try short LoadLink alias
-        id: alias
-        continue-on-error: true
+          rm -rf .vercel
+          LINK_OUTPUT="$(vercel link --yes --project="$VERCEL_PROJECT" --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}" 2>&1)"
+          LINK_CODE=$?
+          if [ "$LINK_CODE" -ne 0 ]; then
+            {
+              echo "Stage: vercel link"
+              echo "Result: FAILED"
+              echo "Error: $(printf '%s\n' "$LINK_OUTPUT" | tail -n 1 | sed -E 's/--token[= ]+[^ ]+/--token=REDACTED/g')"
+            } >> "$STATUS_FILE"
+            echo "deployment_url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          PULL_OUTPUT="$(vercel pull --yes --environment=preview --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}" 2>&1)"
+          PULL_CODE=$?
+          if [ "$PULL_CODE" -ne 0 ]; then
+            {
+              echo "Stage: vercel pull"
+              echo "Result: FAILED"
+              echo "Error: $(printf '%s\n' "$PULL_OUTPUT" | tail -n 1 | sed -E 's/--token[= ]+[^ ]+/--token=REDACTED/g')"
+            } >> "$STATUS_FILE"
+            echo "deployment_url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BUILD_OUTPUT="$(vercel build --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}" 2>&1)"
+          BUILD_CODE=$?
+          if [ "$BUILD_CODE" -ne 0 ]; then
+            {
+              echo "Stage: vercel build"
+              echo "Result: FAILED"
+              echo "Error: $(printf '%s\n' "$BUILD_OUTPUT" | tail -n 2 | tr '\n' ' ' | sed -E 's/--token[= ]+[^ ]+/--token=REDACTED/g')"
+            } >> "$STATUS_FILE"
+            echo "deployment_url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          DEPLOY_OUTPUT="$(vercel deploy --prebuilt --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}" 2>&1)"
+          DEPLOY_CODE=$?
+          DEPLOY_URL="$(printf '%s\n' "$DEPLOY_OUTPUT" | grep -Eo 'https://[^ ]+\.vercel\.app' | tail -n 1)"
+          if [ "$DEPLOY_CODE" -ne 0 ] || [ -z "$DEPLOY_URL" ]; then
+            {
+              echo "Stage: vercel deploy --prebuilt"
+              echo "Result: FAILED"
+              echo "Error: $(printf '%s\n' "$DEPLOY_OUTPUT" | tail -n 2 | tr '\n' ' ' | sed -E 's/--token[= ]+[^ ]+/--token=REDACTED/g')"
+            } >> "$STATUS_FILE"
+            echo "deployment_url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          {
+            echo "Stage: complete"
+            echo "Result: READY"
+            echo "Deployment URL: $DEPLOY_URL"
+          } >> "$STATUS_FILE"
+          echo "deployment_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Record deploy result in Coming Soon branch
+        if: always()
         shell: bash
-        env:
-          DEPLOY_URL: ${{ steps.deploy.outputs.deployment_url }}
         run: |
           set -Eeuo pipefail
-          SHORT_URL=""
-          for ALIAS in loadlink-sa.vercel.app loadlink-soon.vercel.app loadlinkcoming.vercel.app; do
-            if vercel alias set "$DEPLOY_URL" "$ALIAS" --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}"; then
-              SHORT_URL="https://$ALIAS"
-              break
-            fi
-          done
-          echo "short_url=$SHORT_URL" >> "$GITHUB_OUTPUT"
-          echo "Short URL: ${SHORT_URL:-not-assigned}"
+          test -f "$STATUS_FILE" || {
+            mkdir -p deploy
+            printf '%s\n' "LoadLink Coming Soon GitHub deploy status" "Result: WORKFLOW FAILED BEFORE DEPLOY ATTEMPT" > "$STATUS_FILE"
+          }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$STATUS_FILE"
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Record Coming Soon GitHub deploy status"
+          git push origin HEAD:loadlink-coming-soon
 
       - name: Summary
         if: always()
         shell: bash
         env:
           DEPLOY_URL: ${{ steps.deploy.outputs.deployment_url }}
-          SHORT_URL: ${{ steps.alias.outputs.short_url }}
         run: |
           {
             echo "## LoadLink Coming Soon Preview"
@@ -109,5 +161,5 @@ jobs:
             echo "- Source branch: loadlink-coming-soon"
             echo "- Vercel project: matikinca-marketplace"
             echo "- Deployment URL: ${DEPLOY_URL:-not-created}"
-            echo "- Short URL: ${SHORT_URL:-not-assigned}"
+            echo "- Diagnostic status is written to deploy/github-coming-soon-status.txt on loadlink-coming-soon"
           } >> "$GITHUB_STEP_SUMMARY"
