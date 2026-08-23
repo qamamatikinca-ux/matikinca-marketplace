@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -24,12 +25,26 @@ function currentThread() {
 export default function LoadLinkDealerChatStatus20260823() {
   const pathname = usePathname();
   const [status, setStatus] = useState<ChatDealerStatus | null>(null);
+  const [host, setHost] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (!pathname.startsWith("/messages")) { setStatus(null); return; }
+    if (!pathname.startsWith("/messages")) { setStatus(null); setHost(null); return; }
     let active = true;
 
+    const findHost = () => {
+      const header = document.querySelector<HTMLElement>(".loadlink-chat-header");
+      if (!header?.parentElement) return;
+      let node = header.parentElement.querySelector<HTMLElement>(":scope > [data-loadlink-dealer-chat-status-host]");
+      if (!node) {
+        node = document.createElement("div");
+        node.dataset.loadlinkDealerChatStatusHost = "true";
+        header.insertAdjacentElement("afterend", node);
+      }
+      if (active) setHost(node);
+    };
+
     async function load() {
+      findHost();
       const thread = currentThread();
       if (!thread) { if (active) setStatus(null); return; }
       const { data: auth } = await supabase.auth.getUser();
@@ -67,38 +82,42 @@ export default function LoadLinkDealerChatStatus20260823() {
     void load();
     const refresh = () => void load();
     const interval = window.setInterval(refresh, 15_000);
+    const observer = new MutationObserver(findHost);
+    observer.observe(document.body, { childList: true, subtree: true });
     window.addEventListener("popstate", refresh);
     window.addEventListener("loadlink-dealership-status-changed", refresh);
     return () => {
       active = false;
       window.clearInterval(interval);
+      observer.disconnect();
       window.removeEventListener("popstate", refresh);
       window.removeEventListener("loadlink-dealership-status-changed", refresh);
     };
   }, [pathname]);
 
-  if (!status || !status.slug) return null;
+  if (!host || !status || !status.slug) return null;
 
-  return (
-    <div data-loadlink-dealer-chat-status="true" data-loadlink-auth-only="true" className="fixed left-1/2 top-[88px] z-[74] w-[calc(100%-24px)] max-w-md -translate-x-1/2 sm:top-[92px]">
+  return createPortal(
+    <div data-loadlink-dealer-chat-status="true" data-loadlink-auth-only="true" className="px-3 pb-2 pt-1">
       <button
         type="button"
         onClick={() => window.location.assign(`/dealership/${encodeURIComponent(status.slug)}`)}
-        className="loadlink-glass flex w-full items-center gap-3 rounded-[18px] border border-[#f6b800]/35 bg-black/72 p-2.5 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,.20)]"
+        className="loadlink-glass flex w-full items-center gap-3 rounded-[16px] border border-[#f6b800]/28 px-3 py-2 text-left"
         aria-label={`Open ${status.name} showroom update`}
       >
-        <span className="shrink-0 rounded-full bg-[#f6b800] p-[2px] shadow-[0_4px_15px_rgba(246,184,0,.18)]">
-          <span className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-black bg-[#151515] text-xs font-black">
+        <span className="shrink-0 rounded-full bg-[#f6b800] p-[2px] shadow-[0_4px_14px_rgba(246,184,0,.14)]">
+          <span className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-black bg-[#151515] text-xs font-black text-white">
             {status.name.slice(0, 1).toUpperCase()}
             {status.imageUrl ? <img src={status.imageUrl} alt="" className="absolute inset-0 h-full w-full rounded-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}
           </span>
         </span>
         <span className="min-w-0 flex-1">
-          <strong className="block truncate text-[12px] font-black">{status.name}</strong>
-          <span className="mt-0.5 block truncate text-[10px] font-semibold text-white/52">{status.title}</span>
+          <strong className="block truncate text-[11px] font-black">{status.name}</strong>
+          <span className="mt-0.5 block truncate text-[10px] font-semibold opacity-50">{status.title}</span>
         </span>
-        <span className="text-[11px] font-black text-[#f6b800]">Showroom →</span>
+        <span className="text-[10px] font-black opacity-55">View →</span>
       </button>
-    </div>
+    </div>,
+    host,
   );
 }
