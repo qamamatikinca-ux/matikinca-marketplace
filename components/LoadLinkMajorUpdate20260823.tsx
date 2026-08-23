@@ -23,6 +23,13 @@ function applyInputModes(root: ParentNode = document) {
   });
 }
 
+function applyRoutingRepairs(root: ParentNode = document) {
+  root.querySelectorAll<HTMLAnchorElement>('a[href="/jobs/list?mode=contract"],a[href="/jobs/list?type=contract"]').forEach((anchor) => {
+    anchor.href = "/contracts/post";
+    anchor.dataset.loadlinkContractPostLink = "true";
+  });
+}
+
 function applyMessageUiHooks() {
   if (!window.location.pathname.startsWith("/messages")) return;
   document.querySelectorAll<HTMLElement>('[aria-label="Conversation details"]').forEach((node) => {
@@ -61,6 +68,7 @@ export default function LoadLinkMajorUpdate20260823() {
     document.documentElement.dataset.loadlinkRoute = pathname.replace(/^\//, "") || "home";
     document.body.dataset.loadlinkRoute = pathname.replace(/^\//, "") || "home";
     applyInputModes();
+    applyRoutingRepairs();
     applyMessageUiHooks();
     applyImageReliability();
   }, [pathname]);
@@ -89,6 +97,7 @@ export default function LoadLinkMajorUpdate20260823() {
         mutation.addedNodes.forEach((node) => {
           if (!(node instanceof HTMLElement)) return;
           applyInputModes(node);
+          applyRoutingRepairs(node);
           applyImageReliability(node);
         });
       }
