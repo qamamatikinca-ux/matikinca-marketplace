@@ -1,44 +1,134 @@
-import {
-  BriefcaseBusiness,
-  Building2,
-  FileText,
-  Gauge,
-  MessageSquareText,
-  Search,
-  ShieldCheck,
-  Truck,
-  Wrench,
-} from "lucide-react";
+type IconName =
+  | "briefcase"
+  | "truck"
+  | "message"
+  | "tools"
+  | "search"
+  | "file"
+  | "building"
+  | "shield"
+  | "gauge";
 
 const FREE_TRIAL_EMAIL =
   "mailto:loadlinksouthafrica@gmail.com?subject=LoadLink%20Selected%20Free%20Trial&body=Hi%20LoadLink%20team%2C%0D%0A%0D%0AI%27d%20like%20to%20activate%20my%20selected%20free%20trial.%0D%0A%0D%0AName%3A%0D%0ACompany%20%2F%20business%3A%0D%0APhone%20number%3A%0D%0AProvince%3A%0D%0AWhat%20I%20want%20to%20use%20LoadLink%20for%3A%0D%0A%0D%0AThank%20you.";
 
-const businessBenefits = [
+function LoadLinkIcon({ name, className = "" }: { name: IconName; className?: string }) {
+  const common = {
+    width: 22,
+    height: 22,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    className,
+    "aria-hidden": true,
+  };
+
+  switch (name) {
+    case "briefcase":
+      return (
+        <svg {...common}>
+          <rect x="3" y="7" width="18" height="12" rx="2" />
+          <path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7" />
+          <path d="M3 12h18" />
+          <path d="M10 12v2h4v-2" />
+        </svg>
+      );
+    case "truck":
+      return (
+        <svg {...common}>
+          <path d="M3 6h11v10H3z" />
+          <path d="M14 10h4l3 3v3h-7z" />
+          <circle cx="7" cy="18" r="2" />
+          <circle cx="18" cy="18" r="2" />
+        </svg>
+      );
+    case "message":
+      return (
+        <svg {...common}>
+          <path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H10l-5 3v-3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />
+          <path d="M8 10h8M8 13h5" />
+        </svg>
+      );
+    case "tools":
+      return (
+        <svg {...common}>
+          <path d="M14.7 6.3a4 4 0 0 0-5-5l2.2 2.2-2.8 2.8-2.2-2.2a4 4 0 0 0 5 5l-7.6 7.6a2 2 0 1 0 2.8 2.8l7.6-7.6a4 4 0 0 0 5-5l-2.2 2.2-2.8-2.8 2.2-2.2z" />
+        </svg>
+      );
+    case "search":
+      return (
+        <svg {...common}>
+          <circle cx="11" cy="11" r="6" />
+          <path d="m16 16 4 4" />
+        </svg>
+      );
+    case "file":
+      return (
+        <svg {...common}>
+          <path d="M6 3h8l4 4v14H6z" />
+          <path d="M14 3v5h5" />
+          <path d="M9 13h6M9 17h6" />
+        </svg>
+      );
+    case "building":
+      return (
+        <svg {...common}>
+          <path d="M4 21V5h10v16M14 9h6v12" />
+          <path d="M7 8h2M11 8h1M7 12h2M11 12h1M7 16h2M11 16h1M17 12h1M17 16h1" />
+        </svg>
+      );
+    case "shield":
+      return (
+        <svg {...common}>
+          <path d="M12 3 4.5 6v5.5c0 4.7 3 7.6 7.5 9.5 4.5-1.9 7.5-4.8 7.5-9.5V6z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      );
+    case "gauge":
+      return (
+        <svg {...common}>
+          <path d="M4 18a8 8 0 1 1 16 0" />
+          <path d="M12 18l4-5" />
+          <path d="M7 15h.01M17 15h.01M12 10h.01" />
+        </svg>
+      );
+  }
+}
+
+const businessBenefits: Array<{ icon: IconName; title: string; text: string }> = [
   {
-    icon: BriefcaseBusiness,
+    icon: "briefcase",
     title: "Find work",
     text: "See transport jobs, contracts and recurring opportunities built around commercial logistics.",
   },
   {
-    icon: Truck,
+    icon: "truck",
     title: "Source faster",
     text: "Find commercial vehicles, mobile units, professional drivers and dealerships in one place.",
   },
   {
-    icon: MessageSquareText,
+    icon: "message",
     title: "Move deals forward",
     text: "Keep messages, files, voice notes and enquiries connected to the listing that started the deal.",
   },
   {
-    icon: Wrench,
+    icon: "tools",
     title: "Run the work",
     text: "Use practical logistics tools and documents before, during and after the load moves.",
   },
 ];
 
-const platformAreas = [
+const platformAreas: Array<{
+  icon: IconName;
+  title: string;
+  summary: string;
+  items: string[];
+}> = [
   {
-    icon: Search,
+    icon: "search",
     title: "Marketplace",
     summary: "Find the opportunity, equipment and people.",
     items: [
@@ -51,7 +141,7 @@ const platformAreas = [
     ],
   },
   {
-    icon: MessageSquareText,
+    icon: "message",
     title: "Messaging",
     summary: "Keep serious enquiries in context.",
     items: [
@@ -64,7 +154,7 @@ const platformAreas = [
     ],
   },
   {
-    icon: Wrench,
+    icon: "tools",
     title: "Logistics tools",
     summary: "Practical tools for day-to-day operations.",
     items: [
@@ -80,7 +170,7 @@ const platformAreas = [
     ],
   },
   {
-    icon: FileText,
+    icon: "file",
     title: "Documents",
     summary: "Create information once and send it professionally.",
     items: [
@@ -92,7 +182,7 @@ const platformAreas = [
     ],
   },
   {
-    icon: Building2,
+    icon: "building",
     title: "Dealership & business",
     summary: "More control for businesses managing listings and stock.",
     items: [
@@ -105,7 +195,7 @@ const platformAreas = [
     ],
   },
   {
-    icon: ShieldCheck,
+    icon: "shield",
     title: "Trust & account controls",
     summary: "More context before deciding who to work with.",
     items: [
@@ -199,12 +289,12 @@ export default function Home() {
           </div>
 
           <div className="grid border-b border-black/12 md:grid-cols-2 xl:grid-cols-4">
-            {businessBenefits.map(({ icon: Icon, title, text }) => (
+            {businessBenefits.map(({ icon, title, text }) => (
               <article
                 key={title}
                 className="border-b border-black/12 py-7 md:border-r md:px-6 md:first:pl-0 md:[&:nth-child(2n)]:border-r-0 xl:border-b-0 xl:[&:nth-child(2n)]:border-r xl:last:border-r-0 xl:last:pr-0"
               >
-                <Icon size={22} strokeWidth={1.8} className="text-[#a87900]" aria-hidden="true" />
+                <LoadLinkIcon name={icon} className="text-[#a87900]" />
                 <h3 className="mt-4 text-xl font-black tracking-[-0.03em]">{title}</h3>
                 <p className="mt-2 text-sm font-semibold leading-6 text-black/55">{text}</p>
               </article>
@@ -228,11 +318,11 @@ export default function Home() {
           </div>
 
           <div className="divide-y divide-white/10">
-            {platformAreas.map(({ icon: Icon, title, summary, items }) => (
+            {platformAreas.map(({ icon, title, summary, items }) => (
               <article key={title} className="grid gap-6 py-8 lg:grid-cols-[230px_1fr] lg:gap-10">
                 <div>
                   <div className="flex items-center gap-3">
-                    <Icon size={20} strokeWidth={1.8} className="shrink-0 text-[#f6b800]" aria-hidden="true" />
+                    <LoadLinkIcon name={icon} className="shrink-0 text-[#f6b800]" />
                     <h3 className="text-xl font-black tracking-[-0.025em]">{title}</h3>
                   </div>
                   <p className="mt-3 max-w-xs text-sm font-semibold leading-6 text-white/42">{summary}</p>
@@ -262,28 +352,28 @@ export default function Home() {
 
           <div className="grid gap-7 sm:grid-cols-2">
             <div className="border-t border-black/14 pt-5">
-              <FileText size={21} strokeWidth={1.8} className="text-[#a87900]" />
+              <LoadLinkIcon name="file" className="text-[#a87900]" />
               <h3 className="mt-4 text-lg font-black">Branded documents</h3>
               <p className="mt-2 text-sm font-semibold leading-7 text-black/54">
                 Turn rate quotes and operational information into clean LoadLink PDFs with optional business or dealership branding.
               </p>
             </div>
             <div className="border-t border-black/14 pt-5">
-              <Gauge size={21} strokeWidth={1.8} className="text-[#a87900]" />
+              <LoadLinkIcon name="gauge" className="text-[#a87900]" />
               <h3 className="mt-4 text-lg font-black">Performance insight</h3>
               <p className="mt-2 text-sm font-semibold leading-7 text-black/54">
                 Pro and dealership tools add visibility into listings, activity and performance.
               </p>
             </div>
             <div className="border-t border-black/14 pt-5">
-              <Building2 size={21} strokeWidth={1.8} className="text-[#a87900]" />
+              <LoadLinkIcon name="building" className="text-[#a87900]" />
               <h3 className="mt-4 text-lg font-black">Dealership workspace</h3>
               <p className="mt-2 text-sm font-semibold leading-7 text-black/54">
                 Manage dealership listings and enquiries from a workspace built around commercial stock.
               </p>
             </div>
             <div className="border-t border-black/14 pt-5">
-              <ShieldCheck size={21} strokeWidth={1.8} className="text-[#a87900]" />
+              <LoadLinkIcon name="shield" className="text-[#a87900]" />
               <h3 className="mt-4 text-lg font-black">Trust controls</h3>
               <p className="mt-2 text-sm font-semibold leading-7 text-black/54">
                 Verification, moderation and account controls provide more context before a business relationship moves forward.
