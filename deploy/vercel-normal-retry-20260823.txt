@@ -1,0 +1,4 @@
+Normal Vercel Git integration retry
+Branch: loadlink-coming-soon
+Requested: 2026-08-23
+Purpose: retrigger preview deployment without changing runtime code.
