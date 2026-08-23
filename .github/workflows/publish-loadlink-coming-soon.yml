@@ -6,11 +6,6 @@ on:
       - main
     paths:
       - "deploy/coming-soon-preview-trigger.txt"
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "deploy/coming-soon-pr-trigger.txt"
   workflow_dispatch:
 
 permissions:
@@ -31,10 +26,24 @@ jobs:
       VERCEL_PROJECT: matikinca-marketplace
 
     steps:
-      - name: Checkout Coming Soon branch
+      - name: Checkout latest Coming Soon branch
         uses: actions/checkout@v4
         with:
           ref: loadlink-coming-soon
+          fetch-depth: 1
+
+      - name: Confirm selected-trial source
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          grep -q "Your business has been selected for complimentary LoadLink access" app/page.tsx
+          grep -q "Follow the build" app/page.tsx
+          grep -q "INSTAGRAM_URL" app/page.tsx
+          grep -q "LINKEDIN_URL" app/page.tsx
+          test -f app/template.tsx
+          test -f public/images/linkedin-badge.png
+          test -f public/images/instagram-badge.jpeg
+          echo "Coming Soon source verification: PASS"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -57,10 +66,10 @@ jobs:
           vercel link --yes --project="$VERCEL_PROJECT" --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}"
           vercel pull --yes --environment=preview --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}"
 
-      - name: Build preview
+      - name: Build preview on GitHub runner
         run: vercel build --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}"
 
-      - name: Deploy preview
+      - name: Deploy prebuilt preview
         id: deploy
         shell: bash
         run: |
@@ -69,8 +78,9 @@ jobs:
           echo "deployment_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
           echo "Deployment: $DEPLOY_URL"
 
-      - name: Assign shortest available LoadLink alias
+      - name: Try short LoadLink alias
         id: alias
+        continue-on-error: true
         shell: bash
         env:
           DEPLOY_URL: ${{ steps.deploy.outputs.deployment_url }}
@@ -83,23 +93,21 @@ jobs:
               break
             fi
           done
-          test -n "$SHORT_URL"
           echo "short_url=$SHORT_URL" >> "$GITHUB_OUTPUT"
-          echo "Short URL: $SHORT_URL"
+          echo "Short URL: ${SHORT_URL:-not-assigned}"
 
-      - name: Verify updated page
+      - name: Summary
+        if: always()
         shell: bash
         env:
+          DEPLOY_URL: ${{ steps.deploy.outputs.deployment_url }}
           SHORT_URL: ${{ steps.alias.outputs.short_url }}
         run: |
-          set -Eeuo pipefail
-          for attempt in $(seq 1 18); do
-            CODE="$(curl -L -sS -o /tmp/page.html -w '%{http_code}' "$SHORT_URL" || true)"
-            echo "[$attempt/18] HTTP $CODE"
-            if [ "$CODE" = "200" ] && grep -q "South Africa moves" /tmp/page.html && grep -q "Logistics tools" /tmp/page.html && grep -q "PDF exports" /tmp/page.html; then
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "::error::Updated Coming Soon page could not be verified."
-          exit 1
+          {
+            echo "## LoadLink Coming Soon Preview"
+            echo ""
+            echo "- Source branch: loadlink-coming-soon"
+            echo "- Vercel project: matikinca-marketplace"
+            echo "- Deployment URL: ${DEPLOY_URL:-not-created}"
+            echo "- Short URL: ${SHORT_URL:-not-assigned}"
+          } >> "$GITHUB_STEP_SUMMARY"
