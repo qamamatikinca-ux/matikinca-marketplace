@@ -1,0 +1,168 @@
+/* LoadLink completion pass — 23 Aug 2026 */
+
+.loadlink-pin-chat {
+  width: 100%;
+  min-height: 56px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 34px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, currentColor 4%, transparent);
+  color: inherit;
+  text-align: left;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.loadlink-pin-chat > svg { width: 34px; height: 34px; padding: 8px; border-radius: 11px; background: #f6b800; color: #080808; }
+.loadlink-pin-chat > span { min-width: 0; display: grid; gap: 2px; }
+.loadlink-pin-chat strong { font-size: 12px; font-weight: 850; }
+.loadlink-pin-chat small { font-size: 9px; opacity: .48; font-weight: 650; }
+.loadlink-pin-chat i { font-style: normal; font-size: 9px; font-weight: 850; opacity: .52; }
+.loadlink-pin-chat[aria-pressed="true"] { border-color: rgba(246,184,0,.46); background: rgba(246,184,0,.075); }
+
+.loadlink-inline-image-attachment {
+  display: block !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  border-radius: 16px !important;
+  min-width: min(280px, 70vw);
+  background: rgba(0,0,0,.06) !important;
+}
+.loadlink-inline-image-attachment > img[data-loadlink-inline-image="true"] {
+  width: 100%;
+  max-height: 360px;
+  display: block;
+  object-fit: cover;
+  background: #111;
+}
+.loadlink-inline-image-attachment [data-loadlink-inline-image-caption="true"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 11px;
+  font-size: 9px;
+}
+.loadlink-inline-image-attachment [data-loadlink-inline-image-caption="true"] strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+.loadlink-inline-image-attachment [data-loadlink-inline-image-caption="true"] span { flex: 0 0 auto; opacity: .55; }
+
+html[data-loadlink-route="messages"] .loadlink-quote-card { box-shadow: none !important; }
+html[data-loadlink-route="messages"] main[data-theme="dark"] .loadlink-quote-card { background: rgba(255,255,255,.065) !important; border-color: rgba(255,255,255,.14) !important; color: #fff !important; }
+html[data-loadlink-route="messages"] main[data-theme="dark"] .loadlink-quote-card strong,
+html[data-loadlink-route="messages"] main[data-theme="dark"] .loadlink-quote-card p,
+html[data-loadlink-route="messages"] main[data-theme="dark"] .loadlink-quote-card span { color: inherit; }
+html[data-loadlink-route="messages"] main[data-theme="light"] .loadlink-quote-card { background: rgba(255,253,248,.92) !important; color: #111 !important; }
+
+/* Notification Centre: restore the LoadLink transparent/glass identity without changing behavior. */
+html[data-loadlink-route="notifications"] main {
+  background-image: radial-gradient(circle at 90% 4%, rgba(246,184,0,.12), transparent 24%), radial-gradient(circle at 10% 36%, rgba(246,184,0,.055), transparent 28%) !important;
+}
+html[data-loadlink-route="notifications"] main > section > div,
+html[data-loadlink-route="notifications"] main section article,
+html[data-loadlink-route="notifications"] main section li,
+html[data-loadlink-route="notifications"] main section a > div,
+html[data-loadlink-route="notifications"] main section button > div {
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+html[data-loadlink-theme="dark"][data-loadlink-route="notifications"] main > section > div,
+html[data-loadlink-theme="dark"][data-loadlink-route="notifications"] main section article,
+html[data-loadlink-theme="dark"][data-loadlink-route="notifications"] main section li {
+  background-color: rgba(255,255,255,.048) !important;
+  border-color: rgba(255,255,255,.11) !important;
+}
+html[data-loadlink-theme="light"][data-loadlink-route="notifications"] main > section > div,
+html[data-loadlink-theme="light"][data-loadlink-route="notifications"] main section article,
+html[data-loadlink-theme="light"][data-loadlink-route="notifications"] main section li {
+  background-color: rgba(255,255,255,.68) !important;
+  border-color: rgba(0,0,0,.08) !important;
+}
+
+/* Calls: quieter, cleaner LoadLink presentation while preserving WebRTC controls. */
+[data-loadlink-call-chooser="true"], [data-loadlink-call-incoming="true"] { background: rgba(0,0,0,.58) !important; backdrop-filter: blur(24px) !important; -webkit-backdrop-filter: blur(24px) !important; }
+[data-loadlink-call-chooser="true"] > section,
+[data-loadlink-call-incoming="true"] > section {
+  border-radius: 28px !important;
+  border-color: rgba(255,255,255,.13) !important;
+  background: linear-gradient(160deg, rgba(24,24,24,.97), rgba(8,8,8,.98)) !important;
+  box-shadow: 0 28px 90px rgba(0,0,0,.52) !important;
+}
+[data-loadlink-call-active="true"] {
+  background: radial-gradient(circle at 50% 22%, rgba(246,184,0,.11), transparent 27%), #050505 !important;
+}
+[data-loadlink-call-active="true"] > section { position: relative; }
+[data-loadlink-call-active="true"] [data-loadlink-call-avatar="true"],
+[data-loadlink-call-incoming="true"] [data-loadlink-call-avatar="true"] {
+  border: 1px solid rgba(246,184,0,.5) !important;
+  box-shadow: 0 0 0 8px rgba(246,184,0,.04), 0 18px 55px rgba(0,0,0,.32);
+}
+[data-loadlink-call-minimized="true"] { backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-radius: 20px !important; }
+
+/* Dealer Centre loading: brand it without altering the boot logic. */
+html[data-loadlink-route="dealer"] main > div[class*="min-h-screen"] { background-image: radial-gradient(circle at 50% 42%, rgba(246,184,0,.12), transparent 30%); }
+html[data-loadlink-route="dealer"] main > div[class*="min-h-screen"] > div[class*="p-8"] { position: relative; overflow: hidden; border-radius: 28px !important; backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
+html[data-loadlink-route="dealer"] main > div[class*="min-h-screen"] > div[class*="p-8"]::before {
+  content: "";
+  display: block;
+  width: 66px;
+  height: 28px;
+  margin: 0 auto 18px;
+  border: 2px solid rgba(246,184,0,.72);
+  border-radius: 9px 13px 7px 7px;
+  box-shadow: 0 16px 28px rgba(246,184,0,.08);
+  opacity: .9;
+}
+html[data-loadlink-route="dealer"] main > div[class*="min-h-screen"] > div[class*="p-8"]::after {
+  content: "Preparing your dealership workspace";
+  display: block;
+  margin-top: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  opacity: .42;
+}
+
+/* Public dealership: owner edit is intentionally subtle and only mounted for the owner. */
+[data-loadlink-owner-edit-pencil="true"] { transition: transform .16s ease, background-color .16s ease; }
+[data-loadlink-owner-edit-pencil="true"]:active { transform: scale(.96); }
+html[data-loadlink-route^="dealership/"] main > div > section:first-of-type { box-shadow: 0 26px 80px rgba(0,0,0,.18); }
+
+/* Marketplace distance labels */
+[data-loadlink-distance-anchor="true"] { position: relative !important; }
+[data-loadlink-distance-badge="true"] {
+  position: absolute;
+  z-index: 20;
+  right: 9px;
+  top: 9px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  max-width: calc(100% - 18px);
+  padding: 0 9px;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 999px;
+  background: rgba(8,8,8,.78);
+  color: #fff;
+  box-shadow: 0 5px 16px rgba(0,0,0,.16);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 850;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* My Posts: keep every action, reduce the action-row visual weight. */
+html[data-loadlink-route="my-posts"] article details > summary { border-radius: 999px !important; }
+html[data-loadlink-route="my-posts"] article button,
+html[data-loadlink-route="my-posts"] article a { box-shadow: none !important; }
+html[data-loadlink-route="my-posts"] article details > div { backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
+
+@media (max-width: 767px) {
+  [data-loadlink-distance-control="true"] { bottom: calc(env(safe-area-inset-bottom) + 72px) !important; }
+  .loadlink-inline-image-attachment { min-width: min(250px, 66vw); }
+}
