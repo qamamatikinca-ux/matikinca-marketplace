@@ -9,6 +9,7 @@ type ListingPoint = { id: string; latitude: number | null; longitude: number | n
 
 const ENABLED_KEY = "loadlink-distance-enabled-v1";
 const USER_POINT_KEY = "loadlink-distance-user-point-v1";
+const DISMISSED_KEY = "loadlink-distance-prompt-dismissed-v1";
 const MARKETPLACE_ROUTES = ["/jobs", "/contracts", "/list-your-vehicle", "/vehicles", "/listing"];
 
 function distanceKm(from: Point, to: Point) {
@@ -77,6 +78,7 @@ export default function LoadLinkDistanceLayer20260823() {
   const isPostingRoute = pathname === "/jobs/list" || pathname === "/contracts/post";
   const eligible = !isPostingRoute && MARKETPLACE_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
   const [enabled, setEnabled] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const userPointRef = useRef<Point | null>(null);
@@ -99,29 +101,54 @@ export default function LoadLinkDistanceLayer20260823() {
       (position) => {
         const next = { latitude: position.coords.latitude, longitude: position.coords.longitude };
         userPointRef.current = next;
-        try { sessionStorage.setItem(USER_POINT_KEY, JSON.stringify(next)); localStorage.setItem(ENABLED_KEY, "true"); } catch {}
-        setEnabled(true); setBusy(false);
-        setNotice(position.coords.accuracy > 3000 ? "Distance estimates are using an approximate device location." : "Distances are on.");
+        try {
+          sessionStorage.setItem(USER_POINT_KEY, JSON.stringify(next));
+          sessionStorage.removeItem(DISMISSED_KEY);
+          localStorage.setItem(ENABLED_KEY, "true");
+        } catch {}
+        setEnabled(true);
+        setShowPrompt(false);
+        setBusy(false);
         void refreshDistances();
       },
       () => {
-        userPointRef.current = null; setEnabled(false); setBusy(false);
-        if (!fromSavedChoice) setNotice("Location permission was not granted. Distance labels remain off.");
+        userPointRef.current = null;
+        setEnabled(false);
+        setBusy(false);
+        if (fromSavedChoice) {
+          try { localStorage.removeItem(ENABLED_KEY); sessionStorage.removeItem(USER_POINT_KEY); } catch {}
+          setNotice("Location access is needed again to show distance labels.");
+          setShowPrompt(true);
+        } else {
+          setNotice("Location permission was not granted. Distance labels remain off.");
+          setShowPrompt(true);
+        }
       },
       { enableHighAccuracy: true, timeout: 12_000, maximumAge: 120_000 },
     );
   }, [busy, refreshDistances]);
 
   useEffect(() => {
-    if (!eligible) { clearBadges(); return; }
+    if (!eligible) { clearBadges(); setShowPrompt(false); return; }
     try {
       const cached = JSON.parse(sessionStorage.getItem(USER_POINT_KEY) || "null") as Point | null;
+      const savedEnabled = localStorage.getItem(ENABLED_KEY) === "true";
+      const dismissed = sessionStorage.getItem(DISMISSED_KEY) === "true";
       if (cached && typeof cached.latitude === "number" && typeof cached.longitude === "number") {
-        userPointRef.current = cached; setEnabled(true); void refreshDistances();
-      } else if (localStorage.getItem(ENABLED_KEY) === "true") {
+        userPointRef.current = cached;
+        setEnabled(true);
+        setShowPrompt(false);
+        void refreshDistances();
+      } else if (savedEnabled) {
+        setShowPrompt(false);
         getLocation(true);
+      } else {
+        setEnabled(false);
+        setShowPrompt(!dismissed);
       }
-    } catch {}
+    } catch {
+      setShowPrompt(true);
+    }
   }, [eligible, getLocation, pathname, refreshDistances]);
 
   useEffect(() => {
@@ -143,10 +170,10 @@ export default function LoadLinkDistanceLayer20260823() {
     };
   }, [eligible, enabled, refreshDistances]);
 
-  if (!eligible) return null;
+  if (!eligible || enabled || !showPrompt) return null;
   return <div data-loadlink-distance-control="true" className="fixed bottom-[calc(env(safe-area-inset-bottom)+82px)] right-3 z-[90] flex max-w-[calc(100vw-24px)] items-center gap-2 rounded-full border border-current/10 bg-white/88 p-1.5 pl-3 text-black shadow-lg backdrop-blur-2xl dark:bg-[#111]/88 dark:text-white">
-    <span className="min-w-0 truncate text-[10px] font-bold opacity-60">{notice || (enabled ? "Distance labels on" : "See how far listings are")}</span>
-    <button type="button" disabled={busy} onClick={() => getLocation(false)} className="shrink-0 rounded-full bg-[#f6b800] px-3 py-2 text-[10px] font-black text-black disabled:opacity-45">{busy ? "Locating…" : enabled ? "Refresh" : "Use my location"}</button>
-    {enabled ? <button type="button" aria-label="Turn off distance labels" onClick={() => { try { localStorage.removeItem(ENABLED_KEY); sessionStorage.removeItem(USER_POINT_KEY); } catch {} userPointRef.current = null; setEnabled(false); setNotice(""); clearBadges(); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-current/10 text-sm font-black opacity-60">×</button> : null}
+    <span className="min-w-0 truncate text-[10px] font-bold opacity-60">{notice || "See how far listings are"}</span>
+    <button type="button" disabled={busy} onClick={() => getLocation(false)} className="shrink-0 rounded-full bg-[#f6b800] px-3 py-2 text-[10px] font-black text-black disabled:opacity-45">{busy ? "Locating…" : "Use my location"}</button>
+    <button type="button" aria-label="Close location prompt" onClick={() => { try { sessionStorage.setItem(DISMISSED_KEY, "true"); } catch {} setShowPrompt(false); setNotice(""); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-current/10 text-sm font-black opacity-60">×</button>
   </div>;
 }
