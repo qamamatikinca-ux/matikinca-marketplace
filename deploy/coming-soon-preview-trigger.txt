@@ -1,5 +1,5 @@
 Publish LoadLink Coming Soon preview
 Source branch: loadlink-coming-soon
-Requested: 2026-08-23
-Source commit: 8a1cc7c118dcca79e7a9040ab31c4496c59693c7
+Requested: 2026-08-23 retry-2
 Includes: confetti opening, Instagram, LinkedIn, minimal LoadLink UI
+Deployment path: GitHub Actions prebuilt preview
