@@ -1,0 +1,139 @@
+/* LoadLink major product polish — 2026-08-23 */
+
+:root {
+  --ll-major-gold: #f6b800;
+  --ll-major-radius: 18px;
+  --ll-major-glass-light: rgba(255,255,255,.76);
+  --ll-major-glass-dark: rgba(16,16,16,.72);
+}
+
+html[data-loadlink-theme="light"] { color-scheme: light; }
+html[data-loadlink-theme="dark"] { color-scheme: dark; }
+
+/* Keep form controls readable, consistent and iPhone-safe without disabling accessibility zoom. */
+@media (max-width: 900px) {
+  input, textarea, select { font-size: 16px !important; }
+  button, a, input, textarea, select { touch-action: manipulation; }
+}
+
+input[data-loadlink-date-control="true"],
+input[type="date"], input[type="datetime-local"], input[type="time"], input[type="month"], input[type="week"] {
+  min-height: 48px;
+  border-radius: 14px !important;
+  border: 1px solid rgba(127,127,127,.20) !important;
+  font: inherit;
+  font-weight: 650;
+  accent-color: var(--ll-major-gold);
+}
+html[data-loadlink-theme="light"] input[data-loadlink-date-control="true"],
+html[data-loadlink-theme="light"] input[type="date"],
+html[data-loadlink-theme="light"] input[type="datetime-local"],
+html[data-loadlink-theme="light"] input[type="time"] {
+  background: rgba(255,255,255,.88) !important;
+  color: #111 !important;
+}
+html[data-loadlink-theme="dark"] input[data-loadlink-date-control="true"],
+html[data-loadlink-theme="dark"] input[type="date"],
+html[data-loadlink-theme="dark"] input[type="datetime-local"],
+html[data-loadlink-theme="dark"] input[type="time"] {
+  background: rgba(22,22,22,.88) !important;
+  color: #fff !important;
+}
+html[data-loadlink-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+html[data-loadlink-theme="dark"] input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+html[data-loadlink-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: .72; }
+
+/* Transparent LoadLink glass for major interactive surfaces. */
+.ll-major-glass {
+  border: 1px solid rgba(127,127,127,.16);
+  -webkit-backdrop-filter: blur(22px) saturate(135%);
+  backdrop-filter: blur(22px) saturate(135%);
+}
+html[data-loadlink-theme="light"] .ll-major-glass { background: var(--ll-major-glass-light); color: #0a0a0a; }
+html[data-loadlink-theme="dark"] .ll-major-glass { background: var(--ll-major-glass-dark); color: #fff; }
+
+/* High-quality media rendering. */
+img { image-rendering: auto; }
+[data-loadlink-dealer-update-rail] img,
+[data-loadlink-call-avatar="true"] img,
+.loadlink-chat-header img { object-fit: cover !important; object-position: center !important; }
+
+/* Dealership public showroom: blend the hero instead of stacking hard image/card edges. */
+body[data-loadlink-page="dealership-showroom"] [data-loadlink-major-showroom] main > div > section:first-of-type {
+  border-radius: 26px !important;
+  isolation: isolate;
+  box-shadow: none !important;
+}
+body[data-loadlink-page="dealership-showroom"] [data-loadlink-major-showroom] main > div > section:first-of-type > img {
+  opacity: .72 !important;
+  filter: saturate(.9) contrast(1.02);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, rgba(0,0,0,.58) 78%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 55%, rgba(0,0,0,.58) 78%, transparent 100%);
+}
+body[data-loadlink-page="dealership-showroom"] [data-loadlink-major-showroom] main > div > section:nth-of-type(2) > * {
+  border-radius: 18px !important;
+  box-shadow: none !important;
+}
+@media (max-width: 640px) {
+  body[data-loadlink-page="dealership-showroom"] [data-loadlink-major-showroom] main > div { padding-left: 12px !important; padding-right: 12px !important; }
+  body[data-loadlink-page="dealership-showroom"] [data-loadlink-major-showroom] main > div > section:first-of-type { min-height: 330px !important; }
+}
+
+/* Dealer centre: reduce decorative AI-dashboard treatment. */
+body[data-loadlink-page="dealer-centre"] [data-loadlink-dealer-home] > section,
+body[data-loadlink-page="dealer-centre"] [data-loadlink-dealer-home] .rounded-\[24px\],
+body[data-loadlink-page="dealer-centre"] [data-loadlink-dealer-home] .rounded-\[26px\] {
+  box-shadow: none !important;
+}
+
+/* Notification and cookie surfaces use the same glass language in both modes. */
+[data-loadlink-notification-panel="major-20260823"],
+[data-loadlink-cookie-consent="major-20260823"] {
+  -webkit-backdrop-filter: blur(28px) saturate(145%);
+  backdrop-filter: blur(28px) saturate(145%);
+}
+html[data-loadlink-theme="light"] [data-loadlink-notification-panel="major-20260823"],
+html[data-loadlink-theme="light"] [data-loadlink-cookie-consent="major-20260823"] {
+  background: rgba(255,255,255,.90) !important;
+  color: #111 !important;
+  border-color: rgba(0,0,0,.10) !important;
+}
+html[data-loadlink-theme="dark"] [data-loadlink-notification-panel="major-20260823"],
+html[data-loadlink-theme="dark"] [data-loadlink-cookie-consent="major-20260823"] {
+  background: rgba(10,10,10,.90) !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,.11) !important;
+}
+
+/* Call events belong to the scrollable chat timeline and may never cover the composer. */
+[data-loadlink-call-history-host="true"] {
+  position: static !important;
+  inset: auto !important;
+  width: 100%;
+  pointer-events: auto;
+}
+.ll-final-call-history { position: static !important; width: 100%; padding: 8px 12px; }
+.ll-final-call-event { max-width: 340px; margin: 6px auto; }
+
+/* Quote documents stay documents in both themes. */
+[data-loadlink-document-preview],
+.loadlink-document-preview,
+.loadlink-quote-document {
+  color-scheme: light !important;
+  background: #fff !important;
+  color: #111 !important;
+}
+[data-loadlink-document-preview] *, .loadlink-document-preview *, .loadlink-quote-document * { text-shadow: none !important; }
+
+/* Quick-link picture pages: glass controls, no decorative gold copy. */
+body[data-loadlink-page="quick-links"] main input,
+body[data-loadlink-page="quick-links"] main select,
+body[data-loadlink-page="quick-links"] main button {
+  border-radius: 14px;
+}
+body[data-loadlink-page="quick-links"] main [class*="bg-[#f6b800]"] { box-shadow: none !important; }
+
+/* The homepage four portals must remain equal. */
+[data-loadlink-home-portals="approved-geometry"] > div { grid-auto-rows: 1fr; }
+[data-loadlink-home-portal-card] { height: 100% !important; min-height: 310px !important; }
+@media (min-width: 768px) { [data-loadlink-home-portal-card] { min-height: 380px !important; } }
