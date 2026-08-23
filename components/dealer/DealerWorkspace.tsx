@@ -18,7 +18,6 @@ import DealerLeads from "./DealerLeads";
 import DealerMarketing from "./DealerMarketing";
 import DealerMessages from "./DealerMessages";
 import DealerOverview from "./DealerOverview";
-import DealerIntelligencePanel from "./DealerIntelligencePanel";
 import DealerReviews from "./DealerReviews";
 import DealerShell from "./DealerShell";
 import DealerShowroom from "./DealerShowroom";
@@ -63,7 +62,7 @@ export default function DealerWorkspace() {
         dealerFetch<{ staff: DealerStaffMember[] }>("/api/dealer/team"),
       ]);
       if (summaryData.status === "fulfilled") setSummary(summaryData.value);
-      if (intelligence.status === "fulfilled") setInsights(intelligence.value.items || []);
+      if (intelligence.status === "fulfilled") setInsights((intelligence.value.items || []).slice(0, 6));
       if (leadData.status === "fulfilled") setLeads(leadData.value.items || []);
       if (inventoryData.status === "fulfilled") setInventory(inventoryData.value.items || []);
       if (appointmentData.status === "fulfilled") setAppointments(appointmentData.value.items || []);
@@ -133,7 +132,7 @@ export default function DealerWorkspace() {
   if (!context || !profile) return <main className={`min-h-screen ${darkMode ? "bg-black text-white" : "bg-[#f4f0e7] text-black"}`}><div className="mx-auto flex min-h-screen max-w-lg items-center justify-center px-4"><Surface darkMode={darkMode} className="w-full p-8 text-center"><div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-current/10 border-t-[#f6b800]" /><div className="mt-4 text-sm font-black">Preparing Dealer workspace</div></Surface></div></main>;
 
   return <><SubmissionSuccess open={success} title={successText.title} message={successText.message} /><DealerShell darkMode={darkMode} toggleTheme={toggleTheme} profile={profile} context={context} section={validSection} setSection={navigate} onAddVehicle={addVehicle}>
-    {validSection === "overview" ? <div className="grid gap-3 sm:gap-4"><DealerOverview darkMode={darkMode} context={context} summary={summary} leads={leads} appointments={appointments} insights={insights} inventory={inventory} setSection={navigate} onRefresh={refreshCore} /><DealerIntelligencePanel darkMode={darkMode} insights={insights} setSection={navigate} /></div> : null}
+    {validSection === "overview" ? <DealerOverview darkMode={darkMode} context={context} summary={summary} leads={leads} appointments={appointments} insights={insights} inventory={inventory} setSection={navigate} onRefresh={refreshCore} /> : null}
     {validSection === "inventory" ? <DealerInventory darkMode={darkMode} context={context} onAddVehicle={addVehicle} /> : null}
     {validSection === "leads" ? <DealerLeads darkMode={darkMode} context={context} inventory={inventory} staff={staff} /> : null}
     {validSection === "customers" ? <DealerCustomers darkMode={darkMode} /> : null}
