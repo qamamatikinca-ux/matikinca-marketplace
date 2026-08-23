@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       email: auth.user.email,
       amount,
       currency: String(plan.data.currency || "ZAR").toUpperCase(),
-      callback_url: `${origin(request)}/packages?payment=return`,
+      callback_url: `${origin(request)}/payments/status`,
       metadata: {
         loadlink_plan_request_id: req.data.id,
         loadlink_user_id: auth.user.id,
