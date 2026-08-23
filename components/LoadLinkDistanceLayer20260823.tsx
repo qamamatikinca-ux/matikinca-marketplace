@@ -103,7 +103,7 @@ export default function LoadLinkDistanceLayer20260823() {
         userPointRef.current = next;
         try {
           sessionStorage.setItem(USER_POINT_KEY, JSON.stringify(next));
-          sessionStorage.removeItem(DISMISSED_KEY);
+          localStorage.removeItem(DISMISSED_KEY);
           localStorage.setItem(ENABLED_KEY, "true");
         } catch {}
         setEnabled(true);
@@ -116,7 +116,11 @@ export default function LoadLinkDistanceLayer20260823() {
         setEnabled(false);
         setBusy(false);
         if (fromSavedChoice) {
-          try { localStorage.removeItem(ENABLED_KEY); sessionStorage.removeItem(USER_POINT_KEY); } catch {}
+          try {
+            localStorage.removeItem(ENABLED_KEY);
+            localStorage.removeItem(DISMISSED_KEY);
+            sessionStorage.removeItem(USER_POINT_KEY);
+          } catch {}
           setNotice("Location access is needed again to show distance labels.");
           setShowPrompt(true);
         } else {
@@ -133,7 +137,7 @@ export default function LoadLinkDistanceLayer20260823() {
     try {
       const cached = JSON.parse(sessionStorage.getItem(USER_POINT_KEY) || "null") as Point | null;
       const savedEnabled = localStorage.getItem(ENABLED_KEY) === "true";
-      const dismissed = sessionStorage.getItem(DISMISSED_KEY) === "true";
+      const dismissed = localStorage.getItem(DISMISSED_KEY) === "true";
       if (cached && typeof cached.latitude === "number" && typeof cached.longitude === "number") {
         userPointRef.current = cached;
         setEnabled(true);
@@ -174,6 +178,6 @@ export default function LoadLinkDistanceLayer20260823() {
   return <div data-loadlink-distance-control="true" className="fixed bottom-[calc(env(safe-area-inset-bottom)+82px)] right-3 z-[90] flex max-w-[calc(100vw-24px)] items-center gap-2 rounded-full border border-current/10 bg-white/88 p-1.5 pl-3 text-black shadow-lg backdrop-blur-2xl dark:bg-[#111]/88 dark:text-white">
     <span className="min-w-0 truncate text-[10px] font-bold opacity-60">{notice || "See how far listings are"}</span>
     <button type="button" disabled={busy} onClick={() => getLocation(false)} className="shrink-0 rounded-full bg-[#f6b800] px-3 py-2 text-[10px] font-black text-black disabled:opacity-45">{busy ? "Locating…" : "Use my location"}</button>
-    <button type="button" aria-label="Close location prompt" onClick={() => { try { sessionStorage.setItem(DISMISSED_KEY, "true"); } catch {} setShowPrompt(false); setNotice(""); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-current/10 text-sm font-black opacity-60">×</button>
+    <button data-loadlink-location-dismiss="true" type="button" aria-label="Close location prompt" onClick={() => { try { localStorage.setItem(DISMISSED_KEY, "true"); } catch {} setShowPrompt(false); setNotice(""); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-current/10 text-sm font-black opacity-60">×</button>
   </div>;
 }
