@@ -9,8 +9,9 @@ const socialLinks = [
   { label: "LinkedIn", href: process.env.NEXT_PUBLIC_LOADLINK_LINKEDIN_URL || "", icon: "linkedin" },
 ] as const;
 
+const PLAY_BADGE = "https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png";
+
 export default function LoadLinkSiteFooter20260822({ darkMode }: { darkMode: boolean }) {
-  const muted = darkMode ? "text-white/70" : "text-black/75";
   const border = darkMode ? "border-white/10" : "border-black/10";
   const playUrl = process.env.NEXT_PUBLIC_LOADLINK_PLAY_STORE_URL || "";
 
@@ -19,20 +20,16 @@ export default function LoadLinkSiteFooter20260822({ darkMode }: { darkMode: boo
   }
 
   return (
-    <footer className={`px-5 py-12 transition-colors duration-300 md:px-12 md:py-16 ${darkMode ? "bg-black text-white" : "bg-white text-black"}`}>
+    <footer className={`px-5 py-10 transition-colors duration-300 md:px-12 md:py-14 ${darkMode ? "bg-black text-white" : "bg-white text-black"}`} data-loadlink-footer="compact-20260823">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-10 flex justify-center">
+        <div className="mb-8 flex justify-center">
           <Link href="/" aria-label="LoadLink home" className="block max-w-full outline-none">
-            <img
-              src={darkMode ? "/images/loadlink-logo-dark.png" : "/images/loadlink-logo-light.png"}
-              alt="LoadLink"
-              className="h-auto w-[min(72vw,360px)] object-contain"
-            />
+            <img src={darkMode ? "/images/loadlink-logo-dark.png" : "/images/loadlink-logo-light.png"} alt="LoadLink" className="h-auto w-[min(68vw,320px)] object-contain" />
           </Link>
         </div>
 
         <div className={`divide-y border-y ${darkMode ? "divide-white/10 border-white/10" : "divide-black/10 border-black/10"}`}>
-          <FooterDetails title="Company" darkMode={darkMode} open>
+          <FooterDetails title="Company" darkMode={darkMode}>
             <Link href="/about">About LoadLink</Link>
             <a href="mailto:loadlinksouthafrica@gmail.com">Contact support</a>
             <Link href="/help">Help & FAQ</Link>
@@ -70,69 +67,64 @@ export default function LoadLinkSiteFooter20260822({ darkMode }: { darkMode: boo
           </FooterDetails>
         </div>
 
-        <section className={`mt-8 border-t pt-7 ${border}`}>
-          <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-            <div className="max-w-3xl">
-              <p className="text-lg font-black tracking-[-.025em]">Trade with confidence.</p>
-              <p className={`mt-2 text-sm font-semibold leading-6 ${darkMode ? "text-white/58" : "text-black/58"}`}>
-                Verify the person, business, vehicle and documents before completing a transaction. LoadLink provides marketplace infrastructure and safety tools but does not automatically become a party to transactions between users.
-              </p>
-            </div>
-            <Link href="/help" className={`inline-flex min-h-11 w-fit items-center justify-center rounded-full border px-5 text-sm font-black transition active:scale-[.98] ${darkMode ? "border-white/14 bg-white/[.035]" : "border-black/10 bg-black/[.025]"}`}>
-              Report suspicious activity
-            </Link>
-          </div>
-        </section>
-
-        <section className={`mt-8 grid gap-6 border-t pt-7 ${border} md:grid-cols-[1fr_auto] md:items-end`}>
-          <div>
-            <p className="text-sm font-black">Follow LoadLink</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {socialLinks.map((item) => item.href ? (
-                <a key={item.label} href={item.href} target="_blank" rel="noreferrer" aria-label={`LoadLink on ${item.label}`} className={`inline-flex h-10 items-center gap-2 rounded-full border px-3 text-xs font-black ${border}`}>
-                  <SocialIcon name={item.icon} /> {item.label}
-                </a>
-              ) : null)}
-            </div>
+        <section className={`mt-7 grid gap-6 border-b pb-7 ${border} md:grid-cols-[minmax(0,1fr)_auto] md:items-end`}>
+          <div className="max-w-3xl">
+            <p className="text-xl font-black tracking-[-.03em]">Trade with confidence.</p>
+            <p className={`mt-2 max-w-2xl text-sm font-semibold leading-6 ${darkMode ? "text-white/58" : "text-black/58"}`}>
+              Verify people, businesses, vehicles and documents before completing a transaction. LoadLink provides marketplace and safety tools; transactions remain between users unless stated otherwise.
+            </p>
+            <Link href="/help" className={`mt-4 inline-flex min-h-10 items-center justify-center rounded-full border px-4 text-xs font-black ${darkMode ? "border-white/14 bg-white/[.035]" : "border-black/10 bg-black/[.025]"}`}>Report suspicious activity</Link>
           </div>
 
           <div className="md:text-right">
             <p className="text-sm font-black">Get LoadLink</p>
             {playUrl ? (
               <a href={playUrl} target="_blank" rel="noreferrer" aria-label="Get LoadLink on Google Play" className="mt-2 inline-block">
-                <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" className="h-[48px] w-auto object-contain" />
+                <img src={PLAY_BADGE} alt="Get it on Google Play" className="h-[50px] w-auto object-contain" />
               </a>
             ) : (
-              <p className={`mt-2 text-xs font-semibold ${darkMode ? "text-white/50" : "text-black/50"}`}>Android app coming soon</p>
+              <div className="mt-2 inline-flex flex-col items-start md:items-end">
+                <img src={PLAY_BADGE} alt="Google Play" className="h-[50px] w-auto object-contain opacity-70 grayscale-[.15]" />
+                <span className={`mt-1 text-[10px] font-bold ${darkMode ? "text-white/42" : "text-black/45"}`}>Android release coming soon</span>
+              </div>
             )}
           </div>
         </section>
 
-        <div className={`mt-8 border-t pt-6 ${border} ${darkMode ? "text-white/50" : "text-black/55"}`}>
-          <div className="flex flex-wrap gap-x-5 gap-y-3 text-sm font-bold">
+        <section className={`mt-6 grid gap-5 md:grid-cols-[1fr_auto] md:items-center`}>
+          <div>
+            <p className="text-sm font-black">Follow LoadLink</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {socialLinks.map((item) => item.href ? (
+                <a key={item.label} href={item.href} target="_blank" rel="noreferrer" aria-label={`LoadLink on ${item.label}`} className={`inline-flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-black ${border}`}>
+                  <SocialIcon name={item.icon} /> {item.label}
+                </a>
+              ) : null)}
+            </div>
+          </div>
+          <div className={`flex flex-wrap gap-x-5 gap-y-2 text-xs font-bold ${darkMode ? "text-white/55" : "text-black/55"}`}>
             <Link href="/legal#terms-of-use">Terms</Link>
             <Link href="/legal#privacy-policy">Privacy</Link>
             <Link href="/legal#marketplace-safety-policy">Safety</Link>
             <Link href="/legal#refund-cancellation-policy">Refunds</Link>
             <button type="button" onClick={openCookiePreferences}>Cookies</button>
           </div>
-          <p className="mt-5 text-sm font-semibold">© 2026 LoadLink. All rights reserved. · South Africa</p>
-        </div>
+        </section>
+
+        <p className={`mt-6 border-t pt-5 text-xs font-semibold ${border} ${darkMode ? "text-white/45" : "text-black/50"}`}>© 2026 LoadLink. All rights reserved. · South Africa</p>
       </div>
     </footer>
   );
 }
 
-function FooterDetails({ title, darkMode, open = false, children }: { title: string; darkMode: boolean; open?: boolean; children: React.ReactNode }) {
+function FooterDetails({ title, darkMode, children }: { title: string; darkMode: boolean; children: React.ReactNode }) {
   return (
-    <details open={open} className="group py-5">
-      <summary className="flex cursor-pointer list-none items-center justify-between text-xl font-black">
+    <details className="group py-4">
+      <summary className="flex cursor-pointer list-none items-center justify-between text-lg font-black">
         {title}
         <span aria-hidden="true" className={`text-sm opacity-35 transition group-open:rotate-180 ${darkMode ? "text-white" : "text-black"}`}>⌄</span>
       </summary>
-      <div className={`mt-5 grid gap-4 text-base font-semibold ${darkMode ? "text-white/70" : "text-black/70"}`}>
-        {children}
-      </div>
+      <div className={`mt-4 grid gap-3 text-sm font-semibold ${darkMode ? "text-white/70" : "text-black/70"}`}>{children}</div>
     </details>
   );
 }
