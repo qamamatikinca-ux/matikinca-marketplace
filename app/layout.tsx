@@ -26,6 +26,7 @@ import "./loadlink-product-repair-20260822.css";
 import "./loadlink-mobile-product-correction-20260822.css";
 import "./loadlink-final-ui-consistency-20260822.css";
 import "./loadlink-major-update-20260823.css";
+import "./loadlink-completion-20260823.css";
 import GlobalLoading from "@/components/GlobalLoading";
 import ChatLauncher from "@/components/ChatLauncher";
 import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";
@@ -70,6 +71,12 @@ import LoadLinkReleaseRecovery20260821 from "@/components/LoadLinkReleaseRecover
 import LoadLinkProductRepair20260822 from "@/components/LoadLinkProductRepair20260822";
 import LoadLinkCookieConsent20260822 from "@/components/LoadLinkCookieConsent20260822";
 import LoadLinkMobileUxCorrection20260822 from "@/components/LoadLinkMobileUxCorrection20260822";
+import LoadLinkDealerStatusViewer20260823 from "@/components/LoadLinkDealerStatusViewer20260823";
+import LoadLinkChatMediaPreview20260823 from "@/components/LoadLinkChatMediaPreview20260823";
+import LoadLinkChatInfoCompletion20260823 from "@/components/LoadLinkChatInfoCompletion20260823";
+import LoadLinkLocationCompletion20260823 from "@/components/LoadLinkLocationCompletion20260823";
+import LoadLinkDistanceLayer20260823 from "@/components/LoadLinkDistanceLayer20260823";
+import LoadLinkDealershipOwnerEdit20260823 from "@/components/LoadLinkDealershipOwnerEdit20260823";
 
 export const metadata: Metadata = {
   title: { default: "LoadLink | South African Logistics Marketplace", template: "%s | LoadLink" },
@@ -90,7 +97,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var k='loadlink-theme',t=localStorage.getItem(k);if(t!=='dark'&&t!=='light'){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}var r=document.documentElement;r.dataset.loadlinkTheme=t;r.classList.toggle('dark',t==='dark');r.style.colorScheme=t;r.dataset.loadlinkSimple=localStorage.getItem('loadlink-simple-mode')==='true'?'true':'false';var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',t==='dark'?'#050505':'#ffffff')}catch(e){}})();` }} />
       </head>
       <body data-loadlink-release="20260823-major-update">
-        <ThemeCoordinator /><LoadLinkUiRepairV273 /><SimpleModeCoordinator /><AccountActivityTracker /><AuthMfaGate /><ProfileOnboardingGate /><MarketplaceRestrictionGuard /><AccountSettingsGlassFix /><LoadLinkSelectLabelFix /><LoadLinkInteractionSystem /><LoadLinkTouchScrollGuard /><LoadLinkShareEnhancer /><DealerPostBenefitsEnhancer /><MarketplaceUxPolishEnhancer /><PhotoGalleryModernizer /><LoadLinkUniversalUiGuard /><LoadLinkAuditUpdateBridge /><LoadLinkCriticalInteractionFixes /><LoadLinkFinalUxRepair20260820 /><LoadLinkFinalReleasePolishBootstrap20260821 /><LoadLinkReleaseCompletion20260821 /><LoadLinkReleaseRecovery20260821 /><LoadLinkProductRepair20260822 /><LoadLinkMobileUxCorrection20260822 /><ListingReportGuard /><ChatComposerActions /><LogisticsToolsFinalEnhancer /><DealerWorkspaceNavigationEnhancer /><DealerPackageDetailsEnhancer /><LoadLinkMajorUpdate20260823 /><LoadLinkCallBootstrap /><LoadLinkCallHistoryStrip20260823 /><LoadLinkDealerStatusChatBridge20260823 /><LoadLinkDealerChatStatus20260823 /><LoadLinkChatUiPolish20260823 /><LoadLinkCookieConsent20260822 />
+        <ThemeCoordinator /><LoadLinkUiRepairV273 /><SimpleModeCoordinator /><AccountActivityTracker /><AuthMfaGate /><ProfileOnboardingGate /><MarketplaceRestrictionGuard /><AccountSettingsGlassFix /><LoadLinkSelectLabelFix /><LoadLinkInteractionSystem /><LoadLinkTouchScrollGuard /><LoadLinkShareEnhancer /><DealerPostBenefitsEnhancer /><MarketplaceUxPolishEnhancer /><PhotoGalleryModernizer /><LoadLinkUniversalUiGuard /><LoadLinkAuditUpdateBridge /><LoadLinkCriticalInteractionFixes /><LoadLinkFinalUxRepair20260820 /><LoadLinkFinalReleasePolishBootstrap20260821 /><LoadLinkReleaseCompletion20260821 /><LoadLinkReleaseRecovery20260821 /><LoadLinkProductRepair20260822 /><LoadLinkMobileUxCorrection20260822 /><ListingReportGuard /><ChatComposerActions /><LogisticsToolsFinalEnhancer /><DealerWorkspaceNavigationEnhancer /><DealerPackageDetailsEnhancer /><LoadLinkMajorUpdate20260823 /><LoadLinkCallBootstrap /><LoadLinkCallHistoryStrip20260823 /><LoadLinkDealerStatusChatBridge20260823 /><LoadLinkDealerChatStatus20260823 /><LoadLinkChatUiPolish20260823 /><LoadLinkChatMediaPreview20260823 /><LoadLinkChatInfoCompletion20260823 /><LoadLinkDealerStatusViewer20260823 /><LoadLinkLocationCompletion20260823 /><LoadLinkDistanceLayer20260823 /><LoadLinkDealershipOwnerEdit20260823 /><LoadLinkCookieConsent20260822 />
         <Suspense fallback={null}><GlobalLoading /></Suspense>
         <SwipeDotsEnhancer /><AuthBootstrap /><NotificationCenter /><ChatLauncher /><LoadLinkToastCenter /><LoadLinkDeleteConfirmationLayer /><NetworkRecovery />
         {children}
