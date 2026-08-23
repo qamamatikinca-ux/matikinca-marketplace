@@ -1,0 +1,64 @@
+/* Fine-grain finish for the 23 Aug completion pass. */
+
+html[data-loadlink-theme="dark"][data-loadlink-route="messages"] .loadlink-quote-card {
+  background: rgba(255,255,255,.065) !important;
+  border-color: rgba(255,255,255,.14) !important;
+  color: #fff !important;
+}
+html[data-loadlink-theme="dark"][data-loadlink-route="messages"] .loadlink-quote-card > div:first-child {
+  border-color: rgba(255,255,255,.1) !important;
+}
+html[data-loadlink-theme="dark"][data-loadlink-route="messages"] .loadlink-quote-card p,
+html[data-loadlink-theme="dark"][data-loadlink-route="messages"] .loadlink-quote-card strong { color: #fff !important; }
+html[data-loadlink-theme="light"][data-loadlink-route="messages"] .loadlink-quote-card {
+  background: rgba(255,253,248,.96) !important;
+  border-color: rgba(0,0,0,.1) !important;
+  color: #111 !important;
+}
+
+html[data-loadlink-route^="dealership/"] main > div { max-width: 1320px !important; }
+html[data-loadlink-route^="dealership/"] main > div > section:first-of-type {
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 32px !important;
+  isolation: isolate;
+}
+html[data-loadlink-route^="dealership/"] main > div > section:first-of-type::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 52%;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(0,0,0,.32), transparent);
+}
+html[data-loadlink-route^="dealership/"] main > div > section:first-of-type > div:last-child { z-index: 2; }
+html[data-loadlink-route^="dealership/"] main a[href="#showroom"],
+html[data-loadlink-route^="dealership/"] main a[href^="/messages?dealer="],
+html[data-loadlink-route^="dealership/"] main a[href^="tel:"],
+html[data-loadlink-route^="dealership/"] main a[href^="https://wa.me/"] {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: transform .16s ease, background-color .16s ease, border-color .16s ease;
+}
+html[data-loadlink-route^="dealership/"] main a[href="#showroom"]:active,
+html[data-loadlink-route^="dealership/"] main a[href^="/messages?dealer="]:active,
+html[data-loadlink-route^="dealership/"] main a[href^="tel:"]:active,
+html[data-loadlink-route^="dealership/"] main a[href^="https://wa.me/"]:active { transform: scale(.97); }
+html[data-loadlink-route^="dealership/"] main #showroom { border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
+html[data-loadlink-route^="dealership/"] main #showroom a[href^="/vehicles/"] { border-radius: 16px; }
+html[data-loadlink-route^="dealership/"] main #showroom a[href^="/vehicles/"] img { transition: transform .25s ease, filter .25s ease; }
+html[data-loadlink-route^="dealership/"] main #showroom a[href^="/vehicles/"]:hover img { transform: scale(1.025); }
+
+html[data-loadlink-theme="dark"][data-loadlink-route="notifications"] main section > div,
+html[data-loadlink-theme="dark"][data-loadlink-route="notifications"] main article {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 16px 52px rgba(0,0,0,.12) !important;
+}
+html[data-loadlink-theme="light"][data-loadlink-route="notifications"] main section > div,
+html[data-loadlink-theme="light"][data-loadlink-route="notifications"] main article {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.65), 0 16px 52px rgba(0,0,0,.045) !important;
+}
+
+@media (max-width: 767px) {
+  html[data-loadlink-route^="dealership/"] main > div > section:first-of-type { border-radius: 24px !important; }
+  html[data-loadlink-route^="dealership/"] main #showroom a[href^="/vehicles/"] { border-radius: 10px; }
+}

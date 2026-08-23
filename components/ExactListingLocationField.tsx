@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
+import { attachSouthAfricaAutocomplete, geocodeLoadLinkAddress, googleMapsKey, reverseGeocodeLoadLink, type LoadLinkLatLng } from "@/lib/googleMapsBrowser";
 
-export type ListingCoordinates = { latitude: number; longitude: number } | null;
+export type ListingCoordinates = LoadLinkLatLng | null;
 
 export default function ExactListingLocationField({
   value,
@@ -20,47 +21,52 @@ export default function ExactListingLocationField({
   className: string;
   id?: string;
 }) {
+  const exactInputRef = useRef<HTMLInputElement>(null);
   const [exactMode, setExactMode] = useState(false);
   const [coordinates, setCoordinates] = useState<ListingCoordinates>(null);
   const [locating, setLocating] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [notice, setNotice] = useState("");
   const [mapOpen, setMapOpen] = useState(false);
-  const mapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+  const mapsKey = googleMapsKey();
 
   useEffect(() => onCoordinatesChange?.(coordinates), [coordinates, onCoordinatesChange]);
+
+  useEffect(() => {
+    if (!exactMode || !exactInputRef.current || !mapsKey) return;
+    let active = true;
+    let listener: { remove?: () => void } | null = null;
+    void attachSouthAfricaAutocomplete(exactInputRef.current, (place) => {
+      if (!active) return;
+      onChange(place.address);
+      setCoordinates(place.coordinates);
+      setNotice("Exact location confirmed for distance estimates.");
+      setMapOpen(true);
+    }).then((next) => { listener = next; });
+    return () => { active = false; listener?.remove?.(); };
+  }, [exactMode, mapsKey, onChange]);
 
   const mapQuery = useMemo(() => {
     if (coordinates) return `${coordinates.latitude},${coordinates.longitude}`;
     return value.trim() || "South Africa";
   }, [coordinates, value]);
 
-  async function geocodeAddress(address: string) {
-    if (!mapsKey || !address.trim()) return;
-    try {
-      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address.trim())}&region=za&key=${encodeURIComponent(mapsKey)}`);
-      const payload = await response.json();
-      const first = payload?.results?.[0];
-      const location = first?.geometry?.location;
-      if (typeof location?.lat === "number" && typeof location?.lng === "number") {
-        setCoordinates({ latitude: location.lat, longitude: location.lng });
-        if (first.formatted_address) onChange(String(first.formatted_address));
-        setNotice("Exact location confirmed for distance estimates.");
-      }
-    } catch {
-      setNotice("The address is saved, but LoadLink could not confirm its map coordinates right now.");
+  async function confirmAddress() {
+    if (!value.trim() || confirming || coordinates) return;
+    if (!mapsKey) {
+      setNotice("Address saved. Add the Google Maps browser key later to verify exact coordinates, or use your current location now.");
+      return;
     }
-  }
-
-  async function reverseGeocode(latitude: number, longitude: number) {
-    if (!mapsKey) return;
-    try {
-      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${encodeURIComponent(mapsKey)}`);
-      const payload = await response.json();
-      const first = payload?.results?.[0];
-      if (first?.formatted_address) onChange(String(first.formatted_address));
-    } catch {
-      // Coordinates remain valid even if address formatting is temporarily unavailable.
+    setConfirming(true);
+    const confirmed = await geocodeLoadLinkAddress(value);
+    if (confirmed) {
+      onChange(confirmed.address);
+      setCoordinates(confirmed.coordinates);
+      setNotice("Exact location confirmed for distance estimates.");
+    } else {
+      setNotice("LoadLink could not confirm that exact address. Choose one of Google’s suggestions or keep city / province only.");
     }
+    setConfirming(false);
   }
 
   function useCurrentLocation() {
@@ -75,12 +81,15 @@ export default function ExactListingLocationField({
         const next = { latitude: position.coords.latitude, longitude: position.coords.longitude };
         setCoordinates(next);
         setExactMode(true);
+        setMapOpen(true);
         setNotice(`Precise location selected${Math.round(position.coords.accuracy) ? ` · about ${Math.round(position.coords.accuracy)} m accuracy` : ""}.`);
-        void reverseGeocode(next.latitude, next.longitude);
+        void reverseGeocodeLoadLink(next.latitude, next.longitude).then((address) => {
+          if (address) onChange(address);
+        });
         setLocating(false);
       },
       () => {
-        setNotice("Location permission was not granted. You can still type an exact address or keep city/province only.");
+        setNotice("Location permission was not granted. You can still type an exact address or keep city / province only.");
         setLocating(false);
       },
       { enableHighAccuracy: true, timeout: 12_000, maximumAge: 60_000 },
@@ -91,9 +100,10 @@ export default function ExactListingLocationField({
   const muted = darkMode ? "text-white/50" : "text-black/52";
 
   return (
-    <div data-loadlink-exact-location="20260823">
+    <div data-loadlink-exact-location="places-20260823">
       {exactMode ? (
         <input
+          ref={exactInputRef}
           id={id}
           type="text"
           inputMode="text"
@@ -101,7 +111,7 @@ export default function ExactListingLocationField({
           autoComplete="street-address"
           value={value}
           onChange={(event) => { onChange(event.target.value); setCoordinates(null); setNotice(""); }}
-          onBlur={() => void geocodeAddress(value)}
+          onBlur={() => void confirmAddress()}
           placeholder="e.g. 32 Superdrive Avenue, Centurion"
           className={className}
           aria-label="Exact contract or listing address"
@@ -131,19 +141,13 @@ export default function ExactListingLocationField({
           </button>
         </div>
         <p className={`mt-2 text-[10px] font-semibold leading-4 ${muted}`}>
-          Exact location is optional. It helps interested users calculate approximate distance. If you prefer privacy, keep only your city or province.
+          Exact location is optional. Google suggestions keep the address accurate and let interested users calculate an approximate distance. For privacy, keep only city / province.
         </p>
-        {notice ? <p className="mt-2 text-[10px] font-bold text-[#a87a00]">{notice}</p> : null}
+        {confirming ? <p className="mt-2 text-[10px] font-bold text-[#a87a00]">Confirming address…</p> : notice ? <p className="mt-2 text-[10px] font-bold text-[#a87a00]">{notice}</p> : null}
         {mapOpen ? (
           <div className="mt-3 overflow-hidden rounded-[14px] border border-current/10 bg-black/[.03]">
-            <iframe
-              title="LoadLink location map preview"
-              src={`https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`}
-              className="h-48 w-full border-0"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-            {!mapsKey && exactMode ? <p className={`px-3 py-2 text-[9px] font-semibold ${muted}`}>Map preview is available. Verified distance coordinates require the LoadLink Google Maps key or “Use my current location”.</p> : null}
+            <iframe title="LoadLink location map preview" src={`https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`} className="h-48 w-full border-0" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+            {!mapsKey && exactMode ? <p className={`px-3 py-2 text-[9px] font-semibold ${muted}`}>Map preview works now. Verified typed-address coordinates will activate when the Google Maps browser key is added; current-location coordinates already work without it.</p> : null}
           </div>
         ) : null}
       </div>

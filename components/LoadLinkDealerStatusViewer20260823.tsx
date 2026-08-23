@@ -1,0 +1,147 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+
+type OpenStatusDetail = {
+  dealershipId: string;
+  statusId?: string;
+  dealershipName?: string;
+  slug?: string;
+  imageUrl?: string | null;
+};
+
+type PublicStatus = {
+  id: string;
+  dealership_id: string;
+  content_type: string;
+  title: string | null;
+  body: string | null;
+  media_url: string | null;
+  listing_id: string | null;
+  cta_label: string | null;
+  action_url: string | null;
+  display_seconds: number | null;
+  starts_at: string;
+  expires_at: string;
+  created_at: string;
+};
+
+type DealerIdentity = { name: string; slug: string; imageUrl: string };
+
+function safeInternalHref(value: string | null | undefined) {
+  const href = String(value || "").trim();
+  return href.startsWith("/") && !href.startsWith("//") ? href : "";
+}
+
+function initials(value: string) {
+  return value.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0] || "").join("").toUpperCase() || "LL";
+}
+
+export default function LoadLinkDealerStatusViewer20260823() {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [statuses, setStatuses] = useState<PublicStatus[]>([]);
+  const [index, setIndex] = useState(0);
+  const [identity, setIdentity] = useState<DealerIdentity>({ name: "Dealership", slug: "", imageUrl: "" });
+  const [progress, setProgress] = useState(0);
+  const startedAtRef = useRef(0);
+  const frameRef = useRef<number | null>(null);
+
+  const current = statuses[index] || null;
+  const seconds = Math.max(3, Math.min(60, Number(current?.display_seconds || (current?.content_type === "video" ? 60 : 30))));
+
+  const close = useCallback(() => {
+    setOpen(false); setStatuses([]); setIndex(0); setProgress(0);
+    if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    frameRef.current = null;
+  }, []);
+
+  const next = useCallback(() => {
+    setIndex((value) => {
+      if (value >= statuses.length - 1) { window.setTimeout(close, 0); return value; }
+      return value + 1;
+    });
+  }, [close, statuses.length]);
+
+  const previous = useCallback(() => setIndex((value) => Math.max(0, value - 1)), []);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<OpenStatusDetail>).detail;
+      if (!detail?.dealershipId) return;
+      setOpen(true); setLoading(true); setStatuses([]); setProgress(0);
+      setIdentity({ name: detail.dealershipName || "Dealership", slug: detail.slug || "", imageUrl: detail.imageUrl || "" });
+      void (async () => {
+        const [statusResult, dealerResult] = await Promise.all([
+          supabase.from("public_dealership_statuses").select("id,dealership_id,content_type,title,body,media_url,listing_id,cta_label,action_url,display_seconds,starts_at,expires_at,created_at").eq("dealership_id", detail.dealershipId).lte("starts_at", new Date().toISOString()).gt("expires_at", new Date().toISOString()).order("starts_at", { ascending: true }),
+          supabase.from("public_dealership_profiles").select("name,slug,profile_image_url").eq("id", detail.dealershipId).maybeSingle(),
+        ]);
+        const rows = !statusResult.error ? (statusResult.data || []) as PublicStatus[] : [];
+        if (dealerResult.data) setIdentity({ name: String(dealerResult.data.name || detail.dealershipName || "Dealership"), slug: String(dealerResult.data.slug || detail.slug || ""), imageUrl: String(dealerResult.data.profile_image_url || detail.imageUrl || "") });
+        if (!rows.length) { setLoading(false); setStatuses([]); return; }
+        const requested = detail.statusId ? rows.findIndex((item) => item.id === detail.statusId) : -1;
+        setStatuses(rows); setIndex(requested >= 0 ? requested : 0); setLoading(false);
+      })();
+    };
+    window.addEventListener("loadlink:open-dealer-status", handler as EventListener);
+    return () => window.removeEventListener("loadlink:open-dealer-status", handler as EventListener);
+  }, []);
+
+  useEffect(() => {
+    if (!open || !current) return;
+    setProgress(0); startedAtRef.current = performance.now();
+    void supabase.rpc("loadlink_mark_followed_dealer_status_seen", { p_status_id: current.id });
+    const animate = (now: number) => {
+      const ratio = Math.min(1, (now - startedAtRef.current) / (seconds * 1000));
+      setProgress(ratio);
+      if (ratio >= 1) { next(); return; }
+      frameRef.current = requestAnimationFrame(animate);
+    };
+    if (current.content_type !== "video") frameRef.current = requestAnimationFrame(animate);
+    return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current); frameRef.current = null; };
+  }, [current?.id, current?.content_type, next, open, seconds]);
+
+  useEffect(() => {
+    if (!open) return;
+    const key = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+      if (event.key === "ArrowRight") next();
+      if (event.key === "ArrowLeft") previous();
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [close, next, open, previous]);
+
+  const actionHref = useMemo(() => safeInternalHref(current?.action_url) || (current?.listing_id ? `/vehicles/${encodeURIComponent(current.listing_id)}` : ""), [current]);
+
+  if (!open) return null;
+  return <div data-loadlink-status-viewer="true" className="fixed inset-0 z-[2147483400] bg-black text-white">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-[520px] flex-col bg-[#050505] shadow-2xl">
+      <div className="relative z-30 px-3 pt-[max(10px,env(safe-area-inset-top))]">
+        <div className="flex gap-1.5">{(statuses.length ? statuses : [null]).map((item, itemIndex) => <span key={item?.id || itemIndex} className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/25"><span className="block h-full rounded-full bg-white" style={{ width: `${itemIndex < index ? 100 : itemIndex === index ? progress * 100 : 0}%` }} /></span>)}</div>
+        <div className="mt-3 flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/25 bg-[#171717] text-xs font-black">{identity.imageUrl ? <img src={identity.imageUrl} alt="" className="h-full w-full object-cover" /> : initials(identity.name)}</div>
+          <div className="min-w-0 flex-1"><strong className="block truncate text-sm font-black">{identity.name}</strong><span className="block text-[10px] font-semibold text-white/48">Dealership status · 24 hours</span></div>
+          {identity.slug ? <Link href={`/dealership/${encodeURIComponent(identity.slug)}`} onClick={close} className="rounded-full border border-white/15 bg-black/30 px-3 py-2 text-[9px] font-black">Showroom</Link> : null}
+          <button type="button" onClick={close} aria-label="Close status" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/35 text-xl">×</button>
+        </div>
+      </div>
+
+      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+        {loading ? <div className="text-center"><div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-white/15 border-t-[#f6b800]" /><p className="mt-3 text-xs font-bold text-white/55">Loading update…</p></div> : !current ? <div className="px-7 text-center"><h2 className="text-2xl font-black">No active update</h2><p className="mt-2 text-sm font-semibold leading-6 text-white/50">This dealership does not have an active status right now.</p>{identity.slug ? <Link href={`/dealership/${encodeURIComponent(identity.slug)}`} onClick={close} className="mt-5 inline-flex rounded-full bg-[#f6b800] px-5 py-3 text-xs font-black text-black">Open showroom</Link> : null}</div> : <>
+          {current.media_url && current.content_type === "video" ? <video key={current.id} src={current.media_url} autoPlay playsInline controls={false} className="absolute inset-0 h-full w-full object-contain" onTimeUpdate={(event) => { const video = event.currentTarget; if (video.duration) setProgress(Math.min(1, video.currentTime / video.duration)); }} onEnded={next} onError={next} /> : current.media_url ? <img src={current.media_url} alt={current.title || "Dealership status"} className="absolute inset-0 h-full w-full object-contain" /> : null}
+          <div className={`absolute inset-0 ${current.media_url ? "bg-gradient-to-t from-black/95 via-black/10 to-black/20" : "bg-[radial-gradient(circle_at_30%_20%,rgba(246,184,0,.18),transparent_30%),linear-gradient(160deg,#171717,#050505_65%)]"}`} />
+          <button type="button" aria-label="Previous status" onClick={previous} className="absolute inset-y-0 left-0 z-10 w-[28%]" />
+          <button type="button" aria-label="Next status" onClick={next} className="absolute inset-y-0 right-0 z-10 w-[28%]" />
+          <div className="pointer-events-none relative z-20 mt-auto w-full self-end p-5 pb-[max(26px,env(safe-area-inset-bottom))]">
+            <div className="max-w-[430px]">{current.title ? <h2 className="text-2xl font-black tracking-[-.035em]">{current.title}</h2> : null}{current.body ? <p className="mt-2 whitespace-pre-wrap text-sm font-semibold leading-6 text-white/78">{current.body}</p> : null}
+              {actionHref ? <Link href={actionHref} onClick={close} className="pointer-events-auto mt-4 inline-flex min-h-11 items-center rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">{current.cta_label || (current.listing_id ? "View vehicle" : "Open update")}</Link> : null}
+            </div>
+          </div>
+        </>}
+      </div>
+    </div>
+  </div>;
+}

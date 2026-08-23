@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import LoadLinkDealerUpdateRail20260822 from "@/components/LoadLinkDealerUpdateRail20260822";
+import LoadLinkFollowedStatusBridge20260823 from "@/components/LoadLinkFollowedStatusBridge20260823";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 export default function LoadLinkDealerStatusChatBridge20260823() {
@@ -12,10 +13,7 @@ export default function LoadLinkDealerStatusChatBridge20260823() {
   const [host, setHost] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (!pathname.startsWith("/messages")) {
-      setHost(null);
-      return;
-    }
+    if (!pathname.startsWith("/messages")) { setHost(null); return; }
     let active = true;
     const mount = () => {
       const panel = document.querySelector<HTMLElement>(".loadlink-inbox-panel");
@@ -31,14 +29,9 @@ export default function LoadLinkDealerStatusChatBridge20260823() {
       if (active) setHost(node);
     };
     mount();
-    const observer = new MutationObserver(mount);
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => {
-      active = false;
-      observer.disconnect();
-    };
+    const observer = new MutationObserver(mount); observer.observe(document.body, { childList: true, subtree: true });
+    return () => { active = false; observer.disconnect(); };
   }, [pathname]);
 
-  if (!host) return null;
-  return createPortal(<LoadLinkDealerUpdateRail20260822 darkMode={darkMode} />, host);
+  return <><LoadLinkFollowedStatusBridge20260823 />{host ? createPortal(<LoadLinkDealerUpdateRail20260822 darkMode={darkMode} />, host) : null}</>;
 }
