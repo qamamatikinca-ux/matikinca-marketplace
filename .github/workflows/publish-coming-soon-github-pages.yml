@@ -1,0 +1,44 @@
+name: Publish LoadLink Coming Soon to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/publish-coming-soon-github-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: loadlink-coming-soon-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Coming Soon branch
+        uses: actions/checkout@v4
+        with:
+          ref: loadlink-coming-soon
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload Coming Soon site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public-coming-soon
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
