@@ -27,6 +27,7 @@ import "./loadlink-mobile-product-correction-20260822.css";
 import "./loadlink-final-ui-consistency-20260822.css";
 import "./loadlink-major-update-20260823.css";
 import "./loadlink-completion-20260823.css";
+import "./loadlink-completion-detail-20260823.css";
 import GlobalLoading from "@/components/GlobalLoading";
 import ChatLauncher from "@/components/ChatLauncher";
 import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";
