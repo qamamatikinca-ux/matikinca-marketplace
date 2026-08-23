@@ -42,6 +42,23 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewBody, setReviewBody] = useState("");
   const [reviewBusy, setReviewBusy] = useState(false);
+  const [ownsDriverProfile, setOwnsDriverProfile] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const sb = browserSupabase();
+        const { data: auth } = await sb.auth.getUser();
+        if (!active || !auth.user) return;
+        const { data } = await sb.from("driver_profiles").select("id").eq("user_id", auth.user.id).limit(1).maybeSingle();
+        if (active) setOwnsDriverProfile(Boolean(data?.id));
+      } catch {
+        if (active) setOwnsDriverProfile(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!fullPage) return;
@@ -109,7 +126,7 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
 
   return (
     <section className={sectionClass} data-loadlink-phase2-home>
-      {showHero ? <div className={styles.hero}><img src="/images/driver-profile-hero.jpg" alt="Truck drivers ready for logistics opportunities" className={styles.heroImage} /><div className={styles.heroShade} /><div className={styles.heroContent}><h2 className={styles.title}>Drivers Available for Work</h2><p className={styles.subtitle}>Approved drivers can present their licence details, experience, routes and availability directly to logistics companies and truck owners.</p><div className={styles.actions}><Link data-marketplace-action className={styles.primary} href="/driver-profile">Create driver profile</Link>{fullPage ? <Link className={styles.secondary} href="/account/settings">Profile settings</Link> : null}</div></div></div> : null}
+      {showHero ? <div className={styles.hero}><img src="/images/driver-profile-hero.jpg" alt="Truck drivers ready for logistics opportunities" className={styles.heroImage} /><div className={styles.heroShade} /><div className={styles.heroContent}><h2 className={styles.title}>Drivers Available for Work</h2><p className={styles.subtitle}>Approved drivers can present their licence details, experience, routes and availability directly to logistics companies and truck owners.</p><div className={styles.actions}><Link data-marketplace-action className={styles.primary} href="/driver-profile">{ownsDriverProfile ? "Manage your profile" : "Create driver profile"}</Link>{fullPage ? <Link className={styles.secondary} href="/account/settings">Profile settings</Link> : null}</div></div></div> : null}
 
       <div className={styles.content}>
         {fullPage ? <div className={styles.filterBar}><label className={styles.filterField}><span>Search drivers</span><input value={searchTerm} onChange={(event) => { setSearchTerm(event.target.value); setPage(1); }} placeholder="Name, licence, vehicle experience" /></label><label className={styles.filterField}><span>Location</span><SouthAfricaLocationInput value={cityFilter} onChange={(value) => { setCityFilter(value); setPage(1); }} darkMode={darkMode} placeholder="City, town or province" ariaLabel="Filter drivers by South African location" className={styles.locationInput} /></label></div> : null}

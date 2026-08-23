@@ -80,7 +80,7 @@ export default function LoadLinkHomepagePortalGrid20260822({ darkMode }: { darkM
               <div className="relative z-10 flex h-full min-h-[inherit] max-w-[34rem] flex-col justify-end p-5 text-white sm:p-7 md:p-8">
                 <h2 className="text-[31px] font-black leading-[.95] tracking-[-.045em] sm:text-[38px] md:text-[42px]">{portal.title}</h2>
                 <p className="mt-2 max-w-[29rem] text-[12px] font-semibold leading-5 text-white/78 sm:text-[13px]">{portal.description}</p>
-                <span className="mt-4 inline-flex min-h-10 w-fit items-center justify-center rounded-full border border-white/24 bg-black/28 px-5 text-[11px] font-bold text-white backdrop-blur-xl transition duration-200 group-hover:-translate-y-0.5 group-hover:border-white/40 sm:min-h-11 sm:text-xs">
+                <span className="mt-4 inline-flex min-h-10 w-fit items-center justify-center rounded-full border border-[#f6b800]/85 bg-black/34 px-5 text-[11px] font-bold text-white backdrop-blur-xl transition duration-200 group-hover:-translate-y-0.5 group-hover:border-[#f6b800] group-hover:bg-black/46 sm:min-h-11 sm:text-xs">
                   View
                 </span>
               </div>
