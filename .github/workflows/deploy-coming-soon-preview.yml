@@ -1,6 +1,7 @@
 name: Deploy LoadLink Coming Soon Preview
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - loadlink-coming-soon
@@ -75,15 +76,18 @@ jobs:
           echo "deployment_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
           echo "Deployment URL: $DEPLOY_URL"
 
-      - name: Verify redesigned coming soon page
+      - name: Verify current coming soon page
         shell: bash
         env:
           DEPLOY_URL: ${{ steps.deploy.outputs.deployment_url }}
         run: |
           set -Eeuo pipefail
           HTML="$(curl -L -sS "$DEPLOY_URL")"
-          echo "$HTML" | grep -q "South Africa moves."
-          echo "$HTML" | grep -q "LoadLink connects it."
+          echo "$HTML" | grep -q "Your business has been selected for complimentary LoadLink access."
+          echo "$HTML" | grep -q "Activate free trial"
+          echo "$HTML" | grep -q "Follow the build"
+          echo "$HTML" | grep -q "Instagram"
+          echo "$HTML" | grep -q "LinkedIn"
           echo "$HTML" | grep -q "30+"
           echo "$HTML" | grep -q "60+"
           echo "$HTML" | grep -q "40+"
