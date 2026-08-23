@@ -40,6 +40,7 @@ function findAttachmentButton(fileName: string, attachmentId: string) {
 }
 
 function renderPreview(button: HTMLButtonElement, url: string, fileName: string, attachmentId: string) {
+  if (button.querySelector('[data-loadlink-inline-image="true"]')) return;
   button.dataset.loadlinkInlineMedia = attachmentId;
   button.setAttribute("aria-label", `Open ${fileName}`);
   button.classList.add("loadlink-inline-image-attachment");
@@ -78,7 +79,7 @@ export default function LoadLinkChatMediaPreview20260823() {
         for (const message of images) {
           if (!alive || !message.attachment_id || !message.file_name) break;
           const button = findAttachmentButton(message.file_name, message.attachment_id);
-          if (!button) continue;
+          if (!button || button.querySelector('[data-loadlink-inline-image="true"]')) continue;
           let url = cacheRef.current.get(message.attachment_id) || "";
           if (!url) {
             const result = await supabase.rpc("get_listing_guest_attachment", { p_attachment_id: message.attachment_id, p_access_key: thread.accessKey });
@@ -100,7 +101,10 @@ export default function LoadLinkChatMediaPreview20260823() {
       timerRef.current = window.setTimeout(() => void hydrate(), lastThreadRef.current === currentThread() ? 180 : 20);
     };
     schedule();
-    const observer = new MutationObserver(schedule);
+    const observer = new MutationObserver((mutations) => {
+      const onlyInlineMedia = mutations.length > 0 && mutations.every((mutation) => Array.from(mutation.addedNodes).every((node) => node instanceof HTMLElement && (node.dataset.loadlinkInlineImage === "true" || node.dataset.loadlinkInlineImageCaption === "true" || Boolean(node.closest?.('[data-loadlink-inline-media]')))));
+      if (!onlyInlineMedia) schedule();
+    });
     observer.observe(document.body, { childList: true, subtree: true });
     window.addEventListener("popstate", schedule);
     window.addEventListener("loadlink-chat-unread-updated", schedule);
