@@ -1,0 +1,6 @@
+LoadLink Coming Soon GitHub Pages status
+Configure: failure
+Upload: skipped
+Deploy: skipped
+Page URL: not-created
+Recorded: 2026-08-23T01:15:30Z
