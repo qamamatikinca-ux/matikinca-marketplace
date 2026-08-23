@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -30,11 +30,13 @@ jobs:
           ref: loadlink-coming-soon
 
       - name: Configure Pages
+        id: configure
         uses: actions/configure-pages@v5
         with:
           enablement: true
 
       - name: Upload Coming Soon site
+        id: upload
         uses: actions/upload-pages-artifact@v3
         with:
           path: public-coming-soon
@@ -42,3 +44,28 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Record Pages result on Coming Soon branch
+        if: always()
+        shell: bash
+        env:
+          DEPLOY_OUTCOME: ${{ steps.deployment.outcome }}
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          CONFIGURE_OUTCOME: ${{ steps.configure.outcome }}
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
+        run: |
+          set -u
+          mkdir -p deploy
+          {
+            echo "LoadLink Coming Soon GitHub Pages status"
+            echo "Configure: ${CONFIGURE_OUTCOME:-unknown}"
+            echo "Upload: ${UPLOAD_OUTCOME:-unknown}"
+            echo "Deploy: ${DEPLOY_OUTCOME:-unknown}"
+            echo "Page URL: ${PAGE_URL:-not-created}"
+            echo "Recorded: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > deploy/github-pages-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add deploy/github-pages-status.txt
+          git commit -m "Record GitHub Pages deployment status" || true
+          git push origin HEAD:loadlink-coming-soon
