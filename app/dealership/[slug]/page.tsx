@@ -2,5 +2,5 @@ import PublicDealershipExperience from "@/components/dealer/PublicDealershipExpe
 
 export default async function DealershipPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  return <PublicDealershipExperience slug={slug} />;
+  return <div data-loadlink-major-showroom="true"><PublicDealershipExperience slug={slug} /></div>;
 }
