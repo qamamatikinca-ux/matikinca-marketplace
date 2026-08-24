@@ -2,16 +2,19 @@ export type GoogleMapsNamespace = {
   importLibrary: (libraryName: string) => Promise<Record<string, unknown>>;
 };
 
-declare global {
-  interface Window {
-    google?: {
-      maps?: GoogleMapsNamespace;
-    };
-  }
-}
+type LoadLinkGoogleWindow = Window & {
+  google?: {
+    maps?: GoogleMapsNamespace;
+  };
+};
 
 const SCRIPT_ID = "loadlink-google-maps-js";
 let mapsPromise: Promise<GoogleMapsNamespace> | null = null;
+
+function browserGoogleMaps() {
+  if (typeof window === "undefined") return undefined;
+  return (window as LoadLinkGoogleWindow).google?.maps;
+}
 
 export function googleMapsApiKey() {
   return (process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "").trim();
@@ -24,7 +27,7 @@ export function googleMapsConfigured() {
 export async function loadGoogleMaps(): Promise<GoogleMapsNamespace> {
   if (typeof window === "undefined") throw new Error("Google Maps can only load in the browser.");
 
-  const existingMaps = window.google?.maps;
+  const existingMaps = browserGoogleMaps();
   if (existingMaps?.importLibrary) return existingMaps;
 
   const apiKey = googleMapsApiKey();
@@ -34,7 +37,7 @@ export async function loadGoogleMaps(): Promise<GoogleMapsNamespace> {
 
   mapsPromise = new Promise<GoogleMapsNamespace>((resolve, reject) => {
     const finish = () => {
-      const maps = window.google?.maps;
+      const maps = browserGoogleMaps();
       if (maps?.importLibrary) resolve(maps);
       else reject(new Error("Google Maps loaded without the expected Maps JavaScript API."));
     };
@@ -46,7 +49,7 @@ export async function loadGoogleMaps(): Promise<GoogleMapsNamespace> {
 
     const existingScript = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
     if (existingScript) {
-      if (window.google?.maps?.importLibrary) {
+      if (browserGoogleMaps()?.importLibrary) {
         finish();
         return;
       }
