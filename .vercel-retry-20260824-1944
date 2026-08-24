@@ -1,0 +1,3 @@
+Retry production deployment at 2026-08-24 19:44 SAST.
+Source: main
+Reason: user requested production upload retry after Vercel Hobby build-rate limit.
