@@ -43,8 +43,15 @@ export default function LoadLinkDealershipOwnerEdit20260823() {
 
   if (!state) return null;
   return createPortal(
-    <Link href="/dealer?section=showroom" data-loadlink-owner-edit-pencil="true" className="absolute right-4 top-4 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white shadow-lg backdrop-blur-xl transition hover:bg-black/75" aria-label="Edit your dealership showroom" title="Edit dealership">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 19 1-4 9.8-9.8a2.1 2.1 0 0 1 3 3L9 18l-4 1Z" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/><path d="m14.5 6.5 3 3" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"/></svg>
+    <Link
+      href="/dealer?section=showroom"
+      data-loadlink-owner-edit-pencil="true"
+      className="absolute bottom-4 right-4 z-30 inline-flex min-h-10 items-center gap-2 rounded-full border border-white/16 bg-black/62 px-3.5 text-[11px] font-black text-white shadow-[0_10px_30px_rgba(0,0,0,.24)] backdrop-blur-xl transition hover:bg-black/78 active:scale-[.98] sm:bottom-5 sm:right-5"
+      aria-label="Edit your dealership showroom"
+      title="Edit showroom"
+    >
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 19 1-4 9.8-9.8a2.1 2.1 0 0 1 3 3L9 18l-4 1Z" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/><path d="m14.5 6.5 3 3" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"/></svg>
+      <span>Edit showroom</span>
     </Link>,
     state.host,
   );
