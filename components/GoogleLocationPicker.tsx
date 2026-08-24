@@ -123,16 +123,37 @@ export default function GoogleLocationPicker({
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const elementRef = useRef<PlaceAutocompleteElementLike | null>(null);
+  const onValueChangeRef = useRef(onValueChange);
+  const onSelectRef = useRef(onSelect);
+  const valueRef = useRef(value);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [locating, setLocating] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    onValueChangeRef.current = onValueChange;
+  }, [onValueChange]);
+
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
+
+  useEffect(() => {
+    valueRef.current = value;
+    if (!elementRef.current || elementRef.current.value === value) return;
+    elementRef.current.value = value;
+  }, [value]);
+
+  useEffect(() => {
     if (!googleMapsConfigured()) return;
     let active = true;
+    let autocomplete: PlaceAutocompleteElementLike | null = null;
     let inputListener: EventListener | null = null;
     let selectListener: EventListener | null = null;
+
+    setFailed(false);
+    setReady(false);
 
     void (async () => {
       try {
@@ -142,23 +163,24 @@ export default function GoogleLocationPicker({
         };
         if (!active || !hostRef.current || !library.PlaceAutocompleteElement) return;
 
-        const autocomplete = new library.PlaceAutocompleteElement();
+        autocomplete = new library.PlaceAutocompleteElement();
         autocomplete.includedRegionCodes = ["za"];
         autocomplete.placeholder = placeholder;
         autocomplete.description = ariaLabel;
-        autocomplete.value = value;
+        autocomplete.value = valueRef.current;
         autocomplete.noInputIcon = true;
         autocomplete.style.display = "block";
         autocomplete.style.width = "100%";
         autocomplete.style.minWidth = "0";
 
         inputListener = (() => {
-          onValueChange(autocomplete.value || "");
+          if (!autocomplete) return;
+          onValueChangeRef.current(autocomplete.value || "");
         }) as EventListener;
 
         selectListener = (async (event: Event) => {
           const prediction = (event as PlaceSelectEvent).placePrediction;
-          if (!prediction) return;
+          if (!prediction || !autocomplete) return;
           try {
             setMessage("");
             const place = prediction.toPlace();
@@ -174,8 +196,8 @@ export default function GoogleLocationPicker({
             const label = place.formattedAddress || place.displayName || autocomplete.value || city;
 
             autocomplete.value = label;
-            onValueChange(label);
-            onSelect({
+            onValueChangeRef.current(label);
+            onSelectRef.current({
               label,
               city: city || place.displayName || label,
               province,
@@ -201,16 +223,11 @@ export default function GoogleLocationPicker({
 
     return () => {
       active = false;
-      if (elementRef.current && inputListener) elementRef.current.removeEventListener("input", inputListener);
-      if (elementRef.current && selectListener) elementRef.current.removeEventListener("gmp-select", selectListener);
-      elementRef.current = null;
+      if (autocomplete && inputListener) autocomplete.removeEventListener("input", inputListener);
+      if (autocomplete && selectListener) autocomplete.removeEventListener("gmp-select", selectListener);
+      if (elementRef.current === autocomplete) elementRef.current = null;
     };
-  }, [ariaLabel, onSelect, onValueChange, placeholder]);
-
-  useEffect(() => {
-    if (!elementRef.current || elementRef.current.value === value) return;
-    elementRef.current.value = value;
-  }, [value]);
+  }, [ariaLabel, placeholder]);
 
   async function useCurrentLocation() {
     if (!navigator.geolocation || locating) {
@@ -236,8 +253,8 @@ export default function GoogleLocationPicker({
             const province = geocoderComponentValue(result?.address_components, ["administrative_area_level_1"]);
             const label = result?.formatted_address || city || "Current location";
             if (elementRef.current) elementRef.current.value = label;
-            onValueChange(label);
-            onSelect({
+            onValueChangeRef.current(label);
+            onSelectRef.current({
               label,
               city: city || label,
               province,
@@ -265,7 +282,7 @@ export default function GoogleLocationPicker({
     return (
       <SouthAfricaLocationInput
         value={value}
-        onChange={(next) => onValueChange(next)}
+        onChange={(next) => onValueChangeRef.current(next)}
         darkMode={darkMode}
         allowAllSouthAfrica={false}
         placeholder="City or town"
@@ -300,7 +317,7 @@ export default function GoogleLocationPicker({
           </button>
         ) : null}
       </div>
-      {message ? <p className="mt-2 text-[10px] font-bold text-amber-700 dark:text-amber-300">{message}</p> : null}
+      {message ? <p className={`mt-2 text-[10px] font-bold ${darkMode ? "text-amber-300" : "text-amber-700"}`}>{message}</p> : null}
     </div>
   );
 }
