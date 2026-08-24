@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-type DealerUpdate = {
+type ActiveDealerStatus = {
   dealership_id: string;
   slug: string;
   dealership_name: string;
@@ -17,9 +17,19 @@ type DealerUpdate = {
   expires_at: string;
 };
 
+type FollowedDealer = {
+  dealership_id: string;
+  slug: string;
+  dealership_name: string;
+  image_url: string | null;
+  status_id: string | null;
+  status_title: string | null;
+  seen: boolean;
+};
+
 type Props = { darkMode: boolean; onAvailabilityChange?: (available: boolean) => void };
 
-function uniqueDealers(rows: DealerUpdate[]) {
+function uniqueActiveStatuses(rows: ActiveDealerStatus[]) {
   const seen = new Set<string>();
   return rows.filter((row) => {
     const key = row.dealership_id || row.slug;
@@ -31,35 +41,95 @@ function uniqueDealers(rows: DealerUpdate[]) {
 
 export default function LoadLinkDealerUpdateRail20260822({ darkMode, onAvailabilityChange }: Props) {
   const router = useRouter();
-  const [updates, setUpdates] = useState<DealerUpdate[]>([]);
+  const [dealers, setDealers] = useState<FollowedDealer[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
     let active = true;
     let timer = 0;
+
     async function load() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!active) return;
+
       const authenticated = Boolean(session?.user);
       setSignedIn(authenticated);
-      if (!authenticated) { setUpdates([]); setLoaded(true); onAvailabilityChange?.(false); return; }
-      const { data, error } = await supabase.rpc("loadlink_my_followed_dealer_updates");
+      if (!session?.user) {
+        setDealers([]);
+        setLoaded(true);
+        onAvailabilityChange?.(false);
+        return;
+      }
+
+      const followsResult = await supabase
+        .from("dealership_followers")
+        .select("dealership_id")
+        .eq("user_id", session.user.id)
+        .limit(24);
+
       if (!active) return;
-      const rows = !error && Array.isArray(data) ? uniqueDealers(data as DealerUpdate[]) : [];
-      setUpdates(rows); setLoaded(true); onAvailabilityChange?.(rows.length > 0);
+      const followedIds = !followsResult.error
+        ? [...new Set((followsResult.data || []).map((row) => String(row.dealership_id || "")).filter(Boolean))]
+        : [];
+
+      if (!followedIds.length) {
+        setDealers([]);
+        setLoaded(true);
+        onAvailabilityChange?.(false);
+        return;
+      }
+
+      const [profilesResult, statusesResult] = await Promise.all([
+        supabase
+          .from("public_dealership_profiles")
+          .select("id,slug,name,profile_image_url")
+          .in("id", followedIds),
+        supabase.rpc("loadlink_my_followed_dealer_updates"),
+      ]);
+
+      if (!active) return;
+
+      const activeStatuses = !statusesResult.error && Array.isArray(statusesResult.data)
+        ? uniqueActiveStatuses(statusesResult.data as ActiveDealerStatus[])
+        : [];
+      const statusByDealer = new Map(activeStatuses.map((status) => [String(status.dealership_id), status]));
+      const profileById = new Map((profilesResult.data || []).map((profile) => [String(profile.id), profile]));
+
+      const nextDealers = followedIds.flatMap((dealershipId): FollowedDealer[] => {
+        const profile = profileById.get(dealershipId);
+        if (!profile?.slug || !profile?.name) return [];
+        const status = statusByDealer.get(dealershipId);
+        return [{
+          dealership_id: dealershipId,
+          slug: String(profile.slug),
+          dealership_name: String(profile.name),
+          image_url: profile.profile_image_url ? String(profile.profile_image_url) : null,
+          status_id: status?.status_id || null,
+          status_title: status?.title || null,
+          seen: status?.seen ?? true,
+        }];
+      });
+
+      setDealers(nextDealers);
+      setLoaded(true);
+      onAvailabilityChange?.(nextDealers.length > 0);
     }
+
     void load();
     timer = window.setInterval(() => void load(), 15_000);
     const refresh = () => void load();
     const visibility = () => { if (document.visibilityState === "visible") void load(); };
+
     window.addEventListener("loadlink-dealership-follow-changed", refresh);
     window.addEventListener("loadlink-dealership-status-changed", refresh);
     window.addEventListener("loadlink-account-state-changed", refresh);
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", visibility);
+
     return () => {
-      active = false; window.clearInterval(timer);
+      active = false;
+      window.clearInterval(timer);
       window.removeEventListener("loadlink-dealership-follow-changed", refresh);
       window.removeEventListener("loadlink-dealership-status-changed", refresh);
       window.removeEventListener("loadlink-account-state-changed", refresh);
@@ -68,33 +138,99 @@ export default function LoadLinkDealerUpdateRail20260822({ darkMode, onAvailabil
     };
   }, [onAvailabilityChange]);
 
-  const visibleUpdates = useMemo(() => uniqueDealers(updates), [updates]);
+  const visibleDealers = useMemo(() => dealers, [dealers]);
 
-  function openStatus(update: DealerUpdate) {
-    setUpdates((current) => current.map((item) => item.dealership_id === update.dealership_id ? { ...item, seen: true } : item));
-    void supabase.rpc("loadlink_mark_followed_dealer_status_seen", { p_status_id: update.status_id });
-    window.dispatchEvent(new CustomEvent("loadlink:open-dealer-status", { detail: { dealershipId: update.dealership_id, statusId: update.status_id, dealershipName: update.dealership_name, slug: update.slug, imageUrl: update.image_url } }));
+  function openDealer(dealer: FollowedDealer) {
+    if (dealer.status_id) {
+      setDealers((current) => current.map((item) =>
+        item.dealership_id === dealer.dealership_id ? { ...item, seen: true } : item,
+      ));
+      void supabase.rpc("loadlink_mark_followed_dealer_status_seen", { p_status_id: dealer.status_id });
+      window.dispatchEvent(new CustomEvent("loadlink:open-dealer-status", {
+        detail: {
+          dealershipId: dealer.dealership_id,
+          statusId: dealer.status_id,
+          dealershipName: dealer.dealership_name,
+          slug: dealer.slug,
+          imageUrl: dealer.image_url,
+        },
+      }));
+      return;
+    }
+
+    router.push(`/dealership/${encodeURIComponent(dealer.slug)}`);
   }
 
   if (!loaded || !signedIn) return null;
-  return <div data-loadlink-dealer-update-rail className="mb-4">
-    <div className="no-scrollbar -mx-1 overflow-x-auto px-1 pb-1" aria-label="Dealership updates"><div className="flex min-w-max gap-3 pr-2">
-      <button type="button" onClick={() => router.push("/following?discover=1")} className="group w-[66px] shrink-0 text-center outline-none" aria-label="Find other dealerships">
-        <span className={`relative mx-auto grid h-[56px] w-[56px] place-items-center rounded-full border backdrop-blur-xl transition group-active:scale-[.97] ${darkMode ? "border-white/12 bg-white/[.09] text-white" : "border-black/10 bg-black/[.78] text-white"}`}><AddDealerIcon /></span>
-        <span className={`mt-1.5 block truncate text-[10px] font-semibold ${darkMode ? "text-white/64" : "text-black/64"}`}>Find dealers</span>
-      </button>
-      {visibleUpdates.map((update) => {
-        const initial = update.dealership_name.trim().charAt(0).toUpperCase() || "L";
-        return <button key={update.dealership_id} type="button" onClick={() => openStatus(update)} className="group w-[66px] shrink-0 text-center outline-none" aria-label={`View ${update.dealership_name} status${update.seen ? "" : ", new update"}`}>
-          <span className={`relative mx-auto block h-[56px] w-[56px] rounded-full p-[2px] transition group-active:scale-[.97] ${update.seen ? darkMode ? "bg-white/14" : "bg-black/10" : "bg-[#f6b800]"}`}>
-            <span className={`relative flex h-full w-full items-center justify-center overflow-hidden rounded-full border text-sm font-extrabold ${darkMode ? "border-black bg-[#171717] text-white" : "border-white bg-white text-black"}`}>{initial}{update.image_url ? <img src={update.image_url} alt="" loading="eager" className="absolute inset-0 h-full w-full object-cover object-center" /> : null}</span>
-            {!update.seen ? <span className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 ${darkMode ? "border-black bg-[#f6b800]" : "border-white bg-[#f6b800]"}`} aria-hidden="true" /> : null}
-          </span>
-          <span className={`mt-1.5 block truncate text-[10px] font-semibold tracking-[-.01em] ${darkMode ? "text-white/68" : "text-black/68"}`}>{update.dealership_name}</span>
-        </button>;
-      })}
-    </div></div>
-  </div>;
+
+  return (
+    <div data-loadlink-dealer-update-rail className="mb-4">
+      <div className="no-scrollbar -mx-1 overflow-x-auto px-1 pb-1" aria-label="Followed dealerships">
+        <div className="flex min-w-max gap-3 pr-2">
+          <button
+            type="button"
+            onClick={() => router.push("/following?discover=1")}
+            className="group w-[66px] shrink-0 text-center outline-none"
+            aria-label="Find other dealerships"
+          >
+            <span className={`relative mx-auto grid h-[56px] w-[56px] place-items-center rounded-full border backdrop-blur-xl transition group-active:scale-[.97] ${darkMode ? "border-white/12 bg-white/[.09] text-white" : "border-black/10 bg-black/[.78] text-white"}`}>
+              <AddDealerIcon />
+            </span>
+            <span className={`mt-1.5 block truncate text-[10px] font-semibold ${darkMode ? "text-white/64" : "text-black/64"}`}>Find dealers</span>
+          </button>
+
+          {visibleDealers.map((dealer) => {
+            const hasStatus = Boolean(dealer.status_id);
+            const initial = dealer.dealership_name.trim().charAt(0).toUpperCase() || "L";
+            const ringClass = hasStatus
+              ? dealer.seen
+                ? darkMode ? "bg-white/14" : "bg-black/10"
+                : "bg-[#f6b800]"
+              : darkMode
+                ? "border border-white/14 bg-transparent"
+                : "border border-black/12 bg-transparent";
+
+            return (
+              <button
+                key={dealer.dealership_id}
+                type="button"
+                onClick={() => openDealer(dealer)}
+                className="group w-[66px] shrink-0 text-center outline-none"
+                aria-label={hasStatus
+                  ? `View ${dealer.dealership_name} status${dealer.seen ? "" : ", new update"}`
+                  : `Open ${dealer.dealership_name} showroom`}
+                title={hasStatus ? `View ${dealer.dealership_name} status` : `Open ${dealer.dealership_name} showroom`}
+              >
+                <span className={`relative mx-auto block h-[56px] w-[56px] rounded-full p-[2px] transition group-active:scale-[.97] ${ringClass}`}>
+                  <span className={`relative flex h-full w-full items-center justify-center overflow-hidden rounded-full border text-sm font-extrabold ${darkMode ? "border-black bg-[#171717] text-white" : "border-white bg-white text-black"}`}>
+                    {initial}
+                    {dealer.image_url ? (
+                      <img src={dealer.image_url} alt="" loading="eager" className="absolute inset-0 h-full w-full object-cover object-center" />
+                    ) : null}
+                  </span>
+                  {hasStatus && !dealer.seen ? (
+                    <span className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 ${darkMode ? "border-black bg-[#f6b800]" : "border-white bg-[#f6b800]"}`} aria-hidden="true" />
+                  ) : null}
+                </span>
+                <span className={`mt-1.5 block truncate text-[10px] font-semibold tracking-[-.01em] ${darkMode ? "text-white/68" : "text-black/68"}`}>
+                  {dealer.dealership_name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
 }
 
-function AddDealerIcon() { return <svg width="27" height="27" viewBox="0 0 27 27" fill="none" aria-hidden="true"><circle cx="10" cy="7.5" r="4" fill="currentColor" /><path d="M2.6 20.8c.35-5 3.1-7.7 7.4-7.7s7.05 2.7 7.4 7.7c.05.7-.5 1.2-1.15 1.2H3.75c-.65 0-1.2-.5-1.15-1.2Z" fill="currentColor" /><circle cx="20.2" cy="18.8" r="5.5" fill="white" /><path d="M20.2 15.9v5.8M17.3 18.8h5.8" stroke="#222" strokeWidth="1.9" strokeLinecap="round" /></svg>; }
+function AddDealerIcon() {
+  return (
+    <svg width="27" height="27" viewBox="0 0 27 27" fill="none" aria-hidden="true">
+      <circle cx="10" cy="7.5" r="4" fill="currentColor" />
+      <path d="M2.6 20.8c.35-5 3.1-7.7 7.4-7.7s7.05 2.7 7.4 7.7c.05.7-.5 1.2-1.15 1.2H3.75c-.65 0-1.2-.5-1.15-1.2Z" fill="currentColor" />
+      <circle cx="20.2" cy="18.8" r="5.5" fill="white" />
+      <path d="M20.2 15.9v5.8M17.3 18.8h5.8" stroke="#222" strokeWidth="1.9" strokeLinecap="round" />
+    </svg>
+  );
+}
