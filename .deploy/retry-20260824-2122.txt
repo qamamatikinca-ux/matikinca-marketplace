@@ -1,2 +1,3 @@
-LoadLink production retry triggered 2026-08-24 21:22 SAST.
+LoadLink production retry triggered 2026-08-24 22:35 SAST.
 Target: primary matikinca-marketplace production deployment.
+Reason: retry after previous Hobby build-rate-limit window.
