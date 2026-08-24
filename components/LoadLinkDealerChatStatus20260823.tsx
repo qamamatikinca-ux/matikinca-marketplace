@@ -30,8 +30,9 @@ export default function LoadLinkDealerChatStatus20260823() {
     const header = document.querySelector<HTMLElement>(".loadlink-chat-header");
     if (!header) return;
 
-    const image = header.querySelector<HTMLImageElement>('img[alt*="profile"], img');
-    const avatar = image?.closest<HTMLElement>('span[aria-label*="profile picture"]') || image?.parentElement;
+    const avatar = header.querySelector<HTMLElement>('span[aria-label$=" profile picture"]')
+      || header.querySelector<HTMLImageElement>('img[alt*="profile"]')?.parentElement
+      || null;
 
     header.querySelectorAll<HTMLElement>('[data-loadlink-dealer-profile-target="true"]').forEach((node) => {
       if (node !== avatar) {
