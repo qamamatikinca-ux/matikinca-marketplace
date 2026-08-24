@@ -33,6 +33,7 @@ import ChatLauncher from "@/components/ChatLauncher";
 import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";
 import AuthBootstrap from "@/components/AuthBootstrap";
 import NotificationCenter from "@/components/NotificationCenter";
+import LoadLinkCommunicationLayer from "@/components/LoadLinkCommunicationLayer";
 import ThemeCoordinator from "@/components/ThemeCoordinator";
 import SimpleModeCoordinator from "@/components/SimpleModeCoordinator";
 import AccountActivityTracker from "@/components/AccountActivityTracker";
@@ -101,7 +102,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body data-loadlink-release="20260823-final-product-pass">
         <ThemeCoordinator /><LoadLinkUiRepairV273 /><SimpleModeCoordinator /><AccountActivityTracker /><AuthMfaGate /><ProfileOnboardingGate /><MarketplaceRestrictionGuard /><AccountSettingsGlassFix /><LoadLinkSelectLabelFix /><LoadLinkInteractionSystem /><LoadLinkTouchScrollGuard /><LoadLinkShareEnhancer /><DealerPostBenefitsEnhancer /><MarketplaceUxPolishEnhancer /><PhotoGalleryModernizer /><LoadLinkUniversalUiGuard /><LoadLinkAuditUpdateBridge /><LoadLinkCriticalInteractionFixes /><LoadLinkFinalUxRepair20260820 /><LoadLinkFinalReleasePolishBootstrap20260821 /><LoadLinkReleaseCompletion20260821 /><LoadLinkReleaseRecovery20260821 /><LoadLinkProductRepair20260822 /><LoadLinkMobileUxCorrection20260822 /><ListingReportGuard /><ChatComposerActions /><LogisticsToolsFinalEnhancer /><DealerWorkspaceNavigationEnhancer /><DealerPackageDetailsEnhancer /><LoadLinkMajorUpdate20260823 /><LoadLinkCallBootstrap /><LoadLinkCallFallback20260823 /><LoadLinkCallHistoryStrip20260823 /><LoadLinkDealerChatStatus20260823 /><LoadLinkChatUiPolish20260823 /><LoadLinkChatMediaPreview20260823 /><LoadLinkChatInfoCompletion20260823 /><LoadLinkDealerStatusViewer20260823 /><LoadLinkLocationCompletion20260823 /><LoadLinkDistanceLayer20260823 /><LoadLinkDealershipOwnerEdit20260823 /><LoadLinkFinalProductPass20260823 /><LoadLinkCookieConsent20260822 />
         <Suspense fallback={null}><GlobalLoading /></Suspense>
-        <SwipeDotsEnhancer /><AuthBootstrap /><NotificationCenter /><ChatLauncher /><LoadLinkToastCenter /><LoadLinkDeleteConfirmationLayer /><NetworkRecovery />
+        <SwipeDotsEnhancer /><AuthBootstrap /><NotificationCenter /><LoadLinkCommunicationLayer /><ChatLauncher /><LoadLinkToastCenter /><LoadLinkDeleteConfirmationLayer /><NetworkRecovery />
         {children}
         <Suspense fallback={null}><LoadLinkRuntimeBoundary /></Suspense>
       </body>
