@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 type Tool = { href:string; eyebrow:string; title:string; description:string; roles:string[] };
 
 const tools:Tool[]=[
+ {href:"/admin/communications",eyebrow:"Customers",title:"Communication Studio",description:"Publish targeted LoadLink banners, notices and inbox updates with scheduling, presentation controls and interaction tracking.",roles:["owner","admin","operations"]},
  {href:"/admin/listings",eyebrow:"Marketplace",title:"Listing moderation",description:"Approve or reject jobs, contracts and vehicle listings with the user-facing reason kept in sync.",roles:["owner","admin","operations","moderator"]},
  {href:"/admin/reports",eyebrow:"Safety",title:"Marketplace reports",description:"Investigate member reports, open the affected listing and record a protected resolution.",roles:["owner","admin","operations","moderator","support"]},
  {href:"/admin/drivers",eyebrow:"Drivers",title:"Driver reviews",description:"Review driver profiles and private documents before approved drivers become public.",roles:["owner","admin","operations","moderator","verification"]},
