@@ -2,6 +2,8 @@
 
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import GoogleLocationPicker, { type GoogleLocationSelection } from "@/components/GoogleLocationPicker";
+import GoogleMapPreview from "@/components/GoogleMapPreview";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
@@ -21,7 +23,6 @@ import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 type VehicleGroup = "Catering / Event" | "Trucks / Trailers" | "Farming / Mining";
 const groups: VehicleGroup[] = ["Trucks / Trailers", "Catering / Event", "Farming / Mining"];
-const cities = ["Johannesburg", "Pretoria", "Centurion", "Midrand", "Sandton", "Durban", "Cape Town", "Gqeberha", "East London", "Bloemfontein", "Polokwane", "Mbombela", "Rustenburg", "Kimberley", "Mthatha"];
 const today = () => {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -58,6 +59,10 @@ export default function ListJobPage() {
   const [vehicleNeeded, setVehicleNeeded] = useState("");
   const [neededOn, setNeededOn] = useState(today());
   const [city, setCity] = useState("Johannesburg");
+  const [locationLabel, setLocationLabel] = useState("Johannesburg");
+  const [province, setProvince] = useState("Gauteng");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [rate, setRate] = useState("");
   const [description, setDescription] = useState("");
@@ -109,6 +114,10 @@ export default function ListJobPage() {
             setVehicleNeeded(data.vehicleNeeded || "");
             setNeededOn(data.neededOn || today());
             setCity(data.city || "Johannesburg");
+            setLocationLabel(data.locationLabel || data.city || "Johannesburg");
+            setProvince(data.province || "");
+            setLatitude(typeof data.latitude === "number" ? data.latitude : null);
+            setLongitude(typeof data.longitude === "number" ? data.longitude : null);
             setTitle(data.title || "");
             setRate(data.rate || "");
             setDescription(data.description || "");
@@ -127,10 +136,25 @@ export default function ListJobPage() {
     let active = true;
     void supabase.auth.getUser().then(({ data }) => {
       if (!active || !data.user) return;
-      localStorage.setItem(`${draftVersion}:${data.user.id}`, JSON.stringify({ group, vehicleNeeded, neededOn, city, title, rate, description, postedBy, contact, step }));
+      localStorage.setItem(`${draftVersion}:${data.user.id}`, JSON.stringify({
+        group,
+        vehicleNeeded,
+        neededOn,
+        city,
+        locationLabel,
+        province,
+        latitude,
+        longitude,
+        title,
+        rate,
+        description,
+        postedBy,
+        contact,
+        step,
+      }));
     });
     return () => { active = false; };
-  }, [ready, draftVersion, group, vehicleNeeded, neededOn, city, title, rate, description, postedBy, contact, step]);
+  }, [ready, draftVersion, group, vehicleNeeded, neededOn, city, locationLabel, province, latitude, longitude, title, rate, description, postedBy, contact, step]);
 
   async function photos(event: ChangeEvent<HTMLInputElement>) {
     const selectedFiles = Array.from(event.target.files || []).slice(0, 5);
@@ -159,13 +183,29 @@ export default function ListJobPage() {
     }
   }
 
+  function updateLocationText(value: string) {
+    setLocationLabel(value);
+    setCity(value);
+    setProvince("");
+    setLatitude(null);
+    setLongitude(null);
+  }
+
+  function selectGoogleLocation(selection: GoogleLocationSelection) {
+    setLocationLabel(selection.label);
+    setCity(selection.city || selection.label);
+    setProvince(selection.province);
+    setLatitude(selection.latitude);
+    setLongitude(selection.longitude);
+  }
+
   function next() {
     setMessage("");
     if (step === 1 && !vehicleNeeded.trim()) {
       setMessage("Tell LoadLink what vehicle or mobile unit is needed.");
       return;
     }
-    if (step === 2 && (!neededOn || neededOn < today() || !city.trim())) {
+    if (step === 2 && (!neededOn || neededOn < today() || !locationLabel.trim())) {
       setMessage(!neededOn ? "Choose the date this is needed." : neededOn < today() ? "That date has already passed. Choose today or a future date." : `Choose the ${postName} location.`);
       return;
     }
@@ -204,13 +244,14 @@ export default function ListJobPage() {
       if (!intelligence.authenticated) throw new Error(`Sign in to post this ${postName}.`);
       if (["blocked", "suspended"].includes(intelligence.account_status)) throw new Error(intelligence.account_reason || "You cannot post while this account is restricted.");
       if (!neededOn || neededOn < today()) throw new Error("Choose today or a future date.");
+      if (!locationLabel.trim()) throw new Error(`Choose the ${postName} location.`);
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) throw new Error("Your sign-in session needs to be refreshed.");
       const photoUrls = await upload(auth.user.id);
-      const rpcName = isContract ? "loadlink_submit_contract" : "loadlink_submit_job";
+      const rpcName = isContract ? "loadlink_submit_contract_v2" : "loadlink_submit_job_v2";
       const result = await supabase.rpc(rpcName, {
         p_title: title.trim(),
-        p_city: city.trim(),
+        p_city: city.trim() || locationLabel.trim(),
         p_vehicle_group: group,
         p_vehicle_needed: vehicleNeeded.trim(),
         p_needed_on: neededOn,
@@ -220,6 +261,9 @@ export default function ListJobPage() {
         p_description: description.trim(),
         p_photos: photoUrls,
         p_client_request_id: submission.current,
+        p_province: province.trim() || null,
+        p_latitude: latitude,
+        p_longitude: longitude,
       });
       if (result.error) throw result.error;
       localStorage.removeItem(`${draftVersion}:${auth.user.id}`);
@@ -270,15 +314,32 @@ export default function ListJobPage() {
             {step === 2 ? (
               <>
                 <h2 className="text-2xl font-black tracking-[-.035em]">When and where?</h2>
-                <p className={`mt-2 text-xs font-semibold ${muted}`}>Choose the date from the LoadLink calendar and add the operating location.</p>
-                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <p className={`mt-2 text-xs font-semibold ${muted}`}>Choose the date and add the operating location. Exact street address is optional.</p>
+                <div className="mt-5 grid gap-4">
                   <Field label={isContract ? "Contract starts" : "Needed on"}>
                     <span className="relative block">
                       <input type="date" data-loadlink-future-date="true" value={neededOn} min={today()} onChange={(event) => setNeededOn(event.target.value)} className={`${input} pr-12`} />
                       <span className={`pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 ${darkMode ? "text-[#f6b800]" : "text-[#8d6800]"}`}><LoadLinkIcon name="calendar" size={19} /></span>
                     </span>
                   </Field>
-                  <Field label="Location"><input list="loadlink-job-cities" value={city} onChange={(event) => setCity(event.target.value)} className={input} /><datalist id="loadlink-job-cities">{cities.map((item) => <option key={item} value={item} />)}</datalist></Field>
+                  <Field label="Location">
+                    <GoogleLocationPicker
+                      value={locationLabel}
+                      onValueChange={updateLocationText}
+                      onSelect={selectGoogleLocation}
+                      darkMode={darkMode}
+                      className={input}
+                      ariaLabel={`${postNameTitle} location`}
+                    />
+                  </Field>
+                  {latitude !== null && longitude !== null ? (
+                    <GoogleMapPreview
+                      latitude={latitude}
+                      longitude={longitude}
+                      label={`${city}${province ? `, ${province}` : ""}`}
+                      darkMode={darkMode}
+                    />
+                  ) : null}
                 </div>
               </>
             ) : null}
@@ -318,12 +379,22 @@ export default function ListJobPage() {
                 <div className={`mt-5 divide-y rounded-[20px] border ${darkMode ? "divide-white/10 border-white/10 bg-white/[.02]" : "divide-black/8 border-black/8 bg-white/[.26]"}`}>
                   <Review label="Need" value={vehicleNeeded} onEdit={() => setStep(1)} />
                   <Review label="Date" value={neededOn ? new Date(`${neededOn}T12:00:00`).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" }) : "Not selected"} onEdit={() => setStep(2)} />
-                  <Review label="Location" value={city} onEdit={() => setStep(2)} />
+                  <Review label="Location" value={locationLabel || city} onEdit={() => setStep(2)} />
                   <Review label={postNameTitle} value={title} onEdit={() => setStep(3)} />
                   <Review label="Rate" value={rate.trim() || "Negotiable"} onEdit={() => setStep(3)} />
                   <Review label="Contact" value={`${postedBy} · ${contact}`} onEdit={() => setStep(4)} />
                   <Review label="Photos" value={files.length ? `${files.length} selected` : "No photos"} onEdit={() => setStep(4)} />
                 </div>
+                {latitude !== null && longitude !== null ? (
+                  <div className="mt-4">
+                    <GoogleMapPreview
+                      latitude={latitude}
+                      longitude={longitude}
+                      label={`${city}${province ? `, ${province}` : ""}`}
+                      darkMode={darkMode}
+                    />
+                  </div>
+                ) : null}
               </>
             ) : null}
 
