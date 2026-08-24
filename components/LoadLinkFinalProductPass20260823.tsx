@@ -178,18 +178,23 @@ export default function LoadLinkFinalProductPass20260823() {
     if (!marketInput || !["sale", "sale_or_rental"].includes(marketInput.mode) || !marketInput.brand || !marketInput.model || !marketInput.year) { setMarket(null); return; }
     let alive = true;
     const timer = window.setTimeout(() => {
-      setMarketLoading(true);
-      void supabase.rpc("loadlink_vehicle_market_recommendation", {
-        p_brand: marketInput.brand,
-        p_model: marketInput.model,
-        p_year: marketInput.year,
-        p_condition: marketInput.condition,
-        p_odometer_km: marketInput.mileage,
-        p_body_type: marketInput.bodyType || null,
-      }).then(({ data, error }) => {
-        if (!alive) return;
-        setMarket(error ? { available: false, reason: "Market guide is temporarily unavailable." } : (data as MarketResult));
-      }).finally(() => alive && setMarketLoading(false));
+      void (async () => {
+        setMarketLoading(true);
+        try {
+          const { data, error } = await supabase.rpc("loadlink_vehicle_market_recommendation", {
+            p_brand: marketInput.brand,
+            p_model: marketInput.model,
+            p_year: marketInput.year,
+            p_condition: marketInput.condition,
+            p_odometer_km: marketInput.mileage,
+            p_body_type: marketInput.bodyType || null,
+          });
+          if (!alive) return;
+          setMarket(error ? { available: false, reason: "Market guide is temporarily unavailable." } : (data as MarketResult));
+        } finally {
+          if (alive) setMarketLoading(false);
+        }
+      })();
     }, 450);
     return () => { alive = false; window.clearTimeout(timer); };
   }, [marketKey]);
