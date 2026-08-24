@@ -31,6 +31,11 @@ export default function LoadLinkCommunicationLayer() {
     }
 
     setUserId(auth.user.id);
+    const syncResult = await supabase.rpc("loadlink_sync_my_campaign_notifications");
+    if (!syncResult.error && Number(syncResult.data || 0) > 0) {
+      window.dispatchEvent(new Event("loadlink-notifications-updated"));
+    }
+
     const result = await supabase.rpc("loadlink_my_active_communications");
     if (result.error) return;
     const nextCampaigns = ((result.data || []) as LoadLinkCommunication[]).filter((item) => item.surface !== "inbox");
