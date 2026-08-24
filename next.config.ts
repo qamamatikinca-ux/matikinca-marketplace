@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 
+// Production redeploy marker — 2026-08-24
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
