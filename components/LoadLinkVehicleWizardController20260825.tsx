@@ -153,6 +153,14 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode }: { 
           </div>
         </nav>
       ) : null}
+
+      <style jsx global>{`
+        [data-loadlink-vehicle-listing-shell] #vehicle-listing-form [class*="text-[#b88900]"],
+        [data-loadlink-vehicle-listing-shell] #vehicle-listing-form [class*="text-[#f6b800]"] {
+          color: inherit !important;
+          opacity: .52;
+        }
+      `}</style>
     </>
   );
 }
