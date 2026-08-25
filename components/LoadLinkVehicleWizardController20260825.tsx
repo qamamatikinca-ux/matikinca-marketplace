@@ -15,9 +15,10 @@ function getWizardSections() {
 function revealStep(step: number) {
   const { form, sections } = getWizardSections();
   if (!form || !sections.length) return false;
+  const safeStep = Math.max(0, Math.min(step, sections.length - 1));
 
   sections.forEach((section, index) => {
-    const active = index === step;
+    const active = index === safeStep;
     section.hidden = !active;
     section.setAttribute("aria-hidden", active ? "false" : "true");
     section.dataset.loadlinkWizardStep = String(index + 1);
@@ -33,12 +34,21 @@ function firstInvalidControl(section: HTMLElement) {
   return controls.find((control) => !control.disabled && !control.checkValidity()) ?? null;
 }
 
+function confirmationButton(section: HTMLElement) {
+  return Array.from(section.querySelectorAll<HTMLButtonElement>("button")).find((button) => /confirm (truck model|vehicle details)/i.test(button.textContent || "")) || null;
+}
+
 export default function LoadLinkVehicleWizardController20260825({ darkMode }: { darkMode: boolean }) {
   const [activeStep, setActiveStep] = useState(0);
   const [formReady, setFormReady] = useState(false);
   const lastStep = STEP_LABELS.length - 1;
 
   const applyStep = useCallback(() => {
+    const { sections } = getWizardSections();
+    if (sections.length && activeStep >= sections.length) {
+      setActiveStep(Math.max(0, sections.length - 1));
+      return true;
+    }
     const ready = revealStep(activeStep);
     setFormReady(ready);
     return ready;
@@ -84,12 +94,28 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode }: { 
     const { sections } = getWizardSections();
     const section = sections[activeStep];
     if (!section) return;
+
     const invalid = firstInvalidControl(section);
     if (invalid) {
       invalid.reportValidity();
       invalid.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
+
+    if (activeStep === 0 && sections.length < 2) {
+      const confirm = confirmationButton(section);
+      if (confirm) {
+        confirm.click();
+        window.setTimeout(() => {
+          const nextSections = getWizardSections().sections;
+          if (nextSections.length > 1) setActiveStep(1);
+          else confirm.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 120);
+      }
+      return;
+    }
+
+    if (activeStep + 1 >= sections.length) return;
     setActiveStep((step) => Math.min(lastStep, step + 1));
   }
 
@@ -112,7 +138,7 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode }: { 
       <section
         className={`sticky top-20 z-30 border-y px-4 py-3 backdrop-blur-xl ${darkMode ? "border-white/10 bg-black/92" : "border-black/10 bg-[#f5f1e8]/96"}`}
         aria-label="Vehicle listing progress"
-        data-loadlink-source-wizard="jobs-style-step-guide"
+        data-loadlink-source-wizard="jobs-style-working-v2"
       >
         <div className="mx-auto max-w-5xl">
           <div className="flex items-end justify-between gap-4">
@@ -134,22 +160,10 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode }: { 
           aria-label="Vehicle listing step controls"
         >
           <div className="mx-auto flex max-w-5xl items-center gap-2">
-            <button type="button" onClick={cancelListing} className={`h-12 rounded-[16px] border px-4 text-xs font-bold ${darkMode ? "border-white/14 text-white/70" : "border-black/12 text-black/65"}`}>
-              Cancel listing
-            </button>
-            {activeStep > 0 ? (
-              <button type="button" onClick={goBack} className={`h-12 rounded-[16px] border px-5 text-xs font-bold ${darkMode ? "border-white/14" : "border-black/12"}`}>
-                Back
-              </button>
-            ) : null}
+            <button type="button" onClick={cancelListing} className={`h-12 rounded-[16px] border px-4 text-xs font-bold ${darkMode ? "border-white/14 text-white/70" : "border-black/12 text-black/65"}`}>Cancel listing</button>
+            {activeStep > 0 ? <button type="button" onClick={goBack} className={`h-12 rounded-[16px] border px-5 text-xs font-bold ${darkMode ? "border-white/14" : "border-black/12"}`}>Back</button> : null}
             <div className="flex-1" />
-            {activeStep < lastStep ? (
-              <button type="button" onClick={goNext} className="h-12 min-w-[118px] rounded-[16px] bg-[#f6b800] px-5 text-sm font-bold text-black transition active:scale-[.99]">
-                Continue
-              </button>
-            ) : (
-              <span className="px-2 text-right text-[11px] font-semibold opacity-55">Review your details, then submit below.</span>
-            )}
+            {activeStep < lastStep ? <button type="button" onClick={goNext} className="h-12 min-w-[118px] rounded-[16px] bg-[#f6b800] px-5 text-sm font-bold text-black transition active:scale-[.99]">Continue</button> : <span className="px-2 text-right text-[11px] font-semibold opacity-55">Review your details, then submit below.</span>}
           </div>
         </nav>
       ) : null}
