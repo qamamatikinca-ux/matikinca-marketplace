@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type SyntheticEvent } from "react";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import PublicDealerStatus from "@/components/dealer/PublicDealerStatus";
+import { getLoadLinkIntelligence } from "@/lib/loadlinkIntelligence";
 import { supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
@@ -38,6 +39,13 @@ type Listing = {
 
 type Review = { id: string; rating: number; body?: string | null };
 type Update = { id: string; title: string; body: string; image_url?: string | null };
+type HoursValue = { closed?: boolean; open?: string; close?: string };
+
+type OpenState = {
+  label: "Open" | "Closed" | "Hours unavailable";
+  open: boolean;
+  detail: string;
+};
 
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "LL";
@@ -73,17 +81,49 @@ function viewerKey() {
   return value;
 }
 
-function todayHours(raw?: string | null) {
-  if (!raw) return "Hours not supplied";
+function parseHours(raw?: string | null) {
+  if (!raw) return null;
   try {
-    const data = JSON.parse(raw) as Record<string, { closed?: boolean; open?: string; close?: string }>;
-    const day = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][new Date().getDay()];
-    const value = data[day];
-    if (!value) return "Hours available";
-    return value.closed ? `${day}: Closed` : `${day}: ${value.open || "–"}–${value.close || "–"}`;
+    return JSON.parse(raw) as Record<string, HoursValue>;
   } catch {
-    return raw;
+    return null;
   }
+}
+
+function johannesburgClock() {
+  const parts = new Intl.DateTimeFormat("en-ZA", {
+    timeZone: "Africa/Johannesburg",
+    weekday: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+  const pick = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value || "";
+  return { day: pick("weekday"), hour: Number(pick("hour")), minute: Number(pick("minute")) };
+}
+
+function minutes(value?: string) {
+  const match = String(value || "").match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function dealershipOpenState(raw?: string | null): OpenState {
+  const schedule = parseHours(raw);
+  if (!schedule) return { label: "Hours unavailable", open: false, detail: raw || "Trading hours not supplied" };
+  const clock = johannesburgClock();
+  const value = schedule[clock.day];
+  if (!value || value.closed) return { label: "Closed", open: false, detail: `${clock.day}: Closed` };
+  const start = minutes(value.open);
+  const end = minutes(value.close);
+  const now = clock.hour * 60 + clock.minute;
+  if (start === null || end === null) return { label: "Closed", open: false, detail: `${clock.day}: Hours not supplied` };
+  const open = end >= start ? now >= start && now < end : now >= start || now < end;
+  return {
+    label: open ? "Open" : "Closed",
+    open,
+    detail: `${clock.day}: ${value.open || "–"}–${value.close || "–"}`,
+  };
 }
 
 export default function PublicDealershipInstagramShowroom({ slug }: { slug: string }) {
@@ -98,12 +138,15 @@ export default function PublicDealershipInstagramShowroom({ slug }: { slug: stri
   const [stock, setStock] = useState("all");
   const [loading, setLoading] = useState(true);
   const [stockLoading, setStockLoading] = useState(false);
+  const [verificationOpen, setVerificationOpen] = useState(false);
+  const [membershipLoading, setMembershipLoading] = useState(false);
 
   const page = darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black";
-  const surface = darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white";
+  const surface = darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-white/62";
   const border = darkMode ? "border-white/10" : "border-black/10";
   const muted = darkMode ? "text-white/56" : "text-black/56";
   const average = useMemo(() => reviews.length ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length : null, [reviews]);
+  const openState = useMemo(() => dealershipOpenState(dealer?.trading_hours), [dealer?.trading_hours]);
 
   useEffect(() => {
     let alive = true;
@@ -187,6 +230,26 @@ export default function PublicDealershipInstagramShowroom({ slug }: { slug: stri
     window.dispatchEvent(new Event("loadlink-dealership-follow-changed"));
   }
 
+  async function openMembership() {
+    if (membershipLoading) return;
+    setMembershipLoading(true);
+    try {
+      const intelligence = await getLoadLinkIntelligence();
+      if (!intelligence.authenticated) {
+        window.location.assign(`/login?returnTo=${encodeURIComponent("/packages")}`);
+        return;
+      }
+      const planState = String(intelligence.plan_state || "").toLowerCase();
+      const active = ["active", "trial", "trialing", "grace_period"].includes(planState);
+      if (active && intelligence.plan === "dealer") window.location.assign("/dealer");
+      else window.location.assign("/packages");
+    } catch {
+      window.location.assign("/packages");
+    } finally {
+      setMembershipLoading(false);
+    }
+  }
+
   if (loading) {
     return <main className={`min-h-screen ${page}`}><LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} /><div className="grid min-h-[72vh] place-items-center"><div className="h-10 w-10 animate-spin rounded-full border-2 border-current/15 border-t-[#f6b800]" /></div></main>;
   }
@@ -200,7 +263,7 @@ export default function PublicDealershipInstagramShowroom({ slug }: { slug: stri
   const about = dealer.short_bio || dealer.business_description || "Commercial vehicles and mobile units on LoadLink.";
 
   return (
-    <main className={`min-h-screen ${page}`} data-loadlink-public-showroom="instagram-grid-v1">
+    <main className={`min-h-screen ${page}`} data-loadlink-public-showroom="instagram-grid-v2">
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <section className="relative isolate min-h-[360px] overflow-hidden bg-[#080808] text-white sm:min-h-[460px] md:min-h-[540px]">
@@ -229,9 +292,13 @@ export default function PublicDealershipInstagramShowroom({ slug }: { slug: stri
           </div>
 
           <div className="mt-4">
-            <div className="flex items-center gap-2"><h2 className="text-lg font-black">{dealer.name}</h2><span className="grid h-5 w-5 place-items-center rounded-full bg-[#f6b800] text-[11px] font-black text-black">✓</span></div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-black">{dealer.name}</h2>
+              <button type="button" onClick={() => setVerificationOpen(true)} aria-label="View dealership verification" className="inline-flex h-6 items-center gap-1.5 rounded-full bg-[#f6b800] px-2.5 text-[10px] font-black text-black transition active:scale-[.98]"><span aria-hidden="true">✓</span><span>Verified</span></button>
+              <span className={`inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[10px] font-black ${openState.open ? "bg-emerald-500/15 text-emerald-500" : darkMode ? "bg-white/[.07] text-white/60" : "bg-black/[.06] text-black/55"}`}><span className={`h-1.5 w-1.5 rounded-full ${openState.open ? "bg-emerald-500" : "bg-current opacity-60"}`} />{openState.label}</span>
+            </div>
             <p className={`mt-1 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>{about}</p>
-            <p className={`mt-2 text-xs font-semibold ${muted}`}>{todayHours(dealer.trading_hours)}</p>
+            <p className={`mt-2 text-xs font-semibold ${muted}`}>{openState.detail}</p>
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -291,19 +358,49 @@ export default function PublicDealershipInstagramShowroom({ slug }: { slug: stri
         )}
       </section>
 
-      <section className={`mx-auto mt-10 max-w-6xl border-t px-4 py-8 sm:px-6 ${border}`}>
-        <div className="grid gap-8 md:grid-cols-2">
-          <div>
-            <h2 className="text-2xl font-black tracking-[-.03em]">About</h2>
-            <p className={`mt-3 text-sm font-semibold leading-7 ${muted}`}>{dealer.business_description || about}</p>
-            {dealer.physical_location ? <p className="mt-4 text-sm font-bold">{dealer.physical_location}</p> : null}
+      <section className={`mx-auto mt-9 max-w-6xl border-t px-4 pb-12 pt-7 sm:px-6 ${border}`}>
+        <div className="max-w-3xl">
+          <h2 className="text-lg font-black tracking-[-.025em]">About this dealership</h2>
+          <p className={`mt-2 text-sm font-semibold leading-6 ${muted}`}>{dealer.business_description || about}</p>
+          {dealer.physical_location ? <p className="mt-3 text-xs font-bold">{dealer.physical_location}</p> : null}
+        </div>
+
+        <div id="reviews" className={`mt-7 border-t pt-6 ${border}`}>
+          <div className="flex items-center justify-between gap-4">
+            <div><p className="text-[10px] font-black uppercase tracking-[.1em] opacity-42">Customer feedback</p><h2 className="mt-1 text-xl font-black tracking-[-.025em]">Customer reviews</h2></div>
+            <div className="text-right"><p className="text-lg font-black">{average === null ? "—" : average.toFixed(1)}</p><p className={`text-[10px] font-semibold ${muted}`}>{reviews.length} review{reviews.length === 1 ? "" : "s"}</p></div>
           </div>
-          <div id="reviews">
-            <div className="flex items-end justify-between"><h2 className="text-2xl font-black tracking-[-.03em]">Reviews</h2><span className="text-sm font-black">{average === null ? "—" : `${average.toFixed(1)} / 5`}</span></div>
-            {reviews.length ? <div className="mt-4 grid gap-3">{reviews.slice(0, 4).map((review) => <article key={review.id} className={`rounded-2xl border p-4 ${surface}`}><p className="text-xs font-black tracking-[.08em] text-[#f6b800]">{"★".repeat(Math.max(1, Math.min(5, Number(review.rating || 0))))}</p>{review.body ? <p className={`mt-2 text-sm font-semibold leading-6 ${muted}`}>{review.body}</p> : null}</article>)}</div> : <p className={`mt-3 text-sm font-semibold ${muted}`}>No reviews yet.</p>}
-          </div>
+          {reviews.length ? (
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {reviews.slice(0, 6).map((review) => (
+                <article key={review.id} className={`rounded-[16px] border px-3.5 py-3 backdrop-blur-lg ${surface}`}>
+                  <div className="flex items-center justify-between gap-3"><p className="text-[10px] font-black tracking-[.06em] text-[#d49e00]">{"★".repeat(Math.max(1, Math.min(5, Number(review.rating || 0))))}</p><span className={`text-[10px] font-semibold ${muted}`}>{Number(review.rating || 0).toFixed(1)} / 5</span></div>
+                  {review.body ? <p className={`mt-2 line-clamp-3 text-xs font-semibold leading-5 ${muted}`}>{review.body}</p> : null}
+                </article>
+              ))}
+            </div>
+          ) : <p className={`mt-3 text-sm font-semibold ${muted}`}>No customer reviews yet.</p>}
         </div>
       </section>
+
+      {verificationOpen ? (
+        <div className="fixed inset-0 z-[2147483500] grid place-items-end bg-black/60 p-3 backdrop-blur-[7px] sm:place-items-center" role="dialog" aria-modal="true" aria-label="Dealership verification details">
+          <section className={`w-full max-w-md rounded-[26px] border p-5 shadow-2xl backdrop-blur-2xl ${darkMode ? "border-white/12 bg-[#0b0b0b]/94 text-white" : "border-white/70 bg-white/92 text-black"}`}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="grid h-11 w-11 place-items-center rounded-full bg-[#f6b800] text-lg font-black text-black">✓</div>
+              <button type="button" onClick={() => setVerificationOpen(false)} className={`grid h-10 w-10 place-items-center rounded-full border text-xl ${darkMode ? "border-white/12 bg-white/[.035]" : "border-black/10 bg-black/[.025]"}`} aria-label="Close verification details">×</button>
+            </div>
+            <p className="mt-5 text-[10px] font-black uppercase tracking-[.12em] text-[#b88900]">LoadLink verification</p>
+            <h2 className="mt-2 text-2xl font-black tracking-[-.04em]">Verified dealership member</h2>
+            <p className={`mt-3 text-sm font-semibold leading-6 ${muted}`}>This dealership has submitted the required business and verification documents to LoadLink. Its dealership profile is verified and it is a LoadLink dealership member.</p>
+            <div className={`mt-4 rounded-[16px] border px-4 py-3 ${surface}`}><p className="text-[10px] font-black uppercase tracking-[.08em] opacity-42">Trading now</p><p className="mt-1 text-sm font-black">{openState.label} · {openState.detail}</p></div>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setVerificationOpen(false)} className={`min-h-12 rounded-[15px] border px-4 text-sm font-bold ${darkMode ? "border-white/14 bg-white/[.035]" : "border-black/10 bg-black/[.025]"}`}>Close</button>
+              <button type="button" onClick={() => void openMembership()} disabled={membershipLoading} className="min-h-12 rounded-[15px] bg-[#f6b800] px-4 text-sm font-black text-black disabled:opacity-55">{membershipLoading ? "Checking plan…" : "Become a member"}</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
