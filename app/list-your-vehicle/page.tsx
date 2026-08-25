@@ -127,7 +127,7 @@ export default function ListYourVehiclePage() {
 
   if (!entryMode) {
     return (
-      <main className={`min-h-screen ${page}`} data-loadlink-vehicle-portal="working-entry-v10">
+      <main className={`min-h-screen ${page}`} data-loadlink-vehicle-portal="working-entry-v11">
         <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
         <section className="relative flex min-h-[600px] w-full items-end overflow-hidden bg-black text-white md:min-h-[620px]">
           <img src="/images/jobs/jobs-hero-fleet.jpg" alt="LoadLink commercial trucks, trailers and mobile units" className="absolute inset-0 h-full w-full object-cover object-center" />
@@ -136,8 +136,8 @@ export default function ListYourVehiclePage() {
             <h1 className="mx-auto max-w-4xl text-[clamp(3rem,12vw,5.7rem)] font-black leading-[.94] tracking-[-.055em]">List your truck, trailer or mobile unit.</h1>
             <p className="mx-auto mt-5 max-w-2xl text-sm font-semibold leading-7 text-white/72 md:text-base">Create a LoadLink listing in a guided flow, or browse commercial stock already on the marketplace.</p>
             <div className="mx-auto mt-7 grid w-full max-w-[650px] gap-2.5 sm:grid-cols-3">
-              <button type="button" onClick={() => openEntry("vehicle")} className="min-h-[54px] rounded-full border border-[#f6b800] bg-[#f6b800] px-5 text-xs font-black uppercase tracking-[.08em] text-black shadow-[0_12px_30px_rgba(246,184,0,.22)]">List vehicle</button>
-              <button type="button" onClick={() => openEntry("mobile-unit")} className="min-h-[54px] rounded-full border border-[#f6b800] bg-[#f6b800] px-5 text-xs font-black uppercase tracking-[.08em] text-black shadow-[0_12px_30px_rgba(246,184,0,.22)]">List mobile unit</button>
+              <button type="button" onClick={() => openEntry("vehicle")} className="min-h-[54px] rounded-full border border-[#f6b800] bg-[#f6b800] px-5 font-[inherit] text-xs font-black uppercase tracking-[.08em] text-black shadow-[0_12px_30px_rgba(246,184,0,.22)]">List vehicle</button>
+              <button type="button" onClick={() => openEntry("mobile-unit")} className="min-h-[54px] rounded-full border border-[#f6b800] bg-[#f6b800] px-5 font-[inherit] text-xs font-black uppercase tracking-[.08em] text-black shadow-[0_12px_30px_rgba(246,184,0,.22)]">List mobile unit</button>
               <a href="#vehicle-marketplace" className="flex min-h-[54px] items-center justify-center rounded-full border border-[#f6b800] bg-black/58 px-5 text-xs font-black uppercase tracking-[.08em] text-[#f6b800]">Browse marketplace</a>
             </div>
           </div>
@@ -182,30 +182,53 @@ export default function ListYourVehiclePage() {
   }
 
   return (
-    <main className={page} data-loadlink-vehicle-listing-shell="working-guided-flow-v10">
+    <main className={page} data-loadlink-vehicle-listing-shell="working-guided-flow-v11">
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
       <LoadLinkVehicleEntryBootstrap20260825 mode={entryMode as "vehicle" | "mobile-unit"} />
-      <LoadLinkVehicleWizardController20260825 darkMode={darkMode} />
+      <LoadLinkVehicleWizardController20260825 darkMode={darkMode} listingKind={entryMode === "mobile-unit" ? "mobile-unit" : "vehicle"} />
       <div id="listing-form" className="scroll-mt-36"><LegacyVehicleListingPage /></div>
       <style jsx global>{`
-        [data-loadlink-vehicle-listing-shell="working-guided-flow-v10"] #listing-form > main > header,
-        [data-loadlink-vehicle-listing-shell="working-guided-flow-v10"] #listing-form > main > section:first-of-type,
-        [data-loadlink-vehicle-listing-shell="working-guided-flow-v10"] #listing-form #plans {
+        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #listing-form > main > header,
+        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #listing-form > main > section:first-of-type,
+        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #listing-form #plans,
+        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #listing-form #vehicle-marketplace {
           display: none !important;
         }
-        [data-loadlink-vehicle-listing-shell="working-guided-flow-v10"] #vehicle-listing-form {
+        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #vehicle-listing-form {
           padding-bottom: max(118px, calc(env(safe-area-inset-bottom) + 94px)) !important;
         }
-        [data-loadlink-vehicle-listing-shell="working-guided-flow-v10"] #vehicle-listing-form > section[hidden] {
+        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #vehicle-listing-form > section[hidden] {
           display: none !important;
         }
-        [data-loadlink-vehicle-listing-shell="working-guided-flow-v10"] #vehicle-listing-form > section[data-loadlink-wizard-active="true"] {
+        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #vehicle-listing-form > section[data-loadlink-wizard-active="true"] {
           scroll-margin-top: 178px;
         }
-        [data-loadlink-vehicle-listing-shell="working-guided-flow-v10"] input,
-        [data-loadlink-vehicle-listing-shell="working-guided-flow-v10"] select,
-        [data-loadlink-vehicle-listing-shell="working-guided-flow-v10"] textarea {
+        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #vehicle-listing-form > section[data-loadlink-wizard-step="1"] {
+          border-radius: 24px !important;
+          box-shadow: 0 18px 55px rgba(0,0,0,.08);
+        }
+        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #vehicle-listing-form > section[data-loadlink-wizard-step="1"] figure {
+          display: none !important;
+        }
+        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] input,
+        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] select,
+        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] textarea {
           font-size: 16px !important;
+          font-family: inherit !important;
+        }
+        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] select {
+          -webkit-appearance: none !important;
+          appearance: none !important;
+          border-radius: 16px !important;
+          padding-right: 3rem !important;
+          background-image:
+            linear-gradient(45deg, transparent 50%, currentColor 50%),
+            linear-gradient(135deg, currentColor 50%, transparent 50%) !important;
+          background-position:
+            calc(100% - 18px) 50%,
+            calc(100% - 13px) 50% !important;
+          background-size: 5px 5px, 5px 5px !important;
+          background-repeat: no-repeat !important;
         }
       `}</style>
     </main>
