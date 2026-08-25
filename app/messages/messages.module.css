@@ -53,8 +53,24 @@
   display: none !important;
 }
 
+.messageApp :global(.loadlink-chat-header) {
+  border-bottom-color: rgba(17,17,17,.08) !important;
+  background: rgba(255,255,255,.66) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(118%);
+  backdrop-filter: blur(18px) saturate(118%);
+}
+
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-header) {
+  border-bottom-color: rgba(255,255,255,.08) !important;
+  background: rgba(8,8,8,.68) !important;
+}
+
 .messageApp :global(.loadlink-chat-privacy) {
+  border-color: rgba(17,17,17,.07) !important;
+  background: rgba(255,255,255,.48) !important;
   color: rgba(17,17,17,.58) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(112%);
+  backdrop-filter: blur(12px) saturate(112%);
 }
 
 .messageApp :global(.loadlink-chat-composer-meta) {
@@ -144,6 +160,17 @@
   flex: 0 0 auto !important;
   position: relative;
   z-index: 8;
+  border-top: 1px solid rgba(17,17,17,.08) !important;
+  background: rgba(255,255,255,.62) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(118%);
+  backdrop-filter: blur(20px) saturate(118%);
+  box-shadow: 0 -10px 34px rgba(0,0,0,.045);
+}
+
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-composer) {
+  border-top-color: rgba(255,255,255,.08) !important;
+  background: rgba(9,9,9,.66) !important;
+  box-shadow: 0 -10px 34px rgba(0,0,0,.20);
 }
 
 :global(html[data-loadlink-logistics-open="true"]) .messageApp,
