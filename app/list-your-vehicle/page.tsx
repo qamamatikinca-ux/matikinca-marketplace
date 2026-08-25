@@ -136,8 +136,8 @@ export default function ListYourVehiclePage() {
             <h1 className="mx-auto max-w-4xl text-[clamp(3rem,12vw,5.7rem)] font-black leading-[.94] tracking-[-.055em]">List your truck, trailer or mobile unit.</h1>
             <p className="mx-auto mt-5 max-w-2xl text-sm font-semibold leading-7 text-white/72 md:text-base">Create a LoadLink listing in a guided flow, or browse commercial stock already on the marketplace.</p>
             <div className="mx-auto mt-7 grid w-full max-w-[650px] gap-2.5 sm:grid-cols-3">
-              <button type="button" onClick={() => openEntry("vehicle")} className="min-h-[54px] rounded-full border border-[#f6b800] bg-[#f6b800] px-5 font-[inherit] text-xs font-black uppercase tracking-[.08em] text-black shadow-[0_12px_30px_rgba(246,184,0,.22)]">List vehicle</button>
-              <button type="button" onClick={() => openEntry("mobile-unit")} className="min-h-[54px] rounded-full border border-[#f6b800] bg-[#f6b800] px-5 font-[inherit] text-xs font-black uppercase tracking-[.08em] text-black shadow-[0_12px_30px_rgba(246,184,0,.22)]">List mobile unit</button>
+              <button type="button" onClick={() => openEntry("vehicle")} className="min-h-[54px] rounded-full border border-[#f6b800] bg-[#f6b800] px-5 [font-family:inherit] text-xs font-black uppercase tracking-[.08em] text-black shadow-[0_12px_30px_rgba(246,184,0,.22)]">List vehicle</button>
+              <button type="button" onClick={() => openEntry("mobile-unit")} className="min-h-[54px] rounded-full border border-[#f6b800] bg-[#f6b800] px-5 [font-family:inherit] text-xs font-black uppercase tracking-[.08em] text-black shadow-[0_12px_30px_rgba(246,184,0,.22)]">List mobile unit</button>
               <a href="#vehicle-marketplace" className="flex min-h-[54px] items-center justify-center rounded-full border border-[#f6b800] bg-black/58 px-5 text-xs font-black uppercase tracking-[.08em] text-[#f6b800]">Browse marketplace</a>
             </div>
           </div>
