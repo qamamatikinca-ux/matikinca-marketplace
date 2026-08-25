@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import LoadLinkContractCancel20260826 from "@/components/LoadLinkContractCancel20260826";
 
 export const metadata: Metadata = {
   title: "Transport Contracts in South Africa",
@@ -14,5 +15,5 @@ export const metadata: Metadata = {
 };
 
 export default function ContractsLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <>{children}<LoadLinkContractCancel20260826 /></>;
 }
