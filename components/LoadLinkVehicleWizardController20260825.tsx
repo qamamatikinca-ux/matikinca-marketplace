@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 const STEP_LABELS = ["Type", "Vehicle details", "Photos & documents", "Review"] as const;
 const FORM_ID = "vehicle-listing-form";
+type ListingKind = "vehicle" | "mobile-unit";
 
 function getWizardSections() {
   const form = document.getElementById(FORM_ID) as HTMLFormElement | null;
@@ -38,10 +39,12 @@ function confirmationButton(section: HTMLElement) {
   return Array.from(section.querySelectorAll<HTMLButtonElement>("button")).find((button) => /confirm (truck model|vehicle details)/i.test(button.textContent || "")) || null;
 }
 
-export default function LoadLinkVehicleWizardController20260825({ darkMode }: { darkMode: boolean }) {
+export default function LoadLinkVehicleWizardController20260825({ darkMode, listingKind = "vehicle" }: { darkMode: boolean; listingKind?: ListingKind }) {
   const [activeStep, setActiveStep] = useState(0);
   const [formReady, setFormReady] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const lastStep = STEP_LABELS.length - 1;
+  const listingLabel = listingKind === "mobile-unit" ? "mobile unit" : "vehicle";
 
   const applyStep = useCallback(() => {
     const { sections } = getWizardSections();
@@ -123,9 +126,7 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode }: { 
     setActiveStep((step) => Math.max(0, step - 1));
   }
 
-  function cancelListing() {
-    const confirmed = window.confirm("Cancel this listing? Your saved vehicle draft will be cleared.");
-    if (!confirmed) return;
+  function confirmCancelListing() {
     try {
       localStorage.removeItem("loadlink-vehicle-draft-v1");
       localStorage.removeItem("loadlink-vehicle-submission-id");
@@ -136,9 +137,9 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode }: { 
   return (
     <>
       <section
-        className={`sticky top-20 z-30 border-y px-4 py-3 backdrop-blur-xl ${darkMode ? "border-white/10 bg-black/92" : "border-black/10 bg-[#f5f1e8]/96"}`}
-        aria-label="Vehicle listing progress"
-        data-loadlink-source-wizard="jobs-style-working-v2"
+        className={`sticky top-20 z-30 border-y px-4 py-3 backdrop-blur-xl ${darkMode ? "border-white/10 bg-black/88" : "border-black/10 bg-[#f5f1e8]/90"}`}
+        aria-label={`${listingLabel} listing progress`}
+        data-loadlink-source-wizard="jobs-style-working-v3"
       >
         <div className="mx-auto max-w-5xl">
           <div className="flex items-end justify-between gap-4">
@@ -156,16 +157,30 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode }: { 
 
       {formReady ? (
         <nav
-          className={`fixed inset-x-0 bottom-0 z-40 border-t px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-2xl ${darkMode ? "border-white/10 bg-black/94" : "border-black/10 bg-[#f5f1e8]/97"}`}
-          aria-label="Vehicle listing step controls"
+          className={`fixed inset-x-0 bottom-0 z-40 border-t px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-2xl ${darkMode ? "border-white/10 bg-black/88" : "border-black/10 bg-[#f5f1e8]/90"}`}
+          aria-label={`${listingLabel} listing step controls`}
         >
           <div className="mx-auto flex max-w-5xl items-center gap-2">
-            <button type="button" onClick={cancelListing} className={`h-12 rounded-[16px] border px-4 text-xs font-bold ${darkMode ? "border-white/14 text-white/70" : "border-black/12 text-black/65"}`}>Cancel listing</button>
+            <button type="button" onClick={() => setCancelOpen(true)} className={`h-12 rounded-[16px] border px-4 text-xs font-bold ${darkMode ? "border-white/14 bg-white/[.025] text-white/70" : "border-black/12 bg-white/30 text-black/65"}`}>Cancel {listingLabel} listing</button>
             {activeStep > 0 ? <button type="button" onClick={goBack} className={`h-12 rounded-[16px] border px-5 text-xs font-bold ${darkMode ? "border-white/14" : "border-black/12"}`}>Back</button> : null}
             <div className="flex-1" />
             {activeStep < lastStep ? <button type="button" onClick={goNext} className="h-12 min-w-[118px] rounded-[16px] bg-[#f6b800] px-5 text-sm font-bold text-black transition active:scale-[.99]">Continue</button> : <span className="px-2 text-right text-[11px] font-semibold opacity-55">Review your details, then submit below.</span>}
           </div>
         </nav>
+      ) : null}
+
+      {cancelOpen ? (
+        <div className="fixed inset-0 z-[2147483500] grid place-items-end bg-black/58 p-3 backdrop-blur-[6px] sm:place-items-center" role="dialog" aria-modal="true" aria-label={`Cancel ${listingLabel} listing`}>
+          <section className={`w-full max-w-md rounded-[26px] border p-5 shadow-2xl backdrop-blur-2xl ${darkMode ? "border-white/12 bg-[#0b0b0b]/92 text-white" : "border-white/70 bg-white/88 text-black"}`}>
+            <p className="text-[10px] font-black uppercase tracking-[.12em] opacity-45">Listing draft</p>
+            <h2 className="mt-2 text-2xl font-black tracking-[-.035em]">Cancel {listingLabel} listing?</h2>
+            <p className="mt-2 text-sm font-semibold leading-6 opacity-58">Your saved {listingLabel} draft will be cleared from this device. Nothing will be published.</p>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setCancelOpen(false)} className={`min-h-12 rounded-[15px] border px-4 text-sm font-bold ${darkMode ? "border-white/14 bg-white/[.035]" : "border-black/10 bg-black/[.025]"}`}>Keep editing</button>
+              <button type="button" onClick={confirmCancelListing} className="min-h-12 rounded-[15px] bg-[#f6b800] px-4 text-sm font-black text-black">Cancel listing</button>
+            </div>
+          </section>
+        </div>
       ) : null}
 
       <style jsx global>{`
