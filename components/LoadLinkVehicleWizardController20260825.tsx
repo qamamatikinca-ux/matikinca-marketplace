@@ -46,22 +46,17 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode }: { 
 
   useEffect(() => {
     let frame = 0;
-    let observer: MutationObserver | null = null;
-
     const sync = () => {
       window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        applyStep();
-      });
+      frame = window.requestAnimationFrame(() => applyStep());
     };
-
     sync();
-    observer = new MutationObserver(sync);
+    const observer = new MutationObserver(sync);
     observer.observe(document.body, { childList: true, subtree: true });
 
     return () => {
       window.cancelAnimationFrame(frame);
-      observer?.disconnect();
+      observer.disconnect();
       const { form, sections } = getWizardSections();
       sections.forEach((section) => {
         section.hidden = false;
@@ -79,13 +74,7 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode }: { 
     const { sections } = getWizardSections();
     const section = sections[activeStep];
     if (!section) return;
-    const target = section.querySelector<HTMLElement>("input:not([type='hidden']), select, textarea, button") ?? section;
-    const timer = window.setTimeout(() => {
-      section.scrollIntoView({ behavior: "smooth", block: "start" });
-      if (activeStep > 0 && target instanceof HTMLElement) {
-        try { target.focus({ preventScroll: true }); } catch {}
-      }
-    }, 70);
+    const timer = window.setTimeout(() => section.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
     return () => window.clearTimeout(timer);
   }, [activeStep, formReady]);
 
@@ -95,14 +84,12 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode }: { 
     const { sections } = getWizardSections();
     const section = sections[activeStep];
     if (!section) return;
-
     const invalid = firstInvalidControl(section);
     if (invalid) {
       invalid.reportValidity();
       invalid.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-
     setActiveStep((step) => Math.min(lastStep, step + 1));
   }
 
@@ -110,62 +97,59 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode }: { 
     setActiveStep((step) => Math.max(0, step - 1));
   }
 
+  function cancelListing() {
+    const confirmed = window.confirm("Cancel this listing? Your saved vehicle draft will be cleared.");
+    if (!confirmed) return;
+    try {
+      localStorage.removeItem("loadlink-vehicle-draft-v1");
+      localStorage.removeItem("loadlink-vehicle-submission-id");
+    } catch {}
+    window.location.assign("/list-your-vehicle");
+  }
+
   return (
     <>
       <section
-        className={`sticky top-20 z-30 border-y px-4 py-3 backdrop-blur-xl ${darkMode ? "border-white/10 bg-black/90" : "border-black/10 bg-[#f5f1e8]/94"}`}
+        className={`sticky top-20 z-30 border-y px-4 py-3 backdrop-blur-xl ${darkMode ? "border-white/10 bg-black/92" : "border-black/10 bg-[#f5f1e8]/96"}`}
         aria-label="Vehicle listing progress"
-        data-loadlink-source-wizard="20260825"
+        data-loadlink-source-wizard="jobs-style-step-guide"
       >
         <div className="mx-auto max-w-5xl">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-end justify-between gap-4">
             <div>
-              <p className="text-[9px] font-black uppercase tracking-[.14em] opacity-45">Step {activeStep + 1} of {STEP_LABELS.length}</p>
-              <p className="mt-0.5 text-sm font-black tracking-[-.02em]">{STEP_LABELS[activeStep]}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[.12em] opacity-45">Step {activeStep + 1} of {STEP_LABELS.length}</p>
+              <p className="mt-1 text-sm font-bold">{STEP_LABELS[activeStep]}</p>
             </div>
-            <p className="text-[10px] font-black opacity-45">{progress}</p>
+            <span className="text-[11px] font-semibold opacity-45">{progress}</span>
           </div>
-          <div className={`mt-2 h-1 overflow-hidden rounded-full ${darkMode ? "bg-white/10" : "bg-black/10"}`}>
+          <div className={`mt-3 h-1 overflow-hidden rounded-full ${darkMode ? "bg-white/10" : "bg-black/10"}`}>
             <div className="h-full rounded-full bg-[#f6b800] transition-[width] duration-300" style={{ width: progress }} />
-          </div>
-          <div className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5" aria-label="Listing steps">
-            {STEP_LABELS.map((label, index) => {
-              const current = index === activeStep;
-              const complete = index < activeStep;
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => index <= activeStep && setActiveStep(index)}
-                  aria-current={current ? "step" : undefined}
-                  disabled={index > activeStep}
-                  className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[9px] font-black transition ${current ? "border-[#f6b800] bg-[#f6b800] text-black" : complete ? darkMode ? "border-white/18 bg-white/8 text-white" : "border-black/15 bg-black/[.04] text-black" : "border-current/10 opacity-35"}`}
-                >
-                  <span>{complete ? "✓" : index + 1}</span>
-                  <span>{label}</span>
-                </button>
-              );
-            })}
           </div>
         </div>
       </section>
 
       {formReady ? (
         <nav
-          className={`fixed inset-x-0 bottom-0 z-40 border-t px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-2xl ${darkMode ? "border-white/10 bg-black/92" : "border-black/10 bg-[#f5f1e8]/95"}`}
+          className={`fixed inset-x-0 bottom-0 z-40 border-t px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-2xl ${darkMode ? "border-white/10 bg-black/94" : "border-black/10 bg-[#f5f1e8]/97"}`}
           aria-label="Vehicle listing step controls"
         >
           <div className="mx-auto flex max-w-5xl items-center gap-2">
+            <button type="button" onClick={cancelListing} className={`h-12 rounded-[16px] border px-4 text-xs font-bold ${darkMode ? "border-white/14 text-white/70" : "border-black/12 text-black/65"}`}>
+              Cancel listing
+            </button>
             {activeStep > 0 ? (
-              <button type="button" onClick={goBack} className="h-12 min-w-[96px] rounded-full border border-current/15 px-5 text-xs font-black">Back</button>
+              <button type="button" onClick={goBack} className={`h-12 rounded-[16px] border px-5 text-xs font-bold ${darkMode ? "border-white/14" : "border-black/12"}`}>
+                Back
+              </button>
             ) : null}
-            <div className="min-w-0 flex-1 px-1">
-              <p className="truncate text-[10px] font-black uppercase tracking-[.08em] opacity-45">{STEP_LABELS[activeStep]}</p>
-              <p className="truncate text-[11px] font-semibold opacity-60">{activeStep === lastStep ? "Check your details, then publish below." : "Complete this step to continue."}</p>
-            </div>
+            <div className="flex-1" />
             {activeStep < lastStep ? (
-              <button type="button" onClick={goNext} className="h-12 min-w-[112px] rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">Continue</button>
-            ) : null}
+              <button type="button" onClick={goNext} className="h-12 min-w-[118px] rounded-[16px] bg-[#f6b800] px-5 text-sm font-bold text-black transition active:scale-[.99]">
+                Continue
+              </button>
+            ) : (
+              <span className="px-2 text-right text-[11px] font-semibold opacity-55">Review your details, then submit below.</span>
+            )}
           </div>
         </nav>
       ) : null}
