@@ -46,7 +46,7 @@ export default function LoadLinkHomepagePortalGrid20260822({ darkMode }: { darkM
   }, []);
 
   return (
-    <section data-loadlink-home-portals="approved-geometry" className="px-0 pb-8 pt-2 sm:px-4 md:px-6 md:pb-12">
+    <section data-loadlink-home-portals="approved-geometry-gold-actions" className="px-0 pb-8 pt-2 sm:px-4 md:px-6 md:pb-12">
       <div className="mx-auto grid w-full max-w-[1440px] auto-rows-fr gap-px bg-black/10 md:grid-cols-2">
         {portals.map((portal) => {
           const src = portal.images[imageIndex % portal.images.length];
@@ -59,7 +59,7 @@ export default function LoadLinkHomepagePortalGrid20260822({ darkMode }: { darkM
               aria-label={`Open ${portal.title}`}
               data-loadlink-home-portal-card={slug}
               data-loadlink-scroll-top="true"
-              className={`group relative block min-h-[300px] h-full overflow-hidden rounded-none transition active:scale-[.998] sm:min-h-[340px] md:min-h-[390px] lg:min-h-[430px] ${darkMode ? "bg-[#090909]" : "bg-white"}`}
+              className={`group relative block h-full min-h-[300px] overflow-hidden rounded-none transition active:scale-[.998] sm:min-h-[340px] md:min-h-[390px] lg:min-h-[430px] ${darkMode ? "bg-[#090909]" : "bg-white"}`}
             >
               <img
                 src={src}
@@ -80,7 +80,7 @@ export default function LoadLinkHomepagePortalGrid20260822({ darkMode }: { darkM
               <div className="relative z-10 flex h-full min-h-[inherit] max-w-[34rem] flex-col justify-end p-5 text-white sm:p-7 md:p-8">
                 <h2 className="text-[31px] font-black leading-[.95] tracking-[-.045em] sm:text-[38px] md:text-[42px]">{portal.title}</h2>
                 <p className="mt-2 max-w-[29rem] text-[12px] font-semibold leading-5 text-white/78 sm:text-[13px]">{portal.description}</p>
-                <span className="mt-4 inline-flex min-h-10 w-fit items-center justify-center rounded-full border border-[#f6b800]/85 bg-black/34 px-5 text-[11px] font-bold text-white backdrop-blur-xl transition duration-200 group-hover:-translate-y-0.5 group-hover:border-[#f6b800] group-hover:bg-black/46 sm:min-h-11 sm:text-xs">
+                <span className="mt-4 inline-flex min-h-11 w-fit items-center justify-center rounded-full border border-[#f6b800] bg-[#f6b800] px-6 text-[11px] font-black text-black shadow-[0_10px_28px_rgba(246,184,0,.22)] transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_14px_34px_rgba(246,184,0,.30)] sm:text-xs">
                   View
                 </span>
               </div>
