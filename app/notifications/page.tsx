@@ -1,7 +1,6 @@
 "use client";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
-
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
@@ -162,76 +161,82 @@ export default function NotificationsPage() {
     }
   }
 
-  const page = darkMode ? "bg-black text-white" : "bg-[#fffaf0] text-black";
-  const surface = darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white";
-  const muted = darkMode ? "text-white/60" : "text-black/55";
+  const page = darkMode ? "bg-black text-white" : "bg-[#f5f1e8] text-black";
+  const panel = darkMode ? "border-white/10 bg-white/[.035]" : "border-black/8 bg-white/62";
+  const muted = darkMode ? "text-white/52" : "text-black/52";
 
   return (
-    <main className={`min-h-screen ${page}`}>
+    <main className={`min-h-screen ${page}`} data-loadlink-notifications="compact-inbox-v2">
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
-      <section className="mx-auto max-w-5xl px-5 py-8 md:px-8 md:py-12">
-        <div className={`overflow-hidden rounded-[28px] border ${surface}`}>
-          <div className={`border-b px-5 py-7 md:px-8 md:py-9 ${darkMode ? "border-white/10 bg-[#111111]" : "border-black/10 bg-[#fff7e2]"}`}>
-            <div className="flex flex-wrap items-end justify-between gap-5">
-              <div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-4xl font-black tracking-[-.055em] md:text-6xl">Notifications</h1>
-                  <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[.1em] ${darkMode ? "border-white/15 bg-white/[.05] text-white/70" : "border-black/10 bg-white text-black/60"}`}>{unread} unread</span>
-                </div>
-                <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Messages, listing decisions, verification updates and account activity are kept together here.</p>
-              </div>
-
-              {unread > 0 ? (
-                <button type="button" onClick={() => void markAllRead()} disabled={markingAll} className="min-h-11 rounded-full border border-[#f6b800] px-5 text-xs font-black uppercase tracking-[.1em] text-[#b88900] transition active:scale-[.99] disabled:opacity-45">
-                  {markingAll ? "Updating…" : "Mark all as read"}
-                </button>
-              ) : null}
+      <section className="mx-auto max-w-4xl px-4 pb-16 pt-7 sm:px-6 sm:pt-10">
+        <header className="flex flex-col gap-5 border-b border-current/10 pb-6 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-[36px] font-black leading-none tracking-[-.05em] sm:text-[44px]">Notifications</h1>
+              {unread ? <span className="grid min-h-6 min-w-6 place-items-center rounded-full bg-[#f6b800] px-2 text-[10px] font-black text-black">{unread}</span> : null}
             </div>
+            <p className={`mt-3 max-w-xl text-sm font-semibold leading-6 ${muted}`}>Messages, listing decisions, verification and account updates.</p>
           </div>
 
-          <div className={`flex items-center gap-2 border-b px-5 py-4 md:px-8 ${darkMode ? "border-white/10" : "border-black/10"}`}>
-            {([ ["all", "All"], ["unread", `Unread ${unread}`] ] as [NotificationFilter, string][]).map(([value, label]) => (
-              <button key={value} type="button" onClick={() => setFilter(value)} className={`rounded-full px-4 py-2 text-xs font-black uppercase tracking-[.08em] transition ${filter === value ? "bg-[#f6b800] text-black" : darkMode ? "border border-white/10 bg-white/[.04] text-white/65" : "border border-black/10 bg-black/[.03] text-black/60"}`}>{label}</button>
-            ))}
-          </div>
+          {unread > 0 ? (
+            <button type="button" onClick={() => void markAllRead()} disabled={markingAll} className={`min-h-10 w-fit rounded-xl border px-4 text-xs font-bold transition active:scale-[.99] disabled:opacity-45 ${darkMode ? "border-white/14 bg-white/[.035]" : "border-black/10 bg-white/50"}`}>
+              {markingAll ? "Updating…" : "Mark all read"}
+            </button>
+          ) : null}
+        </header>
 
-          {notice ? <p role="alert" className={`m-5 rounded-2xl border p-4 text-sm font-bold md:m-8 ${surface}`}>{notice}</p> : null}
+        <div className="mt-5 flex items-center gap-2" role="tablist" aria-label="Notification filters">
+          {([["all", "All"], ["unread", `Unread${unread ? ` ${unread}` : ""}`]] as [NotificationFilter, string][]).map(([value, label]) => (
+            <button key={value} type="button" role="tab" aria-selected={filter === value} onClick={() => setFilter(value)} className={`min-h-9 rounded-xl px-4 text-xs font-black transition ${filter === value ? "bg-[#f6b800] text-black" : darkMode ? "border border-white/10 bg-white/[.025] text-white/60" : "border border-black/8 bg-white/45 text-black/55"}`}>{label}</button>
+          ))}
+        </div>
 
-          <div className="p-4 md:p-6">
-            {authLoading || loading ? (
-              <div className="grid gap-3" aria-label="Loading notifications">{[0, 1, 2].map((item) => <div key={item} className={`h-28 animate-pulse rounded-2xl border ${darkMode ? "border-white/10 bg-white/[.04]" : "border-black/10 bg-black/[.03]"}`} />)}</div>
-            ) : visibleNotifications.length === 0 ? (
-              <div className={`rounded-2xl border px-6 py-14 text-center ${darkMode ? "border-white/10 bg-[#111111]" : "border-black/10 bg-[#fffaf0]"}`}>
-                <span className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${darkMode ? "bg-white/[.06] text-[#f6b800]" : "bg-[#f6b800]/20 text-[#8a6500]"}`}><BellIcon /></span>
-                <h2 className="mt-5 text-2xl font-black">{filter === "unread" ? "You are all caught up" : "No notifications yet"}</h2>
-                <p className={`mx-auto mt-3 max-w-md text-sm leading-6 ${muted}`}>{filter === "unread" ? "There are no unread account updates at the moment." : "New messages, listing decisions and verification updates will appear here."}</p>
-              </div>
-            ) : (
-              <div className="grid gap-3">
-                {visibleNotifications.map((item) => {
-                  const href = safeActionHref(item.action_url);
-                  const content = (
-                    <div className={`group flex gap-4 rounded-2xl border p-4 text-left transition md:p-5 ${item.is_read ? darkMode ? "border-white/10 bg-[#0b0b0b] hover:bg-[#111111]" : "border-black/10 bg-white hover:bg-[#fffaf0]" : darkMode ? "border-[#f6b800]/35 bg-[#17120a]" : "border-[#f6b800]/50 bg-[#fff7df]"}`}>
-                      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${item.is_read ? darkMode ? "bg-white/[.06] text-white/65" : "bg-black/[.04] text-black/55" : "bg-[#f6b800] text-black"}`}><NotificationTypeIcon type={item.type} /></span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-start justify-between gap-2"><h2 className="text-base font-black md:text-lg">{item.title}</h2><time className={`text-[10px] font-black uppercase tracking-[.09em] ${muted}`}>{formatDate(item.created_at)}</time></div>
-                        <p className={`mt-2 text-sm leading-6 ${muted}`}>{item.message}</p>
-                        <div className="mt-3 flex items-center gap-3">{!item.is_read ? <span className="rounded-full bg-[#f6b800] px-2.5 py-1 text-[9px] font-black uppercase tracking-[.1em] text-black">Unread</span> : null}{href ? <span className="text-[10px] font-black uppercase tracking-[.1em] text-[#b88900]">Open update</span> : null}{markingId === item.id ? <span className={`text-[10px] font-bold ${muted}`}>Updating…</span> : null}</div>
+        {notice ? <p role="alert" className={`mt-4 rounded-xl border px-4 py-3 text-sm font-semibold ${panel}`}>{notice}</p> : null}
+
+        <section className={`mt-5 overflow-hidden rounded-[22px] border backdrop-blur-xl ${panel}`} aria-label="Notification activity">
+          {authLoading || loading ? (
+            <div className="divide-y divide-current/10" aria-label="Loading notifications">
+              {[0, 1, 2, 3].map((item) => <div key={item} className="h-[92px] animate-pulse bg-current/[.025]" />)}
+            </div>
+          ) : visibleNotifications.length === 0 ? (
+            <div className="px-5 py-14 text-center">
+              <span className={`mx-auto grid h-11 w-11 place-items-center rounded-full ${darkMode ? "bg-white/[.06] text-white/70" : "bg-black/[.045] text-black/55"}`}><BellIcon /></span>
+              <h2 className="mt-4 text-xl font-black">{filter === "unread" ? "You’re caught up" : "No notifications yet"}</h2>
+              <p className={`mx-auto mt-2 max-w-sm text-sm font-semibold leading-6 ${muted}`}>{filter === "unread" ? "There are no unread updates right now." : "New account and marketplace updates will appear here."}</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-current/10">
+              {visibleNotifications.map((item) => {
+                const href = safeActionHref(item.action_url);
+                const row = (
+                  <div className={`group relative flex gap-3.5 px-4 py-4 text-left transition sm:px-5 ${item.is_read ? darkMode ? "hover:bg-white/[.025]" : "hover:bg-black/[.02]" : darkMode ? "bg-[#f6b800]/[.055]" : "bg-[#f6b800]/[.075]"}`}>
+                    {!item.is_read ? <span className="absolute bottom-4 left-0 top-4 w-[3px] rounded-r-full bg-[#f6b800]" /> : null}
+                    <span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl border ${item.is_read ? darkMode ? "border-white/10 bg-white/[.035] text-white/55" : "border-black/8 bg-black/[.025] text-black/50" : "border-[#f6b800]/45 bg-[#f6b800]/15 text-[#b88900]"}`}><NotificationTypeIcon type={item.type} /></span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <h2 className={`min-w-0 text-[14px] font-black leading-5 sm:text-[15px] ${item.is_read ? "opacity-78" : ""}`}>{item.title}</h2>
+                        <time className={`shrink-0 text-[10px] font-semibold ${muted}`}>{formatDate(item.created_at)}</time>
+                      </div>
+                      <p className={`mt-1.5 line-clamp-2 text-[13px] font-medium leading-5 ${muted}`}>{item.message}</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        {!item.is_read ? <span className="text-[9px] font-black uppercase tracking-[.08em] text-[#b88900]">New</span> : null}
+                        {href ? <span className="text-[10px] font-bold opacity-48">Open</span> : null}
+                        {markingId === item.id ? <span className="text-[10px] font-semibold opacity-42">Updating…</span> : null}
                       </div>
                     </div>
-                  );
+                  </div>
+                );
 
-                  return href ? (
-                    <Link key={item.id} href={href} onClick={(event) => { event.preventDefault(); void openNotification(item.id, href); }}>{content}</Link>
-                  ) : (
-                    <button key={item.id} type="button" disabled={markingId === item.id} onClick={() => void persistRead(item.id)} className="block w-full disabled:opacity-75">{content}</button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+                return href ? (
+                  <Link key={item.id} href={href} onClick={(event) => { event.preventDefault(); void openNotification(item.id, href); }}>{row}</Link>
+                ) : (
+                  <button key={item.id} type="button" disabled={markingId === item.id} onClick={() => void persistRead(item.id)} className="block w-full disabled:opacity-75">{row}</button>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </section>
     </main>
   );
@@ -240,7 +245,16 @@ export default function NotificationsPage() {
 function formatDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Recently";
-  return date.toLocaleString("en-ZA", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const now = Date.now();
+  const diff = Math.max(0, now - date.getTime());
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "Now";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  return date.toLocaleDateString("en-ZA", { day: "numeric", month: "short" });
 }
 
 function NotificationTypeIcon({ type }: { type: string }) {
@@ -251,7 +265,7 @@ function NotificationTypeIcon({ type }: { type: string }) {
   return <BellIcon />;
 }
 
-function BellIcon() { return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 6 2.5 6.5 2.5 6.5H4s2.5-.5 2.5-6.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9.5 19a2.8 2.8 0 0 0 5 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
-function MessageIcon() { return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M8 9h8M8 12h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
-function CheckIcon() { return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" /><path d="m8 12 2.5 2.5L16 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
-function DocumentIcon() { return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3h7l4 4v14H7V3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M14 3v5h5M10 12h5M10 16h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
+function BellIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 6 2.5 6.5 2.5 6.5H4s2.5-.5 2.5-6.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9.5 19a2.8 2.8 0 0 0 5 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
+function MessageIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M8 9h8M8 12h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
+function CheckIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" /><path d="m8 12 2.5 2.5L16 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
+function DocumentIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3h7l4 4v14H7V3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M14 3v5h5M10 12h5M10 16h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
