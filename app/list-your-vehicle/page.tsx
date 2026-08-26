@@ -6,7 +6,6 @@ import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import VehicleMarketplaceHub from "@/components/VehicleMarketplaceHub";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import LoadLinkVehicleEntryBootstrap20260825 from "@/components/LoadLinkVehicleEntryBootstrap20260825";
-import LoadLinkVehicleWizardController20260825 from "@/components/LoadLinkVehicleWizardController20260825";
 import { getVehicleListingAccess } from "@/lib/packageAccess";
 import { getLoadLinkIntelligence } from "@/lib/loadlinkIntelligence";
 import { getFreshAuthenticatedUser } from "@/lib/reliableSupabase";
@@ -185,7 +184,6 @@ export default function ListYourVehiclePage() {
     <main className={page} data-loadlink-vehicle-listing-shell="working-guided-flow-v11">
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
       <LoadLinkVehicleEntryBootstrap20260825 mode={entryMode as "vehicle" | "mobile-unit"} />
-      <LoadLinkVehicleWizardController20260825 darkMode={darkMode} listingKind={entryMode === "mobile-unit" ? "mobile-unit" : "vehicle"} />
       <div id="listing-form" className="scroll-mt-36"><LegacyVehicleListingPage /></div>
       <style jsx global>{`
         [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #listing-form > main > header,
