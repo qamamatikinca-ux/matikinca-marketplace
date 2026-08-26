@@ -173,6 +173,74 @@
   box-shadow: 0 -10px 34px rgba(0,0,0,.20);
 }
 
+/* Inbox glass is intentionally restrained: one translucent plane, not glass on every control. */
+.messageApp :global(.loadlink-inbox-panel) {
+  background: rgba(250,248,242,.88) !important;
+  border-right-color: rgba(17,17,17,.08) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(112%);
+  backdrop-filter: blur(16px) saturate(112%);
+  box-shadow: 10px 0 34px rgba(0,0,0,.035);
+}
+
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel) {
+  background: rgba(9,9,9,.80) !important;
+  border-right-color: rgba(255,255,255,.075) !important;
+  box-shadow: 10px 0 34px rgba(0,0,0,.18);
+}
+
+.messageApp :global(.loadlink-inbox-panel > div:first-of-type) {
+  background: rgba(255,255,255,.26) !important;
+  border-bottom-color: rgba(17,17,17,.07) !important;
+}
+
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel > div:first-of-type) {
+  background: rgba(255,255,255,.018) !important;
+  border-bottom-color: rgba(255,255,255,.07) !important;
+}
+
+.messageApp :global(.loadlink-inbox-panel input) {
+  background: rgba(255,255,255,.52) !important;
+  border-color: rgba(17,17,17,.09) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35);
+}
+
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel input) {
+  background: rgba(255,255,255,.045) !important;
+  border-color: rgba(255,255,255,.09) !important;
+  color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+}
+
+.messageApp :global(.loadlink-folder-tabs button[aria-selected="false"]) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.messageApp :global(.loadlink-folder-tabs button[aria-selected="true"]) {
+  background: #f6b800 !important;
+  border-color: #f6b800 !important;
+  color: #111 !important;
+  box-shadow: none !important;
+}
+
+.messageApp :global(.loadlink-inbox-panel > div:last-of-type > button) {
+  background: transparent !important;
+  border-bottom-color: rgba(17,17,17,.06) !important;
+}
+
+.messageApp :global(.loadlink-inbox-panel > div:last-of-type > button:hover) {
+  background: rgba(255,255,255,.32) !important;
+}
+
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel > div:last-of-type > button) {
+  border-bottom-color: rgba(255,255,255,.055) !important;
+  color: #fff !important;
+}
+
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel > div:last-of-type > button:hover) {
+  background: rgba(255,255,255,.035) !important;
+}
+
 :global(html[data-loadlink-logistics-open="true"]) .messageApp,
 :global(body[data-loadlink-logistics-open="true"]) .messageApp {
   display: none !important;
