@@ -99,6 +99,7 @@ jobs:
           test "$(sha256sum /tmp/login-hero.webp | awk '{print $1}')" = "aa8633917fc45b724cb82c92f3d7281a29aa4ef20d487744942467867926a6cd"
           curl --fail --silent --show-error --location --retry 8 --retry-delay 3 --output /dev/null 'https://matikinca-marketplace.vercel.app/list-your-vehicle?entry=vehicle'
           curl --fail --silent --show-error --location --retry 8 --retry-delay 3 --output /dev/null 'https://matikinca-marketplace.vercel.app/list-your-vehicle?entry=mobile-unit'
+          curl --fail --silent --show-error --location --retry 8 --retry-delay 3 --output /dev/null 'https://matikinca-marketplace.vercel.app/dealership'
 
       - name: Write release receipt
         if: always()
@@ -164,3 +165,4 @@ jobs:
 # Manual production retry — 2026-08-22 22:04 SAST.
 # Final production deployment retry — 2026-08-24 17:04 SAST.
 # Google Maps integration release build — 2026-08-24.
+# Production hotfix prebuilt deploy trigger — 2026-08-26 21:54 SAST.
