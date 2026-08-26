@@ -60,7 +60,7 @@ export default function LoadLinkCookieConsent20260822() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 sm:justify-end">
-          <Link href="/legal/cookies" className={`flex min-h-10 items-center rounded-full border px-4 text-[10px] font-black ${darkMode ? "border-white/14 bg-white/[.035]" : "border-black/12 bg-black/[.02]"}`}>View cookie policy</Link>
+          <Link href="/legal#cookie-policy" className={`flex min-h-10 items-center rounded-full border px-4 text-[10px] font-black ${darkMode ? "border-white/14 bg-white/[.035]" : "border-black/12 bg-black/[.02]"}`}>View cookie policy</Link>
           <button type="button" onClick={() => choose("essential")} className={`min-h-10 rounded-full border px-4 text-[10px] font-black ${darkMode ? "border-white/14 bg-white/[.035]" : "border-black/12 bg-black/[.02]"}`}>Essential only</button>
           <button type="button" onClick={() => choose("all")} className="min-h-10 rounded-full bg-[#f6b800] px-5 text-[10px] font-black text-black">Allow cookies</button>
         </div>
