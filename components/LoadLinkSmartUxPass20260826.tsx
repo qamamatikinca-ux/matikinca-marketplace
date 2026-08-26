@@ -28,18 +28,6 @@ function applyMessagePolish() {
   });
 }
 
-function removeDealershipTopBlocks() {
-  if (!window.location.pathname.startsWith("/dealership/")) return;
-  findByText(/^Showroom hours$/i).forEach((heading) => {
-    const card = nearestCard(heading);
-    if (card) card.dataset.loadlinkRemovedDealerIntro = "true";
-  });
-  findByText(/^Customer reviews$/i).forEach((heading) => {
-    const card = nearestCard(heading);
-    if (card) card.dataset.loadlinkRemovedDealerIntro = "true";
-  });
-}
-
 function enhanceDealerPoster() {
   const dealershipEvidence = findByText(/verified dealership|dealership member|dealer account|loadlink dealership/i);
   if (!dealershipEvidence.length) return;
@@ -182,7 +170,6 @@ function smartFollowUp() {
 
 function applyAll() {
   applyMessagePolish();
-  removeDealershipTopBlocks();
   enhanceDealerPoster();
   applyContractProgress();
   enhancePackageGuide();
