@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
@@ -44,11 +45,11 @@ export default function LoadLinkCookieConsent20260822() {
 
   return (
     <aside
-      data-loadlink-cookie-consent="major-20260823"
+      data-loadlink-cookie-consent="major-20260826"
       role="dialog"
       aria-modal="false"
       aria-labelledby="loadlink-cookie-title"
-      className={`fixed inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-[9998] mx-auto max-w-[720px] border px-4 py-4 shadow-[0_24px_80px_rgba(0,0,0,.20)] sm:inset-x-5 sm:px-5 ${darkMode ? "border-white/12 bg-[#101010]/88 text-white" : "border-black/10 bg-white/84 text-black"}`}
+      className={`fixed inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-[9998] mx-auto max-w-[720px] border px-4 py-4 shadow-[0_24px_80px_rgba(0,0,0,.20)] backdrop-blur-xl sm:inset-x-5 sm:px-5 ${darkMode ? "border-white/12 bg-[#101010]/88 text-white" : "border-black/10 bg-white/84 text-black"}`}
     >
       <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
         <div className="flex items-start gap-3">
@@ -59,6 +60,7 @@ export default function LoadLinkCookieConsent20260822() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 sm:justify-end">
+          <Link href="/legal/cookies" className={`flex min-h-10 items-center rounded-full border px-4 text-[10px] font-black ${darkMode ? "border-white/14 bg-white/[.035]" : "border-black/12 bg-black/[.02]"}`}>View cookie policy</Link>
           <button type="button" onClick={() => choose("essential")} className={`min-h-10 rounded-full border px-4 text-[10px] font-black ${darkMode ? "border-white/14 bg-white/[.035]" : "border-black/12 bg-black/[.02]"}`}>Essential only</button>
           <button type="button" onClick={() => choose("all")} className="min-h-10 rounded-full bg-[#f6b800] px-5 text-[10px] font-black text-black">Allow cookies</button>
         </div>
