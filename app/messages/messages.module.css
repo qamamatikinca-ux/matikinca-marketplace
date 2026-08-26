@@ -9,254 +9,49 @@
   overflow: hidden !important;
   overscroll-behavior: none;
 }
+.messageApp > :global(div[class*="grid"]) { min-height: 0 !important; height: 100% !important; }
+.messageApp :global(.loadlink-logo-wrap) { width: clamp(132px, 32vw, 158px); }
+.messageApp :global(.loadlink-messages-header-logo) { width: 100% !important; }
+.messageApp :global(.loadlink-official-header-logo) { min-width: 0; max-width: min(46vw, 180px); }
+.messageApp :global(.loadlink-chat-wallpaper) { position: relative; isolation: isolate; background-image: var(--loadlink-chat-wallpaper-v254, url("/images/chat-wallpapers/chat-01.svg")) !important; background-color: #fbfaf7 !important; background-repeat: repeat !important; background-position: center top !important; background-size: min(680px, 125vw) auto !important; background-blend-mode: normal !important; }
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-wallpaper) { background-image: var(--loadlink-chat-wallpaper-v254, url("/images/chat-wallpapers/chat-01.svg")), radial-gradient(circle at 45% 20%, rgba(246,184,0,.075), transparent 48%) !important; background-color: #11100d !important; background-blend-mode: normal, screen !important; }
+.messageApp :global(.loadlink-chat-wallpaper)::before, :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-wallpaper)::before { content: none !important; display: none !important; }
+.messageApp :global(.loadlink-chat-header) { border-bottom-color: rgba(17,17,17,.08) !important; background: rgba(255,255,255,.66) !important; -webkit-backdrop-filter: blur(18px) saturate(118%); backdrop-filter: blur(18px) saturate(118%); }
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-header) { border-bottom-color: rgba(255,255,255,.08) !important; background: rgba(8,8,8,.68) !important; }
+.messageApp :global(.loadlink-chat-privacy) { border-color: rgba(17,17,17,.07) !important; background: rgba(255,255,255,.48) !important; color: rgba(17,17,17,.58) !important; -webkit-backdrop-filter: blur(12px) saturate(112%); backdrop-filter: blur(12px) saturate(112%); }
+.messageApp :global(.loadlink-chat-composer-meta) { color: rgba(17,17,17,.50) !important; }
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-privacy) { border-color: rgba(255,255,255,.08) !important; background: rgba(16,16,16,.54) !important; color: rgba(255,255,255,.62) !important; }
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-composer-meta) { color: rgba(255,255,255,.56) !important; }
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-composer-meta) a { color: #d9a400 !important; }
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-voice-note) { color: #fff; }
+.messageApp img[alt$=" profile"] { width: 100% !important; height: 100% !important; min-width: 100% !important; min-height: 100% !important; max-width: none !important; aspect-ratio: 1 / 1 !important; object-fit: cover !important; border-radius: 999px !important; }
+.messageApp :global([aria-label$=" profile picture"]) { isolation: isolate; overflow: visible !important; }
+.messageApp :global([aria-label$=" profile picture"] > span) { inset: 0 !important; box-shadow: none !important; }
+.messageApp :global([aria-label="Seen"]), .messageApp :global([aria-label="Sent"]) { display: none !important; }
+@media (max-width: 420px) { .messageApp :global(.loadlink-logo-wrap) { width: clamp(124px, 31vw, 148px); } .messageApp :global(.loadlink-chat-header) { gap: .5rem; } }
+.messageApp :global(.loadlink-official-header-logo), .messageApp :global(.loadlink-official-header-logo .loadlink-logo-wrap), .messageApp :global(.loadlink-messages-header-logo) { background: transparent !important; box-shadow: none !important; }
+.messageApp :global(.loadlink-message-viewport) { min-width: 0 !important; min-height: 0 !important; flex: 1 1 0% !important; overflow-x: hidden !important; overflow-y: auto !important; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; scroll-padding-bottom: 1rem; }
+.messageApp :global(.loadlink-message-viewport) > * { min-width: 0; max-width: 100%; }
+.messageApp :global(.loadlink-chat-composer) { flex: 0 0 auto !important; position: relative; z-index: 8; border-top: 1px solid rgba(17,17,17,.08) !important; background: rgba(255,255,255,.62) !important; -webkit-backdrop-filter: blur(20px) saturate(118%); backdrop-filter: blur(20px) saturate(118%); box-shadow: 0 -10px 34px rgba(0,0,0,.045); }
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-composer) { border-top-color: rgba(255,255,255,.08) !important; background: rgba(9,9,9,.66) !important; box-shadow: 0 -10px 34px rgba(0,0,0,.20); }
 
-.messageApp > :global(div[class*="grid"]) {
-  min-height: 0 !important;
-  height: 100% !important;
-}
+/* Inbox uses one translucent glass plane with transparent rows and controls. */
+.messageApp :global(.loadlink-inbox-panel) { background: rgba(247,244,236,.74) !important; border-right-color: rgba(17,17,17,.075) !important; -webkit-backdrop-filter: blur(24px) saturate(115%) !important; backdrop-filter: blur(24px) saturate(115%) !important; box-shadow: 10px 0 34px rgba(0,0,0,.035) !important; }
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel) { background: rgba(7,7,7,.68) !important; border-right-color: rgba(255,255,255,.07) !important; box-shadow: 10px 0 38px rgba(0,0,0,.20) !important; }
+.messageApp :global(.loadlink-inbox-panel > div:first-of-type) { background: transparent !important; border-bottom-color: rgba(17,17,17,.07) !important; }
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel > div:first-of-type) { background: transparent !important; border-bottom-color: rgba(255,255,255,.07) !important; }
+.messageApp :global(.loadlink-inbox-panel input) { background: rgba(255,255,255,.34) !important; border-color: rgba(17,17,17,.09) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.28) !important; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel input) { background: rgba(255,255,255,.045) !important; border-color: rgba(255,255,255,.09) !important; color: #fff !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.025) !important; }
+.messageApp :global(.loadlink-folder-tabs button) { box-shadow: none !important; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.messageApp :global(.loadlink-folder-tabs button[aria-selected="false"]) { background: rgba(255,255,255,.18) !important; }
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-folder-tabs button[aria-selected="false"]) { background: rgba(255,255,255,.025) !important; border-color: rgba(255,255,255,.09) !important; color: rgba(255,255,255,.68) !important; }
+.messageApp :global(.loadlink-folder-tabs button[aria-selected="true"]) { background: rgba(246,184,0,.96) !important; border-color: rgba(246,184,0,.96) !important; color: #111 !important; box-shadow: none !important; }
+.messageApp :global(.loadlink-inbox-panel > div:last-of-type) { background: transparent !important; }
+.messageApp :global(.loadlink-inbox-panel > div:last-of-type > button) { background: transparent !important; border-bottom-color: rgba(17,17,17,.055) !important; }
+.messageApp :global(.loadlink-inbox-panel > div:last-of-type > button:hover) { background: rgba(255,255,255,.22) !important; }
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel > div:last-of-type > button) { background: transparent !important; border-bottom-color: rgba(255,255,255,.05) !important; color: #fff !important; }
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel > div:last-of-type > button:hover) { background: rgba(255,255,255,.03) !important; }
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel strong), :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel h2) { color: #fff !important; }
 
-.messageApp :global(.loadlink-logo-wrap) {
-  width: clamp(132px, 32vw, 158px);
-}
-
-.messageApp :global(.loadlink-messages-header-logo) {
-  width: 100% !important;
-}
-
-.messageApp :global(.loadlink-official-header-logo) {
-  min-width: 0;
-  max-width: min(46vw, 180px);
-}
-
-.messageApp :global(.loadlink-chat-wallpaper) {
-  position: relative;
-  isolation: isolate;
-  background-image: var(--loadlink-chat-wallpaper-v254, url("/images/chat-wallpapers/chat-01.svg")) !important;
-  background-color: #fbfaf7 !important;
-  background-repeat: repeat !important;
-  background-position: center top !important;
-  background-size: min(680px, 125vw) auto !important;
-  background-blend-mode: normal !important;
-}
-
-:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-wallpaper) {
-  background-image:
-    var(--loadlink-chat-wallpaper-v254, url("/images/chat-wallpapers/chat-01.svg")),
-    radial-gradient(circle at 45% 20%, rgba(246, 184, 0, .075), transparent 48%) !important;
-  background-color: #11100d !important;
-  background-blend-mode: normal, screen !important;
-}
-
-.messageApp :global(.loadlink-chat-wallpaper)::before,
-:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-wallpaper)::before {
-  content: none !important;
-  display: none !important;
-}
-
-.messageApp :global(.loadlink-chat-header) {
-  border-bottom-color: rgba(17,17,17,.08) !important;
-  background: rgba(255,255,255,.66) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(118%);
-  backdrop-filter: blur(18px) saturate(118%);
-}
-
-:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-header) {
-  border-bottom-color: rgba(255,255,255,.08) !important;
-  background: rgba(8,8,8,.68) !important;
-}
-
-.messageApp :global(.loadlink-chat-privacy) {
-  border-color: rgba(17,17,17,.07) !important;
-  background: rgba(255,255,255,.48) !important;
-  color: rgba(17,17,17,.58) !important;
-  -webkit-backdrop-filter: blur(12px) saturate(112%);
-  backdrop-filter: blur(12px) saturate(112%);
-}
-
-.messageApp :global(.loadlink-chat-composer-meta) {
-  color: rgba(17,17,17,.50) !important;
-}
-
-:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-privacy) {
-  border-color: rgba(255,255,255,.08) !important;
-  background: rgba(16, 16, 16, .54) !important;
-  color: rgba(255,255,255,.62) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(125%);
-  backdrop-filter: blur(14px) saturate(125%);
-}
-
-:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-composer-meta) {
-  color: rgba(255,255,255,.56) !important;
-}
-
-:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-composer-meta) a {
-  color: #d9a400 !important;
-}
-
-:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-voice-note) {
-  color: #fff;
-}
-
-.messageApp img[alt$=" profile"] {
-  width: 100% !important;
-  height: 100% !important;
-  min-width: 100% !important;
-  min-height: 100% !important;
-  max-width: none !important;
-  aspect-ratio: 1 / 1 !important;
-  object-fit: cover !important;
-  border-radius: 999px !important;
-}
-
-.messageApp :global([aria-label$=" profile picture"]) {
-  isolation: isolate;
-  overflow: visible !important;
-}
-
-.messageApp :global([aria-label$=" profile picture"] > span) {
-  inset: 0 !important;
-  box-shadow: none !important;
-}
-
-.messageApp :global([aria-label="Seen"]),
-.messageApp :global([aria-label="Sent"]) {
-  display: none !important;
-}
-
-@media (max-width: 420px) {
-  .messageApp :global(.loadlink-logo-wrap) {
-    width: clamp(124px, 31vw, 148px);
-  }
-
-  .messageApp :global(.loadlink-chat-header) {
-    gap: .5rem;
-  }
-}
-
-.messageApp :global(.loadlink-official-header-logo),
-.messageApp :global(.loadlink-official-header-logo .loadlink-logo-wrap),
-.messageApp :global(.loadlink-messages-header-logo) {
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.messageApp :global(.loadlink-message-viewport) {
-  min-width: 0 !important;
-  min-height: 0 !important;
-  flex: 1 1 0% !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  overscroll-behavior-y: contain;
-  -webkit-overflow-scrolling: touch;
-  scroll-padding-bottom: 1rem;
-}
-
-.messageApp :global(.loadlink-message-viewport) > * {
-  min-width: 0;
-  max-width: 100%;
-}
-
-.messageApp :global(.loadlink-chat-composer) {
-  flex: 0 0 auto !important;
-  position: relative;
-  z-index: 8;
-  border-top: 1px solid rgba(17,17,17,.08) !important;
-  background: rgba(255,255,255,.62) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(118%);
-  backdrop-filter: blur(20px) saturate(118%);
-  box-shadow: 0 -10px 34px rgba(0,0,0,.045);
-}
-
-:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-composer) {
-  border-top-color: rgba(255,255,255,.08) !important;
-  background: rgba(9,9,9,.66) !important;
-  box-shadow: 0 -10px 34px rgba(0,0,0,.20);
-}
-
-/* Inbox glass is intentionally restrained: one translucent plane, not glass on every control. */
-.messageApp :global(.loadlink-inbox-panel) {
-  background: rgba(250,248,242,.88) !important;
-  border-right-color: rgba(17,17,17,.08) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(112%);
-  backdrop-filter: blur(16px) saturate(112%);
-  box-shadow: 10px 0 34px rgba(0,0,0,.035);
-}
-
-:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel) {
-  background: rgba(9,9,9,.80) !important;
-  border-right-color: rgba(255,255,255,.075) !important;
-  box-shadow: 10px 0 34px rgba(0,0,0,.18);
-}
-
-.messageApp :global(.loadlink-inbox-panel > div:first-of-type) {
-  background: rgba(255,255,255,.26) !important;
-  border-bottom-color: rgba(17,17,17,.07) !important;
-}
-
-:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel > div:first-of-type) {
-  background: rgba(255,255,255,.018) !important;
-  border-bottom-color: rgba(255,255,255,.07) !important;
-}
-
-.messageApp :global(.loadlink-inbox-panel input) {
-  background: rgba(255,255,255,.52) !important;
-  border-color: rgba(17,17,17,.09) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.35);
-}
-
-:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel input) {
-  background: rgba(255,255,255,.045) !important;
-  border-color: rgba(255,255,255,.09) !important;
-  color: #fff !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
-}
-
-.messageApp :global(.loadlink-folder-tabs button[aria-selected="false"]) {
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.messageApp :global(.loadlink-folder-tabs button[aria-selected="true"]) {
-  background: #f6b800 !important;
-  border-color: #f6b800 !important;
-  color: #111 !important;
-  box-shadow: none !important;
-}
-
-.messageApp :global(.loadlink-inbox-panel > div:last-of-type > button) {
-  background: transparent !important;
-  border-bottom-color: rgba(17,17,17,.06) !important;
-}
-
-.messageApp :global(.loadlink-inbox-panel > div:last-of-type > button:hover) {
-  background: rgba(255,255,255,.32) !important;
-}
-
-:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel > div:last-of-type > button) {
-  border-bottom-color: rgba(255,255,255,.055) !important;
-  color: #fff !important;
-}
-
-:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel > div:last-of-type > button:hover) {
-  background: rgba(255,255,255,.035) !important;
-}
-
-:global(html[data-loadlink-logistics-open="true"]) .messageApp,
-:global(body[data-loadlink-logistics-open="true"]) .messageApp {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-:global(html[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-chat-wallpaper),
-:global(body[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-chat-wallpaper),
-:global(html[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-message-viewport),
-:global(body[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-message-viewport),
-:global(html[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-chat-composer),
-:global(body[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-chat-composer) {
-  display: none !important;
-  visibility: hidden !important;
-  background-image: none !important;
-  pointer-events: none !important;
-}
+:global(html[data-loadlink-logistics-open="true"]) .messageApp, :global(body[data-loadlink-logistics-open="true"]) .messageApp { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+:global(html[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-chat-wallpaper), :global(body[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-chat-wallpaper), :global(html[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-message-viewport), :global(body[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-message-viewport), :global(html[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-chat-composer), :global(body[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-chat-composer) { display: none !important; visibility: hidden !important; background-image: none !important; pointer-events: none !important; }
