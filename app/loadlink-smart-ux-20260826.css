@@ -1,0 +1,60 @@
+/* LoadLink smart UX pass — 2026-08-26 */
+:root{--ll-smart-gold:#f6b800;--ll-smart-radius:22px;--ll-smart-border:rgba(0,0,0,.09);--ll-smart-glass:rgba(255,255,255,.76)}
+html.dark{--ll-smart-border:rgba(255,255,255,.11);--ll-smart-glass:rgba(12,12,12,.72)}
+
+/* Inbox + chat: restrained glass, not glossy or neon. */
+.loadlink-messages[data-loadlink-smart-glass="true"] :is(.loadlink-inbox-panel,.loadlink-chat-header,.loadlink-details-panel,.loadlink-chat-composer){background:color-mix(in srgb,var(--ll-smart-glass) 94%,transparent)!important;border-color:var(--ll-smart-border)!important;backdrop-filter:blur(18px) saturate(118%);-webkit-backdrop-filter:blur(18px) saturate(118%);box-shadow:0 14px 40px rgba(0,0,0,.07)!important}
+.loadlink-messages[data-loadlink-smart-glass="true"] .loadlink-chat-panel{background:color-mix(in srgb,var(--ll-smart-glass) 42%,transparent)!important}
+.loadlink-messages[data-loadlink-smart-glass="true"] :is(.loadlink-chat-header img,[data-loadlink-contact-avatar] img,img[data-loadlink-round-avatar="true"],[data-loadlink-call-avatar] img){aspect-ratio:1/1!important;border-radius:999px!important;object-fit:cover!important;object-position:center!important;overflow:hidden!important}
+.loadlink-messages[data-loadlink-smart-glass="true"] .loadlink-chat-composer{border-radius:22px 22px 0 0!important}
+
+/* Call history: compact timeline instead of stacked heavy cards. */
+[data-loadlink-call-history-host="true"]{border-top:0!important;background:transparent!important}
+.ll-final-call-history{margin:6px auto 10px!important;max-width:768px!important;padding:6px 12px!important;display:grid!important;gap:7px!important;overflow:visible!important}
+.ll-final-call-event{min-width:0!important;display:grid!important;grid-template-columns:42px minmax(0,1fr) auto!important;align-items:center!important;gap:11px!important;border:1px solid var(--ll-smart-border)!important;border-radius:18px!important;background:var(--ll-smart-glass)!important;padding:10px 12px!important;backdrop-filter:blur(16px) saturate(115%);-webkit-backdrop-filter:blur(16px) saturate(115%);box-shadow:0 10px 28px rgba(0,0,0,.055)!important}
+.ll-final-call-avatar{width:42px;height:42px;border-radius:999px;overflow:hidden;border:1px solid color-mix(in srgb,var(--ll-smart-gold) 45%,transparent);background:rgba(246,184,0,.10);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#b17f00}
+.ll-final-call-avatar img{width:100%;height:100%;display:block;object-fit:cover;border-radius:999px}
+.ll-final-call-avatar span{display:flex;width:100%;height:100%;align-items:center;justify-content:center}
+.ll-final-call-event-copy{min-width:0}
+.ll-final-call-event strong{display:block!important;font-size:12px!important;line-height:1.35!important;letter-spacing:-.015em!important;white-space:normal!important}
+.ll-final-call-event small{display:block!important;margin-top:3px!important;font-size:9.5px!important;line-height:1.35!important;font-weight:700!important;opacity:.52!important}
+.ll-final-call-direction{display:flex;align-items:center;justify-content:center;width:31px;height:31px;border-radius:999px;background:rgba(246,184,0,.11);color:#9d7200}
+
+/* Dealership presentation rules. */
+[data-loadlink-removed-dealer-intro="true"],[data-loadlink-dealer-review-action="removed"]{display:none!important}
+[data-loadlink-dealer-rating="true"]{display:flex;align-items:center;gap:9px;margin:13px 0 4px;color:var(--ll-smart-gold)}
+[data-loadlink-dealer-rating="true"]>span{font-size:15px;letter-spacing:1px;line-height:1}
+[data-loadlink-dealer-rating="true"]>strong{font-size:11px;letter-spacing:-.01em;color:currentColor}
+[data-loadlink-view-showroom="true"]{display:flex;min-height:48px;align-items:center;justify-content:center;margin-top:12px;border:1px solid var(--ll-smart-gold);border-radius:14px;background:rgba(246,184,0,.08);padding:0 16px;color:var(--ll-smart-gold)!important;font-size:11px;font-weight:900;text-decoration:none!important}
+
+/* Package guide: brighter, quieter, more useful. */
+[data-loadlink-package-guide-glass="true"]{opacity:1!important;filter:none!important;background:var(--ll-smart-glass)!important;border:1px solid var(--ll-smart-border)!important;border-radius:26px!important;backdrop-filter:blur(18px) saturate(118%);-webkit-backdrop-filter:blur(18px) saturate(118%);box-shadow:0 18px 55px rgba(0,0,0,.08)!important;overflow:hidden}
+[data-loadlink-package-guide-glass="true"] :is(h1,h2,h3,strong){opacity:1!important}
+[data-loadlink-package-guide-glass="true"] p{opacity:.68!important}
+[data-loadlink-partner-cta="true"]{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:18px;margin:16px 0 22px;padding:18px;border:1px solid color-mix(in srgb,var(--ll-smart-gold) 34%,var(--ll-smart-border));border-radius:22px;background:color-mix(in srgb,var(--ll-smart-glass) 92%,rgba(246,184,0,.06));backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+[data-loadlink-partner-cta="true"] span{display:block;font-size:9px;font-weight:900;letter-spacing:.16em;color:#a97900}
+[data-loadlink-partner-cta="true"] strong{display:block;margin-top:5px;font-size:20px;line-height:1.05;letter-spacing:-.035em}
+[data-loadlink-partner-cta="true"] p{max-width:580px;margin:7px 0 0;font-size:11px;font-weight:650;line-height:1.55;opacity:.58}
+[data-loadlink-partner-cta="true"] a{display:flex;min-height:46px;align-items:center;justify-content:center;border-radius:999px;background:var(--ll-smart-gold);padding:0 18px;color:#090909!important;font-size:10px;font-weight:900;white-space:nowrap;text-decoration:none!important}
+
+/* Contract wizard status should use LoadLink gold. */
+html[data-loadlink-contract-gold-progress="true"] :is(progress,[role="progressbar"],[data-progress],[data-loadlink-progress]){accent-color:var(--ll-smart-gold)!important}
+html[data-loadlink-contract-gold-progress="true"] progress::-webkit-progress-value{background:var(--ll-smart-gold)!important}
+html[data-loadlink-contract-gold-progress="true"] progress::-moz-progress-bar{background:var(--ll-smart-gold)!important}
+html[data-loadlink-contract-gold-progress="true"] :is([role="progressbar"],[data-progress],[data-loadlink-progress]) :is(.bg-white,.bg-black){background:var(--ll-smart-gold)!important}
+
+/* One sort-control visual language across portal surfaces. */
+[data-loadlink-unified-sort="true"]{min-height:44px!important;border-radius:14px!important;border:1px solid var(--ll-smart-border)!important;background:var(--ll-smart-glass)!important;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 8px 24px rgba(0,0,0,.045)!important}
+[data-loadlink-unified-sort="true"] select{min-height:42px!important;background:transparent!important;font:inherit!important;font-weight:900!important;outline:none!important}
+
+/* Smart follow-up nudge: quiet and action oriented. */
+[data-loadlink-smart-followup="true"]{position:fixed;right:14px;bottom:82px;z-index:94;width:min(360px,calc(100vw - 28px));border:1px solid color-mix(in srgb,var(--ll-smart-gold) 28%,var(--ll-smart-border));border-radius:20px;background:var(--ll-smart-glass);padding:14px;backdrop-filter:blur(20px) saturate(120%);-webkit-backdrop-filter:blur(20px) saturate(120%);box-shadow:0 18px 60px rgba(0,0,0,.16)}
+[data-loadlink-smart-followup="true"]>span{display:block;font-size:8px;font-weight:900;letter-spacing:.16em;color:#a97900}
+[data-loadlink-smart-followup="true"]>strong{display:block;margin-top:5px;font-size:14px;line-height:1.35;letter-spacing:-.02em}
+[data-loadlink-smart-followup="true"]>p{margin:5px 0 0;font-size:10px;font-weight:650;line-height:1.5;opacity:.58}
+[data-loadlink-smart-followup="true"]>div{display:flex;gap:8px;margin-top:11px}
+[data-loadlink-smart-followup="true"] :is(a,button){display:flex;min-height:39px;align-items:center;justify-content:center;border-radius:999px;padding:0 14px;font-size:9px;font-weight:900}
+[data-loadlink-smart-followup="true"] a{background:var(--ll-smart-gold);color:#080808!important;text-decoration:none!important}
+[data-loadlink-smart-followup="true"] button{border:1px solid var(--ll-smart-border);background:transparent;color:inherit}
+
+@media(max-width:640px){[data-loadlink-partner-cta="true"]{grid-template-columns:1fr}[data-loadlink-partner-cta="true"] a{width:100%}.ll-final-call-event{grid-template-columns:40px minmax(0,1fr) 30px!important}.ll-final-call-avatar{width:40px;height:40px}}
