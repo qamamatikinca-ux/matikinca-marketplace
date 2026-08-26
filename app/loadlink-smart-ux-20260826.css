@@ -43,6 +43,12 @@ html[data-loadlink-contract-gold-progress="true"] progress::-webkit-progress-val
 html[data-loadlink-contract-gold-progress="true"] progress::-moz-progress-bar{background:var(--ll-smart-gold)!important}
 html[data-loadlink-contract-gold-progress="true"] :is([role="progressbar"],[data-progress],[data-loadlink-progress]) :is(.bg-white,.bg-black){background:var(--ll-smart-gold)!important}
 
+/* Final contract corrections requested on 2026-08-26. */
+[data-loadlink-contracts-marketplace="contract-search-20260823-restored"] section:first-of-type .max-w-4xl.text-white>p:first-child{display:none!important}
+[data-loadlink-contract-post="20260823-polish"] form>div.mb-5.h-1>div{background:var(--ll-smart-gold)!important}
+[data-loadlink-contract-post="20260823-polish"] form section>div.mt-6.flex>button:last-child{border:1px solid color-mix(in srgb,var(--ll-smart-gold) 78%,transparent)!important;background:linear-gradient(180deg,rgba(246,184,0,.96),rgba(246,184,0,.88))!important;color:#090909!important;box-shadow:0 10px 28px rgba(246,184,0,.16)!important;backdrop-filter:blur(14px)!important;-webkit-backdrop-filter:blur(14px)!important}
+[data-loadlink-contract-post="20260823-polish"] form section>div.mt-6.flex>button:last-child:active{transform:scale(.99)}
+
 /* One sort-control visual language across portal surfaces. */
 [data-loadlink-unified-sort="true"]{min-height:44px!important;border-radius:14px!important;border:1px solid var(--ll-smart-border)!important;background:var(--ll-smart-glass)!important;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 8px 24px rgba(0,0,0,.045)!important}
 [data-loadlink-unified-sort="true"] select{min-height:42px!important;background:transparent!important;font:inherit!important;font-weight:900!important;outline:none!important}
