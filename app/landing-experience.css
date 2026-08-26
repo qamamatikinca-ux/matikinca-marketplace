@@ -1,0 +1,214 @@
+html {
+  scroll-behavior: smooth;
+}
+
+.ll-scroll-reveal,
+[data-ll-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 40px, 0) scale(.988);
+  transition:
+    opacity .82s cubic-bezier(.22, 1, .36, 1),
+    transform .96s cubic-bezier(.22, 1, .36, 1);
+  will-change: opacity, transform;
+}
+
+.ll-scroll-reveal.ll-in-view,
+[data-ll-reveal].ll-in-view {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.ll-story {
+  overflow: clip;
+  border-top: 1px solid rgba(255,255,255,.08);
+  background: #08090a;
+  color: #fff;
+}
+
+.ll-story-intro {
+  min-height: 68svh;
+  display: grid;
+  place-content: center;
+  padding: clamp(5rem, 10vw, 10rem) clamp(1.25rem, 5vw, 5rem);
+  text-align: center;
+}
+
+.ll-story-intro > p,
+.ll-story-eyebrow {
+  margin: 0;
+  color: #f6b800;
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.ll-story-intro h2 {
+  max-width: 13ch;
+  margin: .9rem auto 0;
+  font-size: clamp(2.8rem, 7vw, 7.25rem);
+  font-weight: 500;
+  line-height: .93;
+  letter-spacing: -.055em;
+}
+
+.ll-story-panel {
+  min-height: 100svh;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(4.5rem, 8vw, 8rem) clamp(1.25rem, 5vw, 4rem);
+  display: grid;
+  grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
+  align-items: center;
+  gap: clamp(2rem, 6vw, 7rem);
+  content-visibility: auto;
+  contain-intrinsic-size: 900px;
+}
+
+.ll-story-panel--reverse .ll-story-copy { order: 2; }
+.ll-story-panel--reverse .ll-story-media { order: 1; }
+
+.ll-story-copy h3 {
+  max-width: 11ch;
+  margin: .75rem 0 0;
+  font-size: clamp(2.6rem, 5vw, 5.5rem);
+  font-weight: 500;
+  line-height: .95;
+  letter-spacing: -.05em;
+}
+
+.ll-story-copy > p:last-child {
+  max-width: 34rem;
+  margin: 1.4rem 0 0;
+  color: rgba(255,255,255,.6);
+  font-size: clamp(1rem, 1.4vw, 1.16rem);
+  line-height: 1.72;
+}
+
+.ll-story-media {
+  --ll-parallax: 0;
+  position: relative;
+  min-height: min(76svh, 760px);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: clamp(1.5rem, 3vw, 2.7rem);
+  background:
+    radial-gradient(circle at 50% 35%, rgba(246,184,0,.13), transparent 48%),
+    #0d0e0f;
+  transform: translate3d(0, calc(var(--ll-parallax) * -24px), 0);
+  transition: box-shadow .4s ease;
+  box-shadow: 0 30px 90px rgba(0,0,0,.18);
+}
+
+.ll-story-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.035), transparent 28%, rgba(0,0,0,.08));
+}
+
+.ll-story-media img {
+  display: block;
+  width: min(84%, 520px);
+  height: auto;
+  max-height: 76svh;
+  object-fit: contain;
+  image-rendering: auto;
+  filter: drop-shadow(0 28px 54px rgba(0,0,0,.34));
+  transform: scale(1.015);
+}
+
+.ll-story-media--2 {
+  background: linear-gradient(150deg, #f7f6f1, #d9ddd8);
+}
+
+.ll-story-media--2 img {
+  width: min(72%, 430px);
+  filter: drop-shadow(0 28px 46px rgba(0,0,0,.22));
+}
+
+.ll-story-media--3 {
+  background: #c35d12;
+}
+
+.ll-story-media--3 img {
+  width: min(88%, 560px);
+}
+
+@media (min-width: 1180px) {
+  .ll-story-panel {
+    position: relative;
+  }
+  .ll-story-copy {
+    position: sticky;
+    top: 18vh;
+    align-self: start;
+    padding-top: 16vh;
+  }
+}
+
+@media (max-width: 800px) {
+  .ll-story-intro {
+    min-height: 58svh;
+  }
+
+  .ll-story-panel {
+    min-height: auto;
+    grid-template-columns: 1fr;
+    gap: 2.25rem;
+    padding-block: 5rem;
+  }
+
+  .ll-story-panel--reverse .ll-story-copy,
+  .ll-story-panel--reverse .ll-story-media {
+    order: initial;
+  }
+
+  .ll-story-media {
+    min-height: 66svh;
+  }
+
+  .ll-story-copy h3 {
+    max-width: 12ch;
+  }
+}
+
+@media (max-width: 520px) {
+  .ll-story-panel {
+    padding-inline: 1rem;
+    padding-block: 4.25rem;
+  }
+
+  .ll-story-media {
+    min-height: 60svh;
+    border-radius: 1.5rem;
+    transform: translate3d(0, calc(var(--ll-parallax) * -12px), 0);
+  }
+
+  .ll-story-media img {
+    width: min(92%, 420px);
+  }
+
+  .ll-story-media--2 img {
+    width: min(78%, 330px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  .ll-scroll-reveal,
+  [data-ll-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .ll-story-media {
+    transform: none !important;
+    transition: none !important;
+  }
+}
