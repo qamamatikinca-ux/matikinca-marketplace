@@ -159,10 +159,4 @@ jobs:
           test "${{ steps.deploy.outcome }}" = "success"
           test "${{ steps.verify.outcome }}" = "success"
 
-# Release recovery deployment trigger — 2026-08-21 16:34 SAST.
-# Connected marketplace/call/search repair deployment trigger — 2026-08-22 10:28 SAST.
-# Manual primary production deploy trigger — 2026-08-22 15:27 SAST.
-# Manual production retry — 2026-08-22 22:04 SAST.
-# Final production deployment retry — 2026-08-24 17:04 SAST.
-# Google Maps integration release build — 2026-08-24.
-# Production hotfix prebuilt deploy trigger — 2026-08-26 21:54 SAST.
+# Production hotfix prebuilt deploy trigger — 2026-08-27 22:05 SAST.
