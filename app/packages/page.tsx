@@ -20,6 +20,8 @@ import {
 } from "@/lib/loadlinkIntelligence";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
+import { isManualDailyProduct, MANUAL_DAILY_UNAVAILABLE } from "@/lib/manualPricing";
+
 type SubscriptionPlan = "pro" | "dealer";
 type BusyAction = SubscriptionPlan | "manual" | "manage" | "verify" | "";
 
@@ -27,10 +29,10 @@ const entitledStates = new Set(["active", "trial", "trialing", "grace_period", "
 const paymentStates = new Set(["approved_for_payment", "payment_pending", "payment_failed", "payment_syncing"]);
 const manualFallback: ManualListingProduct = {
   code: "manual_listing_credit",
-  name: "Manual listing credit",
+  name: "Daily vehicle listing credit",
   unit_price_cents: 1500,
   currency: "ZAR",
-  duration_days: 10,
+  duration_days: 1,
   max_quantity: 100,
 };
 
@@ -69,6 +71,7 @@ export default function PackagesPage() {
   const [state, setState] = useState<LoadLinkIntelligenceState | null>(null);
   const [manualProduct, setManualProduct] = useState<ManualListingProduct>(manualFallback);
   const [manualBalance, setManualBalance] = useState<ManualCreditBalance>({ available: 0, reserved: 0, consumed: 0 });
+  const [manualDailyReady, setManualDailyReady] = useState(false);
   const [manualQuantity, setManualQuantity] = useState(1);
   const [manualOpen, setManualOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -98,12 +101,13 @@ export default function PackagesPage() {
       try {
         const [freshState, product, credits] = await Promise.all([
           getLoadLinkIntelligence(),
-          getManualListingProduct().catch(() => manualFallback),
+          getManualListingProduct().catch(() => null),
           getManualCreditBalance().catch(() => ({ available: 0, reserved: 0, consumed: 0 })),
         ]);
         if (!mounted) return;
         setState(freshState);
-        setManualProduct(product);
+        setManualProduct(product || manualFallback);
+        setManualDailyReady(isManualDailyProduct(product));
         setManualBalance(credits);
       } catch (error) {
         if (mounted) setNotice(loadLinkHumanError(error, "LoadLink could not read your package status right now."));
@@ -181,7 +185,7 @@ export default function PackagesPage() {
     [manualProduct, manualQuantity],
   );
   const manualCovered = Boolean(activePlan);
-  const manualDisabled = Boolean(busy || pendingPlan || manualCovered);
+  const manualDisabled = Boolean(loading || busy || pendingPlan || manualCovered || !manualDailyReady);
 
   async function managePlan() {
     if (busy) return;
@@ -269,6 +273,7 @@ export default function PackagesPage() {
       }
 
       const product = await getManualListingProduct();
+      if (!isManualDailyProduct(product)) throw new Error(MANUAL_DAILY_UNAVAILABLE);
       setManualProduct(product);
       const quantity = Math.max(1, Math.min(product.max_quantity, manualQuantity));
       const expectedTotal = product.unit_price_cents * quantity;
@@ -371,9 +376,9 @@ export default function PackagesPage() {
               <h2 className="mt-2 text-[30px] font-black tracking-[-.05em]">Manual</h2>
               <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 <span className="text-[42px] font-black leading-none tracking-[-.06em]">{money(manualProduct.unit_price_cents).replace(",00", "")}</span>
-                <span className={`text-xs font-extrabold ${muted}`}>per 10-day listing credit</span>
+                <span className={`text-xs font-extrabold ${muted}`}>per vehicle / active day</span>
               </div>
-              <p className={`mt-4 min-h-[60px] text-xs font-semibold leading-5 ${muted}`}>Pay only when you need to advertise. One credit activates one approved vehicle listing for {manualProduct.duration_days} days.</p>
+              <p className={`mt-4 min-h-[60px] text-xs font-semibold leading-5 ${muted}`}>Vehicle advertising costs R15 for each active day. Paused listings do not use new daily credits.</p>
             </div>
 
             <div className="my-5 h-px bg-current/10" />
@@ -386,22 +391,23 @@ export default function PackagesPage() {
             {manualBalance.available > 0 ? (
               <div className={`mt-5 rounded-2xl border px-4 py-3 ${softSurface}`}>
                 <p className="text-sm font-black">{manualBalance.available} credit{manualBalance.available === 1 ? "" : "s"} ready</p>
-                <p className={`mt-1 text-[11px] font-semibold ${muted}`}>Your 10-day period starts when a listing is approved and goes live.</p>
+                <p className={`mt-1 text-[11px] font-semibold ${muted}`}>Existing paid listing periods keep their original terms.</p>
                 <button type="button" onClick={() => window.location.assign("/list-your-vehicle")} className="mt-3 text-[11px] font-black underline decoration-[#f6b800] decoration-2 underline-offset-4">List a vehicle</button>
               </div>
             ) : null}
 
             <div className="mt-auto pt-6">
+              {!loading && !manualDailyReady ? <p className={`mb-3 text-xs leading-5 ${muted}`} role="status">{MANUAL_DAILY_UNAVAILABLE}</p> : null}
               {!manualOpen ? (
                 <button type="button" onClick={() => setManualOpen(true)} disabled={manualDisabled} className={`h-12 w-full rounded-xl text-sm font-black transition active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-45 ${darkMode ? "border border-white/15" : "border border-black/15"}`}>
-                  {manualCovered ? `Included with ${titleCasePlan(activePlan)}` : pendingPlan ? "Request already in review" : "Buy Manual credits"}
+                  {manualCovered ? `Included with ${titleCasePlan(activePlan)}` : pendingPlan ? "Request already in review" : !manualDailyReady ? "Payments temporarily unavailable" : "Buy daily credits"}
                 </button>
               ) : (
                 <div className={`rounded-2xl border p-4 ${softSurface}`}>
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-[11px] font-black">Manual listings</p>
-                      <p className={`mt-1 text-[10px] font-semibold ${muted}`}>{money(manualProduct.unit_price_cents)} each · {manualProduct.duration_days} days each</p>
+                      <p className="text-[11px] font-black">Daily listing credits</p>
+                      <p className={`mt-1 text-[10px] font-semibold ${muted}`}>{money(manualProduct.unit_price_cents)} per active day</p>
                     </div>
                     <div className="flex h-11 items-center overflow-hidden rounded-xl border border-current/15" aria-label="Manual listing quantity">
                       <button type="button" aria-label="Decrease quantity" onClick={() => changeManualQuantity(manualQuantity - 1)} disabled={manualQuantity <= 1 || Boolean(busy)} className="h-full w-11 text-lg font-black disabled:opacity-30">−</button>
@@ -412,13 +418,13 @@ export default function PackagesPage() {
 
                   <dl className="mt-4 grid gap-2 border-t border-current/10 pt-4 text-[11px] font-semibold">
                     <div className="flex justify-between gap-4"><dt className={muted}>Quantity</dt><dd className="font-black">{manualQuantity}</dd></div>
-                    <div className="flex justify-between gap-4"><dt className={muted}>Price per listing</dt><dd className="font-black">{money(manualProduct.unit_price_cents)}</dd></div>
-                    <div className="flex justify-between gap-4"><dt className={muted}>Duration</dt><dd className="font-black">{manualProduct.duration_days} days each</dd></div>
+                    <div className="flex justify-between gap-4"><dt className={muted}>Price per active day</dt><dd className="font-black">{money(manualProduct.unit_price_cents)}</dd></div>
+                    <div className="flex justify-between gap-4"><dt className={muted}>Duration</dt><dd className="font-black">1 active day per credit</dd></div>
                     <div className="mt-1 flex justify-between gap-4 border-t border-current/10 pt-3"><dt className="font-black">Total</dt><dd className="text-base font-black">{money(manualTotalCents)}</dd></div>
                   </dl>
 
-                  <p className={`mt-3 text-[10px] font-semibold leading-4 ${muted}`}>Each credit is separate. Buying 10 gives you 10 listing credits, not one 100-day listing. No bulk surcharge or hidden fee is added by LoadLink.</p>
-                  <button type="button" onClick={() => void payManual()} disabled={busy === "manual" || busy === "verify"} className="mt-4 h-11 w-full rounded-xl bg-[#f6b800] text-sm font-black text-black transition active:scale-[.99] disabled:opacity-45">{busy === "manual" ? "Opening payment…" : `Continue to payment · ${money(manualTotalCents)}`}</button>
+                  <p className={`mt-3 text-[10px] font-semibold leading-4 ${muted}`}>Each credit covers one active day for one vehicle. Daily credits are used only while the listing is active.</p>
+                  <button type="button" onClick={() => void payManual()} disabled={!manualDailyReady || busy === "manual" || busy === "verify"} className="mt-4 h-11 w-full rounded-xl bg-[#f6b800] text-sm font-black text-black transition active:scale-[.99] disabled:opacity-45">{busy === "manual" ? "Opening payment…" : `Continue to payment · ${money(manualTotalCents)}`}</button>
                   <button type="button" onClick={() => setManualOpen(false)} disabled={Boolean(busy)} className={`mt-3 w-full py-1 text-[11px] font-black ${muted}`}>Cancel</button>
                 </div>
               )}
@@ -436,7 +442,8 @@ export default function PackagesPage() {
                 <p className={`mt-4 min-h-[60px] text-xs font-semibold leading-5 ${muted}`}>{details.description}</p>
                 <div className="my-5 h-px bg-current/10" />
                 <ul className="grid gap-3">{details.features.map((feature) => <li key={feature} className="flex gap-3 text-[12px] font-semibold leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]" /><span>{feature}</span></li>)}</ul>
-                <div className="mt-auto pt-6"><button type="button" onClick={() => activePlan === plan ? void managePlan() : void actSubscription(plan)} disabled={subscriptionDisabled(plan)} className={`h-12 w-full rounded-xl text-sm font-black transition active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-45 ${isPro || (activePlan === "pro" && plan === "dealer") ? "bg-[#f6b800] text-black" : darkMode ? "border border-white/15" : "border border-black/15"}`}>{subscriptionButtonLabel(plan)}</button></div>
+                <div className="mt-auto pt-6">
+              {!loading && !manualDailyReady ? <p className={`mb-3 text-xs leading-5 ${muted}`} role="status">{MANUAL_DAILY_UNAVAILABLE}</p> : null}<button type="button" onClick={() => activePlan === plan ? void managePlan() : void actSubscription(plan)} disabled={subscriptionDisabled(plan)} className={`h-12 w-full rounded-xl text-sm font-black transition active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-45 ${isPro || (activePlan === "pro" && plan === "dealer") ? "bg-[#f6b800] text-black" : darkMode ? "border border-white/15" : "border border-black/15"}`}>{subscriptionButtonLabel(plan)}</button></div>
               </article>
             );
           })}

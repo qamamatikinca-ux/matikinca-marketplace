@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { isAuthenticatedUser, loginHref } from "@/lib/auth";
-import { getVehicleListingAccess, type LoadLinkPlan, requestManualListingPayment, requestSubscription } from "@/lib/packageAccess";
+import { getVehicleListingAccess, type LoadLinkPlan, requestSubscription } from "@/lib/packageAccess";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function VehicleListingAccess({
@@ -14,11 +14,9 @@ export default function VehicleListingAccess({
   onGranted: (plan: LoadLinkPlan) => void;
 }) {
   const [loading, setLoading] = useState(true);
-  const [days, setDays] = useState(7);
   const [busy, setBusy] = useState<"manual" | "pro" | "dealer" | null>(null);
   const [message, setMessage] = useState("");
   const [schemaReady, setSchemaReady] = useState(true);
-  const total = useMemo(() => days * 15, [days]);
 
   const check = useCallback(async () => {
     setLoading(true);
@@ -40,20 +38,6 @@ export default function VehicleListingAccess({
     if (isAuthenticatedUser(user)) return true;
     window.location.assign(loginHref("/packages#activate-plan"));
     return false;
-  }
-
-  async function requestManual() {
-    if (!(await requireAccount())) return;
-    setBusy("manual");
-    setMessage("");
-    try {
-      const result = await requestManualListingPayment(days);
-      setMessage(`Manual listing request ${result.reference} created for R${(result.amount_cents / 100).toFixed(2)}. Access activates after the payment is confirmed.`);
-    } catch {
-      setMessage("The Manual listing request could not be created. Try again.");
-    } finally {
-      setBusy(null);
-    }
   }
 
   async function requestPlan(plan: "pro" | "dealer") {
@@ -80,15 +64,14 @@ export default function VehicleListingAccess({
           <h2 className="text-3xl font-black tracking-[-.045em] md:text-4xl">Activate or upgrade</h2>
           <p className={`mt-2 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Choose the access you want. LoadLink creates the correct payment request and keeps the listing rules tied to that package.</p>
 
-          {!schemaReady ? <div className="mt-5 rounded-xl border border-red-500/35 bg-red-500/10 p-4 text-sm font-bold">Package payments are not ready on this database yet. Install the existing LoadLink packages migration before accepting paid vehicle listings.</div> : null}
+          {!schemaReady ? <div className="mt-5 rounded-xl border border-red-500/35 bg-red-500/10 p-4 text-sm font-bold">Package payments are temporarily unavailable. Please check again later.</div> : null}
 
           {loading ? <div className={`mt-6 h-40 animate-pulse rounded-2xl border ${darkMode ? "border-white/10 bg-white/[.03]" : "border-black/10 bg-black/[.03]"}`} /> : (
             <div className="mt-6 grid gap-3 lg:grid-cols-3">
               <article className={`rounded-[22px] border p-5 ${surface}`}>
                 <div className="flex items-start justify-between gap-3"><div><h3 className="text-xl font-black">Manual listing</h3><p className={`mt-1 text-xs font-semibold ${muted}`}>One vehicle, only for the days you need.</p></div><strong className="text-xl">R15/day</strong></div>
-                <label className="mt-5 grid gap-2 text-xs font-black">Days to advertise<input type="number" min={1} max={365} value={days} onChange={(event) => setDays(Math.max(1, Math.min(365, Number(event.target.value) || 1)))} className={`h-11 rounded-xl border px-3 text-base font-black outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-black" : "border-black/10 bg-[#faf8f2]"}`} /></label>
-                <div className="mt-3 flex items-center justify-between text-sm"><span className={muted}>Total request</span><strong>R{total}</strong></div>
-                <button type="button" disabled={Boolean(busy) || !schemaReady} onClick={() => void requestManual()} className="mt-5 h-12 w-full rounded-xl bg-[#f6b800] px-4 text-sm font-black text-black disabled:opacity-45">{busy === "manual" ? "Creating request…" : "Activate Manual"}</button>
+                <p className={`mt-5 text-xs leading-5 ${muted}`}>R15 per vehicle for each active day. Check current payment availability on the packages page.</p>
+                <Link href="/packages#manual-package" className="mt-5 flex min-h-12 items-center justify-center rounded-xl bg-[#f6b800] px-4 text-sm font-black text-black">View Manual pricing</Link>
               </article>
 
               <article className={`rounded-[22px] border p-5 ${surface}`}>

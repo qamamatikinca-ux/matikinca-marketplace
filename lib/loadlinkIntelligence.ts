@@ -58,13 +58,24 @@ export function loadLinkHumanError(error: unknown, fallback = "LoadLink could no
   return raw.trim() || fallback;
 }
 
+// Share simultaneous reads for the same session; do not cache billing or account state.
+const intelligenceRequests = new Map<string, Promise<LoadLinkIntelligenceState>>();
 export async function getLoadLinkIntelligence(): Promise<LoadLinkIntelligenceState> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) return signedOutIntelligence;
-  const res = await fetch("/api/account/intelligence", { headers: { Authorization: `Bearer ${session.access_token}` }, cache: "no-store" });
-  const body = await res.json().catch(() => null);
-  if (!res.ok || !body) throw new Error(loadLinkHumanError(body?.error, "LoadLink could not read your account status right now."));
-  return body as LoadLinkIntelligenceState;
+  const key = session.access_token;
+  const existing = intelligenceRequests.get(key);
+  if (existing) return existing;
+  const request = (async () => {
+    const res = await fetch("/api/account/intelligence", { headers: { Authorization: `Bearer ${key}` }, cache: "no-store", signal: AbortSignal.timeout(15_000) });
+    const body = await res.json().catch(() => null);
+    if (!res.ok || !body) throw new Error(loadLinkHumanError(body?.error, "LoadLink could not read your account status right now."));
+    const { data: { session: current } } = await supabase.auth.getSession();
+    if (current?.access_token !== key) throw new Error("Your sign-in session changed. Please try again.");
+    return body as LoadLinkIntelligenceState;
+  })();
+  intelligenceRequests.set(key, request);
+  try { return await request; } finally { if (intelligenceRequests.get(key) === request) intelligenceRequests.delete(key); }
 }
 
 export async function requestLoadLinkPlan(plan: "pro" | "dealer") {

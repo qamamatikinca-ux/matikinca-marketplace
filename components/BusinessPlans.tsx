@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { requestManualListingPayment } from "@/lib/packageAccess";
 import {
   getLoadLinkIntelligence,
   getPaystackManagementLink,
@@ -20,7 +19,7 @@ const plans = [
     id: "manual" as const,
     name: "Manual",
     price: "R15",
-    billing: "per vehicle / day",
+    billing: "per vehicle / active day",
     description: "For occasional vehicle advertising without a monthly subscription.",
     features: ["Up to 5 active vehicle listings at once", "Up to 5 photos per listing", "Standard marketplace placement", "50 messages per day"],
   },
@@ -65,8 +64,6 @@ export default function BusinessPlans({
   const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState("");
   const [compareOpen, setCompareOpen] = useState(false);
-  const [manualOpen, setManualOpen] = useState(false);
-  const [days, setDays] = useState(7);
 
   useEffect(() => {
     void getLoadLinkIntelligence().then(setState).catch(() => setState(null));
@@ -83,7 +80,6 @@ export default function BusinessPlans({
   const showActiveDashboard = Boolean(enableRequests && !compact && !selectable && activePlan && !visiblePlans);
   const selectedCards = useMemo(() => plans.filter((plan) => !visiblePlans || visiblePlans.includes(plan.id)), [visiblePlans]);
   const showCards = !showActiveDashboard || compareOpen;
-  const manualTotal = Math.max(1, days) * 15;
 
   async function refresh() {
     const fresh = await getLoadLinkIntelligence();
@@ -129,25 +125,6 @@ export default function BusinessPlans({
       await refresh();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "LoadLink could not complete that request.");
-    } finally {
-      setBusy("");
-    }
-  }
-
-  async function requestManual() {
-    if (!enableRequests) return;
-    setBusy("manual");
-    setNotice("");
-    try {
-      const fresh = await refresh();
-      if (!fresh.authenticated) {
-        window.location.assign(`/login?returnTo=${encodeURIComponent("/packages#manual-package")}`);
-        return;
-      }
-      const result = await requestManualListingPayment(days);
-      setNotice(`Manual listing request ${result.reference} created for R${(result.amount_cents / 100).toFixed(2)}.`);
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "LoadLink could not create the Manual listing request.");
     } finally {
       setBusy("");
     }
@@ -228,15 +205,7 @@ export default function BusinessPlans({
                   {plan.id === "dealer" && !internal ? <button type="button" onClick={() => window.location.assign("/dealership/loadlink-test-dealership")} className="mt-5 text-[10px] font-black underline decoration-[#f6b800] decoration-2 underline-offset-4">View example dealership</button> : null}
 
                   {plan.id === "manual" ? (
-                    <div className="mt-5">
-                      {!manualOpen ? <button type="button" onClick={() => setManualOpen(true)} className="h-12 w-full rounded-xl bg-[#f6b800] text-sm font-black text-black">Choose Manual</button> : (
-                        <div className={`rounded-2xl border p-4 ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-[#faf8f2]"}`}>
-                          <div className="flex items-end gap-4"><label className="min-w-0 flex-1 text-xs font-black">Days<input type="number" min={1} max={365} value={days} onChange={(event) => setDays(Math.max(1, Math.min(365, Number(event.target.value) || 1)))} className={`mt-2 h-11 w-full rounded-xl border px-3 text-base font-black outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-black" : "border-black/10 bg-white"}`} /></label><div className="text-right"><p className={`text-[10px] font-bold uppercase ${muted}`}>Total</p><p className="mt-1 text-2xl font-black">R{manualTotal}</p></div></div>
-                          <button type="button" disabled={busy === "manual"} onClick={() => void requestManual()} className="mt-4 h-11 w-full rounded-xl bg-[#f6b800] text-sm font-black text-black disabled:opacity-45">{busy === "manual" ? "Working…" : "Continue with Manual"}</button>
-                          <button type="button" onClick={() => setManualOpen(false)} className={`mt-3 w-full text-xs font-black ${muted}`}>Cancel</button>
-                        </div>
-                      )}
-                    </div>
+                    <a href="/packages#manual-package" className="mt-5 flex min-h-12 items-center justify-center rounded-xl bg-[#f6b800] px-4 text-sm font-black text-black">View Manual pricing</a>
                   ) : (
                     <button type="button" disabled={busy === plan.id || requested || dealerIncludesPro} onClick={() => active ? void manage() : void act(plan.id)} className={`mt-5 h-12 w-full rounded-xl text-sm font-black ${active || dealerIncludesPro ? darkMode ? "border border-white/12 bg-white/[.04]" : "border border-black/10 bg-black/[.03]" : "bg-[#f6b800] text-black"} disabled:opacity-45`}>
                       {busy === plan.id || (active && busy === "manage") ? "Working…" : active ? `Manage ${plan.name} plan` : dealerIncludesPro ? "Included with Dealer" : pay ? "Continue payment" : requested ? "Under review" : upgrading ? "Upgrade to Dealer" : selectable && selected ? "Selected" : `Choose ${plan.name}`}

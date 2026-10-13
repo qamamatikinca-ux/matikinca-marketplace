@@ -1,0 +1,65 @@
+/* Calls share LoadLink's gold, charcoal and light surfaces. */
+.ll-call-overlay { background: rgba(0,0,0,.56); backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+.ll-call-sheet { --call-text: #f7f7f5; --call-muted: #a5a5a0; background: #121210 !important; color: var(--call-text) !important; border: 1px solid rgba(255,255,255,.12); border-radius: 28px; box-shadow: 0 24px 80px rgba(0,0,0,.3); max-height: calc(100dvh - 32px); overflow-y: auto; }
+.ll-call-sheet p:not([class*="text-red"]):not([class*="text-xl"]):not([class*="text-lg"]) { color: var(--call-muted); }
+.ll-call-sheet [data-loadlink-call-avatar] { box-shadow: 0 0 0 8px rgba(246,184,0,.07); }
+.ll-call-phone-fallback { display: flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 8px; font-size: 12px; color: var(--call-muted); border-radius: 16px; }
+.ll-call-active-overlay { display: grid; place-items: center; padding: 24px; }
+.ll-call-active-sheet { height: min(680px, calc(100dvh - 48px)) !important; max-height: calc(100dvh - 48px); padding: 20px 24px 24px !important; background: radial-gradient(ellipse at 50% 15%,rgba(246,184,0,.08),transparent 60%),#121210 !important; }
+.ll-call-control { width: 76px; height: 76px; border-radius: 22px; font-size: 11px; color: var(--call-text); }
+.ll-call-control[aria-pressed="true"] { background: #f6b800 !important; border-color: #f6b800 !important; color: #111 !important; }
+.ll-call-overlay button:focus-visible, .ll-call-overlay a:focus-visible, .ll-chat-call-card:focus-visible { outline: 3px solid #f6b800; outline-offset: 3px; }
+.ll-call-sheet button:disabled { opacity: .5; }
+html[data-loadlink-theme="light"] .ll-call-sheet { --call-text: #161610; --call-muted: #68685f; background: #fffefa !important; border-color: rgba(0,0,0,.09); }
+html[data-loadlink-theme="light"] .ll-call-control { color: #25251f; background: #f1f0e9; border-color: #deded5; }
+html[data-loadlink-theme="light"] .ll-call-active-sheet header button { color: #25251f; border-color: #deded5; }
+.ll-chat-call-row { display: flex; justify-content: flex-start; padding: 3px 0; }
+.ll-chat-call-outgoing { justify-content: flex-end; }
+.ll-chat-call-card { display: flex; gap: 12px; align-items: center; width: min(330px, 92%); min-height: 78px; padding: 14px; text-align: left; border: 1px solid rgba(0,0,0,.08); border-radius: 20px; background: #fffefa; color: #161610; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+.ll-chat-call-outgoing .ll-chat-call-card { background: #fff5d7; }
+.ll-chat-call-icon { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border-radius: 14px; color: #927000; background: rgba(246,184,0,.12); }
+.ll-chat-call-copy { flex: 1; min-width: 0; }
+.ll-chat-call-copy strong { display: block; font-size: 13px; line-height: 1.5; }
+.ll-chat-call-copy small { display: block; margin-top: 3px; color: #66665c; font-size: 11px; }
+.ll-chat-call-card time { align-self: flex-end; font-size: 10px; color: #747469; font-variant-numeric: tabular-nums; }
+.ll-chat-call-missed .ll-chat-call-icon, .ll-chat-call-missed strong { color: #bc3434; }
+.ll-chat-day { background: #fffefa; color: #66665c; font-size: 10px; font-weight: 700; padding: 5px 12px; border-radius: 999px; }
+html[data-loadlink-theme="dark"] .ll-chat-call-card { background: #20201b; border-color: #383830; color: #f7f7f5; }
+html[data-loadlink-theme="dark"] .ll-chat-call-outgoing .ll-chat-call-card { background: #30291b; }
+html[data-loadlink-theme="dark"] .ll-chat-call-copy small, html[data-loadlink-theme="dark"] .ll-chat-call-card time { color: #b2b2a7; }
+html[data-loadlink-theme="dark"] .ll-chat-day { background: #25251f; color: #b2b2a7; }
+.ll-call-history-retry { margin: 0 auto 12px; text-align: center; color: #77766d; font-size: 12px; }
+.ll-call-history-retry button { min-height: 44px; padding: 0 12px; text-decoration: underline; }
+.ll-chat-loading { max-width: 600px; margin: 12px auto; }
+.ll-chat-loading > span { display: block; width: 55%; height: 64px; margin-bottom: 16px; border-radius: 20px; background: rgba(127,127,127,.12); }
+.ll-chat-loading > span:nth-child(2) { margin-left: auto; width: 42%; }
+.ll-chat-loading p { font-size: 12px; text-align: center; opacity: .6; }
+@media (max-width: 639px) {
+  .ll-call-active-overlay { padding: 0; }
+  .ll-call-active-sheet { height: 100dvh !important; max-height: 100dvh; width: 100%; max-width: none !important; border: 0; border-radius: 0; padding: max(16px,env(safe-area-inset-top)) 20px max(20px,env(safe-area-inset-bottom)) !important; }
+  .ll-call-active-sheet [data-loadlink-call-avatar] { width: clamp(76px,20vh,140px); height: clamp(76px,20vh,140px); }
+  .loadlink-chat-header > div:last-child { gap: 4px; }
+  .loadlink-chat-header button[aria-label="Search this conversation"], .loadlink-chat-header button[aria-label="Conversation details"] { min-width: 44px; min-height: 44px; }
+  .loadlink-chat-panel input:not([type="checkbox"]):not([type="radio"]), .loadlink-chat-panel textarea, .loadlink-chat-panel select { font-size: 16px; }
+}
+@media (max-height: 500px) {
+  .ll-call-active-sheet { overflow-y: auto; }
+  .ll-call-active-sheet > div:first-of-type { padding: 8px 0; flex: none; }
+  .ll-call-active-sheet [data-loadlink-call-avatar] { width: 64px; height: 64px; }
+  .ll-call-active-sheet h2 { font-size: 22px; margin-top: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ll-call-overlay *, .ll-chat-call-card, .loadlink-message-viewport { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+.ll-call-sheet .ll-call-timer { color: var(--call-text) !important; font-size: clamp(30px,6vh,42px); font-weight: 600; }
+.ll-call-sheet .ll-call-status { color: #b89224 !important; }
+html[data-loadlink-theme="light"] .ll-call-secondary { color: #25251f; border-color: #deded5; background: #f1f0e9; }
+.ll-call-result { position: fixed; left: 16px; right: 16px; bottom: calc(90px + env(safe-area-inset-bottom)); z-index: 2147483350; display: flex; align-items: center; gap: 12px; max-width: 420px; margin: auto; padding: 12px 16px; border-radius: 18px; background: #20201b; border: 1px solid #454539; color: #fff; box-shadow: 0 12px 40px #0003; font-size: 13px; }
+.ll-call-result span { flex: 1; min-width: 0; }
+.ll-call-result button { min-width: 44px; min-height: 44px; font-size: 22px; }
+.ll-call-mini > button { min-height: 44px; }
+/* Form text stays legible and avoids focus zoom on small touch screens. */
+@media (max-width: 639px) and (pointer: coarse) {
+  main form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), main form textarea, main form select { font-size: 16px !important; max-width: 100%; }
+  main form input, main form select { min-height: 44px; }
+}

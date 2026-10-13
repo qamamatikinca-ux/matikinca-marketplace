@@ -31,7 +31,7 @@ const categories: Category[] = [
     { q: "Can I archive a conversation?", a: "Yes. Archived conversations remain available in Archived and can be restored where supported." },
   ]},
   { id: "payments", label: "Packages & payments", description: "Manual credits, Pro, Dealer, payment verification and refunds.", articles: [
-    { q: "What is Manual listing access?", a: "One Manual listing credit costs R15 and gives one approved Manual listing a 10-day live period. Bulk purchases create separate credits." },
+    { q: "What is Manual listing access?", a: "Manual vehicle advertising costs R15 per active day. Check Packages for current payment availability. Existing paid listing periods keep their original terms." },
     { q: "I was charged but my plan or credits are not active.", a: "Do not pay again immediately. Keep the LoadLink payment reference and use Talk to an Agent so the server-side Paystack verification can be checked." },
     { q: "A payment failed or was cancelled.", a: "A failed or cancelled payment must not activate a plan or listing credit. You can start a new payment when ready." },
   ]},

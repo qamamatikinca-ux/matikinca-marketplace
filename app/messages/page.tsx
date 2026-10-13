@@ -36,6 +36,9 @@ import {
   writeMessagePrivacy,
 } from "@/lib/messagePrivacy";
 import styles from "./messages.module.css";
+import { useChatCalls } from "@/components/calls/useChatCalls";
+import ChatCallCard from "@/components/calls/ChatCallCard";
+import { mergeChatTimeline } from "@/lib/callHistory";
 
 type Role = "buyer" | "owner";
 
@@ -423,6 +426,7 @@ export default function MessagesPage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState("");
+  const chatCalls = useChatCalls(selectedId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
   const [query, setQuery] = useState("");
@@ -751,6 +755,20 @@ export default function MessagesPage() {
     });
   }, [chatSearch, messages]);
 
+  const chatTimeline = useMemo(() => {
+    const needle = chatSearch.trim().toLowerCase();
+    const calls = chatCalls.calls.filter(call => !needle || `${call.label} ${call.detail} voice call`.toLowerCase().includes(needle));
+    return mergeChatTimeline(searchedMessages, calls);
+  }, [searchedMessages, chatCalls.calls, chatSearch]);
+  const requestChatCall = () => {
+    if (!selectedConversation) return;
+    window.dispatchEvent(new CustomEvent("loadlink-start-chat-call", { detail: {
+      conversationId: selectedConversation.id, name: selectedConversation.other_name,
+      avatarUrl: selectedConversation.other_photo || "",
+      phone: selectedConversation.other_phone || "",
+    } }));
+  };
+
   const loadConversations = useCallback(async (preferredId?: string) => {
     const requestSequence = ++conversationLoadSequenceRef.current;
     const buyerKeys = getBuyerKeys();
@@ -1043,11 +1061,18 @@ export default function MessagesPage() {
     const frame = window.requestAnimationFrame(() => {
       const viewport = messageViewportRef.current;
       if (!viewport) return;
-      viewport.scrollTo({ top: viewport.scrollHeight, behavior: messagesLoading ? "auto" : "smooth" });
+      viewport.scrollTo({ top: viewport.scrollHeight, behavior: messagesLoading || window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
       forceScrollRef.current = false;
     });
     return () => window.cancelAnimationFrame(frame);
   }, [messages, messagesLoading, selectedId]);
+
+  useEffect(() => {
+    const viewport = messageViewportRef.current;
+    if (!viewport || viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight > 180) return;
+    const frame = window.requestAnimationFrame(() => viewport.scrollTo({ top: viewport.scrollHeight, behavior: "auto" }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [chatCalls.calls]);
 
   async function send(event?: FormEvent) {
     event?.preventDefault();
@@ -1795,18 +1820,11 @@ ${message}` : message)}
 
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {selectedConversation.other_phone ? (
-                    <a
-                      href={`tel:${selectedConversation.other_phone.replace(/\s/g, "")}`}
-                      className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black md:w-auto md:px-4"
-                      aria-label="Call contact"
-                    >
-                      <PhoneIcon />
-                      <span className="ml-2 hidden text-xs font-black uppercase md:inline">
-                        Call
-                      </span>
-                    </a>
-                  ) : null}
+                  <button type="button" onClick={requestChatCall}
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white text-black md:w-auto md:px-4"
+                    aria-label="Start voice call">
+                    <PhoneIcon /><span className="ml-2 hidden text-xs font-black md:inline">Call</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => void toggleBlock()}
@@ -1890,20 +1908,24 @@ ${message}` : message)}
                 ref={messageViewportRef}
                 className={`loadlink-message-viewport loadlink-chat-wallpaper relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-5 sm:px-5 md:px-8 ${darkMode ? "bg-[#090909]" : "bg-[#f6f3eb]"}`}
               >
-                {messagesLoading && messages.length === 0 ? (
-                  null
-                ) : searchedMessages.length ? (
+                {chatCalls.error ? <div className="ll-call-history-retry" role="status">{chatCalls.error} <button type="button" onClick={chatCalls.retry}>Retry</button></div> : null}
+                {messagesLoading && messages.length === 0 && chatTimeline.length === 0 ? (
+                  <div className="ll-chat-loading" role="status" aria-label="Loading conversation"><span /><span /><span /><p>Loading conversation…</p></div>
+                ) : chatTimeline.length ? (
                   <div className="mx-auto max-w-3xl space-y-3">
-                    {searchedMessages.map((message, index) => {
+                    {chatTimeline.map((entry, index) => {
+                      const previousEntry = chatTimeline[index - 1];
+                      const showEntryDay = !previousEntry || new Date(previousEntry.created_at).toDateString() !== new Date(entry.created_at).toDateString();
+                      if (entry.kind === "call") return <div key={entry.key}>
+                        {showEntryDay ? <div className="my-5 flex justify-center"><span className="ll-chat-day">{new Intl.DateTimeFormat("en-ZA", { weekday: "short", day: "2-digit", month: "short" }).format(new Date(entry.created_at))}</span></div> : null}
+                        <ChatCallCard call={entry.call} onCall={requestChatCall} />
+                      </div>;
+                      const message = entry.message;
                       const mine = message.sender_role === selectedConversation.role;
                       const recipientSeenAt = selectedConversation.other_last_seen ? new Date(selectedConversation.other_last_seen).getTime() : 0;
             const messageSentAt = new Date(message.created_at).getTime();
             const seen = mine && Number.isFinite(recipientSeenAt) && recipientSeenAt >= messageSentAt;
-            const previous = searchedMessages[index - 1];
-                      const showDay =
-                        !previous ||
-                        new Date(previous.created_at).toDateString() !==
-                          new Date(message.created_at).toDateString();
+                      const showDay = showEntryDay;
                       return (
                         <div key={message.id}>
                           {showDay ? (

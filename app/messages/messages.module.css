@@ -55,3 +55,16 @@
 
 :global(html[data-loadlink-logistics-open="true"]) .messageApp, :global(body[data-loadlink-logistics-open="true"]) .messageApp { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 :global(html[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-chat-wallpaper), :global(body[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-chat-wallpaper), :global(html[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-message-viewport), :global(body[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-message-viewport), :global(html[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-chat-composer), :global(body[data-loadlink-logistics-open="true"]) .messageApp :global(.loadlink-chat-composer) { display: none !important; visibility: hidden !important; background-image: none !important; pointer-events: none !important; }
+
+/* Keep narrow chats usable without forcing the contact name off screen. */
+.messageApp :global(.loadlink-chat-panel) { min-width: 0; }
+.messageApp :global(.loadlink-chat-header button:focus-visible) { outline: 2px solid #f6b800; outline-offset: 2px; }
+@media (pointer: coarse) {
+  .messageApp :global(.loadlink-chat-header), .messageApp :global(.loadlink-chat-composer), .messageApp :global(.loadlink-chat-privacy) { -webkit-backdrop-filter: none; backdrop-filter: none; background: #fffefa !important; }
+  :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-header), :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-composer), :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-privacy) { background: #11110e !important; }
+}
+@media (max-width: 360px) {
+  .messageApp :global(.loadlink-chat-header) { padding-inline: 8px; gap: 5px; }
+  .messageApp :global(.loadlink-chat-header > div:last-child) { gap: 2px; }
+  .messageApp :global(.loadlink-chat-header h2) { font-size: 14px; }
+}

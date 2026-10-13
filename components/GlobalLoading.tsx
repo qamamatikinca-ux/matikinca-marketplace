@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 
-const INITIAL_LOADING_TIME = 420;
+const INITIAL_LOADING_TIME = 0;
 const INITIAL_LOADING_FALLBACK = 900;
 
 export default function GlobalLoading() {
