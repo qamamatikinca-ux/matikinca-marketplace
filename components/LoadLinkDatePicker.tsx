@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import { useMemo, useState } from "react";
 
 function toLocalDate(value: string) {
@@ -40,8 +42,8 @@ export default function LoadLinkDatePicker({ value, onChange, min, darkMode, ari
         <div className="fixed inset-0 z-[2147483200] flex items-center justify-center bg-black/58 p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm" role="presentation">
           <button type="button" aria-label="Close date picker" className="absolute inset-0" onClick={() => setOpen(false)} />
           <section role="dialog" aria-modal="true" aria-label={ariaLabel} className={`relative z-10 max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[28px] border p-5 shadow-2xl ${panel}`}>
-            <div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-[#b78300]">Date</p><h2 className="mt-1 text-2xl font-black tracking-[-.04em]">Choose a date</h2></div><button type="button" onClick={() => setOpen(false)} className={`flex h-10 w-10 items-center justify-center rounded-full border text-xl ${soft}`} aria-label="Close">×</button></div>
-            <div className="mt-5 flex items-center justify-between gap-3"><button type="button" onClick={() => setMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))} className={`h-10 w-10 rounded-full border ${soft}`} aria-label="Previous month">‹</button><strong className="text-base font-black">{new Intl.DateTimeFormat("en-ZA", { month: "long", year: "numeric" }).format(month)}</strong><button type="button" onClick={() => setMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))} className={`h-10 w-10 rounded-full border ${soft}`} aria-label="Next month">›</button></div>
+            <div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-[#b78300]">Date</p><h2 className="mt-1 text-2xl font-black tracking-[-.04em]">Choose a date</h2></div><button type="button" onClick={() => setOpen(false)} className={`flex h-10 w-10 items-center justify-center rounded-full border text-xl ${soft}`} aria-label="Close"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button></div>
+            <div className="mt-5 flex items-center justify-between gap-3"><button type="button" onClick={() => setMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))} className={`h-10 w-10 rounded-full border ${soft}`} aria-label="Previous month"><LoadLinkIcon name="chevronLeft" size={18} className="inline-block shrink-0 align-middle" /></button><strong className="text-base font-black">{new Intl.DateTimeFormat("en-ZA", { month: "long", year: "numeric" }).format(month)}</strong><button type="button" onClick={() => setMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))} className={`h-10 w-10 rounded-full border ${soft}`} aria-label="Next month"><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></button></div>
             <div className="mt-5 grid grid-cols-7 text-center text-[9px] font-black uppercase opacity-45">{["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((item) => <span key={item} className="py-2">{item}</span>)}</div>
             <div className="grid grid-cols-7 gap-1.5">{days.map((date, index) => {
               if (!date) return <span key={`empty-${index}`} className="aspect-square" />;

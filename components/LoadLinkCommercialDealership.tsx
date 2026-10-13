@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
 import Link from "next/link";
@@ -253,8 +255,8 @@ export default function LoadLinkCommercialDealership() {
               
             </div>
             <div className="mb-3 hidden justify-end gap-2 sm:flex">
-              <button type="button" onClick={() => moveSlider(-1)} className={`flex h-10 w-10 items-center justify-center rounded-full border ${darkMode ? "border-white/20" : "border-black/15"}`} aria-label="Previous dealership products">←</button>
-              <button type="button" onClick={() => moveSlider(1)} className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f6b800] text-black" aria-label="Next dealership products">→</button>
+              <button type="button" onClick={() => moveSlider(-1)} className={`flex h-10 w-10 items-center justify-center rounded-full border ${darkMode ? "border-white/20" : "border-black/15"}`} aria-label="Previous dealership products"><LoadLinkIcon name="chevronLeft" size={18} className="inline-block shrink-0 align-middle" /></button>
+              <button type="button" onClick={() => moveSlider(1)} className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f6b800] text-black" aria-label="Next dealership products"><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></button>
             </div>
             <div ref={sliderRef} className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-4 touch-pan-x">
               {visibleInventory.map((truck) => (
@@ -290,7 +292,7 @@ export default function LoadLinkCommercialDealership() {
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/78 p-0 sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label={selected.title}>
           <button type="button" className="absolute inset-0" onClick={() => setSelected(null)} aria-label="Close vehicle details" />
           <div className={`relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-[28px] shadow-2xl sm:rounded-[28px] ${darkMode ? "bg-[#0d0d0d] text-white" : "bg-white text-black"}`}>
-            <div className="relative aspect-[16/9] bg-black"><img src={selected.image} alt={selected.title} className="h-full w-full object-contain" /><button type="button" onClick={() => setSelected(null)} className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl font-black text-black" aria-label="Close vehicle details">×</button></div>
+            <div className="relative aspect-[16/9] bg-black"><img src={selected.image} alt={selected.title} className="h-full w-full object-contain" /><button type="button" onClick={() => setSelected(null)} className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl font-black text-black" aria-label="Close vehicle details"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button></div>
             <div className="p-5 md:p-7"><p className={`text-xs font-black ${muted}`}>{selected.year} · {selected.mileage}</p><h2 className="mt-2 text-3xl font-black tracking-[-.04em]">{selected.title}</h2><p className="mt-3 text-2xl font-black text-[#c59100]">{selected.price}</p>
               <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3">
                 {[['Mileage', selected.mileage], ['Previous owners', selected.previousOwners], ['Transmission', selected.transmission], ['Fuel', selected.fuel], ['Condition', selected.condition], ['Service history', selected.serviceHistory], ['Body type', selected.bodyType], ['Seller', DEALER_NAME]].map(([label, value]) => <div key={label} className={`rounded-xl border p-3 ${darkMode ? "border-white/10 bg-white/[.03]" : "border-black/10 bg-black/[.02]"}`}><p className={`text-[10px] font-black uppercase ${muted}`}>{label}</p><p className="mt-1 text-sm font-black">{value}</p></div>)}
@@ -303,7 +305,7 @@ export default function LoadLinkCommercialDealership() {
       {customizeDialog ? (
         <div className="fixed inset-0 z-[125] flex items-end justify-center bg-black/75 p-0 sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label="Customize dealership showroom">
           <div className={`w-full max-w-xl rounded-t-[30px] border p-5 shadow-2xl sm:rounded-[30px] sm:p-7 ${surface}`}>
-            <div className="flex items-center justify-between gap-4"><h2 className="text-3xl font-black tracking-[-.04em]">Customize showroom</h2><button type="button" onClick={() => setCustomizeDialog(false)} className={`flex h-10 w-10 items-center justify-center rounded-full border text-xl ${darkMode ? "border-white/15" : "border-black/10"}`}>×</button></div>
+            <div className="flex items-center justify-between gap-4"><h2 className="text-3xl font-black tracking-[-.04em]">Customize showroom</h2><button type="button" onClick={() => setCustomizeDialog(false)} className={`flex h-10 w-10 items-center justify-center rounded-full border text-xl ${darkMode ? "border-white/15" : "border-black/10"}`}><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button></div>
             <div className="mt-6 grid gap-4">
               <label className="text-xs font-black uppercase tracking-[.12em]">Banner image<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => updateShowroomImage(event, "banner")} className="mt-2 block w-full text-sm font-semibold normal-case" /></label>
               <label className="text-xs font-black uppercase tracking-[.12em]">Profile picture<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => updateShowroomImage(event, "profile")} className="mt-2 block w-full text-sm font-semibold normal-case" /></label>
@@ -322,7 +324,7 @@ export default function LoadLinkCommercialDealership() {
           <div className={`w-full max-w-lg rounded-t-[30px] border p-5 shadow-2xl sm:rounded-[30px] sm:p-7 ${surface}`}>
             <div className="flex items-start justify-between gap-4">
               <div><h2 id="follow-title" className="text-3xl font-black tracking-[-.04em]">{following ? "Dealership notifications" : "Follow this dealership"}</h2><p className={`mt-2 text-sm leading-6 ${muted}`}>Choose what LoadLink should alert you about. You can change these choices later.</p></div>
-              <button type="button" onClick={() => setFollowDialog(false)} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-xl ${darkMode ? "border-white/15" : "border-black/10"}`} aria-label="Close follow settings">×</button>
+              <button type="button" onClick={() => setFollowDialog(false)} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-xl ${darkMode ? "border-white/15" : "border-black/10"}`} aria-label="Close follow settings"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
             </div>
             <div className="mt-6 grid gap-3">
               <Preference checked={preferences.newListings} onChange={(value) => setPreferences((current) => ({ ...current, newListings: value }))} title="New vehicle listings" copy="Alert me when this dealership adds new commercial vehicles." darkMode={darkMode} />

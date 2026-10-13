@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import LoadLinkDocumentPreview from "@/components/LoadLinkDocumentPreview";
 import Link from "next/link";
@@ -148,7 +150,7 @@ export default function ToolsPage() {
       {tool ? <section id="tool-workspace" className={`mt-7 overflow-hidden rounded-[28px] border ${card}`}>
         <div className={`flex items-start justify-between gap-4 border-b p-5 md:p-6 ${darkMode?"border-white/10":"border-black/10"}`}>
           <div className="flex items-center gap-3"><ToolIcon id={tool.id}/><div><h2 className="text-2xl font-black tracking-[-.03em]">{tool.name}</h2><p className={`mt-1 text-xs font-semibold ${muted}`}>{tool.description}</p></div></div>
-          <button type="button" onClick={()=>setSelected(null)} className="flex h-10 w-10 items-center justify-center rounded-full border border-current/10 text-xl">×</button>
+          <button type="button" onClick={()=>setSelected(null)} className="flex h-10 w-10 items-center justify-center rounded-full border border-current/10 text-xl"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
         </div>
 
         {tool.id==="quote" ? <div className="grid gap-5 p-5 md:grid-cols-[.9fr_1.1fr] md:p-6">

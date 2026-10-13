@@ -342,7 +342,7 @@ export default function DriverProfileWizardV273() {
             <ReviewRow label="Vehicles" value={form.vehicle_types || "—"} onEdit={() => setStep(2)} />
             <ReviewRow label="Availability" value={form.availability || "—"} onEdit={() => setStep(3)} />
             <ReviewRow label="PrDP" value={form.prdp_required ? `Required${form.prdp_expiry ? ` · expires ${form.prdp_expiry}` : ""}` : "Not marked as required"} onEdit={() => setStep(3)} />
-            <ReviewRow label="Documents" value={`${documentMap.identity ? "ID ✓" : "ID missing"} · ${documentMap.drivers_licence ? "Licence ✓" : "Licence missing"}${form.prdp_required ? ` · ${documentMap.prdp ? "PrDP ✓" : "PrDP missing"}` : ""}`} onEdit={() => setStep(4)} />
+            <ReviewRow label="Documents" value={`${documentMap.identity ? "ID added" : "ID missing"} · ${documentMap.drivers_licence ? "Licence added" : "Licence missing"}${form.prdp_required ? ` · ${documentMap.prdp ? "PrDP added" : "PrDP missing"}` : ""}`} onEdit={() => setStep(4)} />
           </div>
           {submitted ? <div className="mt-5 rounded-[16px] border border-[#f6b800]/35 bg-[#f6b800]/10 p-4 text-xs font-bold">Your profile is already with LoadLink for review. You can still correct your saved details if LoadLink requests changes.</div> : null}
         </> : null}

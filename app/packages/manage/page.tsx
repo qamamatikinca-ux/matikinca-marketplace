@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
@@ -74,7 +76,7 @@ export default function ManagePackagePage() {
     <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
     <section className="mx-auto max-w-4xl px-4 pb-20 pt-8 sm:px-6 md:pt-12">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link href="/packages" className={`inline-flex min-h-10 items-center rounded-full border px-4 text-xs font-black ${darkMode ? "border-white/12 bg-white/[.035]" : "border-black/10 bg-white/55"}`}>← Packages</Link>
+        <Link href="/packages" className={`inline-flex min-h-10 items-center rounded-full border px-4 text-xs font-black ${darkMode ? "border-white/12 bg-white/[.035]" : "border-black/10 bg-white/55"}`}><LoadLinkIcon name="chevronLeft" size={16} className="inline-block align-middle" /> Packages</Link>
         <span className={`rounded-full border px-3 py-2 text-[10px] font-black uppercase tracking-[.1em] ${state?.plan_state === "active" ? "border-[#f6b800]/45 bg-[#f6b800]/10 text-[#a77900]" : subtle}`}>{status}</span>
       </div>
 
@@ -107,10 +109,10 @@ export default function ManagePackagePage() {
           <section className={`rounded-[26px] border p-6 backdrop-blur-2xl ${surface}`}>
             <p className={`text-[10px] font-black uppercase tracking-[.12em] ${muted}`}>Plan actions</p>
             <div className="mt-4 grid gap-2">
-              {plan === "dealer" ? <Link href="/dealer" className={`flex min-h-12 items-center justify-between rounded-2xl border px-4 text-sm font-black ${subtle}`}><span>Dealership Centre</span><span>→</span></Link> : null}
-              <Link href="/packages" className={`flex min-h-12 items-center justify-between rounded-2xl border px-4 text-sm font-black ${subtle}`}><span>Compare packages</span><span>→</span></Link>
-              <Link href="/help" className={`flex min-h-12 items-center justify-between rounded-2xl border px-4 text-sm font-black ${subtle}`}><span>Help & support</span><span>→</span></Link>
-              {supportPhone ? <a href={`tel:${supportPhone.replace(/\s/g, "")}`} className="flex min-h-12 items-center justify-between rounded-2xl bg-[#f6b800] px-4 text-sm font-black text-black"><span>Call support</span><span>↗</span></a> : null}
+              {plan === "dealer" ? <Link href="/dealer" className={`flex min-h-12 items-center justify-between rounded-2xl border px-4 text-sm font-black ${subtle}`}><span>Dealership Centre</span><span><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></span></Link> : null}
+              <Link href="/packages" className={`flex min-h-12 items-center justify-between rounded-2xl border px-4 text-sm font-black ${subtle}`}><span>Compare packages</span><span><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></span></Link>
+              <Link href="/help" className={`flex min-h-12 items-center justify-between rounded-2xl border px-4 text-sm font-black ${subtle}`}><span>Help & support</span><span><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></span></Link>
+              {supportPhone ? <a href={`tel:${supportPhone.replace(/\s/g, "")}`} className="flex min-h-12 items-center justify-between rounded-2xl bg-[#f6b800] px-4 text-sm font-black text-black"><span>Call support</span><span><LoadLinkIcon name="arrowUpRight" size={18} className="inline-block shrink-0 align-middle" /></span></a> : null}
             </div>
           </section>
         </div>

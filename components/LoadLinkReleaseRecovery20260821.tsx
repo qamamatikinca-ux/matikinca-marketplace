@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type SearchScope = "all" | "job" | "contract" | "asset" | "driver" | "dealer";
@@ -296,7 +298,7 @@ export default function LoadLinkReleaseRecovery20260821() {
       <button type="button" className="ll-recovery-search-backdrop" aria-label="Close search options" onClick={() => setOpen(false)} />
       <section className="ll-recovery-search-panel">
         <header className="ll-recovery-search-header">
-          <button type="button" aria-label="Close" onClick={() => setOpen(false)}>‹</button>
+          <button type="button" aria-label="Close" onClick={() => setOpen(false)}><LoadLinkIcon name="chevronLeft" size={18} className="inline-block shrink-0 align-middle" /></button>
           <div><strong>What do you need?</strong><span>{scopeLabel} · choose a useful starting point or type your own</span></div>
         </header>
 
@@ -307,11 +309,11 @@ export default function LoadLinkReleaseRecovery20260821() {
 
         <div className="ll-recovery-search-options">
           <button type="button" className={selected === "" ? "is-selected" : ""} onClick={() => setSelected("")}>
-            <i /><span><strong>Any {scopeLabel.toLowerCase()}</strong><small>Show everything in this section</small></span><b>›</b>
+            <i /><span><strong>Any {scopeLabel.toLowerCase()}</strong><small>Show everything in this section</small></span><b><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></b>
           </button>
           {options.map((item) => (
             <button key={item.value} type="button" className={selected === item.value ? "is-selected" : ""} onClick={() => setSelected(item.value)}>
-              <i /><span><strong>{item.title}</strong><small>{item.subtitle}</small></span><b>›</b>
+              <i /><span><strong>{item.title}</strong><small>{item.subtitle}</small></span><b><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></b>
             </button>
           ))}
           {!options.length ? <p>No preset matches that filter. Use “Type my own” below.</p> : null}

@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
@@ -146,7 +148,7 @@ export default function LinkBot() {
           <section className={`flex max-h-[88dvh] w-full max-w-md flex-col overflow-hidden rounded-[28px] border shadow-[0_30px_90px_rgba(0,0,0,.28)] backdrop-blur-3xl ${panel}`} role="dialog" aria-modal="true" aria-label="LoadLink help">
             <header className={`flex items-center justify-between border-b p-4 ${softBorder}`}>
               <div><p className={`text-[10px] font-black uppercase tracking-[.14em] ${darkMode ? "text-white/45" : "text-black/45"}`}>LoadLink help</p><h2 className="mt-1 text-xl font-black">LinkBot</h2><p className={`mt-1 text-[10px] ${darkMode ? "text-white/40" : "text-black/40"}`}>Context-aware help and support handover</p></div>
-              <button onClick={() => setOpen(false)} className={`flex h-10 w-10 items-center justify-center rounded-full border text-xl ${softBorder}`} aria-label="Close LinkBot">×</button>
+              <button onClick={() => setOpen(false)} className={`flex h-10 w-10 items-center justify-center rounded-full border text-xl ${softBorder}`} aria-label="Close LinkBot"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto p-4">
               <div className="space-y-3">

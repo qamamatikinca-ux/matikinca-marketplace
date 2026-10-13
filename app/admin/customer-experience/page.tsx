@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -127,7 +129,7 @@ function FilterButton({ active, onClick, children }: { active: boolean; onClick:
 }
 
 function StarRating({ rating }: { rating: number }) {
-  return <div className="flex gap-0.5" aria-label={`${rating} out of 5 stars`}>{[1,2,3,4,5].map((star) => <span key={star} className={star <= rating ? "text-[#d99f00]" : "text-black/15"}>★</span>)}</div>;
+  return <div className="flex gap-0.5" aria-label={`${rating} out of 5 stars`}>{[1,2,3,4,5].map((star) => <span key={star} className={star <= rating ? "text-[#d99f00]" : "text-black/15"}><LoadLinkIcon name="star" size={16} className="inline-block shrink-0 align-middle" /></span>)}</div>;
 }
 
 function surfaceLabel(value: string) {

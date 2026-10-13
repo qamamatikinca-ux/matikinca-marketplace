@@ -1,6 +1,12 @@
 import type { SVGProps } from "react";
 
 export type LoadLinkIconName =
+  | "arrowUpRight"
+  | "callIncoming"
+  | "callOutgoing"
+  | "refresh"
+  | "star"
+  | "checkDouble"
   | "archive"
   | "bell"
   | "calendar"
@@ -49,6 +55,12 @@ export default function LoadLinkIcon({ name, size = 20, strokeWidth = 1.9, ...pr
   };
 
   switch (name) {
+    case "arrowUpRight": return <svg {...common}><path d="M7 17 17 7M7 7h10v10" /></svg>;
+    case "callIncoming": return <svg {...common}><path d="M17 7 7 17M7 7v10h10" /></svg>;
+    case "callOutgoing": return <svg {...common}><path d="M7 17 17 7M7 7h10v10" /></svg>;
+    case "refresh": return <svg {...common}><path d="M20 10a8 8 0 1 0-2 8M20 4v6h-6" /></svg>;
+    case "star": return <svg {...common}><path d="m12 3 2.8 5.7 6.3.9-4.6 4.5 1.1 6.3-5.6-3-5.6 3 1.1-6.3L3 9.6l6.2-.9L12 3Z" /></svg>;
+    case "checkDouble": return <svg {...common}><path d="m2 12 4 4L16 6m-5 7 3 3L22 8" /></svg>;
     case "menu": return <svg {...common}><path d="M4 7h16M4 12h16M4 17h16" /></svg>;
     case "close": return <svg {...common}><path d="m6 6 12 12M18 6 6 18" /></svg>;
     case "search": return <svg {...common}><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>;

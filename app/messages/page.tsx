@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
 import Link from "next/link";
@@ -1796,7 +1798,7 @@ ${message}` : message)}
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/10 text-xl font-black md:hidden"
                   aria-label="Back to conversations"
                 >
-                  ←
+                  <LoadLinkIcon name="chevronLeft" size={18} className="inline-block shrink-0 align-middle" />
                 </button>
                 <DealerUpdateAvatar
                   listingId={selectedConversation.listing_id}
@@ -1874,7 +1876,7 @@ ${message}` : message)}
               ) : null}
 
               {chatSearchOpen ? (
-                <div className="flex items-center gap-2 border-b border-black/10 bg-white px-3 py-2 md:px-5"><SearchIcon /><input autoFocus value={chatSearch} onChange={(event) => setChatSearch(event.target.value)} placeholder="Search messages, rates or files" className="h-10 min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none" /><span className="hidden text-[10px] font-bold text-black/40 sm:inline">{chatSearch.trim() ? `${searchedMessages.length} found` : ""}</span><button type="button" onClick={() => { setChatSearch(""); setChatSearchOpen(false); }} className="h-9 w-9 rounded-full border border-black/10 text-sm font-black">×</button></div>
+                <div className="flex items-center gap-2 border-b border-black/10 bg-white px-3 py-2 md:px-5"><SearchIcon /><input autoFocus value={chatSearch} onChange={(event) => setChatSearch(event.target.value)} placeholder="Search messages, rates or files" className="h-10 min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none" /><span className="hidden text-[10px] font-bold text-black/40 sm:inline">{chatSearch.trim() ? `${searchedMessages.length} found` : ""}</span><button type="button" onClick={() => { setChatSearch(""); setChatSearchOpen(false); }} className="h-9 w-9 rounded-full border border-black/10 text-sm font-black"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button></div>
               ) : null}
 
               {conversationBlocked ? (
@@ -1895,7 +1897,7 @@ ${message}` : message)}
                   >
                     <div className={`sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between border-b px-4 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
                       <div><strong className="text-sm font-bold">Conversation info</strong><p className={`mt-0.5 text-[9px] font-medium ${darkMode ? "text-white/45" : "text-black/45"}`}>Details and account actions</p></div>
-                      <button type="button" onClick={() => setShowDetails(false)} className={`flex h-9 w-9 items-center justify-center rounded-full border text-lg ${darkMode ? "border-white/15 text-white" : "border-black/10 text-black"}`} aria-label="Close conversation info">×</button>
+                      <button type="button" onClick={() => setShowDetails(false)} className={`flex h-9 w-9 items-center justify-center rounded-full border text-lg ${darkMode ? "border-white/15 text-white" : "border-black/10 text-black"}`} aria-label="Close conversation info"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
                     </div>
                     <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                       <ConversationDetails darkMode={darkMode} conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} reportBusy={reportBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} onReport={reportConversation} />
@@ -1972,7 +1974,7 @@ ${message}` : message)}
                                 <p className="whitespace-pre-wrap break-words text-sm font-medium leading-6">{message.body}</p>
                               ) : null}
                               <div className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] font-semibold ${mine ? "text-white/45" : "text-black/35"}`}>
-                                {message.edited_at && !message.deleted_at ? <span>edited ·</span> : null}<span>{formatClock(message.created_at)}</span>{mine ? <span className={seen ? "font-black text-[#f6b800]" : ""} aria-label={seen ? "Seen" : "Sent"}>{seen ? "Seen ✓✓" : "Sent ✓"}</span> : null}
+                                {message.edited_at && !message.deleted_at ? <span>edited ·</span> : null}<span>{formatClock(message.created_at)}</span>{mine ? <span className={seen ? "font-black text-[#f6b800]" : ""} aria-label={seen ? "Seen" : "Sent"}>{seen ? "Seen" : "Sent"}<LoadLinkIcon name={seen ? "checkDouble" : "check"} size={12} /></span> : null}
                                 {!message.deleted_at ? <button type="button" onClick={() => setMessageMenuId((current) => current === message.id ? "" : message.id)} className={`ml-1 flex h-5 w-6 items-center justify-center rounded-md text-[13px] leading-none ${mine ? "text-white/55 hover:bg-white/10" : "text-black/40 hover:bg-black/5"}`} aria-label="Message options" aria-expanded={messageMenuId === message.id}>•••</button> : null}
                               </div>
                               {!message.deleted_at && messageMenuId === message.id ? (
@@ -2024,7 +2026,7 @@ ${message}` : message)}
                         <button key={suggestion} type="button" onClick={() => { updateTyping(suggestion); setShowStarterSuggestions(false); }} className={`shrink-0 rounded-full border px-3 py-2 text-[10px] font-semibold ${darkMode ? "border-white/12 bg-white/[.04] text-white/80" : "border-black/10 bg-white text-black/75"}`}>{suggestion.length > 58 ? `${suggestion.slice(0, 58)}…` : suggestion}</button>
                       ))}
                     </div>
-                    <button type="button" onClick={() => setShowStarterSuggestions(false)} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm ${darkMode ? "text-white/45" : "text-black/40"}`} aria-label="Hide suggested messages">×</button>
+                    <button type="button" onClick={() => setShowStarterSuggestions(false)} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm ${darkMode ? "text-white/45" : "text-black/40"}`} aria-label="Hide suggested messages"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
                   </div>
                 </div>
               ) : null}

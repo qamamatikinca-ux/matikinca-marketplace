@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -79,7 +81,7 @@ export default function VehicleProductPage() {
 
       <section className="mx-auto max-w-6xl px-4 pb-16 pt-6 md:px-6 md:pt-9">
         <Link href="/list-your-vehicle#vehicle-marketplace-vehicles" className={`inline-flex text-xs font-black uppercase tracking-[.08em] ${muted}`}>
-          ← Back to vehicles
+          <LoadLinkIcon name="chevronLeft" size={16} className="inline-block align-middle" /> Back to vehicles
         </Link>
 
         {loading ? (

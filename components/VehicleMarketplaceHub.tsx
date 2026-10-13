@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import LoadLinkPagination from "@/components/LoadLinkPagination";
@@ -223,7 +225,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
                       />
 
                       <Link href={href} onClick={() => markSeen(String(row.id))} className={`mt-5 flex min-h-12 w-full items-center justify-between border-t pt-4 text-sm font-black ${darkMode ? "border-white/10" : "border-black/10"}`}>
-                        <span>View full details</span><span aria-hidden="true">→</span>
+                        <span>View full details</span><span aria-hidden="true"><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></span>
                       </Link>
                     </div>
                   </article>

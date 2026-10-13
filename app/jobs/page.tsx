@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
 import Link from "next/link";
@@ -986,7 +988,7 @@ function ListingAnalyticsModal({ job, ownerKey, onClose }: { job: JobListing; ow
             <p className="text-xs font-black uppercase tracking-[0.2em] text-[#f6b800]">Listing analytics</p>
             <h2 className="mt-2 text-2xl font-black">{job.title}</h2>
           </div>
-          <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center border border-white/20 text-xl font-black" aria-label="Close analytics">×</button>
+          <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center border border-white/20 text-xl font-black" aria-label="Close analytics"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
         </header>
 
         <div className="grid grid-cols-2 border-b border-white/10 md:grid-cols-3">
@@ -1055,7 +1057,7 @@ function PhotoGalleryModal({ job, onClose }: { job: JobListing; onClose: () => v
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#f6b800]">{job.photos.length} photo{job.photos.length === 1 ? "" : "s"}</p>
             <h3 className="text-lg font-black">{job.title}</h3>
           </div>
-          <button onClick={onClose} className="flex h-10 w-10 items-center justify-center border border-white/20 text-2xl font-black">×</button>
+          <button onClick={onClose} className="flex h-10 w-10 items-center justify-center border border-white/20 text-2xl font-black"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
         </div>
 
         <div className="grid gap-4">
@@ -1109,7 +1111,7 @@ function EditJobModal({ job, ownerKey, onClose, onUpdated }: { job: JobListing; 
       <div className="mx-auto max-w-xl border border-[#f6b800] bg-black p-5 text-white">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-2xl font-black">Edit post</h3>
-          <button onClick={onClose} className="flex h-10 w-10 items-center justify-center border border-white/20 text-2xl font-black">×</button>
+          <button onClick={onClose} className="flex h-10 w-10 items-center justify-center border border-white/20 text-2xl font-black"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
         </div>
 
         <div className="grid gap-3">

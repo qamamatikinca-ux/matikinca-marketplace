@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -248,7 +250,7 @@ export default function LoadLinkRuntimeIntelligence() {
               className="text-xs font-black opacity-35"
               aria-label="Dismiss"
             >
-              ×
+              <LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" />
             </button>
           </div>
         </div>

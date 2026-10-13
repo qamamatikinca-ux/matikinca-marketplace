@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import type { DealerInsight, DealerSection } from "@/lib/dealer/types";
 import { EmptyState, Surface } from "./ui";
 
@@ -37,7 +39,7 @@ export default function DealerIntelligencePanel({ darkMode, insights, setSection
                   <span className="mt-0.5 block text-[12px] font-black sm:text-[13px]">{item.title}</span>
                   <span className={`mt-1 block text-[11px] font-semibold leading-5 ${muted}`}>{item.message}</span>
                 </span>
-                {item.action_label ? <span className="shrink-0 self-center text-[9px] font-black opacity-60">{item.action_label} →</span> : null}
+                {item.action_label ? <span className="shrink-0 self-center text-[9px] font-black opacity-60">{item.action_label} <LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></span> : null}
               </>
             );
             return actionable ? (

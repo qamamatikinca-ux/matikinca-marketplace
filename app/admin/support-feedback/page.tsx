@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkRatingStars from "@/components/LoadLinkRatingStars";
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
@@ -62,7 +64,7 @@ export default function SupportFeedbackPage() {
 
         <div className="mt-5 flex gap-2 overflow-x-auto pb-1">{(["all","low","job","contract","vehicle","asset"] as Filter[]).map((option) => <button key={option} type="button" onClick={() => setFilter(option)} className={`shrink-0 rounded-full px-4 py-2 text-[11px] font-black ${filter === option ? "bg-[#f6b800] text-black" : "border border-black/10 bg-white text-black"}`}>{option === "low" ? "Follow-up" : option === "asset" ? "Equipment" : option[0].toUpperCase() + option.slice(1)}</button>)}</div>
 
-        <div className="mt-5 grid gap-3">{visible.map((row) => <article key={row.id} className="rounded-[22px] border border-black/10 bg-white p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-lg font-black">{"★".repeat(Math.max(0, Math.min(5, Number(row.rating))))}<span className="text-black/15">{"★".repeat(Math.max(0, 5 - Number(row.rating)))}</span></p><h2 className="mt-2 text-lg font-black">{row.listing_title || "Posting experience"}</h2><p className="mt-1 text-xs font-semibold text-black/45">{row.user_email || "Signed-in member"} · {new Date(row.created_at).toLocaleString("en-ZA")}</p></div><span className={`rounded-full px-3 py-1 text-[10px] font-black ${Number(row.rating) <= 3 ? "bg-red-50 text-red-700" : "bg-[#f7f5ef] text-black/55"}`}>{Number(row.rating) <= 3 ? "Follow up" : row.surface}</span></div><p className="mt-4 text-sm font-semibold leading-6 text-black/65">{row.comment?.trim() || "No written comment."}</p></article>)}</div>
+        <div className="mt-5 grid gap-3">{visible.map((row) => <article key={row.id} className="rounded-[22px] border border-black/10 bg-white p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-lg font-black"><LoadLinkRatingStars rating={Math.max(0, Math.min(5, Number(row.rating)))} /></p><h2 className="mt-2 text-lg font-black">{row.listing_title || "Posting experience"}</h2><p className="mt-1 text-xs font-semibold text-black/45">{row.user_email || "Signed-in member"} · {new Date(row.created_at).toLocaleString("en-ZA")}</p></div><span className={`rounded-full px-3 py-1 text-[10px] font-black ${Number(row.rating) <= 3 ? "bg-red-50 text-red-700" : "bg-[#f7f5ef] text-black/55"}`}>{Number(row.rating) <= 3 ? "Follow up" : row.surface}</span></div><p className="mt-4 text-sm font-semibold leading-6 text-black/65">{row.comment?.trim() || "No written comment."}</p></article>)}</div>
       </div>
     </main>
   );

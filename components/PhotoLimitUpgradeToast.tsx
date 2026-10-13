@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import Link from "next/link";
 import { useEffect } from "react";
 
@@ -43,7 +45,7 @@ export default function PhotoLimitUpgradeToast({
               </button>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-current/15 text-lg opacity-60" aria-label="Dismiss">×</button>
+          <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-current/15 text-lg opacity-60" aria-label="Dismiss"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
         </div>
         <div className="mt-3 h-1 overflow-hidden rounded-full bg-current/10">
           <div className="loadlink-upgrade-toast-timer h-full w-full origin-left bg-[#f6b800]" />

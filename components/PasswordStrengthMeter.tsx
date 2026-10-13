@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 type Rule = { label: string; valid: boolean };
 
 function rulesFor(password: string): Rule[] {
@@ -46,7 +48,7 @@ export default function PasswordStrengthMeter({ password, darkMode }: { password
       <div className="mt-2.5 grid gap-1.5 sm:grid-cols-2">
         {strength.rules.map((rule) => (
           <div key={rule.label} className={`flex items-center gap-2 text-[11px] font-semibold ${rule.valid ? "text-emerald-500" : darkMode ? "text-white/43" : "text-black/43"}`}>
-            <span className={`flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full border text-[9px] font-black ${rule.valid ? "border-emerald-500 bg-emerald-500 text-white" : darkMode ? "border-white/18 text-transparent" : "border-black/18 text-transparent"}`}>{rule.valid ? "✓" : "·"}</span>
+            <span className={`flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full border text-[9px] font-black ${rule.valid ? "border-emerald-500 bg-emerald-500 text-white" : darkMode ? "border-white/18 text-transparent" : "border-black/18 text-transparent"}`}>{rule.valid ? <LoadLinkIcon name="check" size={12} /> : null}</span>
             {rule.label}
           </div>
         ))}

@@ -39,12 +39,14 @@ function enhanceDealerPoster() {
 
   const evidence = dealershipEvidence[0];
   const card = nearestCard(evidence);
-  if (card && !card.querySelector("[data-loadlink-dealer-rating]") && !findByText(/★/, card).length) {
+  if (card && !card.querySelector("[data-loadlink-dealer-rating]") && !card.querySelector("[data-loadlink-rating-stars]")) {
     const rating = document.createElement("div");
     rating.dataset.loadlinkDealerRating = "true";
     rating.setAttribute("aria-label", "Dealership rating");
     const scoreText = normaliseText(card.textContent).match(/\b([0-5](?:\.\d)?)\s*(?:\/\s*5|stars?)/i)?.[1];
-    rating.innerHTML = `<span aria-hidden="true">★★★★★</span><strong>${scoreText ? `${scoreText} / 5` : "New dealership"}</strong>`;
+    const score = document.createElement("strong");
+    score.textContent = scoreText ? `${scoreText} / 5` : "No reviews yet";
+    rating.appendChild(score);
     const actions = Array.from(card.querySelectorAll<HTMLElement>("button,a")).find((node) => !/review/i.test(normaliseText(node.textContent)));
     if (actions?.parentElement) actions.parentElement.insertBefore(rating, actions);
     else card.appendChild(rating);

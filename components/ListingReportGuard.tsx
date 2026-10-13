@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import { useEffect, useRef, useState } from "react";
 import { isAuthenticatedUser } from "@/lib/auth";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
@@ -142,7 +144,7 @@ export default function ListingReportGuard() {
             <h2 id="loadlink-report-title" className="mt-1 text-xl font-black tracking-[-.03em]">Report listing</h2>
             <p className={`mt-1 truncate text-xs font-semibold ${darkMode ? "text-white/45" : "text-black/45"}`}>{listingTitle}</p>
           </div>
-          <button type="button" onClick={close} disabled={submitting} aria-label="Close report" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-current/10 text-xl leading-none opacity-60 disabled:opacity-30">×</button>
+          <button type="button" onClick={close} disabled={submitting} aria-label="Close report" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-current/10 text-xl leading-none opacity-60 disabled:opacity-30"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
         </div>
 
         <div className="px-5 py-5">

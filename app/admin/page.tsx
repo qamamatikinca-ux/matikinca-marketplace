@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
@@ -185,7 +187,7 @@ export default function AdminPage() {
                 <div className="flex items-start justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[.15em] text-[#8a6500]">{tool.eyebrow}</p><p className="mt-1 text-[9px] font-black uppercase tracking-[.12em] text-black/25">{tool.group}</p></div>{tool.metricKey ? <span className={`rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-[.08em] ${queueTone(metric)}`}>{metricLabel(metric)}</span> : tool.ownerOnly ? <span className="rounded-full bg-black px-3 py-1.5 text-[8px] font-black uppercase tracking-[.1em] text-white">Owner</span> : null}</div>
                 <h3 className="mt-5 text-2xl font-black tracking-[-.04em]">{tool.title}</h3>
                 <p className="mt-2 min-h-12 text-sm font-semibold leading-6 text-black/50">{tool.description}</p>
-                <div className="mt-5 flex items-center justify-between border-t border-black/8 pt-4"><span className="text-[10px] font-black uppercase tracking-[.1em] text-black/45">Open workspace</span><span className="text-xl transition group-hover:translate-x-1">→</span></div>
+                <div className="mt-5 flex items-center justify-between border-t border-black/8 pt-4"><span className="text-[10px] font-black uppercase tracking-[.1em] text-black/45">Open workspace</span><span className="text-xl transition group-hover:translate-x-1"><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></span></div>
               </Link>;
             })}
           </div>

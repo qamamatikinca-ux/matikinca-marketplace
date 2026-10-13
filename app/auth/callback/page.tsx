@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import HomeLogoLink from "@/components/HomeLogoLink";
@@ -65,7 +67,7 @@ export default function AuthCallbackPage() {
     <main className={`min-h-screen ${page}`}>
       <header className={`border-b ${darkMode ? "border-white/10 bg-black/95" : "border-black/10 bg-white/95"}`}>
         <div className="relative mx-auto flex h-[76px] max-w-6xl items-center px-4 sm:px-6">
-          <Link href="/login" className={`flex h-11 w-11 items-center justify-center rounded-full border text-xl font-black ${darkMode ? "border-white/10 bg-white/[.035] text-white" : "border-black/10 bg-black/[.02] text-black"}`} aria-label="Back to sign in">←</Link>
+          <Link href="/login" className={`flex h-11 w-11 items-center justify-center rounded-full border text-xl font-black ${darkMode ? "border-white/10 bg-white/[.035] text-white" : "border-black/10 bg-black/[.02] text-black"}`} aria-label="Back to sign in"><LoadLinkIcon name="chevronLeft" size={18} className="inline-block shrink-0 align-middle" /></Link>
           <HomeLogoLink theme="auto" showGlow={false} className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center" logoClassName="w-[138px] sm:w-[154px]" />
           <LoadLinkThemeToggle darkMode={darkMode} onToggle={toggleTheme} className="ml-auto" />
         </div>

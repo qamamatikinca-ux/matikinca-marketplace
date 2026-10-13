@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -200,7 +202,7 @@ export default function PublicDealerStatus({
                   <span className="block text-[9px] font-semibold text-white/55">LoadLink dealership update</span>
                 </span>
               </a>
-              <button type="button" onClick={close} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/48 text-2xl font-light" aria-label="Close status">×</button>
+              <button type="button" onClick={close} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/48 text-2xl font-light" aria-label="Close status"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
             </header>
 
             <div className="relative min-h-0 flex-1 bg-black">

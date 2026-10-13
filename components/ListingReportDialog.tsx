@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import { useState } from "react";
 
 type ListingReportDialogProps = {
@@ -33,12 +35,12 @@ export default function ListingReportDialog({ listingId, title, darkMode, onClos
       <section className={`w-full max-w-[500px] overflow-hidden rounded-[28px] border shadow-2xl ${darkMode ? "border-white/12 bg-[#0a0a0a] text-white" : "border-black/10 bg-[#fffdf7] text-black"}`}>
         <header className="flex items-start justify-between gap-4 border-b border-current/10 px-5 py-5">
           <div><p className="text-[10px] font-black uppercase tracking-[.14em] text-[#b88900]">LoadLink safety</p><h2 id="loadlink-report-title" className="mt-1 text-[25px] font-black tracking-[-.04em]">Report listing</h2></div>
-          <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-current/15 text-xl" aria-label="Close report">×</button>
+          <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-current/15 text-xl" aria-label="Close report"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
         </header>
 
         {saved ? (
           <div className="p-6 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f6b800] text-2xl font-black text-black">✓</div>
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f6b800] text-2xl font-black text-black"><LoadLinkIcon name="check" size={18} className="inline-block shrink-0 align-middle" /></div>
             <h3 className="mt-4 text-xl font-black">Report saved</h3>
             <p className={`mx-auto mt-2 max-w-sm text-sm leading-6 ${darkMode ? "text-white/55" : "text-black/55"}`}>Saved on this device. It will be sent when the complaints email connection is added.</p>
             <button type="button" onClick={onClose} className="mt-5 h-12 w-full rounded-2xl bg-[#f6b800] text-xs font-black uppercase tracking-[.08em] text-black">Done</button>

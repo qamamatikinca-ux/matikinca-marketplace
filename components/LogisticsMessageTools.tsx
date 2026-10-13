@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import LoadLinkDocumentPreview from "@/components/LoadLinkDocumentPreview";
@@ -400,7 +402,7 @@ export default function LogisticsMessageTools({
           <div className="mx-auto min-h-full max-w-3xl p-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
             <div className="flex items-start justify-between gap-4">
               <div><p className="loadlink-ui-label">In conversation</p><h2 className="mt-1 text-xl font-black tracking-[-.025em]">Logistics tools</h2><p className={`mt-1 text-xs font-medium ${muted}`}>Use a tool without leaving this chat.</p></div>
-              <button type="button" onClick={closePanel} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-xl ${control}`} aria-label="Close logistics actions">×</button>
+              <button type="button" onClick={closePanel} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-xl ${control}`} aria-label="Close logistics actions"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
             </div>
 
             <div className="mt-5">

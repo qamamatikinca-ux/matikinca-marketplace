@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const SEARCH_PRESETS: Record<string, { title: string; subtitle: string; value: string }[]> = {
@@ -194,13 +196,13 @@ export default function LoadLinkFinalReleasePolish20260821() {
           <button className="ll-final-search-backdrop" aria-label="Close search options" onClick={() => setSearchOpen(false)} />
           <section className="ll-final-search-panel">
             <header className="ll-final-search-header">
-              <button type="button" className="ll-final-search-back" onClick={() => setSearchOpen(false)} aria-label="Go back">‹</button>
+              <button type="button" className="ll-final-search-back" onClick={() => setSearchOpen(false)} aria-label="Go back"><LoadLinkIcon name="chevronLeft" size={18} className="inline-block shrink-0 align-middle" /></button>
               <div><strong>Choose what you need</strong><span>{scope === "job" ? "Jobs" : scope === "contract" ? "Contracts" : scope === "asset" ? "Vehicles & units" : scope === "driver" ? "Drivers" : scope === "dealer" ? "Dealerships" : "LoadLink search"}</span></div>
             </header>
             <div className="ll-final-search-filter"><span>⌕</span><input autoFocus value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Search options" /></div>
             <div className="ll-final-search-list">
               <button type="button" className={`ll-final-search-row ${selected === "" ? "is-selected" : ""}`} onClick={() => setSelected("")}><span className="ll-final-check" /> <span><strong>Any</strong><small>Show all matching LoadLink results</small></span></button>
-              {options.map((item) => <button key={item.value} type="button" className={`ll-final-search-row ${selected === item.value ? "is-selected" : ""}`} onClick={() => setSelected(item.value)}><span className="ll-final-check" /><span><strong>{item.title}</strong><small>{item.subtitle}</small></span><b>›</b></button>)}
+              {options.map((item) => <button key={item.value} type="button" className={`ll-final-search-row ${selected === item.value ? "is-selected" : ""}`} onClick={() => setSelected(item.value)}><span className="ll-final-check" /><span><strong>{item.title}</strong><small>{item.subtitle}</small></span><b><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></b></button>)}
               {!options.length ? <p className="ll-final-search-empty">No preset matches that search. You can type your own search instead.</p> : null}
             </div>
             <footer className="ll-final-search-footer"><button type="button" onClick={() => { setSelected(""); setFilter(""); }}>Reset</button><button type="button" className="ll-final-type" onClick={typeCustom}>Type my own</button><button type="button" className="ll-final-apply" onClick={applySearch}>Apply</button></footer>

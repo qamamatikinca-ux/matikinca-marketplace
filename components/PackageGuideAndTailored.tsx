@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -159,7 +161,7 @@ export default function PackageGuideAndTailored({ darkMode }: { darkMode: boolea
               <ul className={`mt-5 divide-y border-y ${row}`}>
                 {selected.reasons.map((reason) => (
                   <li key={reason} className="flex min-h-11 items-center gap-3 py-2 text-xs font-bold">
-                    <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#f6b800] text-[10px] text-black">✓</span>
+                    <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#f6b800] text-[10px] text-black"><LoadLinkIcon name="check" size={18} className="inline-block shrink-0 align-middle" /></span>
                     <span>{reason}</span>
                   </li>
                 ))}
@@ -218,7 +220,7 @@ export default function PackageGuideAndTailored({ darkMode }: { darkMode: boolea
                 <p className={`max-w-lg text-[11px] font-semibold leading-5 ${muted}`}>No price is invented here. Your request is stored and reviewed against the packages and controls configured for your account.</p>
                 {submitted ? (
                   <div className="flex h-11 items-center gap-2 text-xs font-black">
-                    <span className="grid h-8 w-8 place-items-center rounded-full bg-[#f6b800] text-black">✓</span>
+                    <span className="grid h-8 w-8 place-items-center rounded-full bg-[#f6b800] text-black"><LoadLinkIcon name="check" size={18} className="inline-block shrink-0 align-middle" /></span>
                     Sent for review
                   </div>
                 ) : (
@@ -257,7 +259,7 @@ function UsageRow({ checked, onSelect, title, detail, darkMode, last = false }: 
         <span className="block text-sm font-black">{title}</span>
         <span className="mt-0.5 block text-[11px] font-semibold opacity-50">{detail}</span>
       </span>
-      <span className="text-lg opacity-35">›</span>
+      <span className="text-lg opacity-35"><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></span>
     </button>
   );
 }

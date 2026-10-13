@@ -1,3 +1,4 @@
+import LoadLinkIcon from "@/components/LoadLinkIcon";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -81,7 +82,7 @@ export default function LegalPage() {
                 className="group flex min-h-[82px] items-center justify-between gap-3 rounded-[20px] border border-black/10 bg-white px-4 py-4 text-[13px] font-black leading-5 shadow-[0_8px_24px_rgba(0,0,0,.045)] transition hover:-translate-y-0.5 hover:border-black/20 hover:shadow-[0_12px_28px_rgba(0,0,0,.07)] sm:min-h-[76px] sm:px-5 sm:text-sm"
               >
                 {label}
-                <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black text-sm text-[#f6b800] transition group-hover:translate-y-0.5">↓</span>
+                <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black text-sm text-[#f6b800] transition group-hover:translate-y-0.5"><LoadLinkIcon name="chevronDown" size={18} className="inline-block shrink-0 align-middle" /></span>
               </Link>
             ))}
           </div>

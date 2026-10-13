@@ -1,5 +1,9 @@
 "use client";
 
+import LoadLinkRatingStars from "@/components/LoadLinkRatingStars";
+
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { getBuyerKeys, getOwnerKeys } from "@/lib/chatKeys";
@@ -471,7 +475,7 @@ export default function LoadLinkReleaseCompletion20260821() {
         const reviewTarget = reviewTargetForBinding(binding);
         if (!reviewTarget || !binding.host.isConnected) return null;
         const ratingLabel = reviewTarget.count && reviewTarget.average !== null
-          ? `★ ${reviewTarget.average.toFixed(1)} · ${reviewTarget.count} review${reviewTarget.count === 1 ? "" : "s"}`
+          ? `${reviewTarget.average.toFixed(1)} · ${reviewTarget.count} review${reviewTarget.count === 1 ? "" : "s"}`
           : "No account reviews yet";
         return createPortal(
           <div className={`ll-account-footer ${binding.compact ? "is-compact" : ""}`} onClick={(event) => event.stopPropagation()}>
@@ -504,9 +508,9 @@ export default function LoadLinkReleaseCompletion20260821() {
             <header className="ll-account-review-header">
               <div className="ll-account-review-identity">
                 <div className="ll-account-review-avatar" aria-hidden="true">{target.photo ? <img src={target.photo} alt="" /> : <span>{initials(target.name)}</span>}</div>
-                <div><small>{target.accountType}</small><h2>{target.name}</h2><p>{target.count && target.average !== null ? `★ ${target.average.toFixed(1)} from ${target.count} review${target.count === 1 ? "" : "s"}` : "No reviews yet"}</p></div>
+                <div><small>{target.accountType}</small><h2>{target.name}</h2><p>{target.count && target.average !== null ? `${target.average.toFixed(1)} from ${target.count} review${target.count === 1 ? "" : "s"}` : "No reviews yet"}</p></div>
               </div>
-              <button type="button" className="ll-account-review-close" onClick={() => setTarget(null)} aria-label="Close">×</button>
+              <button type="button" className="ll-account-review-close" onClick={() => setTarget(null)} aria-label="Close"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
             </header>
 
             <div className="ll-account-review-tabs" role="tablist" aria-label="Account review options">
@@ -520,7 +524,7 @@ export default function LoadLinkReleaseCompletion20260821() {
               <div className="ll-account-review-list">
                 {reviewsLoading ? <div className="ll-account-review-empty">Loading reviews…</div> : reviews.length ? reviews.map((review) => (
                   <article key={review.id} className="ll-account-review-card">
-                    <div className="ll-account-review-card-top"><strong>{"★".repeat(Math.max(1, Math.min(5, review.rating)))}</strong><span>{new Intl.DateTimeFormat("en-ZA", { day: "numeric", month: "short", year: "numeric" }).format(new Date(review.createdAt))}</span></div>
+                    <div className="ll-account-review-card-top"><strong><LoadLinkRatingStars rating={Math.max(1, Math.min(5, review.rating))} /></strong><span>{new Intl.DateTimeFormat("en-ZA", { day: "numeric", month: "short", year: "numeric" }).format(new Date(review.createdAt))}</span></div>
                     <p>{review.body || "Rating submitted without a written comment."}</p>
                     {review.response ? <div className="ll-account-review-response"><small>Account response</small><p>{review.response}</p></div> : null}
                   </article>
@@ -529,7 +533,7 @@ export default function LoadLinkReleaseCompletion20260821() {
             ) : (
               <div className="ll-account-review-write">
                 <div className="ll-account-review-stars" aria-label="Choose a rating">
-                  {[1, 2, 3, 4, 5].map((star) => <button key={star} type="button" aria-label={`${star} star${star === 1 ? "" : "s"}`} aria-pressed={star <= rating} onClick={() => setRating(star)}>★</button>)}
+                  {[1, 2, 3, 4, 5].map((star) => <button key={star} type="button" aria-label={`${star} star${star === 1 ? "" : "s"}`} aria-pressed={star <= rating} onClick={() => setRating(star)}><LoadLinkIcon name="star" size={16} className="inline-block shrink-0 align-middle" /></button>)}
                 </div>
                 <label><span>Your experience</span><textarea maxLength={1200} value={reviewBody} onChange={(event) => setReviewBody(event.target.value)} placeholder={target.dealershipId ? "Describe your experience with this dealership" : "Describe your experience (optional)"} /></label>
                 <p className="ll-account-review-guidance">Keep reviews factual and relevant to your LoadLink interaction. Reviews are attached to the account, not just one post.</p>

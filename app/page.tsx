@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import LoadLinkSiteFooter20260822 from "@/components/LoadLinkSiteFooter20260822";
 import LoadLinkHomepagePortalGrid20260822 from "@/components/LoadLinkHomepagePortalGrid20260822";
@@ -83,7 +85,7 @@ function HomeFallback() {
         <section className="mt-8 grid gap-px border border-black/10 bg-black/10 sm:grid-cols-2">
           {links.map(([label, href]) => (
             <Link key={href} href={href} className="flex min-h-20 items-center justify-between bg-white px-5 py-4 text-lg font-black">
-              {label}<span aria-hidden="true">→</span>
+              {label}<span aria-hidden="true"><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></span>
             </Link>
           ))}
         </section>

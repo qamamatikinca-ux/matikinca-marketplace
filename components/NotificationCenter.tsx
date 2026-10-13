@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -119,7 +121,7 @@ export default function NotificationCenter() {
             </div>
             <div className="flex items-center gap-2">
               {unread ? <button type="button" onClick={() => void markAllRead()} className={`h-9 rounded-full border px-3 text-[10px] font-black ${border}`}>Mark read</button> : null}
-              <button type="button" onClick={() => setOpen(false)} className={`flex h-9 w-9 items-center justify-center rounded-full border text-lg ${border}`} aria-label="Close notifications">×</button>
+              <button type="button" onClick={() => setOpen(false)} className={`flex h-9 w-9 items-center justify-center rounded-full border text-lg ${border}`} aria-label="Close notifications"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
             </div>
           </header>
 

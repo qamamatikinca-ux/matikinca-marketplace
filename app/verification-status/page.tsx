@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
 import Link from "next/link";
@@ -85,7 +87,7 @@ export default function VerificationStatusPage() {
                 const reached = copy.step >= index + 1 || status === "verified";
                 return (
                   <div key={String(label)} className="text-center">
-                    <div className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full border text-xs font-black ${reached ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/12 text-white/30" : "border-black/12 text-black/30"}`}>{reached ? "✓" : number}</div>
+                    <div className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full border text-xs font-black ${reached ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/12 text-white/30" : "border-black/12 text-black/30"}`}>{reached ? <LoadLinkIcon name="check" size={16}/> : number}</div>
                     <p className={`mt-2 text-[10px] font-semibold uppercase tracking-[.08em] ${reached ? "opacity-75" : "opacity-35"}`}>{label}</p>
                   </div>
                 );
@@ -104,5 +106,5 @@ export default function VerificationStatusPage() {
 function StatusMark({ status }: { status: Status }) {
   const verified = status === "verified";
   const rejected = status === "rejected";
-  return <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-base font-black ${verified ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500" : rejected ? "border-amber-500/30 bg-amber-500/10 text-amber-500" : "border-current/15 opacity-60"}`}>{verified ? "✓" : rejected ? "!" : "•"}</div>;
+  return <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-base font-black ${verified ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500" : rejected ? "border-amber-500/30 bg-amber-500/10 text-amber-500" : "border-current/15 opacity-60"}`}>{verified ? <LoadLinkIcon name="check" size={20}/> : rejected ? "!" : "•"}</div>;
 }

@@ -1,5 +1,9 @@
 "use client";
 
+import LoadLinkRatingStars from "@/components/LoadLinkRatingStars";
+
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState, type SyntheticEvent } from "react";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
@@ -251,7 +255,7 @@ export default function PublicDealershipExperienceV2({ slug }: { slug: string })
               <div className="min-w-0 pb-1">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-white/16 bg-black/42 px-2.5 py-1 text-[10px] font-semibold text-white/82 backdrop-blur">
-                    <span className="grid h-4 w-4 place-items-center rounded-full bg-white text-[10px] text-black">✓</span>
+                    <span className="grid h-4 w-4 place-items-center rounded-full bg-white text-[10px] text-black"><LoadLinkIcon name="check" size={18} className="inline-block shrink-0 align-middle" /></span>
                     Verified dealership
                   </span>
                   {dealer.physical_location ? <span className="text-[11px] font-medium text-white/58">{dealer.physical_location}</span> : null}
@@ -348,7 +352,7 @@ export default function PublicDealershipExperienceV2({ slug }: { slug: string })
                     <p className={`mt-1 text-xs font-medium ${muted}`}>{item.city || dealer.physical_location || "South Africa"}</p>
                     <div className={`mt-5 flex items-center justify-between gap-3 border-t pt-4 ${border}`}>
                       <span className="text-base font-bold">{price(item)}</span>
-                      <span className={`text-xs font-semibold ${muted}`}>View vehicle →</span>
+                      <span className={`text-xs font-semibold ${muted}`}>View vehicle <LoadLinkIcon name="chevronRight" size={16} className="inline-block align-middle" /></span>
                     </div>
                   </div>
                 </Link>
@@ -399,7 +403,7 @@ export default function PublicDealershipExperienceV2({ slug }: { slug: string })
               <div className="grid gap-3 md:grid-cols-2">
                 {reviews.slice(0, 6).map((review) => (
                   <article key={review.id} className={`rounded-[22px] border p-5 ${surface}`}>
-                    <p className="text-sm font-semibold tracking-[.08em]">{"★".repeat(Math.max(1, Math.min(5, Number(review.rating || 0))))}</p>
+                    <p className="text-sm font-semibold tracking-[.08em]"><LoadLinkRatingStars rating={Math.max(1, Math.min(5, Number(review.rating || 0)))} /></p>
                     {review.body ? <p className={`mt-3 text-sm font-medium leading-6 ${muted}`}>{review.body}</p> : null}
                   </article>
                 ))}

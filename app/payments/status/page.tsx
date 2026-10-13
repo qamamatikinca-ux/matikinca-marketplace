@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
@@ -149,7 +151,7 @@ export default function PaymentStatusPage() {
 
                 <div className="mt-8 grid gap-2">
                   {steps.map((step, index) => <div key={step.label} className={`flex items-center gap-3 rounded-[18px] border px-4 py-3 ${step.active ? "border-[#f6b800]/55 bg-[#f6b800]/[.08]" : "border-current/10"}`}>
-                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${step.done ? "bg-[#f6b800] text-black" : step.active ? "border border-[#f6b800] text-[#a87900]" : "bg-current/[.06] opacity-45"}`}>{step.done ? "✓" : index + 1}</span>
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${step.done ? "bg-[#f6b800] text-black" : step.active ? "border border-[#f6b800] text-[#a87900]" : "bg-current/[.06] opacity-45"}`}>{step.done ? <LoadLinkIcon name="check" size={16}/> : index + 1}</span>
                     <div className="min-w-0"><strong className="block text-sm font-black">{step.label}</strong>{step.active ? <span className={`mt-0.5 block text-[10px] font-semibold ${muted}`}>Waiting for a protected Control Centre decision</span> : null}</div>
                   </div>)}
                 </div>

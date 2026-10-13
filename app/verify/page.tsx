@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
 import Link from "next/link";
@@ -131,7 +133,7 @@ export default function VerifyPage() {
 
             {step === "documents" ? <form onSubmit={submit} className="mt-6 grid gap-5"><div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm font-black">Full legal name<input required className={input} value={fullName} onChange={(event) => setFullName(event.target.value)} /></label><label className="block text-sm font-black">Document type<select className={input} value={idType} onChange={(event) => setIdType(event.target.value)}><option value="south_african_id">South African ID</option><option value="passport">Passport</option></select></label></div><label className="block text-sm font-black">Last four digits of ID or passport<input required className={input} value={last4} onChange={(event) => setLast4(event.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" maxLength={4} /></label><FileField label="Identity document" required onChange={setIdFile} darkMode={darkMode} /><FileField label="Clear selfie showing your face" required onChange={setSelfie} darkMode={darkMode} /><FileField label="Company registration document (optional)" onChange={setCompany} darkMode={darkMode} /><button disabled={busy} className="h-13 w-full rounded-2xl bg-[#f6b800] font-black text-black disabled:opacity-50">{busy ? "Submitting…" : "Submit for verification"}</button></form> : null}
 
-            {step === "done" ? <div className="mt-6 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/12 text-xl font-black text-emerald-500">✓</div><h2 className="mt-4 text-2xl font-black">Submission received</h2><p className={`mx-auto mt-2 max-w-md text-sm font-semibold leading-6 ${muted}`}>We'll update your status after review.</p><Link href="/verification-status" className="mt-6 flex h-12 items-center justify-center rounded-xl bg-black font-semibold text-[#f6b800] dark:bg-[#f6b800] dark:text-black">View status</Link></div> : null}
+            {step === "done" ? <div className="mt-6 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/12 text-xl font-black text-emerald-500"><LoadLinkIcon name="check" size={18} className="inline-block shrink-0 align-middle" /></div><h2 className="mt-4 text-2xl font-black">Submission received</h2><p className={`mx-auto mt-2 max-w-md text-sm font-semibold leading-6 ${muted}`}>We'll update your status after review.</p><Link href="/verification-status" className="mt-6 flex h-12 items-center justify-center rounded-xl bg-black font-semibold text-[#f6b800] dark:bg-[#f6b800] dark:text-black">View status</Link></div> : null}
 
             {message ? <p role="status" className={`mt-5 rounded-2xl border p-4 text-sm font-semibold leading-6 ${darkMode ? "border-white/10 bg-white/[.03] text-white/68" : "border-black/10 bg-black/[.02] text-black/68"}`}>{message}</p> : null}
           </div>

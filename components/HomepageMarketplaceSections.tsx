@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import RequireAuthLink from "@/components/RequireAuthLink";
@@ -225,8 +227,8 @@ export default function HomepageMarketplaceSections({ darkMode }: { darkMode: bo
             />
             {vehicles.length > 1 ? (
               <div className="hidden gap-2 sm:flex">
-                <button type="button" onClick={() => moveVehicles(-1)} className={`flex h-10 w-10 items-center justify-center border ${darkMode ? "border-white/20" : "border-black/15"}`} aria-label="Previous vehicles">←</button>
-                <button type="button" onClick={() => moveVehicles(1)} className="flex h-10 w-10 items-center justify-center bg-[#f6b800] text-black" aria-label="Next vehicles">→</button>
+                <button type="button" onClick={() => moveVehicles(-1)} className={`flex h-10 w-10 items-center justify-center border ${darkMode ? "border-white/20" : "border-black/15"}`} aria-label="Previous vehicles"><LoadLinkIcon name="chevronLeft" size={18} className="inline-block shrink-0 align-middle" /></button>
+                <button type="button" onClick={() => moveVehicles(1)} className="flex h-10 w-10 items-center justify-center bg-[#f6b800] text-black" aria-label="Next vehicles"><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></button>
               </div>
             ) : null}
           </div>
@@ -349,9 +351,9 @@ export default function HomepageMarketplaceSections({ darkMode }: { darkMode: bo
           <section className={`border p-6 ${surface}`}>
             <h2 className=" text-2xl font-black">Choose what you want to publish</h2>
             <div className="mt-5 grid gap-2">
-              <RequireAuthLink href="/jobs/list" className="flex h-12 items-center justify-between border border-[#f6b800] px-4 text-xs font-black uppercase tracking-[.1em] text-[#b88900]"><span>Post a logistics job</span><span>→</span></RequireAuthLink>
-              <RequireAuthLink href="/jobs/list?mode=contract" className="flex h-12 items-center justify-between border border-[#f6b800] px-4 text-xs font-black uppercase tracking-[.1em] text-[#b88900]"><span>Post a contract</span><span>→</span></RequireAuthLink>
-              <RequireAuthLink href="/list-your-vehicle" className="flex h-12 items-center justify-between bg-[#f6b800] px-4 text-xs font-black uppercase tracking-[.1em] text-black"><span>List a vehicle</span><span>→</span></RequireAuthLink>
+              <RequireAuthLink href="/jobs/list" className="flex h-12 items-center justify-between border border-[#f6b800] px-4 text-xs font-black uppercase tracking-[.1em] text-[#b88900]"><span>Post a logistics job</span><span><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></span></RequireAuthLink>
+              <RequireAuthLink href="/jobs/list?mode=contract" className="flex h-12 items-center justify-between border border-[#f6b800] px-4 text-xs font-black uppercase tracking-[.1em] text-[#b88900]"><span>Post a contract</span><span><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></span></RequireAuthLink>
+              <RequireAuthLink href="/list-your-vehicle" className="flex h-12 items-center justify-between bg-[#f6b800] px-4 text-xs font-black uppercase tracking-[.1em] text-black"><span>List a vehicle</span><span><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></span></RequireAuthLink>
             </div>
           </section>
 
@@ -430,7 +432,7 @@ function OpportunityColumn({
                   <h3 className="mt-1 line-clamp-2 text-base font-black">{item.title || "LoadLink opportunity"}</h3>
                   <p className={`mt-1 truncate text-xs font-semibold ${muted}`}>{item.vehicle_group || item.posted_by || "Logistics opportunity"}</p>
                 </div>
-                <span aria-hidden="true">→</span>
+                <span aria-hidden="true"><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></span>
               </Link>
             );
           })}

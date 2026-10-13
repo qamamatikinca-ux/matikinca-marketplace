@@ -443,7 +443,7 @@ export default function PackagesPage() {
                 <div className="my-5 h-px bg-current/10" />
                 <ul className="grid gap-3">{details.features.map((feature) => <li key={feature} className="flex gap-3 text-[12px] font-semibold leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]" /><span>{feature}</span></li>)}</ul>
                 <div className="mt-auto pt-6">
-              {!loading && !manualDailyReady ? <p className={`mb-3 text-xs leading-5 ${muted}`} role="status">{MANUAL_DAILY_UNAVAILABLE}</p> : null}<button type="button" onClick={() => activePlan === plan ? void managePlan() : void actSubscription(plan)} disabled={subscriptionDisabled(plan)} className={`h-12 w-full rounded-xl text-sm font-black transition active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-45 ${isPro || (activePlan === "pro" && plan === "dealer") ? "bg-[#f6b800] text-black" : darkMode ? "border border-white/15" : "border border-black/15"}`}>{subscriptionButtonLabel(plan)}</button></div>
+              <button type="button" onClick={() => activePlan === plan ? void managePlan() : void actSubscription(plan)} disabled={subscriptionDisabled(plan)} className={`h-12 w-full rounded-xl text-sm font-black transition active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-45 ${isPro || (activePlan === "pro" && plan === "dealer") ? "bg-[#f6b800] text-black" : darkMode ? "border border-white/15" : "border border-black/15"}`}>{subscriptionButtonLabel(plan)}</button></div>
               </article>
             );
           })}
