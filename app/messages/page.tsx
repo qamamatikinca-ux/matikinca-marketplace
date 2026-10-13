@@ -1876,7 +1876,7 @@ ${message}` : message)}
               ) : null}
 
               {chatSearchOpen ? (
-                <div className="flex items-center gap-2 border-b border-black/10 bg-white px-3 py-2 md:px-5"><SearchIcon /><input autoFocus value={chatSearch} onChange={(event) => setChatSearch(event.target.value)} placeholder="Search messages, rates or files" className="h-10 min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none" /><span className="hidden text-[10px] font-bold text-black/40 sm:inline">{chatSearch.trim() ? `${searchedMessages.length} found` : ""}</span><button type="button" onClick={() => { setChatSearch(""); setChatSearchOpen(false); }} className="h-9 w-9 rounded-full border border-black/10 text-sm font-black"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button></div>
+                <div className="flex items-center gap-2 border-b border-black/10 bg-white px-3 py-2 md:px-5"><SearchIcon /><input autoFocus value={chatSearch} onChange={(event) => setChatSearch(event.target.value)} placeholder="Search messages, rates or files" className="h-10 min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none" /><span className="hidden text-[10px] font-bold text-black/40 sm:inline">{chatSearch.trim() ? `${searchedMessages.length} found` : ""}</span><button type="button" onClick={() => { setChatSearch(""); setChatSearchOpen(false); }} className="h-9 w-9 rounded-full border border-black/10 text-sm font-black" aria-label="Close"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button></div>
               ) : null}
 
               {conversationBlocked ? (
