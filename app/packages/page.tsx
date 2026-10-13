@@ -30,7 +30,7 @@ const manualFallback: ManualListingProduct = {
   name: "Manual listing credit",
   unit_price_cents: 1500,
   currency: "ZAR",
-  duration_days: 10,
+  duration_days: 1,
   max_quantity: 100,
 };
 
@@ -371,9 +371,9 @@ export default function PackagesPage() {
               <h2 className="mt-2 text-[30px] font-black tracking-[-.05em]">Manual</h2>
               <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 <span className="text-[42px] font-black leading-none tracking-[-.06em]">{money(manualProduct.unit_price_cents).replace(",00", "")}</span>
-                <span className={`text-xs font-extrabold ${muted}`}>per 10-day listing credit</span>
+                <span className={`text-xs font-extrabold ${muted}`}>per active vehicle per day</span>
               </div>
-              <p className={`mt-4 min-h-[60px] text-xs font-semibold leading-5 ${muted}`}>Pay only when you need to advertise. One credit activates one approved vehicle listing for {manualProduct.duration_days} days.</p>
+              <p className={`mt-4 min-h-[60px] text-xs font-semibold leading-5 ${muted}`}>Pay only when you need to advertise. One credit pays for one active day. Pause from My Posts to preserve unused paid time.</p>
             </div>
 
             <div className="my-5 h-px bg-current/10" />
@@ -386,7 +386,7 @@ export default function PackagesPage() {
             {manualBalance.available > 0 ? (
               <div className={`mt-5 rounded-2xl border px-4 py-3 ${softSurface}`}>
                 <p className="text-sm font-black">{manualBalance.available} credit{manualBalance.available === 1 ? "" : "s"} ready</p>
-                <p className={`mt-1 text-[11px] font-semibold ${muted}`}>Your 10-day period starts when a listing is approved and goes live.</p>
+                <p className={`mt-1 text-[11px] font-semibold ${muted}`}>Your paid day starts when a listing is approved and goes live.</p>
                 <button type="button" onClick={() => window.location.assign("/list-your-vehicle")} className="mt-3 text-[11px] font-black underline decoration-[#f6b800] decoration-2 underline-offset-4">List a vehicle</button>
               </div>
             ) : null}
@@ -401,7 +401,7 @@ export default function PackagesPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-[11px] font-black">Manual listings</p>
-                      <p className={`mt-1 text-[10px] font-semibold ${muted}`}>{money(manualProduct.unit_price_cents)} each · {manualProduct.duration_days} days each</p>
+                      <p className={`mt-1 text-[10px] font-semibold ${muted}`}>{money(manualProduct.unit_price_cents)} each · {manualProduct.duration_days} active day each</p>
                     </div>
                     <div className="flex h-11 items-center overflow-hidden rounded-xl border border-current/15" aria-label="Manual listing quantity">
                       <button type="button" aria-label="Decrease quantity" onClick={() => changeManualQuantity(manualQuantity - 1)} disabled={manualQuantity <= 1 || Boolean(busy)} className="h-full w-11 text-lg font-black disabled:opacity-30">−</button>
@@ -413,11 +413,11 @@ export default function PackagesPage() {
                   <dl className="mt-4 grid gap-2 border-t border-current/10 pt-4 text-[11px] font-semibold">
                     <div className="flex justify-between gap-4"><dt className={muted}>Quantity</dt><dd className="font-black">{manualQuantity}</dd></div>
                     <div className="flex justify-between gap-4"><dt className={muted}>Price per listing</dt><dd className="font-black">{money(manualProduct.unit_price_cents)}</dd></div>
-                    <div className="flex justify-between gap-4"><dt className={muted}>Duration</dt><dd className="font-black">{manualProduct.duration_days} days each</dd></div>
+                    <div className="flex justify-between gap-4"><dt className={muted}>Duration</dt><dd className="font-black">{manualProduct.duration_days} active day each</dd></div>
                     <div className="mt-1 flex justify-between gap-4 border-t border-current/10 pt-3"><dt className="font-black">Total</dt><dd className="text-base font-black">{money(manualTotalCents)}</dd></div>
                   </dl>
 
-                  <p className={`mt-3 text-[10px] font-semibold leading-4 ${muted}`}>Each credit is separate. Buying 10 gives you 10 listing credits, not one 100-day listing. No bulk surcharge or hidden fee is added by LoadLink.</p>
+                  <p className={`mt-3 text-[10px] font-semibold leading-4 ${muted}`}>Each R15 credit pays for one active vehicle-day. Active daily listings renew from your prepaid credits. Pause a listing to preserve its unused paid time. No automatic card charge is made.</p>
                   <button type="button" onClick={() => void payManual()} disabled={busy === "manual" || busy === "verify"} className="mt-4 h-11 w-full rounded-xl bg-[#f6b800] text-sm font-black text-black transition active:scale-[.99] disabled:opacity-45">{busy === "manual" ? "Opening payment…" : `Continue to payment · ${money(manualTotalCents)}`}</button>
                   <button type="button" onClick={() => setManualOpen(false)} disabled={Boolean(busy)} className={`mt-3 w-full py-1 text-[11px] font-black ${muted}`}>Cancel</button>
                 </div>

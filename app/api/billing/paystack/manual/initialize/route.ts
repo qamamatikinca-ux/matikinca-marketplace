@@ -19,9 +19,7 @@ function clients(request: NextRequest) {
 function origin(request: NextRequest) {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "");
   if (configured) return configured;
-  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
-  const proto = request.headers.get("x-forwarded-proto") || "https";
-  return host ? `${proto}://${host}` : new URL(request.url).origin;
+  return "https://matikinca-marketplace.vercel.app";
 }
 
 function exactQuantity(value: unknown) {
@@ -54,6 +52,12 @@ export async function POST(request: NextRequest) {
     const quantity = exactQuantity(body?.quantity);
     if (!quantity) return Response.json({ error: "Choose between 1 and 100 Manual listing credits." }, { status: 400 });
 
+    const product = await user.rpc("loadlink_get_manual_listing_product");
+    if (product.error) throw product.error;
+    if (product.data?.unit_price_cents !== 1500 || product.data?.duration_days !== 1 || product.data?.currency !== "ZAR") {
+      throw new Error("Daily listing pricing is temporarily unavailable.");
+    }
+
     const existing = await admin
       .from("admin_payments")
       .select("reference,amount_cents,currency,created_at,metadata")
@@ -70,13 +74,13 @@ export async function POST(request: NextRequest) {
       const sameQuantity = Number(metadata.quantity) === quantity;
       const authorizationUrl = String(metadata.authorization_url || "");
       const created = new Date(row.created_at || 0).getTime();
-      if (sameQuantity && authorizationUrl && Number.isFinite(created) && Date.now() - created < 30 * 60 * 1000) {
+      if (sameQuantity && Number(metadata.duration_days) === 1 && Number(metadata.unit_price_cents) === 1500 && Number(row.amount_cents) === quantity * 1500 && authorizationUrl.startsWith("https://checkout.paystack.com/") && Number.isFinite(created) && Date.now() - created < 30 * 60 * 1000) {
         return Response.json({
           authorization_url: authorizationUrl,
           reference: row.reference,
           quantity,
           unit_price_cents: Number(metadata.unit_price_cents || 1500),
-          duration_days: Number(metadata.duration_days || 10),
+          duration_days: Number(metadata.duration_days),
           amount_cents: Number(row.amount_cents),
           currency: String(row.currency || "ZAR").toUpperCase(),
           reused: true,
@@ -97,7 +101,7 @@ export async function POST(request: NextRequest) {
     const durationDays = Number(order.data?.duration_days || 0);
     const currency = String(order.data?.currency || "").toUpperCase();
 
-    if (!paymentId || !reference || amount !== quantity * unitPrice || unitPrice !== 1500 || durationDays !== 10 || currency !== "ZAR") {
+    if (!paymentId || !reference || amount !== quantity * unitPrice || unitPrice !== 1500 || durationDays !== 1 || currency !== "ZAR") {
       throw new Error("LoadLink stopped this checkout because the Manual listing total did not reconcile.");
     }
 
@@ -122,6 +126,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
       body: JSON.stringify(init),
+      signal: AbortSignal.timeout(15_000),
     });
     const paystack = await response.json();
 

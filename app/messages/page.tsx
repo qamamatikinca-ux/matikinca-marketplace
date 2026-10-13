@@ -472,6 +472,8 @@ export default function MessagesPage() {
   const recordingChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingCancelledRef = useRef(false);
+  const recordingRequestRef = useRef(0);
+  const recordingPendingRef = useRef(false);
   const initialMessageDraftRef = useRef("");
   const draftSeededForThreadRef = useRef("");
 
@@ -1003,7 +1005,9 @@ export default function MessagesPage() {
     };
     touchPresence();
     const presenceTimer = setInterval(touchPresence, 10_000);
-    const handleVisibility = () => { if (document.visibilityState === "visible") touchPresence(); };
+    const refreshAfterReconnect = () => { if (document.visibilityState === "visible" && navigator.onLine) { touchPresence(); void loadMessages(selectedConversation).catch(() => undefined); } };
+    const handleVisibility = refreshAfterReconnect;
+    window.addEventListener("online", refreshAfterReconnect);
     window.addEventListener("focus", touchPresence);
     document.addEventListener("visibilitychange", handleVisibility);
 
@@ -1011,9 +1015,14 @@ export default function MessagesPage() {
       active = false;
       clearInterval(messageTimer);
       clearInterval(presenceTimer);
+      window.removeEventListener("online", refreshAfterReconnect);
       window.removeEventListener("focus", touchPresence);
       document.removeEventListener("visibilitychange", handleVisibility);
-      if (mediaRecorderRef.current?.state === "recording") stopRecording(true);
+      recordingRequestRef.current += 1;
+      recordingPendingRef.current = false;
+      if (mediaRecorderRef.current?.state !== "inactive") stopRecording(true);
+      recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
+      recordingStreamRef.current = null;
       supabase
         .rpc("touch_listing_guest_presence", {
           p_thread_id: selectedConversation.id,
@@ -1350,14 +1359,18 @@ export default function MessagesPage() {
   }
 
   async function startRecording() {
+    if (recordingPendingRef.current) return;
     if (!selectedConversation || recording || uploading || sending || conversationBlocked || dailyLimitReached || potentialDealPending || potentialDealDeclined) return;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
       setError("Voice notes are not supported by this browser. You can attach an audio file instead.");
       return;
     }
     setError("");
+    const requestId = ++recordingRequestRef.current;
+    recordingPendingRef.current = true;
+    let stream: MediaStream | null = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
@@ -1366,6 +1379,7 @@ export default function MessagesPage() {
           sampleRate: { ideal: 48_000 },
         },
       });
+      if (requestId !== recordingRequestRef.current) { stream.getTracks().forEach((track) => track.stop()); return; }
       const preferredTypes = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg;codecs=opus"];
       const mimeType = preferredTypes.find((type) => MediaRecorder.isTypeSupported(type)) || "";
       const options: MediaRecorderOptions = { audioBitsPerSecond: 128_000 };
@@ -1373,21 +1387,31 @@ export default function MessagesPage() {
       const recorder = new MediaRecorder(stream, options);
       recordingStreamRef.current = stream;
       mediaRecorderRef.current = recorder;
-      recordingChunksRef.current = [];
+      const chunks: Blob[] = [];
+      recordingChunksRef.current = chunks;
       recordingCancelledRef.current = false;
       setRecordingSeconds(0);
       recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) recordingChunksRef.current.push(event.data);
+        if (event.data.size > 0) chunks.push(event.data);
       };
-      recorder.onerror = () => setError("The voice note recording stopped unexpectedly.");
+      recorder.onerror = () => {
+        recordingCancelledRef.current = true;
+        setError("The voice note recording stopped unexpectedly. Record it again.");
+        if (recorder.state !== "inactive") recorder.stop();
+        stream?.getTracks().forEach((track) => track.stop());
+        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+        setRecording(false);
+      };
       recorder.onstop = () => {
         const actualType = recorder.mimeType || mimeType || "audio/webm";
-        const cancelled = recordingCancelledRef.current;
-        const blob = new Blob(recordingChunksRef.current, { type: actualType });
+        const cancelled = recordingCancelledRef.current || requestId !== recordingRequestRef.current;
+        const blob = new Blob(chunks, { type: actualType });
+        if (requestId !== recordingRequestRef.current) { stream?.getTracks().forEach((track) => track.stop()); return; }
         recordingChunksRef.current = [];
         recordingCancelledRef.current = false;
-        recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
-        recordingStreamRef.current = null;
+        stream?.getTracks().forEach((track) => track.stop());
+        if (recordingStreamRef.current === stream) recordingStreamRef.current = null;
         if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
         recordingTimerRef.current = null;
         setRecording(false);
@@ -1399,17 +1423,20 @@ export default function MessagesPage() {
       };
       recorder.start(500);
       setRecording(true);
+      const startedAt = Date.now();
       recordingTimerRef.current = setInterval(() => {
-        setRecordingSeconds((seconds) => {
-          if (seconds >= 89) {
-            mediaRecorderRef.current?.stop();
-            return 90;
-          }
-          return seconds + 1;
-        });
+        const seconds = Math.min(90, Math.floor((Date.now() - startedAt) / 1000));
+        setRecordingSeconds(seconds);
+        if (seconds >= 90 && recorder.state !== "inactive") recorder.stop();
       }, 1000);
     } catch (recordError) {
+      stream?.getTracks().forEach((track) => track.stop());
+      recordingStreamRef.current = null;
+      mediaRecorderRef.current = null;
+      setRecording(false);
       setError(recordError instanceof Error && /permission|denied|notallowed/i.test(recordError.message) ? "Microphone permission is required to record a voice note." : "The microphone could not be opened.");
+    } finally {
+      if (requestId === recordingRequestRef.current) recordingPendingRef.current = false;
     }
   }
 
@@ -2096,7 +2123,7 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
     if (!url || !autoplayRef.current) return;
     autoplayRef.current = false;
     const timer = window.setTimeout(() => {
-      void audioRef.current?.play().catch(() => undefined);
+      void audioRef.current?.play().catch(() => onError("Tap Play again to start this voice note."));
     }, 0);
     return () => window.clearTimeout(timer);
   }, [url]);
@@ -2104,7 +2131,7 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
   async function loadVoiceNote(playAfterLoad = false) {
     if (!message.attachment_id || loading) return;
     if (url) {
-      if (playAfterLoad) void audioRef.current?.play().catch(() => undefined);
+      if (playAfterLoad) void audioRef.current?.play().catch(() => onError("Tap Play again to start this voice note."));
       return;
     }
     setLoading(true);
@@ -2118,7 +2145,7 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
       const payload = ((result.data || []) as AttachmentPayload[])[0];
       if (!payload) throw new Error("Voice note unavailable.");
       const blob = base64ToBlob(payload.file_base64, payload.file_type);
-      setWaveform(await audioWaveform(blob));
+      void audioWaveform(blob).then(setWaveform).catch(() => undefined);
       autoplayRef.current = playAfterLoad;
       setUrl(URL.createObjectURL(blob));
     } catch (error) {
@@ -2136,7 +2163,7 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
     }
     const audio = audioRef.current;
     if (!audio) return;
-    if (audio.paused) { audio.playbackRate = playbackRate; await audio.play().catch(() => undefined); }
+    if (audio.paused) { audio.playbackRate = playbackRate; await audio.play().catch(() => onError("This voice note could not play. Tap Play to retry.")); }
     else audio.pause();
   }
 
@@ -2158,9 +2185,10 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
           ref={audioRef}
           src={url}
           preload="metadata"
+          onError={() => { setPlaying(false); setLoadFailed(true); setUrl(""); onError("This voice note could not be loaded. Tap Retry."); }}
           className="hidden"
-          onLoadedMetadata={(event) => setDuration(event.currentTarget.duration || 0)}
-          onDurationChange={(event) => setDuration(event.currentTarget.duration || 0)}
+          onLoadedMetadata={(event) => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
+          onDurationChange={(event) => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
           onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime || 0)}
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}

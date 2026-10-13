@@ -40,7 +40,9 @@ type MyListing = {
   created_at: string | null;
   view_count: number | null;
   last_viewed_at: string | null;
-  owner_key: string;
+  owner_key?: string;
+  daily_billing_enabled?: boolean;
+  paused_listing_seconds?: number | null;
   user_id: string | null;
   status?: ListingStatus | null;
   moderation_status?: ModerationStatus | null;
@@ -137,7 +139,7 @@ export default function MyPostsPage() {
       const results: MyListing[] = [];
       const byUser = await supabase
         .from("job_listings")
-        .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,status,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status")
+        .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,user_id,status,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status,daily_billing_enabled,paused_listing_seconds")
         .eq("user_id", currentUserId)
         .order("created_at", { ascending: false });
 
@@ -145,7 +147,7 @@ export default function MyPostsPage() {
       else if (/status|column|schema cache/i.test(byUser.error.message)) {
         const fallback = await supabase
           .from("job_listings")
-          .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status")
+          .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,user_id,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status,daily_billing_enabled,paused_listing_seconds")
           .eq("user_id", currentUserId)
           .order("created_at", { ascending: false });
         if (fallback.error) throw fallback.error;
@@ -182,10 +184,11 @@ export default function MyPostsPage() {
     setMessage("");
     const result = await supabase.rpc("delete_my_listing", { p_listing_id: listing.id, p_owner_key: "" });
     if (result.error || result.data !== true) {
-      setMessage(result.error?.message || "This post could not be deleted. Run the new LoadLink SQL if this is your first update.");
+      setMessage(result.error?.message || "This post could not be deleted. Please try again.");
       return;
     }
     await loadListings();
+    window.dispatchEvent(new Event("loadlink-listing-updated"));
   }
 
   async function setStatus(listing: MyListing, status: ListingStatus) {
@@ -195,7 +198,8 @@ export default function MyPostsPage() {
       setMessage(result.error?.message || "The listing status could not be changed.");
       return;
     }
-    setListings((current) => current.map((item) => item.id === listing.id ? { ...item, status } : item));
+    await loadListings();
+    window.dispatchEvent(new Event("loadlink-listing-updated"));
   }
 
   async function renewListing(listing: MyListing) {
@@ -378,6 +382,7 @@ export default function MyPostsPage() {
                           </div>
                         ) : null}
 
+                        {isManualVehicle && listing.daily_billing_enabled ? <p className={`mt-2 text-[10px] leading-4 ${muted}`}>{status === "active" ? "R15 per active day · renews from prepaid daily credits" : "Paused · unused paid time is preserved"}</p> : null}
                         {isManualVehicle && listing.expires_at ? <div className={`mt-3 rounded-xl border px-3 py-2.5 ${expired ? "border-red-500/35 bg-red-500/10" : "border-[#f6b800]/25 bg-[#f6b800]/8"}`}><p className="text-[10px] font-black">{expired ? "Listing expired" : `Expires ${formatDate(listing.expires_at)}`}</p>{!expired ? <button type="button" onClick={() => void renewListing(listing)} className="mt-1.5 text-[10px] font-black text-[#b88900] underline underline-offset-4">Renew</button> : null}</div> : null}
 
                         {moderationStatus === "rejected" ? (
@@ -406,6 +411,8 @@ export default function MyPostsPage() {
                               <summary aria-label="More post actions" className={`flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-xl border text-base font-black ${darkMode ? "border-white/15" : "border-black/10"}`}>•••</summary>
                               <div className={`absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-xl border shadow-xl ${surface}`}>
                                 <button type="button" onClick={() => void openAnalytics(listing)} className="block w-full px-4 py-3 text-left text-xs font-black">{isPro ? "View analytics" : "Analytics options"}</button>
+                                {moderationStatus === "approved" && status === "active" ? <button type="button" onClick={() => void setStatus(listing, "draft")} className="block w-full border-t border-current/10 px-4 py-3 text-left text-xs font-black">Pause listing</button> : null}
+                                {moderationStatus === "approved" && status === "active" && !expired && !isPro ? <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("loadlink:boost-listing", { detail: { listingId: listing.id } }))} className="block w-full border-t border-current/10 px-4 py-3 text-left text-xs font-black">Boost listing</button> : null}
                                 {moderationStatus === "approved" ? status === "active" ? <button type="button" onClick={() => void setStatus(listing, "filled")} className="block w-full border-t border-current/10 px-4 py-3 text-left text-xs font-black">Mark as filled</button> : <button type="button" onClick={() => void setStatus(listing, "active")} className="block w-full border-t border-current/10 px-4 py-3 text-left text-xs font-black">Reopen post</button> : null}
                                 <button type="button" onClick={() => void deleteListing(listing)} className="block w-full border-t border-red-500/20 px-4 py-3 text-left text-xs font-black text-red-500">Delete post</button>
                               </div>

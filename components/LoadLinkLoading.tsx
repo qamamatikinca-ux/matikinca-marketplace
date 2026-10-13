@@ -2,7 +2,7 @@
 
 export default function LoadLinkLoading() {
   return (
-    <div className="pointer-events-none fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-black/82">
+    <div role="status" aria-label="Loading LoadLink" aria-live="polite" className="pointer-events-none fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-black/82">
       <div className="relative h-36 w-full">
         <div className="absolute left-0 top-1/2 h-[2px] w-full -translate-y-1/2 bg-yellow-400/20" />
 
