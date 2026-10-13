@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 matikinca-marketplace-google-auth-chat-protected.zip
 *.zip
+
+# Supabase CLI transient local state
+/supabase/.temp/

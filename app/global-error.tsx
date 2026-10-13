@@ -23,11 +23,6 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
       return () => window.clearTimeout(timer);
     }
 
-    if (path !== "/") {
-      window.location.replace("/");
-      return;
-    }
-
     setFailedTwice(true);
   }, [reset]);
 

@@ -2,12 +2,16 @@ import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
+import { serverRateLimit } from "@/lib/serverRateLimit";
+import { isAuthenticatedUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
 function hashKey(value: string) { return createHash("sha256").update(value).digest("hex"); }
 
 export async function POST(request: NextRequest) {
+  const limited = serverRateLimit(request, "message-push", 30, 60000);
+  if (limited) return limited;
   try {
     const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
     const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
@@ -22,7 +26,7 @@ export async function POST(request: NextRequest) {
     const authClient = createClient(url, anon, { auth: { persistSession: false, autoRefreshToken: false } });
     const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
     const { data: { user }, error: userError } = await authClient.auth.getUser(bearer);
-    if (userError || !user) return NextResponse.json({ error: "Invalid session." }, { status: 401 });
+    if (userError || !isAuthenticatedUser(user)) return NextResponse.json({ error: "Invalid session." }, { status: 401 });
 
     const body = await request.json();
     const threadId = String(body?.threadId || "");
@@ -30,22 +34,25 @@ export async function POST(request: NextRequest) {
     if (!/^[0-9a-f-]{36}$/i.test(threadId)) return NextResponse.json({ error: "Invalid conversation." }, { status: 400 });
 
     const [{ data: thread }, { data: senderKeys }] = await Promise.all([
-      admin.from("listing_guest_threads").select("id,buyer_hash,listing_id").eq("id", threadId).maybeSingle(),
+      admin.from("listing_guest_threads").select("id,buyer_hash,buyer_user_id,listing_id").eq("id", threadId).maybeSingle(),
       admin.from("user_chat_access_keys").select("access_key_hash").eq("user_id", user.id),
     ]);
     if (!thread) return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
-    const { data: listing } = await admin.from("job_listings").select("owner_key,title").eq("id", thread.listing_id).maybeSingle();
-    if (!listing?.owner_key) return NextResponse.json({ error: "Listing not found." }, { status: 404 });
+    const { data: listing } = await admin.from("job_listings").select("owner_key,user_id,title").eq("id", thread.listing_id).maybeSingle();
+    if (!listing) return NextResponse.json({ error: "Listing not found." }, { status: 404 });
     const senderHashes = new Set((senderKeys || []).map((row) => String(row.access_key_hash)));
-    const ownerHash = hashKey(String(listing.owner_key));
+    const ownerHash = listing.owner_key ? hashKey(String(listing.owner_key)) : "";
     const buyerHash = String(thread.buyer_hash || "");
-    const senderIsBuyer = senderHashes.has(buyerHash);
-    const senderIsOwner = senderHashes.has(ownerHash);
+    const senderIsBuyer = thread.buyer_user_id === user.id || senderHashes.has(buyerHash);
+    const senderIsOwner = listing.user_id === user.id;
     if (!senderIsBuyer && !senderIsOwner) return NextResponse.json({ error: "Conversation access denied." }, { status: 403 });
-    const recipientHash = senderIsBuyer ? ownerHash : buyerHash;
-    const { data: recipientKey } = await admin.from("user_chat_access_keys").select("user_id").eq("access_key_hash", recipientHash).maybeSingle();
-    if (!recipientKey?.user_id) return NextResponse.json({ ok: true, delivered: 0 });
-    const recipientId = String(recipientKey.user_id);
+    let recipientId = String(senderIsBuyer ? listing.user_id || "" : thread.buyer_user_id || "");
+    if (!recipientId) {
+      const recipientHash = senderIsBuyer ? ownerHash : buyerHash;
+      const { data: recipientKey } = await admin.from("user_chat_access_keys").select("user_id").eq("access_key_hash", recipientHash).maybeSingle();
+      recipientId = String(recipientKey?.user_id || "");
+    }
+    if (!recipientId) return NextResponse.json({ ok: true, delivered: 0 });
     if (recipientId === user.id) return NextResponse.json({ ok: true, delivered: 0 });
 
     const [{ data: profile }, { data: subscriptions }] = await Promise.all([

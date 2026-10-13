@@ -1,5 +1,6 @@
 // LoadLink major revision — 2026-08-26
 import NetworkRecovery from "@/components/platform/NetworkRecovery";
+import ListingPerformance from "@/components/ListingPerformance";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
@@ -105,7 +106,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body data-loadlink-release="20260826-smart-ux-r2">
         <ThemeCoordinator /><LoadLinkUiRepairV273 /><SimpleModeCoordinator /><AccountActivityTracker /><AuthMfaGate /><ProfileOnboardingGate /><MarketplaceRestrictionGuard /><AccountSettingsGlassFix /><LoadLinkSelectLabelFix /><LoadLinkInteractionSystem /><LoadLinkTouchScrollGuard /><LoadLinkShareEnhancer /><DealerPostBenefitsEnhancer /><MarketplaceUxPolishEnhancer /><PhotoGalleryModernizer /><LoadLinkUniversalUiGuard /><LoadLinkAuditUpdateBridge /><LoadLinkCriticalInteractionFixes /><LoadLinkFinalUxRepair20260820 /><LoadLinkFinalReleasePolishBootstrap20260821 /><LoadLinkReleaseCompletion20260821 /><LoadLinkReleaseRecovery20260821 /><LoadLinkProductRepair20260822 /><LoadLinkMobileUxCorrection20260822 /><ListingReportGuard /><ChatComposerActions /><LogisticsToolsFinalEnhancer /><DealerWorkspaceNavigationEnhancer /><DealerPackageDetailsEnhancer /><LoadLinkMajorUpdate20260823 /><LoadLinkCallBootstrap /><LoadLinkCallFallback20260823 /><LoadLinkCallHistoryStrip20260823 /><LoadLinkDealerChatStatus20260823 /><LoadLinkChatUiPolish20260823 /><LoadLinkChatMediaPreview20260823 /><LoadLinkChatInfoCompletion20260823 /><LoadLinkDealerStatusViewer20260823 /><LoadLinkLocationCompletion20260823 /><LoadLinkDistanceLayer20260823 /><LoadLinkDealershipOwnerEdit20260823 /><LoadLinkFinalProductPass20260823 /><LoadLinkFinalMarketplacePolish20260824 /><LoadLinkTruckReferenceGallery20260824 /><LoadLinkBrokenImageGuard20260826 /><LoadLinkSmartUxPass20260826 /><LoadLinkCookieConsent20260822 />
-        <Suspense fallback={null}><GlobalLoading /></Suspense>
+        <Suspense fallback={null}><GlobalLoading /><ListingPerformance /></Suspense>
         <SwipeDotsEnhancer /><AuthBootstrap /><NotificationCenter /><ChatLauncher /><LoadLinkToastCenter /><LoadLinkDeleteConfirmationLayer /><NetworkRecovery />
         {children}
         <Suspense fallback={null}><LoadLinkRuntimeBoundary /></Suspense>
