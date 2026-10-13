@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { clearVehicleDraft, hasVehicleDraft, readVehicleDraft, scopeVehicleDraft, vehicleDraftHref, type VehicleDraft } from "@/lib/vehicleDraft";
@@ -7,15 +7,23 @@ import LoadLinkActionToast from "@/components/LoadLinkActionToast";
 
 export default function VehicleDraftResumeToast() {
   const pathname = usePathname(), router = useRouter();
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
+  const sessionKeyRef = useRef("");
   const [draft, setDraft] = useState<VehicleDraft | null>(null);
   const [userId, setUserId] = useState("");
   useEffect(() => {
     let alive = true, revision = 0;
-    const onListing = pathname.startsWith("/list-your-vehicle") || pathname.startsWith("/list-your-truck");
     const check = (id: string, sessionId: string) => {
       if (!alive) return;
+      const key = id ? `${id}:${sessionId}` : "";
+      // Focus and token events can repeat SIGNED_IN for the same active session.
+      // Navigation alone must never offer a draft the user just left.
+      if (key && sessionKeyRef.current === key) return;
+      sessionKeyRef.current = key;
       scopeVehicleDraft(id); setUserId(id); setDraft(null);
-      if (!id || onListing) return;
+      const currentPath = pathnameRef.current;
+      if (!id || currentPath.startsWith("/list-your-vehicle") || currentPath.startsWith("/list-your-truck")) return;
       const saved = readVehicleDraft(id);
       if (!hasVehicleDraft(saved)) return;
       const seen = `loadlink-draft-prompt:${id}:${sessionId}`;
@@ -33,6 +41,6 @@ export default function VehicleDraftResumeToast() {
       if (event === "SIGNED_IN" || event === "INITIAL_SESSION") window.setTimeout(() => check(session?.user.id || "", getSessionId(session?.access_token)), 0);
     });
     return () => { alive = false; subscription.unsubscribe(); };
-  }, [pathname]);
+  }, []);
   return <LoadLinkActionToast open={Boolean(draft)} title="Continue your vehicle listing?" message="You left a vehicle listing unfinished. Your saved details are ready when you are." primaryLabel="Continue" secondaryLabel="Start fresh" onPrimary={() => { if (draft) router.push(vehicleDraftHref(draft)); setDraft(null); }} onSecondary={() => { clearVehicleDraft(userId); setDraft(null); }} onClose={() => setDraft(null)} />;
 }
