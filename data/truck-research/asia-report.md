@@ -26,3 +26,16 @@ Hino 200 was introduced in South Africa in 2022 by rebadging the Toyota Dyna; ca
 Direct Wikimedia shell downloads/API requests return HTTP 403 in this environment. Web open/click confirms indexed description pages and several upload image URLs, but returns text-only <<ImageDisplayed>> markers, with no ImageContent/base64 bytes. No Commons assets were falsely claimed as downloaded. Root should test the deterministic upload URL/image proxy and omit failed images cleanly. Manufacturer JPEG downloads succeeded and were visually inspected locally.
 
 No application source, database or deployment was modified by this research task.
+
+
+## Remaining-model completion, 13 October 2026
+
+Completed real photographic references for 88 of the 89 existing Asian model-family rows. Thirty-five rows now use inspected local photographs for predictable delivery. Preserved all pre-existing verified specification defaults; added only the manufacturer-confirmed diesel fuel for FAW J5N. No gearbox default was inferred from dealer specifications for a whole model family.
+
+The South African priorities now include Croner, FUSO FZ/FV (FZ launch vehicles), FAW J5N, Tata LPT and Ultra, Eicher Pro 2000 and Pro 3000, JAC X200 and Daewoo Maximus. BharatBenz Tractor Range now has an actual manufacturer-exchange photograph of a 2016 4023T.
+
+Replaced Daewoo Novus's failing Wikimedia URL with an inspected local 2011 Ultra Novus crane-truck photograph. Foton EST-M uses an actual New Zealand cab-chassis dealer photograph; BharatBenz medium duty uses actual 1217/1214 exhibition photography. Rejected rendered marketing imagery for these entries.
+
+FAW Tiger V Plus remains null. Searches in English and Chinese and current manufacturer catalogs did not establish the exact name or a verifiable photo of that variant. The one secondary Vietnamese blog naming it provides no reliable matching image. Tiger V, Tiger VH, Tiger VN and Tiger VR references must not be relabeled as Tiger V Plus.
+
+Photo labels identify the depicted regional configuration and reference year where documented. A family's reference picture does not verify every year, facelift or trim. Captured/event years are not a claimed production-range boundary. Manufacturer, dealer and news photographs are marked with copyright/reuse permission not stated; they are not mislabeled as Creative Commons. Wikimedia credits/licenses remain recorded individually in the JSON.

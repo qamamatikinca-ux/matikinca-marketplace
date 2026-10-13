@@ -10,7 +10,7 @@ html[data-loadlink-theme="light"] [data-loadlink-toast-surface="true"] .text-red
 html body .ll-call-result span { color: var(--ll-toast-text) !important; }
 html body .loadlink-network-banner { background: var(--ll-toast-surface); color: var(--ll-toast-text); border-color: var(--ll-toast-border); }
 /* Keep the requested entry actions as pills despite older global button rules. */
-html body [data-loadlink-vehicle-portal] button, html body [data-loadlink-vehicle-portal] a[href="#vehicle-marketplace"] { border-radius: 9999px !important; }
+html body [data-loadlink-vehicle-entry-actions] button, html body [data-loadlink-vehicle-entry-actions] a[href="#vehicle-marketplace"] { border-radius: 9999px !important; }
 /* Only call surfaces receive the updated call treatment. */
 html body .ll-call-active-sheet { background: var(--ll-call-background, #11110f) !important; padding: max(18px,env(safe-area-inset-top)) 24px max(24px,env(safe-area-inset-bottom)) !important; }
 html[data-loadlink-theme="light"] .ll-call-active-sheet { --ll-call-background: #faf9f4; }
@@ -41,3 +41,8 @@ html[data-loadlink-theme="light"] [data-loadlink-toast-surface="true"] span.text
 html body .ll-call-active-sheet .ll-call-timer[hidden] { display: none !important; }
 html[data-loadlink-theme="light"] .ll-call-active-sheet [class*="text-red"] { color: #a5212e !important; }
 @media (prefers-reduced-motion: reduce) { .ll-call-active-sheet *, [data-loadlink-owned-vehicle-wizard] * { scroll-behavior: auto !important; transition: none !important; } }
+
+html[data-loadlink-theme="light"] [data-loadlink-toast-surface="true"] .ll-toast-accent { color: #765700 !important; }
+
+html[data-loadlink-theme="light"] [data-loadlink-action-toast="error"] .ll-toast-accent { color: #b32637 !important; }
+html[data-loadlink-theme="light"] [data-loadlink-action-toast="success"] .ll-toast-accent { color: #166d47 !important; }

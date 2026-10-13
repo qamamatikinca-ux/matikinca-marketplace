@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkVehicleWizardController20260825 from "@/components/LoadLinkVehicleWizardController20260825";
-import { readVehicleDraft, clearVehicleDraft, scopeVehicleDraft } from "@/lib/vehicleDraft";
+import { VEHICLE_DRAFT_OWNER_KEY, readVehicleDraft, clearVehicleDraft, scopeVehicleDraft } from "@/lib/vehicleDraft";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -142,7 +142,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [contactNumber, setContactNumber] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [description, setDescription] = useState("");
-  const [packageType, setPackageType] = useState<"standard" | "pro" | "dealer">("standard");
+  const [packageType, setPackageType] = useState<"standard" | "pro" | "dealer">(initialPackage);
   const [selectedPlan, setSelectedPlan] = useState<BusinessPlanId | "standard" | null>(entryMode ? initialPackage : null);
   const [vehiclePhotos, setVehiclePhotos] = useState<File[]>([]);
   const [vehiclePreviews, setVehiclePreviews] = useState<string[]>([]);
@@ -152,6 +152,8 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [companyRegistrationNumber, setCompanyRegistrationNumber] = useState("");
   const [taxNumber, setTaxNumber] = useState("");
   const submitLockRef = useRef(false);
+  const draftOwnerRef = useRef("");
+  const listingSubmittedRef = useRef(false);
   const submissionIdRef = useRef("");
   const vehiclePreviewUrlsRef = useRef<string[]>([]);
 
@@ -170,6 +172,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       const user = await getFreshAuthenticatedUser();
       if (!user) { setAuthReady(true); return; }
       scopeVehicleDraft(user.id);
+      draftOwnerRef.current = user.id;
       setSignedIn(true);
       void syncAccountState().catch(() => undefined);
       setPostedBy(String(user.user_metadata?.full_name || user.user_metadata?.name || ""));
@@ -227,17 +230,23 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       submissionIdRef.current = String(d.submissionId || submissionIdRef.current);
       localStorage.setItem("loadlink-vehicle-submission-id", submissionIdRef.current);
     } catch {
-      submissionIdRef.current = localStorage.getItem("loadlink-vehicle-submission-id") || createSafeRandomId();
-      localStorage.setItem("loadlink-vehicle-submission-id", submissionIdRef.current);
+      submissionIdRef.current ||= createSafeRandomId();
     }
     finally { setDraftHydrated(true); }
   }, [resumeDraft, authReady, signedIn]);
 
   useEffect(() => {
     if (!listingFlowOpen || !vehicleCategory || !draftHydrated || !signedIn) return;
-    const draft = { updatedAt: Date.now(), entryMode: entryMode || "vehicle", sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, gvmKg, payloadKg, rate, offerMode, rentalRate, rentalPeriod, specA, specB, specC, specD, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType, submissionId: submissionIdRef.current || localStorage.getItem("loadlink-vehicle-submission-id") || "" };
-    const timer = window.setTimeout(() => { try { localStorage.setItem("loadlink-vehicle-draft-v1", JSON.stringify(draft)); } catch {} }, 150);
-    return () => window.clearTimeout(timer);
+    const draft = { updatedAt: Date.now(), entryMode: entryMode || "vehicle", sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, gvmKg, payloadKg, rate, offerMode, rentalRate, rentalPeriod, specA, specB, specC, specD, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType, submissionId: submissionIdRef.current || "" };
+    const persist = () => {
+      try {
+        if (!listingSubmittedRef.current && localStorage.getItem(VEHICLE_DRAFT_OWNER_KEY) === draftOwnerRef.current)
+          localStorage.setItem("loadlink-vehicle-draft-v1", JSON.stringify(draft));
+      } catch {}
+    };
+    const timer = window.setTimeout(persist, 150);
+    window.addEventListener("pagehide", persist);
+    return () => { window.clearTimeout(timer); window.removeEventListener("pagehide", persist); persist(); };
   }, [draftHydrated, signedIn, sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, gvmKg, payloadKg, rate, offerMode, rentalRate, rentalPeriod, specA, specB, specC, specD, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType]);
 
   useEffect(() => {
@@ -263,6 +272,14 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     setTransmission(category === "trailer" ? "Not applicable" : "");
     setFuelType(category === "trailer" ? "Not applicable" : "");
     setAxleConfiguration(""); setTitle(""); setMessage("");
+  }
+
+  function selectTruckModel(name: string) {
+    setModelName(name); setModelConfirmed(false);
+    const reference = findTruckReference(brand, name);
+    setTransmission(reference?.verified_transmission || "");
+    setFuelType(reference?.verified_fuel || "");
+    setAxleConfiguration(reference?.axle_options.length === 1 ? reference.axle_options[0] : "");
   }
 
   function confirmSelectedModel() {
@@ -333,8 +350,8 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
 
   function currentSubmissionId() {
     if (!submissionIdRef.current) {
-      submissionIdRef.current = localStorage.getItem("loadlink-vehicle-submission-id") || createSafeRandomId();
-      localStorage.setItem("loadlink-vehicle-submission-id", submissionIdRef.current);
+      submissionIdRef.current = createSafeRandomId();
+      try { localStorage.setItem("loadlink-vehicle-submission-id", submissionIdRef.current); } catch {}
     }
     return submissionIdRef.current;
   }
@@ -520,9 +537,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       const owned = getOwnedJobKeys(); owned[listingId] = ownerKey; setOwnedJobKeys(owned);
       window.dispatchEvent(new Event("loadlink-account-state-changed"));
       await recordUserActivity("vehicle_listing_posted", { entityType: "listing", entityId: listingId, metadata: { title: title.trim(), category: vehicleCategory, dealershipId: dealershipId || null } }).catch(() => undefined);
+      listingSubmittedRef.current = true;
       await syncAccountState().catch(() => undefined);
-      localStorage.removeItem("loadlink-vehicle-draft-v1");
-      localStorage.removeItem("loadlink-vehicle-submission-id");
+      clearVehicleDraft();
       submissionIdRef.current = createSafeRandomId();
       setSubmittedListingId(listingId);
       setSubmissionSuccess(true);
@@ -675,9 +692,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
               {vehicleCategory !== "truck" ? <Field label={`${vehicleCategory === "trailer" ? "Trailer" : "Mobile unit"} type`}><select value={vehicleSubtype} onChange={(event) => { setVehicleSubtype(event.target.value); setBodyType(event.target.value); }} className={inputClass} required><option value="">Select type</option>{(vehicleCategory === "trailer" ? trailerTypes : mobileUnitTypes).map((item) => <option key={item}>{item}</option>)}</select></Field> : null}
               <Field label="Registration / model year"><select value={year} onChange={(event) => { setYear(Number(event.target.value)); setModelName(""); setModelConfirmed(false); }} className={inputClass}>{truckYears.map((item) => <option key={item} value={item}>{item}</option>)}</select></Field>
               <Field label="Make / manufacturer">{vehicleCategory === "truck" ? <select value={brand} onChange={(event) => { setBrand(event.target.value); setModelName(""); setModelConfirmed(false); }} className={inputClass} required><option value="">Choose manufacturer</option>{truckCatalog.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}</select> : <input value={brand} onChange={(event) => setBrand(event.target.value)} placeholder="Make or manufacturer" className={inputClass} required />}</Field>
-              <Field label="Model">{vehicleCategory === "truck" ? <select value={modelName} onChange={(event) => { setModelName(event.target.value); setModelConfirmed(false); }} className={inputClass} disabled={!brand} required><option value="">Choose exact model</option>{availableModels.map((item) => <option key={item.name}>{item.name}</option>)}</select> : <input value={modelName} onChange={(event) => setModelName(event.target.value)} placeholder="Model name or number" className={inputClass} required />}</Field>
+              <Field label="Model">{vehicleCategory === "truck" ? <select value={modelName} onChange={(event) => selectTruckModel(event.target.value)} className={inputClass} disabled={!brand} required><option value="">Choose model family</option>{availableModels.map((item) => <option key={item.name}>{item.name}</option>)}</select> : <input value={modelName} onChange={(event) => setModelName(event.target.value)} placeholder="Model name or number" className={inputClass} required />}</Field>
             </div>
-            {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>{imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Loading model reference…</p> : null}{referenceImage?.imageUrl ? <figure className="mt-4 max-w-xl"><LoadLinkImage src={referenceImage.imageUrl} alt={referenceImage.title || "Truck reference"} className="aspect-[16/9] w-full rounded-xl object-cover" /><figcaption className={`mt-2 text-[11px] font-semibold leading-5 ${muted}`}>Model-family reference: {referenceImage.title}. Your truck’s year and specification may differ. Upload photos of your actual vehicle.{referenceImage.credit ? ` Credit: ${referenceImage.credit}.` : ""}{referenceImage.license ? ` ${referenceImage.license}.` : ""} {referenceImage.sourceUrl ? <a href={referenceImage.sourceUrl} target="_blank" rel="noreferrer" className="font-black underline underline-offset-2">Source</a> : null}</figcaption></figure> : <p className={`mt-3 text-xs ${muted}`}>A verified photograph is not available for this model and year yet.</p>}{referenceImage?.specSourceUrl ? <p className={`mt-3 text-xs ${muted}`}>Available verified specifications have been filled in. Confirm your vehicle’s gearbox and fuel type. <a href={referenceImage.specSourceUrl} target="_blank" rel="noreferrer" className="underline">Manufacturer specifications</a></p> : null}</div> : <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={() => { setTitle(`${year} ${brand} ${modelName} ${vehicleSubtype}`.replace(/\s+/g, " ").trim()); setMessage(""); }} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm vehicle details</button></div>}
+            {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>{imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Loading model reference…</p> : null}{referenceImage?.imageUrl ? <figure className="mt-4 max-w-xl"><LoadLinkImage loading="eager" fetchPriority="high" src={referenceImage.imageUrl} alt={referenceImage.title || "Truck reference"} className="aspect-[16/9] w-full rounded-xl bg-current/[.025] object-contain" /><figcaption className={`mt-2 text-[11px] font-semibold leading-5 ${muted}`}>Model-family reference: {referenceImage.title}. Your truck’s year and specification may differ. Upload photos of your actual vehicle.{referenceImage.credit ? ` Credit: ${referenceImage.credit}.` : ""}{referenceImage.license ? ` ${referenceImage.license}.` : ""} {referenceImage.sourceUrl ? <a href={referenceImage.sourceUrl} target="_blank" rel="noreferrer" className="font-black underline underline-offset-2">Source</a> : null}</figcaption></figure> : <p className={`mt-3 text-xs ${muted}`}>A verified photograph is not available for this model and year yet.</p>}{referenceImage?.specSourceUrl ? <p className={`mt-3 text-xs ${muted}`}>{referenceImage.verifiedFuel || referenceImage.verifiedTransmission ? "Verified specifications have been filled in. Confirm your vehicle’s gearbox and fuel type." : "Specifications vary by version. Select the gearbox and fuel type fitted to your vehicle."} <a href={referenceImage.specSourceUrl} target="_blank" rel="noreferrer" className="underline">Manufacturer specifications</a></p> : null}</div> : <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={() => { setTitle(`${year} ${brand} ${modelName} ${vehicleSubtype}`.replace(/\s+/g, " ").trim()); setMessage(""); }} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm vehicle details</button></div>}
           </section>
 
           {detailsReady ? <>

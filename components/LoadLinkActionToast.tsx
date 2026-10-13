@@ -44,7 +44,7 @@ export default function LoadLinkActionToast({
       data-loadlink-toast-surface="true"
     >
       <div className="flex items-start gap-3 p-4">
-        <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-black/20" style={{ borderColor: `${accent}66`, color: accent }}>
+        <span className="ll-toast-accent mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-black/20" style={{ borderColor: `${accent}66`, color: accent }}>
           {icon || <ToneIcon tone={tone} />}
         </span>
         <div className="min-w-0 flex-1 pt-0.5">
@@ -55,13 +55,13 @@ export default function LoadLinkActionToast({
               <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/15">
                 <div className="h-full rounded-full transition-[width] duration-200" style={{ width: `${safeProgress}%`, backgroundColor: accent }} />
               </div>
-              <strong className="text-[10px]" style={{ color: accent }}>{Math.round(safeProgress)}%</strong>
+              <strong className="ll-toast-accent text-[10px]" style={{ color: accent }}>{Math.round(safeProgress)}%</strong>
             </div>
           ) : null}
           {primaryLabel || secondaryLabel ? (
             <div className="mt-3 flex flex-wrap gap-2">
               {secondaryLabel ? <button type="button" onClick={onSecondary} className="ll-toast-secondary h-9 rounded-xl border border-white/15 bg-white/[.035] px-3 text-[10px] font-black text-white/78">{secondaryLabel}</button> : null}
-              {primaryLabel ? <button type="button" onClick={onPrimary} className="h-9 rounded-xl border px-3 text-[10px] font-black" style={{ borderColor: accent, color: tone === "success" || tone === "progress" ? "#050505" : accent, backgroundColor: tone === "success" || tone === "progress" ? accent : "transparent" }}>{primaryLabel}</button> : null}
+              {primaryLabel ? <button type="button" onClick={onPrimary} className={`h-9 rounded-xl border px-3 text-[10px] font-black ${tone === "info" || tone === "error" ? "ll-toast-accent" : ""}`} style={{ borderColor: accent, color: tone === "success" || tone === "progress" ? "#050505" : accent, backgroundColor: tone === "success" || tone === "progress" ? accent : "transparent" }}>{primaryLabel}</button> : null}
             </div>
           ) : null}
         </div>

@@ -27,14 +27,16 @@ function distanceKm(a: Position, dealer: Dealer) {
 
 export default function FollowingPage({ initialView = "following" }: { initialView?: View } = {}) {
   const pathname = usePathname();
-  const alive = useRef(true), loadSequence = useRef(0);
-  const [error, setError] = useState("");
+  const alive = useRef(true), loadSequence = useRef(0), discoverySequence = useRef(0);
+  const [discoveryError, setDiscoveryError] = useState("");
+  const [followingError, setFollowingError] = useState("");
   const [discoveryLoading, setDiscoveryLoading] = useState(true);
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [dealers, setDealers] = useState<Dealer[]>([]), [discoverDealers, setDiscoverDealers] = useState<Dealer[]>([]);
   const [updates, setUpdates] = useState<DealerUpdate[]>([]);
   const [loading, setLoading] = useState(true), [signedIn, setSignedIn] = useState(true);
   const [view, setView] = useState<View>(initialView), [locationQuery, setLocationQuery] = useState("");
+  const error = view === "discover" ? discoveryError : followingError;
   const [position, setPosition] = useState<Position>(null);
 
   useEffect(() => {
@@ -45,24 +47,28 @@ export default function FollowingPage({ initialView = "following" }: { initialVi
     refresh();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => { window.setTimeout(() => { if (alive.current) refresh(); }, 0); });
     window.addEventListener("online", refresh);
-    return () => { alive.current = false; loadSequence.current += 1; subscription.unsubscribe(); window.removeEventListener("online", refresh); };
+    return () => { alive.current = false; loadSequence.current += 1; discoverySequence.current += 1; subscription.unsubscribe(); window.removeEventListener("online", refresh); };
   }, [initialView]);
 
   async function loadDiscovery() {
     if (!alive.current) return;
+    const sequence = ++discoverySequence.current;
+    const current = () => alive.current && sequence === discoverySequence.current;
     setDiscoveryLoading(true);
+    setDiscoveryError("");
     try {
       const response = await fetch("/api/dealerships", { signal: AbortSignal.timeout(15_000) });
       const body = await response.json();
       if (!response.ok) throw new Error("Directory unavailable");
-      if (alive.current) { setDiscoverDealers(normalizePublicDealerships(body.rows)); setError(""); }
-    } catch { if (alive.current) setError("Dealerships could not load. Check your connection and try again."); }
-    finally { if (alive.current) setDiscoveryLoading(false); }
+      if (current()) { setDiscoverDealers(normalizePublicDealerships(body.rows)); setDiscoveryError(""); }
+    } catch { if (current()) setDiscoveryError("Dealerships could not load. Check your connection and try again."); }
+    finally { if (current()) setDiscoveryLoading(false); }
   }
   async function loadFollowing() {
     const sequence = ++loadSequence.current;
     const current = () => alive.current && sequence === loadSequence.current;
     setLoading(true);
+    setFollowingError("");
     try {
       if (!isSupabaseConfigured) { if (current()) setSignedIn(false); return; }
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -81,7 +87,7 @@ export default function FollowingPage({ initialView = "following" }: { initialVi
       if (dealerResult.error) throw dealerResult.error;
       if (updateResult.error) throw updateResult.error;
       if (current()) { setDealers(normalizePublicDealerships(dealerResult.data)); setUpdates((updateResult.data || []).map(row => ({ ...row, update_type: String(row.update_type || "update"), title: String(row.title || "Dealership update"), body: String(row.body || "") })) as DealerUpdate[]); }
-    } catch { if (current()) setError("Your dealership network could not refresh. Please try again."); }
+    } catch { if (current()) setFollowingError("Your dealership network could not refresh. Please try again."); }
     finally { if (current()) setLoading(false); }
   }
 
@@ -100,7 +106,7 @@ export default function FollowingPage({ initialView = "following" }: { initialVi
     <section className="mx-auto max-w-6xl px-4 pb-16 pt-5 md:px-6 md:pt-8">
       <div className="border-b border-current/10 pb-5"><h1 className="text-3xl font-black tracking-[-.045em] sm:text-4xl">Dealerships</h1><p className={`mt-2 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Follow verified dealerships, see updates and discover popular dealers around you.</p><div className="no-scrollbar mt-5 flex gap-2 overflow-x-auto"><Tab active={view === "following"} onClick={() => chooseView("following")} darkMode={darkMode}>Following</Tab><Tab active={view === "updates"} onClick={() => chooseView("updates")} darkMode={darkMode}>Updates</Tab><Tab active={view === "discover"} onClick={() => chooseView("discover")} darkMode={darkMode}>Find dealers</Tab></div></div>
       {error ? <div role="status" className={`mt-4 flex items-center justify-between gap-4 rounded-2xl border p-4 text-sm ${glass}`}><span>{error}</span><button type="button" className="min-h-11 shrink-0 rounded-full bg-[#f6b800] px-5 font-bold text-black" onClick={() => { void loadDiscovery(); void loadFollowing(); }}>Retry</button></div> : null}
-      {view === "discover" ? <section className="pt-5"><div className={`rounded-[20px] border p-3.5 backdrop-blur-xl ${glass}`}><label className="block"><span className={`mb-2 block text-[9px] font-black uppercase tracking-[.11em] ${muted}`}>City or area</span><input value={locationQuery} onChange={(e) => setLocationQuery(e.target.value)} placeholder="Johannesburg, Pretoria, Durban…" className={`h-12 w-full rounded-xl border px-4 text-sm font-semibold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/10 bg-white/[.045] text-white placeholder:text-white/28" : "border-black/10 bg-white/70 text-black placeholder:text-black/35"}`} /></label></div><div className="mt-5"><h2 className="text-xl font-black tracking-[-.03em]">{fallbackMode ? "Popular dealerships near you" : locationQuery.trim() ? "Matching dealerships" : "Most followed dealerships"}</h2><p className={`mt-1 text-xs font-semibold ${muted}`}>{fallbackMode ? "No exact area match, so LoadLink is showing popular alternatives instead." : position ? "Distance is estimated from your location where dealership coordinates are available." : "Sorted by follower count."}</p></div><div className="mt-4 grid gap-3 md:grid-cols-2">{discoveryLoading ? <p role="status" className={`py-8 text-sm ${muted}`}>Loading dealerships…</p> : !discoveryRows.length && !error ? <Empty title="No dealerships available yet" copy="Approved dealerships will appear here when their public profiles are ready." glass={glass} muted={muted} /> : null}{discoveryRows.map((dealer) => <DealerCard key={dealer.id} dealer={dealer} darkMode={darkMode} muted={muted} position={position} />)}</div></section> : loading ? <div className="flex min-h-[50vh] items-center justify-center"><div className="h-9 w-9 animate-spin rounded-full border-2 border-current/10 border-t-[#f6b800]" /></div> : !signedIn ? <Empty title="Sign in to see your dealership network" copy="Following and dealership updates are linked to your LoadLink account." action={<Link href="/login?returnTo=%2Ffollowing" className="inline-flex h-11 items-center rounded-xl bg-[#f6b800] px-5 text-xs font-black text-black">Sign in</Link>} glass={glass} muted={muted} /> : dealers.length === 0 ? <Empty title="No dealerships followed yet" copy="Browse verified dealerships and follow the ones you want to keep close." action={<button onClick={() => chooseView("discover")} className="h-11 rounded-xl bg-[#f6b800] px-5 text-xs font-black text-black">Find dealers</button>} glass={glass} muted={muted} /> : view === "following" ? <div className="mt-5 grid gap-3 md:grid-cols-2">{dealers.map((dealer) => <DealerCard key={dealer.id} dealer={dealer} darkMode={darkMode} muted={muted} position={position} />)}</div> : updates.length ? <div className="mt-5 grid gap-3 md:grid-cols-2">{updates.map((u) => { const dealer = dealerById.get(u.dealership_id); return <article key={u.id} className={`rounded-[20px] border p-4 ${glass}`}><div className="flex items-center gap-3">{dealer ? <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-full border border-current/10">{dealer.profile_image_url ? <LoadLinkImage src={dealer.profile_image_url} alt="" className="h-full w-full object-cover" /> : dealer.name.slice(0,1)}</span> : null}<div className="min-w-0">{dealer ? <Link href={`/dealership/${dealer.slug}`} className="truncate text-sm font-black">{dealer.name}</Link> : null}<p className={`text-[9px] font-bold uppercase tracking-[.08em] ${muted}`}>{u.update_type.replaceAll("_", " ")}</p></div></div><h2 className="mt-3 text-base font-black">{u.title}</h2><p className={`mt-2 line-clamp-3 text-sm font-semibold leading-6 ${muted}`}>{u.body}</p></article>; })}</div> : <Empty title="No new dealership updates" copy="Fresh updates from followed dealerships will appear here." glass={glass} muted={muted} />}
+      {view === "discover" ? <section className="pt-5"><div className={`rounded-[20px] border p-3.5 backdrop-blur-xl ${glass}`}><label className="block"><span className={`mb-2 block text-[9px] font-black uppercase tracking-[.11em] ${muted}`}>City or area</span><input value={locationQuery} onChange={(e) => setLocationQuery(e.target.value)} placeholder="Johannesburg, Pretoria, Durban…" className={`h-12 w-full rounded-xl border px-4 text-sm font-semibold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/10 bg-white/[.045] text-white placeholder:text-white/28" : "border-black/10 bg-white/70 text-black placeholder:text-black/35"}`} /></label></div><div className="mt-5"><h2 className="text-xl font-black tracking-[-.03em]">{fallbackMode ? "Popular dealerships" : locationQuery.trim() ? "Matching dealerships" : "Most followed dealerships"}</h2><p className={`mt-1 text-xs font-semibold ${muted}`}>{fallbackMode ? "No exact area match, so LoadLink is showing popular alternatives instead." : position ? "Distance is estimated from your location where dealership coordinates are available." : "Sorted by follower count."}</p></div><div className="mt-4 grid gap-3 md:grid-cols-2">{discoveryLoading ? <p role="status" className={`py-8 text-sm ${muted}`}>Loading dealerships…</p> : !discoveryRows.length && !error ? <Empty title="No dealerships available yet" copy="Approved dealerships will appear here when their public profiles are ready." glass={glass} muted={muted} /> : null}{discoveryRows.map((dealer) => <DealerCard key={dealer.id} dealer={dealer} darkMode={darkMode} muted={muted} position={position} />)}</div></section> : loading ? <div className="flex min-h-[50vh] items-center justify-center"><div className="h-9 w-9 animate-spin rounded-full border-2 border-current/10 border-t-[#f6b800]" /></div> : !signedIn ? <Empty title="Sign in to see your dealership network" copy="Following and dealership updates are linked to your LoadLink account." action={<Link href="/login?returnTo=%2Ffollowing" className="inline-flex h-11 items-center rounded-xl bg-[#f6b800] px-5 text-xs font-black text-black">Sign in</Link>} glass={glass} muted={muted} /> : dealers.length === 0 ? <Empty title="No dealerships followed yet" copy="Browse verified dealerships and follow the ones you want to keep close." action={<button onClick={() => chooseView("discover")} className="h-11 rounded-xl bg-[#f6b800] px-5 text-xs font-black text-black">Find dealers</button>} glass={glass} muted={muted} /> : view === "following" ? <div className="mt-5 grid gap-3 md:grid-cols-2">{dealers.map((dealer) => <DealerCard key={dealer.id} dealer={dealer} darkMode={darkMode} muted={muted} position={position} />)}</div> : updates.length ? <div className="mt-5 grid gap-3 md:grid-cols-2">{updates.map((u) => { const dealer = dealerById.get(u.dealership_id); return <article key={u.id} className={`rounded-[20px] border p-4 ${glass}`}><div className="flex items-center gap-3">{dealer ? <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-full border border-current/10">{dealer.profile_image_url ? <LoadLinkImage src={dealer.profile_image_url} alt="" className="h-full w-full object-cover" /> : dealer.name.slice(0,1)}</span> : null}<div className="min-w-0">{dealer ? <Link href={`/dealership/${dealer.slug}`} className="truncate text-sm font-black">{dealer.name}</Link> : null}<p className={`text-[9px] font-bold uppercase tracking-[.08em] ${muted}`}>{u.update_type.replaceAll("_", " ")}</p></div></div><h2 className="mt-3 text-base font-black">{u.title}</h2><p className={`mt-2 line-clamp-3 text-sm font-semibold leading-6 ${muted}`}>{u.body}</p></article>; })}</div> : <Empty title="No new dealership updates" copy="Fresh updates from followed dealerships will appear here." glass={glass} muted={muted} />}
     </section>
   </main>;
 }
