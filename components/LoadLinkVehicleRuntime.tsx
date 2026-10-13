@@ -1,37 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import { scopeVehicleDraft } from "@/lib/vehicleDraft";
 import { supabase } from "@/lib/supabaseClient";
 
-function scopeVehicleDraft(userId: string) {
-  if (!userId || typeof window === "undefined") return;
-
-  const ownerKey = "loadlink-smart-vehicle-draft-owner";
-  const draftKey = "loadlink-vehicle-draft-v1";
-  const submissionKey = "loadlink-vehicle-submission-id";
-  const previous = localStorage.getItem(ownerKey);
-
-  if (!previous) {
-    localStorage.setItem(ownerKey, userId);
-    return;
-  }
-
-  if (previous === userId) return;
-
-  const oldDraft = localStorage.getItem(draftKey);
-  const oldSubmission = localStorage.getItem(submissionKey);
-  if (oldDraft) localStorage.setItem(`${draftKey}:${previous}`, oldDraft);
-  if (oldSubmission) localStorage.setItem(`${submissionKey}:${previous}`, oldSubmission);
-
-  const nextDraft = localStorage.getItem(`${draftKey}:${userId}`);
-  const nextSubmission = localStorage.getItem(`${submissionKey}:${userId}`);
-  if (nextDraft) localStorage.setItem(draftKey, nextDraft);
-  else localStorage.removeItem(draftKey);
-  if (nextSubmission) localStorage.setItem(submissionKey, nextSubmission);
-  else localStorage.removeItem(submissionKey);
-
-  localStorage.setItem(ownerKey, userId);
-}
 
 function todayIso() {
   const now = new Date();

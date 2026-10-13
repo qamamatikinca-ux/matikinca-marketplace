@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
 import Link from "next/link";
@@ -294,7 +296,7 @@ export default function AccountSettingsPage() {
         {settingsView === "profile" ? (
           <div className="mt-6 grid gap-5 lg:grid-cols-[250px_1fr]">
             <aside className={`h-fit border p-5 ${surface}`}>
-              <div className="mx-auto flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-current/15 bg-black text-xl font-bold text-white">{form.avatar_url ? <img src={form.avatar_url} alt="Profile" className="h-full w-full object-cover" /> : initials}</div>
+              <div className="mx-auto flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-current/15 bg-black text-xl font-bold text-white">{form.avatar_url ? <LoadLinkImage src={form.avatar_url} alt="Profile" className="h-full w-full object-cover" /> : initials}</div>
               <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void uploadAvatar(event)} className="hidden" />
               <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="mt-4 h-10 w-full rounded-xl bg-black px-4 text-xs font-black text-white disabled:opacity-50">{uploading ? "Uploading…" : "Change photo"}</button>
               <div className={`mt-4 rounded-xl border p-3 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-black/[.02]"}`}><p className="text-[10px] font-semibold uppercase tracking-[.1em] opacity-50">Profile complete</p><p className="mt-1 text-xl font-bold">{completion}%</p></div>

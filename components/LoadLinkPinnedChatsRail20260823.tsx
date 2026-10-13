@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import { useEffect, useMemo, useState } from "react";
 
 const PIN_STORAGE_KEY = "loadlink-pinned-conversations-v1";
@@ -99,7 +101,7 @@ export default function LoadLinkPinnedChatsRail20260823({ darkMode }: { darkMode
           {chats.map((chat) => (
             <a key={chat.id} href={chat.href} className={`flex min-w-[205px] max-w-[240px] items-center gap-3 rounded-2xl border px-3 py-2.5 transition ${darkMode ? "border-white/10 bg-white/[.035] hover:bg-white/[.06]" : "border-black/10 bg-black/[.025] hover:bg-black/[.045]"}`}>
               <span className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-[11px] font-black ${darkMode ? "bg-white/10" : "bg-black/[.07]"}`}>
-                {chat.image ? <img src={chat.image} alt="" className="h-full w-full object-cover" /> : initials(chat.name)}
+                {chat.image ? <LoadLinkImage src={chat.image} alt="" className="h-full w-full object-cover" /> : initials(chat.name)}
               </span>
               <span className="min-w-0 flex-1">
                 <strong className="block truncate text-xs font-black">{chat.name}</strong>

@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
@@ -52,5 +54,5 @@ export default function LoadLinkCallHistoryStrip20260823(){
   },[]);
 
   const visibleRows=useMemo(()=>rows.slice().reverse(),[rows]);if(!host||!thread||!visibleRows.length)return null;
-  return createPortal(<div className="ll-final-call-history" aria-label="Call activity in this chat">{visibleRows.map((row)=>{const outgoing=row.caller_user_id===userId;const identity=identities[row.id]||{name:"LoadLink contact",avatarUrl:""};const answered=Boolean(answers[row.id]);const reason=String(row.end_reason||row.status||"").toLowerCase();const connected=answered&&!hasFailureReason(reason);return <div className="ll-final-call-event" key={row.id} data-loadlink-call-event="true"><span className="ll-final-call-avatar" aria-hidden="true">{identity.avatarUrl?<img src={identity.avatarUrl} alt=""/>:<span>{initials(identity.name)}</span>}</span><span className="ll-final-call-event-copy"><strong>{titleFor(row,outgoing,identity.name,answered)}</strong><small>{connected?durationLabel(answers[row.id],row.ended_at):"No audio connection"} · {outgoing?"Outgoing":"Incoming"} · LoadLink audio</small></span><span className="ll-final-call-direction" aria-hidden="true"><LoadLinkIcon name="phone" size={15} strokeWidth={2}/></span></div>;})}</div>,host);
+  return createPortal(<div className="ll-final-call-history" aria-label="Call activity in this chat">{visibleRows.map((row)=>{const outgoing=row.caller_user_id===userId;const identity=identities[row.id]||{name:"LoadLink contact",avatarUrl:""};const answered=Boolean(answers[row.id]);const reason=String(row.end_reason||row.status||"").toLowerCase();const connected=answered&&!hasFailureReason(reason);return <div className="ll-final-call-event" key={row.id} data-loadlink-call-event="true"><span className="ll-final-call-avatar" aria-hidden="true">{identity.avatarUrl?<LoadLinkImage src={identity.avatarUrl} alt=""/>:<span>{initials(identity.name)}</span>}</span><span className="ll-final-call-event-copy"><strong>{titleFor(row,outgoing,identity.name,answered)}</strong><small>{connected?durationLabel(answers[row.id],row.ended_at):"No audio connection"} · {outgoing?"Outgoing":"Incoming"} · LoadLink audio</small></span><span className="ll-final-call-direction" aria-hidden="true"><LoadLinkIcon name="phone" size={15} strokeWidth={2}/></span></div>;})}</div>,host);
 }

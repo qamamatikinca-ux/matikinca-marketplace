@@ -189,7 +189,7 @@ export const truckCatalog: TruckBrand[] = [
     name: "Hino",
     country: "Japan",
     models: [
-      model("200 Series", 2010, 2027, manualAutoAmt, ["Diesel"], LIGHT_AXLES, DISTRIBUTION),
+      model("200 Series", 2022, 2027, manualAutoAmt, ["Diesel"], LIGHT_AXLES, DISTRIBUTION),
       model("300 Series / Dutro", 2010, 2027, manualAutoAmt, ["Diesel", "Electric"], LIGHT_AXLES, DISTRIBUTION),
       model("500 Series / Ranger", 2010, 2027, manualAutoAmt, ["Diesel"], MEDIUM_AXLES, [...DISTRIBUTION, ...CONSTRUCTION]),
       model("700 Series / Profia", 2010, 2027, manualAndAmt, ["Diesel"], VOCATIONAL_AXLES, [...LONG_HAUL, ...CONSTRUCTION]),
@@ -563,14 +563,11 @@ export function validateTruckTransmission(
     };
   }
 
-  const valid = selected.transmissions.includes(transmission as TruckTransmission);
-  return {
-    valid,
-    requiresModificationProof: false,
-    message: valid
-      ? "Gearbox matches the catalogued factory options for this model and year."
-      : `${brandName} ${modelName} (${year}) is not catalogued with a ${transmission.toLowerCase()} gearbox. Select one of the listed factory options or choose Converted / custom and upload supporting paperwork.`,
-  };
+  const valid = ["Manual", "Automatic", "Automated manual", "Electric direct drive"].includes(transmission);
+  return { valid, requiresModificationProof: false, message: valid
+    ? "Confirm this gearbox against your vehicle’s specification or registration documents."
+    : "Choose the gearbox fitted to your truck." };
+
 }
 
 export function catalogStats() {

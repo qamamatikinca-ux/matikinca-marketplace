@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
@@ -132,7 +134,7 @@ export default function AdminDriversPage() {
             const documents = Array.isArray(row.documents) ? row.documents : [];
             return <article key={row.id} className="rounded-[26px] border border-black/10 bg-white p-5 shadow-[0_16px_45px_rgba(0,0,0,.035)] sm:p-6">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-                <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full bg-[#ece9df]">{row.profile_image_url ? <img src={row.profile_image_url} alt={row.full_name || "Driver"} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xl font-black text-black/25">LL</div>}</div>
+                <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full bg-[#ece9df]">{row.profile_image_url ? <LoadLinkImage src={row.profile_image_url} alt={row.full_name || "Driver"} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xl font-black text-black/25">LL</div>}</div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div><div className="flex flex-wrap gap-2"><span className="rounded-full bg-black px-3 py-1 text-[10px] font-black text-white">{label(row.status || "pending")}</span><span className="rounded-full bg-[#f6b800] px-3 py-1 text-[10px] font-black text-black">{documents.length} documents</span></div><h2 className="mt-3 text-2xl font-black tracking-[-.035em]">{row.full_name || "Unnamed driver"}</h2><p className="mt-1 text-sm font-semibold text-black/55">{row.headline || "LoadLink driver applicant"}</p><p className="mt-1 text-xs font-semibold text-black/40">{row.email || "No email"} · {row.phone || "No phone"}</p></div>

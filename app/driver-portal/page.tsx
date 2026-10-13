@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
 import Link from "next/link";
@@ -20,7 +22,7 @@ export default function DriverPortalPage() {
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <section className="relative min-h-[520px] overflow-hidden md:min-h-[620px]">
-        <img
+        <LoadLinkImage
           src="/images/driver-profile-hero.jpg"
           alt="Professional truck drivers"
           className="absolute inset-0 h-full w-full object-cover object-center"

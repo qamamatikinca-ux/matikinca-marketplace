@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
@@ -660,7 +662,7 @@ export default function JobsPortalPage() {
       <Header darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
 
       <section className="relative min-h-[82vh] overflow-hidden border-b border-[#f6b800]/40">
-        <img src="/images/jobs/jobs-hero-fleet.jpg" alt="Truck fleet ready for logistics work" className="absolute inset-0 h-full w-full object-cover grayscale" />
+        <LoadLinkImage src="/images/jobs/jobs-hero-fleet.jpg" alt="Truck fleet ready for logistics work" className="absolute inset-0 h-full w-full object-cover grayscale" />
         <div className={`absolute inset-0 ${darkMode ? "bg-gradient-to-b from-black/15 via-black/45 to-black" : "bg-gradient-to-b from-black/5 via-black/35 to-[#fff7df]"}`} />
 
         <div className="relative mx-auto flex min-h-[82vh] max-w-5xl flex-col justify-end px-5 pb-8 pt-20">
@@ -799,7 +801,7 @@ function FeaturedJobsRail({ jobs, darkMode, onOpen }: { jobs: JobListing[]; dark
           {jobs.map((job) => (
             <button key={job.id} onClick={() => onOpen(job)} className={`overflow-hidden rounded-2xl border text-left ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
               <div className="relative aspect-[16/9] bg-black">
-                <img src={job.photos[0] || "/images/jobs/job-card-1.jpg"} alt={job.title} className="h-full w-full object-cover" />
+                <LoadLinkImage src={job.photos[0] || "/images/jobs/job-card-1.jpg"} alt={job.title} className="h-full w-full object-cover" />
                 <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] text-black">Promoted</span>
               </div>
               <div className="p-4">
@@ -823,7 +825,7 @@ function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onRe
   return (
     <article id={`job-${job.id}`} className={`scroll-mt-24 overflow-hidden border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
       <div role="button" tabIndex={0} onClick={onOpenGallery} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" ")onOpenGallery()}} className="group relative block w-full cursor-pointer overflow-hidden bg-black text-left">
-        <div className="aspect-[4/3] w-full overflow-hidden md:aspect-[16/9]"><img src={coverPhoto} alt={job.title} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" /></div>
+        <div className="aspect-[4/3] w-full overflow-hidden md:aspect-[16/9]"><LoadLinkImage src={coverPhoto} alt={job.title} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" /></div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/45" />
         <span className="absolute right-3 bottom-3 rounded-full bg-black/75 px-3 py-1.5 text-xs font-black text-white">{photoCount} photos</span>
         {job.sponsored ? <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.15em] text-black">Promoted</span> : null}
@@ -883,7 +885,7 @@ function ContactSellerStack({ job, darkMode }: { job: JobListing; darkMode: bool
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b88900]">Contact poster</p>
         <div className={`mt-3 flex items-center gap-3 border p-3 ${darkMode ? "border-white/10 bg-[#090909]" : "border-black/10 bg-white"}`}>
           <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden border border-[#f6b800]/50 bg-white">
-            {job.posterPhoto ? <img src={job.posterPhoto} alt={job.postedBy} className="h-full w-full object-cover" /> : <PosterUserIcon />}
+            {job.posterPhoto ? <LoadLinkImage src={job.posterPhoto} alt={job.postedBy} className="h-full w-full object-cover" /> : <PosterUserIcon />}
           </div>
           <div className="min-w-0">
             <h4 className="truncate text-lg font-black">{job.postedBy}</h4>
@@ -1063,7 +1065,7 @@ function PhotoGalleryModal({ job, onClose }: { job: JobListing; onClose: () => v
         <div className="grid gap-4">
           {job.photos.map((photo, index) => (
             <figure key={photo + index} className="border border-white/10 bg-black">
-              <img src={photo} alt={`${job.title} photo ${index + 1}`} className="h-auto w-full object-contain" />
+              <LoadLinkImage src={photo} alt={`${job.title} photo ${index + 1}`} className="h-auto w-full object-contain" />
               {index === 0 ? <figcaption className="px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-[#f6b800]">Cover photo</figcaption> : null}
             </figure>
           ))}

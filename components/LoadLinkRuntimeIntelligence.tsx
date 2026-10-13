@@ -4,6 +4,7 @@ import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { scopeVehicleDraft } from "@/lib/vehicleDraft";
 import { supabase } from "@/lib/supabaseClient";
 import {
   getLoadLinkIntelligence,
@@ -23,31 +24,6 @@ type Notice = {
 const entitled = new Set(["active", "trial", "trialing", "grace_period", "cancelled"]);
 const futureWords = /(needed|work.?starts|expiry|expires|due|appointment|scheduled|schedule|recurrence|renewal|valid.?until)/i;
 
-function scopeVehicleDraft(userId: string) {
-  if (!userId || typeof window === "undefined") return;
-  const ownerKey = "loadlink-smart-vehicle-draft-owner";
-  const draftKey = "loadlink-vehicle-draft-v1";
-  const submissionKey = "loadlink-vehicle-submission-id";
-  const previous = localStorage.getItem(ownerKey);
-  if (!previous) {
-    localStorage.setItem(ownerKey, userId);
-    return;
-  }
-  if (previous === userId) return;
-
-  const oldDraft = localStorage.getItem(draftKey);
-  const oldSubmission = localStorage.getItem(submissionKey);
-  if (oldDraft) localStorage.setItem(`${draftKey}:${previous}`, oldDraft);
-  if (oldSubmission) localStorage.setItem(`${submissionKey}:${previous}`, oldSubmission);
-
-  const nextDraft = localStorage.getItem(`${draftKey}:${userId}`);
-  const nextSubmission = localStorage.getItem(`${submissionKey}:${userId}`);
-  if (nextDraft) localStorage.setItem(draftKey, nextDraft);
-  else localStorage.removeItem(draftKey);
-  if (nextSubmission) localStorage.setItem(submissionKey, nextSubmission);
-  else localStorage.removeItem(submissionKey);
-  localStorage.setItem(ownerKey, userId);
-}
 
 function todayIso() {
   const now = new Date();
@@ -227,6 +203,7 @@ export default function LoadLinkRuntimeIntelligence() {
         <div className="pointer-events-none fixed inset-x-3 top-[76px] z-[130] mx-auto max-w-md">
           <div
             role="status"
+            data-loadlink-toast-surface="true"
             className="pointer-events-auto flex items-start gap-3 rounded-[18px] border border-black/10 bg-white/96 p-3.5 text-black shadow-2xl dark:border-white/10 dark:bg-[#111]/96 dark:text-white"
           >
             <span
@@ -239,15 +216,15 @@ export default function LoadLinkRuntimeIntelligence() {
               }`}
             />
             <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-black">{notice.title}</div>
+              <div className="ll-toast-title text-[11px] font-black">{notice.title}</div>
               {notice.detail ? (
-                <div className="mt-1 text-[9px] font-semibold leading-4 opacity-50">{notice.detail}</div>
+                <div className="ll-toast-detail mt-1 text-[9px] font-semibold leading-4 opacity-50">{notice.detail}</div>
               ) : null}
             </div>
             <button
               type="button"
               onClick={() => setNotice(null)}
-              className="text-xs font-black opacity-35"
+              className="ll-toast-close text-xs font-black opacity-35"
               aria-label="Dismiss"
             >
               <LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" />

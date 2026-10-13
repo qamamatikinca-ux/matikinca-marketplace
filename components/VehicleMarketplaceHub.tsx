@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import Link from "next/link";
@@ -200,7 +202,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
                   >
                     <Link href={href} onClick={() => markSeen(String(row.id))} className="group relative block w-full overflow-hidden bg-black text-left">
                       <div className="aspect-[4/3] w-full overflow-hidden md:aspect-[16/9]">
-                        <img src={row.photos?.[0] || "/images/truck-1.jpg"} alt={row.title || "LoadLink vehicle"} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" />
+                        <LoadLinkImage src={row.photos?.[0] || "/images/truck-1.jpg"} alt={row.title || "LoadLink vehicle"} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" />
                       </div>
                       <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/45" />
                       <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[9px] font-black uppercase tracking-[.12em] text-black">{offer}</span>

@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import { useEffect, useRef, useState } from "react";
@@ -166,7 +168,7 @@ export default function PublicDealerStatus({
           <button type="button" onClick={() => open(0)} className="flex min-w-0 items-center gap-3 text-left" aria-label={`View ${dealerName} status`}>
             <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-[#f6b800] p-[2px] shadow-[0_8px_22px_rgba(246,184,0,.16)]">
               <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-current/10 bg-[#111] text-[10px] font-black text-[#f6b800]">
-                {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : initials(dealerName)}
+                {avatarUrl ? <LoadLinkImage src={avatarUrl} alt="" className="h-full w-full object-cover" /> : initials(dealerName)}
               </span>
             </span>
             <span className="min-w-0">
@@ -195,7 +197,7 @@ export default function PublicDealerStatus({
             <header className="absolute left-0 right-0 top-[calc(max(10px,env(safe-area-inset-top))+12px)] z-30 flex items-center gap-3 bg-gradient-to-b from-black/72 to-transparent px-4 pb-8 pt-3">
               <a href={`/dealership/${dealerSlug}`} className="flex min-w-0 flex-1 items-center gap-2.5">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-[#111] text-[8px] font-black text-[#f6b800]">
-                  {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : initials(dealerName)}
+                  {avatarUrl ? <LoadLinkImage src={avatarUrl} alt="" className="h-full w-full object-cover" /> : initials(dealerName)}
                 </span>
                 <span className="min-w-0">
                   <strong className="block truncate text-[13px] font-black">{dealerName}</strong>
@@ -221,7 +223,7 @@ export default function PublicDealerStatus({
                     className="h-full w-full object-contain"
                   />
                 ) : (
-                  <img src={current.media_url} alt="" className="h-full w-full object-contain" />
+                  <LoadLinkImage src={current.media_url} alt="" className="h-full w-full object-contain" />
                 )
               ) : (
                 <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_top,rgba(246,184,0,.18),transparent_42%),#0a0a0a] p-8 text-center">

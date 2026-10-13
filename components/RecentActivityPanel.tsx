@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { formatListingRate } from "@/lib/formatCurrency";
@@ -253,7 +255,7 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
               >
                 <div className="aspect-[4/3] overflow-hidden bg-black/10">
                   {item.image ? (
-                    <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
+                    <LoadLinkImage src={item.image} alt={item.title} className="h-full w-full object-cover" />
                   ) : (
                     <div className={`flex h-full items-center justify-center text-xs font-black ${darkMode ? "bg-white/[.04] text-white/35" : "bg-black/[.04] text-black/35"}`}>No post photo</div>
                   )}

@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
@@ -175,7 +177,7 @@ export default function AdminListingsPage() {
 
             return <article key={item.id} className="overflow-hidden rounded-[26px] border border-black/10 bg-white shadow-[0_18px_50px_rgba(0,0,0,.04)]">
               <div className="grid md:grid-cols-[210px_1fr]">
-                <div className="min-h-44 bg-[#ece9df] md:min-h-full">{photos[0] ? <img src={photos[0]} alt={item.title || "Listing"} className="h-full min-h-44 w-full object-cover" /> : <div className="flex h-full min-h-44 items-center justify-center text-xs font-black uppercase tracking-[.12em] text-black/30">No listing photo</div>}</div>
+                <div className="min-h-44 bg-[#ece9df] md:min-h-full">{photos[0] ? <LoadLinkImage src={photos[0]} alt={item.title || "Listing"} className="h-full min-h-44 w-full object-cover" /> : <div className="flex h-full min-h-44 items-center justify-center text-xs font-black uppercase tracking-[.12em] text-black/30">No listing photo</div>}</div>
                 <div className="p-5 sm:p-6">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>

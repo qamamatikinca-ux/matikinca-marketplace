@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
@@ -200,7 +202,7 @@ export default function LoadLinkCommercialDealership() {
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <section className="relative min-h-[330px] overflow-hidden bg-black text-white md:min-h-[430px]">
-        <img src={bannerImage} alt="Commercial trucks at LoadLink Commercial Centurion" className="absolute inset-0 h-full w-full object-cover opacity-68" />
+        <LoadLinkImage src={bannerImage} alt="Commercial trucks at LoadLink Commercial Centurion" className="absolute inset-0 h-full w-full object-cover opacity-68" />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
         <div className="relative mx-auto flex min-h-[330px] max-w-7xl items-end px-5 pb-8 md:min-h-[430px] md:px-8 md:pb-12">
           <div className="max-w-3xl">
@@ -215,7 +217,7 @@ export default function LoadLinkCommercialDealership() {
         <div className="mx-auto max-w-7xl px-5 py-7 md:px-8 md:py-9">
           <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-start">
             <div className="flex gap-4">
-              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-[22px] border-4 border-[#f6b800] bg-black md:h-28 md:w-28"><img src={profileImage} alt="LoadLink Commercial Centurion profile" className="h-full w-full object-cover" /></div>
+              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-[22px] border-4 border-[#f6b800] bg-black md:h-28 md:w-28"><LoadLinkImage src={profileImage} alt="LoadLink Commercial Centurion profile" className="h-full w-full object-cover" /></div>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2"><h2 className="text-2xl font-black tracking-[-.04em] md:text-3xl">{DEALER_NAME}</h2><span className="rounded-full bg-[#f6b800] px-2.5 py-1 text-[9px] font-black uppercase text-black">Verified dealer</span></div>
                 <p className={`mt-2 text-sm font-semibold ${muted}`}>Centurion, Gauteng · Commercial trucks · Nationwide enquiries</p>
@@ -261,7 +263,7 @@ export default function LoadLinkCommercialDealership() {
             <div ref={sliderRef} className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-4 touch-pan-x">
               {visibleInventory.map((truck) => (
                 <button type="button" key={truck.title} onClick={() => setSelected(truck)} className="group relative aspect-square w-[82vw] max-w-[310px] shrink-0 snap-start overflow-hidden rounded-[18px] bg-black text-left sm:w-[285px] sm:rounded-[24px]">
-                  <img src={truck.image} alt={truck.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />
+                  <LoadLinkImage src={truck.image} alt={truck.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 p-3 text-white sm:p-5">
                     <p className="text-[9px] font-black uppercase tracking-[.12em] text-[#f6b800]">{truck.year} · {truck.mileage}</p>
@@ -292,7 +294,7 @@ export default function LoadLinkCommercialDealership() {
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/78 p-0 sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label={selected.title}>
           <button type="button" className="absolute inset-0" onClick={() => setSelected(null)} aria-label="Close vehicle details" />
           <div className={`relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-[28px] shadow-2xl sm:rounded-[28px] ${darkMode ? "bg-[#0d0d0d] text-white" : "bg-white text-black"}`}>
-            <div className="relative aspect-[16/9] bg-black"><img src={selected.image} alt={selected.title} className="h-full w-full object-contain" /><button type="button" onClick={() => setSelected(null)} className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl font-black text-black" aria-label="Close vehicle details"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button></div>
+            <div className="relative aspect-[16/9] bg-black"><LoadLinkImage src={selected.image} alt={selected.title} className="h-full w-full object-contain" /><button type="button" onClick={() => setSelected(null)} className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl font-black text-black" aria-label="Close vehicle details"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button></div>
             <div className="p-5 md:p-7"><p className={`text-xs font-black ${muted}`}>{selected.year} · {selected.mileage}</p><h2 className="mt-2 text-3xl font-black tracking-[-.04em]">{selected.title}</h2><p className="mt-3 text-2xl font-black text-[#c59100]">{selected.price}</p>
               <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3">
                 {[['Mileage', selected.mileage], ['Previous owners', selected.previousOwners], ['Transmission', selected.transmission], ['Fuel', selected.fuel], ['Condition', selected.condition], ['Service history', selected.serviceHistory], ['Body type', selected.bodyType], ['Seller', DEALER_NAME]].map(([label, value]) => <div key={label} className={`rounded-xl border p-3 ${darkMode ? "border-white/10 bg-white/[.03]" : "border-black/10 bg-black/[.02]"}`}><p className={`text-[10px] font-black uppercase ${muted}`}>{label}</p><p className="mt-1 text-sm font-black">{value}</p></div>)}

@@ -2,6 +2,7 @@
 
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const SEARCH_PRESETS: Record<string, { title: string; subtitle: string; value: string }[]> = {
@@ -78,10 +79,8 @@ export default function LoadLinkFinalReleasePolish20260821() {
   const [scope, setScope] = useState("all");
   const [selected, setSelected] = useState("");
   const [filter, setFilter] = useState("");
-  const [wizardStep, setWizardStep] = useState(0);
-  const [wizardTotal, setWizardTotal] = useState(0);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const wizardSectionsRef = useRef<HTMLElement[]>([]);
+  const pathname = usePathname();
 
   const options = useMemo(() => {
     const list = SEARCH_PRESETS[scope] || DEFAULT_PRESETS;
@@ -118,25 +117,7 @@ export default function LoadLinkFinalReleasePolish20260821() {
         }
       }
 
-      if (path === "/list-your-vehicle" || path === "/list-your-truck") {
-        const form = document.querySelector<HTMLFormElement>("form#vehicle-listing-form");
-        if (form) {
-          form.dataset.llFinalWizard = "true";
-          const sections = Array.from(form.querySelectorAll<HTMLElement>(":scope > section")).filter((section) => {
-            const heading = section.querySelector("h2");
-            return Boolean(heading && /identity|vehicle details|photos and verification|contact and confirmation/i.test(heading.textContent || ""));
-          });
-          if (sections.length) {
-            wizardSectionsRef.current = sections;
-            setWizardTotal(sections.length);
-            setWizardStep((current) => Math.min(current, Math.max(0, sections.length - 1)));
-            sections.forEach((section, index) => {
-              section.dataset.llWizardSection = String(index);
-              section.dataset.llWizardActive = index === wizardStep ? "true" : "false";
-            });
-          }
-        }
-      }
+
     };
 
     scan();
@@ -151,7 +132,7 @@ export default function LoadLinkFinalReleasePolish20260821() {
       window.removeEventListener("loadlink-theme-changed", onTheme as EventListener);
       window.removeEventListener("popstate", scan);
     };
-  }, [wizardStep]);
+  }, [pathname]);
 
   function applySearch() {
     const input = searchInputRef.current;
@@ -170,24 +151,6 @@ export default function LoadLinkFinalReleasePolish20260821() {
     window.setTimeout(() => searchInputRef.current?.focus({ preventScroll: true }), 50);
   }
 
-  function goWizard(next: number) {
-    const sections = wizardSectionsRef.current;
-    if (!sections.length) return;
-    const current = sections[wizardStep];
-    if (next > wizardStep && current) {
-      const invalid = Array.from(current.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input,select,textarea")).find((field) => !field.disabled && !field.checkValidity());
-      if (invalid) {
-        invalid.reportValidity();
-        invalid.focus({ preventScroll: false });
-        return;
-      }
-    }
-    const target = Math.max(0, Math.min(next, sections.length - 1));
-    setWizardStep(target);
-    window.setTimeout(() => sections[target]?.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
-  }
-
-  const wizardTitle = wizardSectionsRef.current[wizardStep]?.querySelector("h2")?.textContent || "Listing details";
 
   return (
     <>
@@ -210,13 +173,7 @@ export default function LoadLinkFinalReleasePolish20260821() {
         </div>
       ) : null}
 
-      {wizardTotal > 1 && (location.pathname === "/list-your-vehicle" || location.pathname === "/list-your-truck") ? (
-        <aside className="ll-final-wizard-dock" aria-label="Listing progress">
-          <div className="ll-final-wizard-copy"><span>Step {wizardStep + 1} of {wizardTotal}</span><strong>{wizardTitle}</strong><small>Complete one section at a time. Your information stays in the form.</small></div>
-          <div className="ll-final-wizard-progress">{Array.from({ length: wizardTotal }, (_, index) => <i key={index} className={index <= wizardStep ? "is-done" : ""} />)}</div>
-          <div className="ll-final-wizard-actions"><button type="button" disabled={wizardStep === 0} onClick={() => goWizard(wizardStep - 1)}>Previous</button>{wizardStep < wizardTotal - 1 ? <button type="button" className="is-primary" onClick={() => goWizard(wizardStep + 1)}>Continue</button> : <button type="button" className="is-primary" onClick={() => document.querySelector<HTMLButtonElement>('form#vehicle-listing-form button[type="submit"]')?.click()}>Review & submit</button>}</div>
-        </aside>
-      ) : null}
+
     </>
   );
 }

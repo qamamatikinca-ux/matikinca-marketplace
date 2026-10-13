@@ -1,3 +1,4 @@
+import LoadLinkImage from "@/components/LoadLinkImage";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -48,7 +49,7 @@ export default function LegalPage() {
       <header className="border-b border-black/10 bg-white px-5 py-5 sm:px-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
           <Link href="/" aria-label="LoadLink home" className="outline-none">
-            <img src="/images/loadlink-logo-light.png" alt="LoadLink" className="h-10 w-auto object-contain sm:h-12" />
+            <LoadLinkImage src="/images/loadlink-logo-light.png" alt="LoadLink" className="h-10 w-auto object-contain sm:h-12" />
           </Link>
           <Link
             href="/"

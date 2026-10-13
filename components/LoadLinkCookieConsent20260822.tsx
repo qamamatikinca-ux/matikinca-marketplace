@@ -46,6 +46,7 @@ export default function LoadLinkCookieConsent20260822() {
   return (
     <aside
       data-loadlink-cookie-consent="major-20260826"
+      data-loadlink-toast-surface="true"
       role="dialog"
       aria-modal="false"
       aria-labelledby="loadlink-cookie-title"
@@ -55,8 +56,8 @@ export default function LoadLinkCookieConsent20260822() {
         <div className="flex items-start gap-3">
           <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border ${darkMode ? "border-white/12 bg-white/[.05]" : "border-black/10 bg-black/[.025]"}`}><CookieIcon /></span>
           <div>
-            <h2 id="loadlink-cookie-title" className="text-[13px] font-black tracking-[-.02em]">{preferencesMode ? "Cookie preferences" : "Cookies on LoadLink"}</h2>
-            <p className={`mt-1 max-w-xl text-[11px] font-semibold leading-5 ${darkMode ? "text-white/55" : "text-black/55"}`}>Essential cookies keep sign-in and security working. Optional cookies help LoadLink remember preferences and improve the marketplace.</p>
+            <h2 id="loadlink-cookie-title" className="ll-toast-title text-[13px] font-black tracking-[-.02em]">{preferencesMode ? "Cookie preferences" : "Cookies on LoadLink"}</h2>
+            <p className={`ll-toast-detail mt-1 max-w-xl text-[11px] font-semibold leading-5 ${darkMode ? "text-white/55" : "text-black/55"}`}>Essential cookies keep sign-in and security working. Optional cookies help LoadLink remember preferences and improve the marketplace.</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2 sm:justify-end">

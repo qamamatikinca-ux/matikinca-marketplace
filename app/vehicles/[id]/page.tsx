@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import Link from "next/link";
@@ -101,7 +103,7 @@ export default function VehicleProductPage() {
               <div data-loadlink-vehicle-gallery className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto bg-black/[.06]">
                 {(photos.length ? photos : ["/images/truck-1.jpg"]).map((photo, index) => (
                   <div key={`${photo}-${index}`} className="aspect-[16/10] w-full shrink-0 snap-center bg-black/[.06]">
-                    <img src={photo} alt={`${listing.title || "LoadLink vehicle"} photo ${index + 1}`} className="h-full w-full object-cover" />
+                    <LoadLinkImage src={photo} alt={`${listing.title || "LoadLink vehicle"} photo ${index + 1}`} className="h-full w-full object-cover" />
                   </div>
                 ))}
               </div>

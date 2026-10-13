@@ -24,7 +24,7 @@ export default function PhotoLimitUpgradeToast({
 
   return (
     <div className="fixed inset-x-3 bottom-[max(16px,env(safe-area-inset-bottom))] z-[12000] mx-auto max-w-md" role="status" aria-live="polite">
-      <div className="loadlink-glass rounded-[22px] border p-4 shadow-[0_20px_60px_rgba(0,0,0,.20)]">
+      <div data-loadlink-toast-surface="true" className="loadlink-glass rounded-[22px] border p-4 shadow-[0_20px_60px_rgba(0,0,0,.20)]">
         <div className="flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-black text-[#f6b800]">
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -32,8 +32,8 @@ export default function PhotoLimitUpgradeToast({
             </svg>
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-black">Standard includes {limit} photos</h2>
-            <p className="mt-1 text-xs font-semibold leading-5 opacity-60">
+            <h2 className="ll-toast-title text-sm font-black">Standard includes {limit} photos</h2>
+            <p className="ll-toast-detail mt-1 text-xs font-semibold leading-5 opacity-60">
               We kept the first {limit}. Upgrade if you want to show more photos and unlock Pro listing features.
             </p>
             <div className="mt-3 flex gap-2">

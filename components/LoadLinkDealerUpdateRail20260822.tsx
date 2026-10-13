@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -205,7 +207,7 @@ export default function LoadLinkDealerUpdateRail20260822({ darkMode, onAvailabil
                   <span className={`relative flex h-full w-full items-center justify-center overflow-hidden rounded-full border text-sm font-extrabold ${darkMode ? "border-black bg-[#171717] text-white" : "border-white bg-white text-black"}`}>
                     {initial}
                     {dealer.image_url ? (
-                      <img src={dealer.image_url} alt="" loading="eager" className="absolute inset-0 h-full w-full object-cover object-center" />
+                      <LoadLinkImage src={dealer.image_url} alt="" loading="eager" className="absolute inset-0 h-full w-full object-cover object-center" />
                     ) : null}
                   </span>
                   {hasStatus && !dealer.seen ? (

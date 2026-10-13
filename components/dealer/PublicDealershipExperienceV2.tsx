@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import LoadLinkRatingStars from "@/components/LoadLinkRatingStars";
 
 import LoadLinkIcon from "@/components/LoadLinkIcon";
@@ -229,7 +231,7 @@ export default function PublicDealershipExperienceV2({ slug }: { slug: string })
 
       <div className="mx-auto w-full max-w-[1440px] pb-24 sm:px-4 md:px-6">
         <section className="relative isolate min-h-[500px] overflow-hidden bg-[#080808] text-white sm:mt-4 sm:min-h-[540px] sm:rounded-[32px]">
-          <img
+          <LoadLinkImage
             src={dealer.cover_image_url || "/images/jobs/jobs-hero-fleet.jpg"}
             alt={`${dealer.name} dealership cover`}
             className="absolute inset-0 h-full w-full object-cover object-center opacity-80"
@@ -248,7 +250,7 @@ export default function PublicDealershipExperienceV2({ slug }: { slug: string })
             <div className="flex items-end gap-4 sm:gap-5">
               <div className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-full border-[3px] border-white bg-[#141414] text-xl font-bold text-white shadow-[0_18px_46px_rgba(0,0,0,.34)] sm:h-28 sm:w-28">
                 {dealer.profile_image_url ? (
-                  <img src={dealer.profile_image_url} alt={`${dealer.name} profile`} className="h-full w-full rounded-full object-cover" onError={imageFallback} />
+                  <LoadLinkImage src={dealer.profile_image_url} alt={`${dealer.name} profile`} className="h-full w-full rounded-full object-cover" onError={imageFallback} />
                 ) : initials(dealer.name)}
               </div>
 
@@ -339,7 +341,7 @@ export default function PublicDealershipExperienceV2({ slug }: { slug: string })
               {listings.map((item) => (
                 <Link key={item.id} href={`/vehicles/${item.id}`} className={`group overflow-hidden rounded-[22px] border transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_50px_rgba(0,0,0,.10)] ${surface}`}>
                   <div className="relative aspect-[16/10] overflow-hidden bg-[#111]">
-                    <img
+                    <LoadLinkImage
                       src={item.photos?.[0] || "/images/truck-1.jpg"}
                       onError={imageFallback}
                       alt={item.title || "Commercial vehicle"}
@@ -377,7 +379,7 @@ export default function PublicDealershipExperienceV2({ slug }: { slug: string })
             <div className="no-scrollbar mt-5 flex gap-4 overflow-x-auto pb-2">
               {updates.map((item) => (
                 <article key={item.id} className={`w-[285px] shrink-0 overflow-hidden rounded-[22px] border ${surface}`}>
-                  {item.image_url ? <img src={item.image_url} alt="" onError={imageFallback} className="aspect-[16/9] w-full object-cover" /> : <div className={`aspect-[16/9] ${softer}`} />}
+                  {item.image_url ? <LoadLinkImage src={item.image_url} alt="" onError={imageFallback} className="aspect-[16/9] w-full object-cover" /> : <div className={`aspect-[16/9] ${softer}`} />}
                   <div className="p-5">
                     <h3 className="line-clamp-1 text-base font-bold">{item.title}</h3>
                     <p className={`mt-2 line-clamp-3 text-sm font-medium leading-6 ${muted}`}>{item.body}</p>

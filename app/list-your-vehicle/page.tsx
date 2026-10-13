@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import VehicleMarketplaceHub from "@/components/VehicleMarketplaceHub";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
-import LoadLinkVehicleEntryBootstrap20260825 from "@/components/LoadLinkVehicleEntryBootstrap20260825";
+import LoadLinkActionToast from "@/components/LoadLinkActionToast";
+import { scopeVehicleDraft, readVehicleDraft, hasVehicleDraft, clearVehicleDraft } from "@/lib/vehicleDraft";
 import { getVehicleListingAccess } from "@/lib/packageAccess";
 import { getLoadLinkIntelligence } from "@/lib/loadlinkIntelligence";
 import { getFreshAuthenticatedUser } from "@/lib/reliableSupabase";
@@ -43,6 +45,8 @@ export default function ListYourVehiclePage() {
   const [entryMode, setEntryMode] = useState<EntryMode>("");
   const [dealershipRoute, setDealershipRoute] = useState(false);
   const [entryReady, setEntryReady] = useState(false);
+  const [initialPackage, setInitialPackage] = useState<ListingPackage>("standard");
+  const [draftDecision, setDraftDecision] = useState<"pending" | "resume" | "fresh">("fresh");
   const [dealerPostingGate, setDealerPostingGate] = useState<DealerPostingGate>(null);
   const page = darkMode ? "bg-black text-white" : "bg-[#f5f1e8] text-black";
 
@@ -75,6 +79,10 @@ export default function ListYourVehiclePage() {
         return;
       }
 
+      if (cancelled) return;
+      scopeVehicleDraft(user.id);
+      const resume = new URLSearchParams(window.location.search).get("resume") === "1";
+      setDraftDecision(resume ? "resume" : hasVehicleDraft(readVehicleDraft(user.id)) ? "pending" : "fresh");
       let packageType: ListingPackage = "standard";
       try {
         const [access, intelligence] = await Promise.all([
@@ -101,7 +109,7 @@ export default function ListYourVehiclePage() {
         }
       } catch {}
 
-      seed(packageType);
+      setInitialPackage(packageType);
       if (!cancelled) {
         setDealerPostingGate(null);
         setEntryReady(true);
@@ -122,14 +130,14 @@ export default function ListYourVehiclePage() {
   }, [entryMode, entryReady, dealerPostingGate]);
 
   if (!booted) return <LoadLinkLoading />;
-  if (entryMode && dealershipRoute) return <LegacyVehicleListingPage />;
+  if (entryMode && dealershipRoute) return <LegacyVehicleListingPage entryMode={entryMode} resumeDraft={new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("resume") === "1"} />;
 
   if (!entryMode) {
     return (
       <main className={`min-h-screen ${page}`} data-loadlink-vehicle-portal="working-entry-v11">
         <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
         <section className="relative flex min-h-[600px] w-full items-end overflow-hidden bg-black text-white md:min-h-[620px]">
-          <img src="/images/jobs/jobs-hero-fleet.jpg" alt="LoadLink commercial trucks, trailers and mobile units" className="absolute inset-0 h-full w-full object-cover object-center" />
+          <Image fill sizes="100vw" loading="eager" fetchPriority="high" src="/images/jobs/jobs-hero-fleet.jpg" alt="LoadLink commercial trucks, trailers and mobile units" className="absolute inset-0 h-full w-full object-cover object-center" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/18 via-black/48 to-black/94" />
           <div className="relative z-10 mx-auto w-full max-w-6xl px-5 pb-10 pt-20 text-center">
             <h1 className="mx-auto max-w-4xl text-[clamp(3rem,12vw,5.7rem)] font-black leading-[.94] tracking-[-.055em]">List your truck, trailer or mobile unit.</h1>
@@ -144,6 +152,10 @@ export default function ListYourVehiclePage() {
         <div id="vehicle-marketplace" className="scroll-mt-20"><VehicleMarketplaceHub darkMode={darkMode} /></div>
       </main>
     );
+  }
+
+  if (entryReady && draftDecision === "pending" && !dealerPostingGate) {
+    return <main className={`min-h-screen ${page}`}><LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme}/><LoadLinkActionToast open title="Continue your vehicle listing?" message="Your saved vehicle details are ready. Continue where you stopped or start a new listing." primaryLabel="Continue" secondaryLabel="Start fresh" onPrimary={() => setDraftDecision("resume")} onSecondary={() => { clearVehicleDraft(); setDraftDecision("fresh"); }} onClose={() => window.location.assign("/list-your-vehicle")} /></main>;
   }
 
   if (!entryReady) {
@@ -183,15 +195,9 @@ export default function ListYourVehiclePage() {
   return (
     <main className={page} data-loadlink-vehicle-listing-shell="working-guided-flow-v11">
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
-      <LoadLinkVehicleEntryBootstrap20260825 mode={entryMode as "vehicle" | "mobile-unit"} />
-      <div id="listing-form" className="scroll-mt-36"><LegacyVehicleListingPage /></div>
+      
+      <div id="listing-form" className="scroll-mt-36"><LegacyVehicleListingPage entryMode={entryMode} initialPackage={initialPackage} resumeDraft={draftDecision === "resume"} embedded /></div>
       <style jsx global>{`
-        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #listing-form > main > header,
-        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #listing-form > main > section:first-of-type,
-        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #listing-form #plans,
-        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #listing-form #vehicle-marketplace {
-          display: none !important;
-        }
         [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #vehicle-listing-form {
           padding-bottom: max(118px, calc(env(safe-area-inset-bottom) + 94px)) !important;
         }
@@ -204,9 +210,6 @@ export default function ListYourVehiclePage() {
         [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #vehicle-listing-form > section[data-loadlink-wizard-step="1"] {
           border-radius: 24px !important;
           box-shadow: 0 18px 55px rgba(0,0,0,.08);
-        }
-        [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #vehicle-listing-form > section[data-loadlink-wizard-step="1"] figure {
-          display: none !important;
         }
         [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] input,
         [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] select,

@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 
 type DocumentPreviewProps = {
@@ -112,11 +114,11 @@ export default function LoadLinkDocumentPreview({
         <article className="mx-auto overflow-hidden rounded-[22px] border border-black/10 bg-white text-black shadow-[0_18px_55px_rgba(0,0,0,.12)]">
           <header className="flex min-h-[86px] items-start justify-between gap-5 border-b border-black/8 px-5 py-5 sm:px-6">
             <div className="min-w-0">
-              <img src="/images/loadlink-logo-light.png?v=universal-theme-v1" alt="LoadLink" className="h-7 w-auto max-w-[150px] object-contain object-left" />
+              <LoadLinkImage src="/images/loadlink-logo-light.png?v=universal-theme-v1" alt="LoadLink" className="h-7 w-auto max-w-[150px] object-contain object-left" />
               <p className="mt-2 text-[9px] font-black uppercase tracking-[.16em] text-[#9b7200]">Logistics made easier</p>
             </div>
             <div className="flex min-w-[96px] max-w-[42%] flex-col items-end">
-              {businessLogo ? <img src={businessLogo} alt="Business logo" className="max-h-12 max-w-full object-contain object-right" /> : <span className="flex h-11 min-w-[88px] items-center justify-center rounded-xl border border-dashed border-black/15 px-3 text-center text-[8px] font-black uppercase tracking-[.08em] text-black/35">Business logo</span>}
+              {businessLogo ? <LoadLinkImage src={businessLogo} alt="Business logo" className="max-h-12 max-w-full object-contain object-right" /> : <span className="flex h-11 min-w-[88px] items-center justify-center rounded-xl border border-dashed border-black/15 px-3 text-center text-[8px] font-black uppercase tracking-[.08em] text-black/35">Business logo</span>}
             </div>
           </header>
 

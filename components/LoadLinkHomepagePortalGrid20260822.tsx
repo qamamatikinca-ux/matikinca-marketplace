@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 type Portal = {
@@ -61,10 +62,13 @@ export default function LoadLinkHomepagePortalGrid20260822({ darkMode }: { darkM
               data-loadlink-scroll-top="true"
               className={`group relative block h-full min-h-[300px] overflow-hidden rounded-none transition active:scale-[.998] sm:min-h-[340px] md:min-h-[390px] lg:min-h-[430px] ${darkMode ? "bg-[#090909]" : "bg-white"}`}
             >
-              <img
+              <Image
+                fill
+                sizes="(max-width: 767px) 100vw, 50vw"
+                fetchPriority={portal.title === "Jobs" ? "high" : "auto"}
                 src={src}
                 alt=""
-                loading={portal.title === "Jobs" || portal.title === "Contracts" ? "eager" : "lazy"}
+                loading="eager"
                 className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 ease-out group-hover:scale-[1.025]"
                 onError={(event) => {
                   const image = event.currentTarget;

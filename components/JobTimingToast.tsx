@@ -43,10 +43,10 @@ export default function JobTimingToast({ listingId, conversationId, listingTitle
   }, [conversationId, info, listingId]);
 
   if (!info || !visible) return null;
-  return <div className={`loadlink-job-timing-toast fixed left-3 right-3 top-[76px] z-[90] mx-auto max-w-md rounded-[20px] border p-3.5 ${darkMode ? "text-white" : "text-black"}`}>
+  return <div data-loadlink-toast-surface="true" className={`loadlink-job-timing-toast fixed left-3 right-3 top-[76px] z-[90] mx-auto max-w-md rounded-[20px] border p-3.5 ${darkMode ? "text-white" : "text-black"}`}>
     <div className="flex items-start gap-3">
       <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${darkMode ? "bg-[#f6b800]/12 text-[#f6b800]" : "bg-[#f6b800]/16 text-[#8f6900]"}`}><LoadLinkIcon name="calendar" size={18} /></span>
-      <div className="min-w-0 flex-1"><div className="text-[11px] font-black">{info.title}</div><div className="mt-1 text-[9px] font-semibold leading-4 opacity-60">{info.detail}</div>{onFollowUp ? <button type="button" onClick={() => { onFollowUp(info.follow); setVisible(false); }} className="mt-2 text-[9px] font-black underline decoration-[#f6b800] decoration-2 underline-offset-4">Follow up</button> : null}</div>
+      <div className="min-w-0 flex-1"><div className="ll-toast-title text-[11px] font-black">{info.title}</div><div className="ll-toast-detail mt-1 text-[9px] font-semibold leading-4 opacity-60">{info.detail}</div>{onFollowUp ? <button type="button" onClick={() => { onFollowUp(info.follow); setVisible(false); }} className="mt-2 text-[9px] font-black underline decoration-[#f6b800] decoration-2 underline-offset-4">Follow up</button> : null}</div>
       <button type="button" onClick={() => setVisible(false)} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-current/15 opacity-60" aria-label="Dismiss"><LoadLinkIcon name="close" size={14} /></button>
     </div>
   </div>;

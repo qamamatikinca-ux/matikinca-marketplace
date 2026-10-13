@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
@@ -185,7 +187,7 @@ export default function ContractsPage() {
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <section className="relative min-h-[78vh] overflow-hidden border-b border-[#f6b800]/40">
-        <img src="/images/contracts-1.jpg" alt="Transport and logistics contracts" className="absolute inset-0 h-full w-full object-cover grayscale" />
+        <LoadLinkImage src="/images/contracts-1.jpg" alt="Transport and logistics contracts" className="absolute inset-0 h-full w-full object-cover grayscale" />
         <div className={`absolute inset-0 ${darkMode ? "bg-gradient-to-b from-black/15 via-black/48 to-black" : "bg-gradient-to-b from-black/8 via-black/38 to-[#fff7df]"}`} />
 
         <div className="relative mx-auto flex min-h-[78vh] max-w-5xl flex-col justify-end px-5 pb-8 pt-20">
@@ -255,7 +257,7 @@ export default function ContractsPage() {
                 <article id={`contract-${row.id}`} key={row.id} className={`overflow-hidden rounded-[22px] border shadow-[0_12px_34px_rgba(0,0,0,.06)] ${surface}`}>
                   <div className="grid md:grid-cols-[220px_minmax(0,1fr)]">
                     <Link href={`/contracts/${row.id}`} className="relative block aspect-[16/9] overflow-hidden bg-[#111] md:aspect-auto md:min-h-[220px]">
-                      <img src={image} alt="" className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+                      <LoadLinkImage src={image} alt="" className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} />
                       <span className="absolute left-3 top-3 rounded-full bg-[#1ca55c] px-3 py-1 text-[9px] font-black uppercase tracking-[.08em] text-white">Contract</span>
                     </Link>
                     <div className="p-5 md:p-6">

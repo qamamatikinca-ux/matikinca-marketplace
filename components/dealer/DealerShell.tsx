@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
@@ -44,7 +46,7 @@ export default function DealerShell({darkMode,toggleTheme,profile,context,sectio
       <aside className={`hidden h-[calc(100vh-102px)] self-start overflow-y-auto rounded-[26px] border lg:sticky lg:top-[92px] lg:flex lg:flex-col ${surface}`}>
         <div className="border-b border-current/10 p-4">
           <div className="flex items-center gap-3">
-            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-[#f6b800]/35 bg-current/[.04]">{profile.profile_image_url?<img src={profile.profile_image_url} alt="" className="h-full w-full object-cover"/>:<div className="flex h-full items-center justify-center text-xs font-black">{profile.name.slice(0,2).toUpperCase()}</div>}</div>
+            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-[#f6b800]/35 bg-current/[.04]">{profile.profile_image_url?<LoadLinkImage src={profile.profile_image_url} alt="" className="h-full w-full object-cover"/>:<div className="flex h-full items-center justify-center text-xs font-black">{profile.name.slice(0,2).toUpperCase()}</div>}</div>
             <div className="min-w-0"><div className="truncate text-sm font-black">{profile.name}</div><div className="mt-1 text-[9px] font-semibold opacity-42">{statusText(context)}</div></div>
           </div>
         </div>
@@ -61,14 +63,14 @@ export default function DealerShell({darkMode,toggleTheme,profile,context,sectio
           <Link href="/notifications" aria-label="Notifications" className={`relative flex h-10 w-10 items-center justify-center rounded-full border ${darkMode?"border-white/10 bg-white/[.035]":"border-black/10 bg-white"}`}><BellIcon/><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#f6b800]"/></Link>
           <button type="button" onClick={()=>go("settings")} aria-label="Dealership settings" className={`flex h-10 w-10 items-center justify-center rounded-full border ${darkMode?"border-white/10 bg-white/[.035]":"border-black/10 bg-white"}`}><Icon name="settings"/></button>
           <button type="button" onClick={()=>setAccountOpen(value=>!value)} className={`flex h-11 min-w-0 max-w-[260px] items-center gap-2 rounded-[14px] border px-2.5 text-left ${darkMode?"border-white/10 bg-white/[.035]":"border-black/10 bg-white shadow-sm"}`} aria-expanded={accountOpen} aria-label="Dealership account menu">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#f6b800]/50 bg-black text-[9px] font-black text-[#f6b800]">{account.profile.avatar_url?<img src={account.profile.avatar_url} alt="" className="h-full w-full object-cover"/>:initials}</span>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#f6b800]/50 bg-black text-[9px] font-black text-[#f6b800]">{account.profile.avatar_url?<LoadLinkImage src={account.profile.avatar_url} alt="" className="h-full w-full object-cover"/>:initials}</span>
             <span className="hidden min-w-0 flex-1 sm:block"><span className="block truncate text-[10px] font-black">{adminName}</span><span className={`mt-0.5 block truncate text-[8px] font-semibold ${muted}`}>{profile.name}</span></span>
             <span className="hidden text-xs opacity-35 sm:block">⌄</span>
           </button>
 
           {accountOpen?<><button type="button" aria-label="Close account menu" className="fixed inset-0 z-[88] bg-transparent" onClick={()=>setAccountOpen(false)}/><section className={`absolute right-0 top-12 z-[90] w-[min(92vw,330px)] overflow-hidden rounded-[24px] border p-2 shadow-[0_24px_70px_rgba(0,0,0,.32)] backdrop-blur-xl ${darkMode?"border-white/10 bg-[#101010]/98":"border-black/10 bg-white/98"}`}>
             <div className="flex items-center gap-3 p-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#f6b800]/45 bg-black text-[10px] font-black text-[#f6b800]">{account.profile.avatar_url?<img src={account.profile.avatar_url} alt="" className="h-full w-full object-cover"/>:initials}</span>
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#f6b800]/45 bg-black text-[10px] font-black text-[#f6b800]">{account.profile.avatar_url?<LoadLinkImage src={account.profile.avatar_url} alt="" className="h-full w-full object-cover"/>:initials}</span>
               <div className="min-w-0"><div className="truncate text-sm font-black">{adminName}</div><div className={`mt-0.5 truncate text-[10px] font-semibold ${muted}`}>{adminEmail}</div></div>
             </div>
             <Link href="/account/packages" onClick={()=>setAccountOpen(false)} className={`mx-1 mb-2 flex items-center gap-3 rounded-[18px] border p-3 ${darkMode?"border-[#f6b800]/25 bg-[#f6b800]/[.07]":"border-[#b88900]/18 bg-[#fff8df]"}`}>
@@ -88,7 +90,7 @@ export default function DealerShell({darkMode,toggleTheme,profile,context,sectio
 
         <section className={`mb-4 rounded-[26px] border p-4 sm:p-5 ${surface}`}>
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-[16px] border border-[#f6b800]/45 bg-current/[.04]">{profile.profile_image_url?<img src={profile.profile_image_url} alt="" className="h-full w-full object-cover"/>:<div className="flex h-full items-center justify-center text-sm font-black">{profile.name.slice(0,2).toUpperCase()}</div>}</div>
+            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-[16px] border border-[#f6b800]/45 bg-current/[.04]">{profile.profile_image_url?<LoadLinkImage src={profile.profile_image_url} alt="" className="h-full w-full object-cover"/>:<div className="flex h-full items-center justify-center text-sm font-black">{profile.name.slice(0,2).toUpperCase()}</div>}</div>
             <div className="min-w-0 flex-1"><h1 className="truncate text-[20px] font-black tracking-[-.04em] sm:text-[24px]">{profile.name}</h1><div className="mt-1 text-[10px] font-semibold opacity-45">{statusText(context)}</div></div>
             <div className="hidden gap-2 sm:flex"><PrimaryButton type="button" onClick={onAddVehicle}>Add vehicle</PrimaryButton><SecondaryButton darkMode={darkMode} type="button" onClick={()=>window.open(`/dealership/${profile.slug}`,"_blank")}>Dealer page</SecondaryButton></div>
           </div>

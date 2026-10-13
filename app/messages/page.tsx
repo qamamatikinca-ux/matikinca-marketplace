@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
@@ -2301,9 +2303,9 @@ function QuoteMessageCard({ message, mine, canRespond, branding, onRespond }: { 
   return (
     <div className={`loadlink-quote-card w-full min-w-0 max-w-full overflow-hidden rounded-2xl border ${mine ? "border-white/15 bg-white/[.06]" : "border-black/10 bg-[#fffaf0]"}`}>
       <div className={`flex items-center gap-2 border-b px-3 py-2 ${mine ? "border-white/10" : "border-black/10"}`}>
-        {brandLogo ? <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1"><img src={brandLogo} alt={brandName ? `${brandName} logo` : "Dealership logo"} className="h-full w-full object-contain" /></span> : null}
+        {brandLogo ? <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1"><LoadLinkImage src={brandLogo} alt={brandName ? `${brandName} logo` : "Dealership logo"} className="h-full w-full object-contain" /></span> : null}
         <div className="min-w-0 flex-1"><strong className="block truncate text-[10px] font-black">{brandName || "Rate quote"}</strong><span className={`block text-[8px] font-semibold ${mine ? "text-white/45" : "text-black/40"}`}>{brandName ? "Dealership quote" : "Structured quote"}</span></div>
-        <span className="flex h-7 w-[76px] shrink-0 items-center justify-center overflow-hidden rounded-md bg-white px-1.5"><img src="/images/loadlink-logo-light.png" alt="LoadLink" className="h-full w-full object-contain" /></span>
+        <span className="flex h-7 w-[76px] shrink-0 items-center justify-center overflow-hidden rounded-md bg-white px-1.5"><LoadLinkImage src="/images/loadlink-logo-light.png" alt="LoadLink" className="h-full w-full object-contain" /></span>
       </div>
       <div className="p-3">
         <div className="flex items-center justify-between gap-3"><strong className="text-[10px] font-black uppercase tracking-wide">Quote</strong><span className={`rounded-full px-2 py-1 text-[8px] font-black uppercase ${statusClass}`}>{status}</span></div>
@@ -2344,7 +2346,7 @@ function Avatar({
     <span aria-label={`${name} profile picture`} className={`relative ${size} shrink-0`} style={{ aspectRatio: "1 / 1" }}>
       <span className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-full bg-black text-xs font-black text-[#f6b800] ring-1 ring-[#f6b800]/35">
         {photo && !imageFailed ? (
-          <img
+          <LoadLinkImage
             src={photo}
             alt={`${name} profile`}
             className="absolute inset-0 block h-full w-full rounded-full object-cover"

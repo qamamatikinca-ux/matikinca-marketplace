@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
@@ -206,7 +208,7 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
           </div>
           {signedIn ? (
             <div className={`mt-5 flex items-center gap-3 rounded-2xl border p-3 ${border} ${darkMode ? "bg-white/[.04]" : "bg-white"}`}>
-              <div className="h-12 w-12 overflow-hidden rounded-full bg-black text-[#f6b800]">{account.profile.avatar_url ? <img src={account.profile.avatar_url} alt="Your profile" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center text-xs font-black">{initials}</span>}</div>
+              <div className="h-12 w-12 overflow-hidden rounded-full bg-black text-[#f6b800]">{account.profile.avatar_url ? <LoadLinkImage src={account.profile.avatar_url} alt="Your profile" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center text-xs font-black">{initials}</span>}</div>
               <div className="min-w-0 flex-1"><p className="truncate text-sm font-black">{account.profile.full_name || "Your LoadLink account"}</p><p className={`truncate text-xs font-semibold ${muted}`}>{account.user?.email}</p></div>
               <Link href="/account/settings" className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-[#f6b800] ring-1 ring-[#f6b800]/45" aria-label="Profile settings"><LoadLinkGearIcon /></Link>
             </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
@@ -344,7 +346,7 @@ export default function MyPostsPage() {
                   <article key={listing.id} className={`overflow-hidden rounded-[22px] border ${surface}`}>
                     <div className="grid grid-cols-[112px_minmax(0,1fr)] md:grid-cols-[168px_minmax(0,1fr)]">
                       <div className="relative min-h-[148px] overflow-hidden bg-black md:min-h-[190px]">
-                        <img src={listing.photos?.[0] || "/images/jobs/job-card-1.jpg"} alt={listing.title} loading="lazy" className="h-full w-full object-cover" />
+                        <LoadLinkImage src={listing.photos?.[0] || "/images/jobs/job-card-1.jpg"} alt={listing.title} loading="lazy" className="h-full w-full object-cover" />
                         <span className={`absolute left-2.5 top-2.5 rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] ${tone}`}>{state}</span>
                         {verificationStatus ? <span className="absolute bottom-2.5 left-2.5 max-w-[calc(100%-20px)] truncate rounded-full bg-black/75 px-2.5 py-1 text-[8px] font-black text-white">{verificationStatus.replaceAll("_", " ")}</span> : null}
                       </div>
@@ -525,7 +527,7 @@ function ReviewPostCard({ listing, darkMode, surface, muted, onEdit }: { listing
     <article className={`overflow-hidden rounded-[24px] border ${surface}`}>
       <div className="flex gap-4 p-4 sm:p-5">
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-[18px] bg-black sm:h-28 sm:w-28">
-          <img src={listing.photos?.[0] || "/images/jobs/job-card-1.jpg"} alt={listing.title} loading="lazy" className="h-full w-full object-cover" />
+          <LoadLinkImage src={listing.photos?.[0] || "/images/jobs/job-card-1.jpg"} alt={listing.title} loading="lazy" className="h-full w-full object-cover" />
           <span className={`absolute left-2 top-2 rounded-full px-2 py-1 text-[8px] font-black uppercase ${rejected ? "bg-red-600 text-white" : "bg-[#f6b800] text-black"}`}>{rejected ? "Needs changes" : "In review"}</span>
         </div>
         <div className="min-w-0 flex-1">
@@ -818,7 +820,7 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
                 <div className="mt-4 grid grid-cols-4 gap-2">
                   {photosToShow.slice(0, photoLimit).map((photo, index) => (
                     <div key={`${photo}-${index}`} className={`relative overflow-hidden rounded-xl border border-white/[.08] bg-black ${index === 0 ? "col-span-2 row-span-2" : ""}`}>
-                      <img src={photo} alt={`Listing photo ${index + 1}`} className="aspect-square h-full w-full object-cover" />
+                      <LoadLinkImage src={photo} alt={`Listing photo ${index + 1}`} className="aspect-square h-full w-full object-cover" />
                       {index === 0 ? <span className="absolute bottom-2 left-2 rounded-full bg-black/68 px-2 py-1 text-[8px] font-black uppercase tracking-[.1em] text-white">Cover</span> : null}
                     </div>
                   ))}

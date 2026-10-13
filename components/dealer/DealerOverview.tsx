@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import { useEffect, useMemo, useState } from "react";
 import type {
   DealerAppointment,
@@ -938,7 +940,7 @@ function StatusPreview({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <img
+              <LoadLinkImage
                 src={item.media_url}
                 alt=""
                 className="h-full w-full object-cover"

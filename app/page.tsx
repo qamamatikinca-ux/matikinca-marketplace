@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
@@ -78,7 +80,7 @@ function HomeFallback() {
     <main className="min-h-screen bg-[#fff6dc] px-5 py-10 text-black">
       <div className="mx-auto max-w-4xl">
         <header className="border-b border-black/10 pb-6 text-center">
-          <img src="/images/loadlink-logo-light.png" alt="LoadLink" className="mx-auto h-14 w-auto object-contain" />
+          <LoadLinkImage src="/images/loadlink-logo-light.png" alt="LoadLink" className="mx-auto h-14 w-auto object-contain" />
           <h1 className="mt-6 text-4xl font-black">LoadLink marketplace</h1>
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-black/60">LoadLink could not initialise the full homepage on this browser. The core marketplace portals remain available below.</p>
         </header>

@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import Link from "next/link";
@@ -248,7 +250,7 @@ export default function HomepageMarketplaceSections({ darkMode }: { darkMode: bo
                     className={`w-[82vw] max-w-[310px] shrink-0 snap-start overflow-hidden border ${surface}`}
                   >
                     <div className="relative aspect-[4/3] bg-black/10">
-                      <img src={image} alt={vehicle.title || "Commercial vehicle"} className="h-full w-full object-cover" />
+                      <LoadLinkImage src={image} alt={vehicle.title || "Commercial vehicle"} className="h-full w-full object-cover" />
                       <span className="absolute left-3 top-3 bg-black/85 px-2.5 py-1 text-[9px] font-black uppercase tracking-[.1em] text-[#f6b800]">{vehicle.stock_status || "Available"}</span>
                     </div>
                     <div className="p-4">
@@ -334,7 +336,7 @@ export default function HomepageMarketplaceSections({ darkMode }: { darkMode: bo
                     className={`border p-5 ${surface}`}
                   >
                     <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-black text-sm font-black text-[#f6b800]">
-                      {dealer.profile_image_url ? <img src={dealer.profile_image_url} alt={dealer.name} className="h-full w-full object-cover" /> : initials(dealer.name)}
+                      {dealer.profile_image_url ? <LoadLinkImage src={dealer.profile_image_url} alt={dealer.name} className="h-full w-full object-cover" /> : initials(dealer.name)}
                     </div>
                     <h3 className="mt-5 text-xl font-black">{dealer.name}</h3>
                     <p className={`mt-2 text-xs font-semibold ${muted}`}>{dealer.physical_location || "South Africa"}</p>
@@ -422,7 +424,7 @@ function OpportunityColumn({
                 className="flex items-center gap-4 p-5 transition hover:bg-[#f6b800]/[.05]"
               >
                 <div className="h-16 w-20 shrink-0 overflow-hidden bg-black/10">
-                  {item.photos?.[0] ? <img src={item.photos[0]} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center bg-black text-xs font-black text-[#f6b800]">LL</div>}
+                  {item.photos?.[0] ? <LoadLinkImage src={item.photos[0]} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center bg-black text-xs font-black text-[#f6b800]">LL</div>}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">

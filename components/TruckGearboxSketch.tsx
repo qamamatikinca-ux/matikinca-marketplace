@@ -1,8 +1,9 @@
+import LoadLinkImage from "@/components/LoadLinkImage";
 export default function TruckGearboxSketch({ darkMode }: { darkMode: boolean }) {
   return (
     <div className={`relative mx-auto w-full max-w-[620px] overflow-hidden rounded-[26px] border ${darkMode ? "border-white/10 bg-[#080808]" : "border-black/10 bg-[#f8f5ed]"}`}>
       <div className="pointer-events-none absolute inset-0 animate-[loadlinkGlow_3.2s_ease-in-out_infinite] bg-[radial-gradient(circle_at_50%_48%,rgba(246,184,0,.10),transparent_55%)]" />
-      <img
+      <LoadLinkImage
         src="/loadlink-settings-roadside-repair.webp"
         alt=""
         aria-hidden="true"

@@ -1,8 +1,13 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import dynamic from "next/dynamic";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
+import LoadLinkVehicleWizardController20260825 from "@/components/LoadLinkVehicleWizardController20260825";
+import { readVehicleDraft, clearVehicleDraft, scopeVehicleDraft } from "@/lib/vehicleDraft";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -29,6 +34,7 @@ import { submitListingDirect } from "@/lib/listingSubmission";
 
 const BusinessPlans = dynamic(() => import("@/components/BusinessPlans"), { ssr: false, loading: () => <div className="mx-auto my-6 h-28 max-w-6xl animate-pulse rounded-2xl bg-current/[.05]" /> });
 const VehicleMarketplaceHub = dynamic(() => import("@/components/VehicleMarketplaceHub"), { ssr: false, loading: () => <div className="mx-auto my-8 h-64 max-w-6xl animate-pulse rounded-2xl bg-current/[.05]" /> });
+import { findTruckReference, truckReferenceResponse } from "@/lib/truckModelReferences";
 import { getTruckModel, getTruckModels, truckCatalog, truckYears, validateTruckTransmission } from "@/lib/truckCatalog";
 
 
@@ -60,7 +66,7 @@ type VerificationFiles = {
   businessAddress: File | null;
   representativeAuthority: File | null;
 };
-type ReferenceImage = { imageUrl: string; title: string; exactMatch: boolean; sourceUrl?: string; credit?: string; license?: string; matchConfidence?: "high" | "medium" | "reference" };
+type ReferenceImage = { brand?: string; model?: string; verifiedFuel?: string | null; verifiedTransmission?: string | null; specSourceUrl?: string | null; imageUrl: string | null; title: string; exactMatch: boolean; sourceUrl?: string; credit?: string; license?: string; matchConfidence?: "high" | "medium" | "reference" };
 
 const emptyVerificationFiles: VerificationFiles = {
   idDocument: null, driverLicence: null, registrationPaper: null, ownershipProof: null,
@@ -81,13 +87,14 @@ function unitSpecSchema(category: VehicleCategory | null, subtype: string): Arra
   if (clean.includes("kitchen") || clean.includes("food truck")) return [["Power supply", "Electrical, generator or gas setup"], ["Water system", "Fresh/grey water capacity and pumps"], ["Included kitchen equipment", "Cooking, refrigeration and prep equipment"], ["Extraction / ventilation", "Extraction hood and ventilation setup"]];
   return [["Power supply", "Electrical, generator, solar or other"], ["Internal dimensions", "Usable internal dimensions"], ["Fit-out / equipment", "Installed fixtures and equipment"], ["Operating capability", "What this unit is ready to do"]];
 }
-export default function ListYourVehiclePage() {
+export default function ListYourVehiclePage({ entryMode, initialPackage = "standard", resumeDraft = false, embedded = false }: { entryMode?: "vehicle" | "mobile-unit"; initialPackage?: "standard" | "pro" | "dealer"; resumeDraft?: boolean; embedded?: boolean } = {}) {
   const router = useRouter();
   const { darkMode, toggleTheme } = useLoadLinkTheme();
+  const [draftHydrated, setDraftHydrated] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
-  const [listingFlowOpen, setListingFlowOpen] = useState(false);
-  const [listingIntent, setListingIntent] = useState<ListingIntent | null>(null);
+  const [listingFlowOpen, setListingFlowOpen] = useState(Boolean(entryMode));
+  const [listingIntent, setListingIntent] = useState<ListingIntent | null>(entryMode === "mobile-unit" ? "mobile_unit" : null);
   const [saving, setSaving] = useState(false);
   const [preparingVehiclePhotos, setPreparingVehiclePhotos] = useState(false);
   const [vehiclePhotoProgress, setVehiclePhotoProgress] = useState("");
@@ -96,7 +103,7 @@ export default function ListYourVehiclePage() {
   const [photoLimitToast, setPhotoLimitToast] = useState(false);
   const [submittedListingId, setSubmittedListingId] = useState<string | null>(null);
   const [sellerType, setSellerType] = useState<SellerType>("private");
-  const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory | null>(null);
+  const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory | null>(entryMode === "mobile-unit" ? "mobile_unit" : null);
   const [vehicleSubtype, setVehicleSubtype] = useState("");
   const [dealershipId, setDealershipId] = useState("");
   const [dealershipName, setDealershipName] = useState("");
@@ -136,7 +143,7 @@ export default function ListYourVehiclePage() {
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [description, setDescription] = useState("");
   const [packageType, setPackageType] = useState<"standard" | "pro" | "dealer">("standard");
-  const [selectedPlan, setSelectedPlan] = useState<BusinessPlanId | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<BusinessPlanId | "standard" | null>(entryMode ? initialPackage : null);
   const [vehiclePhotos, setVehiclePhotos] = useState<File[]>([]);
   const [vehiclePreviews, setVehiclePreviews] = useState<string[]>([]);
   const [documents, setDocuments] = useState<VerificationFiles>(emptyVerificationFiles);
@@ -162,6 +169,7 @@ export default function ListYourVehiclePage() {
       if (!isSupabaseConfigured) { setAuthReady(true); return; }
       const user = await getFreshAuthenticatedUser();
       if (!user) { setAuthReady(true); return; }
+      scopeVehicleDraft(user.id);
       setSignedIn(true);
       void syncAccountState().catch(() => undefined);
       setPostedBy(String(user.user_metadata?.full_name || user.user_metadata?.name || ""));
@@ -199,11 +207,12 @@ export default function ListYourVehiclePage() {
   }, [router]);
 
   useEffect(() => {
+    if (!authReady || !signedIn) return;
     try {
       submissionIdRef.current = localStorage.getItem("loadlink-vehicle-submission-id") || createSafeRandomId();
       localStorage.setItem("loadlink-vehicle-submission-id", submissionIdRef.current);
-      const d = JSON.parse(localStorage.getItem("loadlink-vehicle-draft-v1") || "null");
-      if (!d) return;
+      const d = resumeDraft ? readVehicleDraft() as Record<string, any> | null : null;
+      if (!d) { setDraftHydrated(true); return; }
       setSellerType(d.sellerType || "private"); setVehicleCategory(d.vehicleCategory || null); setVehicleSubtype(d.vehicleSubtype || "");
       setYear(d.year || 2026); setBrand(d.brand || ""); setModelName(d.modelName || ""); setModelConfirmed(Boolean(d.modelConfirmed));
       setTitle(d.title || ""); setCity(d.city || "Johannesburg"); setBodyType(d.bodyType || ""); setTransmission(d.transmission || "");
@@ -212,29 +221,30 @@ export default function ListYourVehiclePage() {
       setCondition(d.condition || "Good"); setServiceHistory(d.serviceHistory || "Partial service history"); setGvmKg(d.gvmKg || "");
       setPayloadKg(d.payloadKg || ""); setRate(d.rate || ""); setOfferMode(d.offerMode || "sale"); setRentalRate(d.rentalRate || ""); setRentalPeriod(d.rentalPeriod || "month"); setSpecA(d.specA || ""); setSpecB(d.specB || ""); setSpecC(d.specC || ""); setSpecD(d.specD || ""); setPostedBy(d.postedBy || ""); setContactNumber(d.contactNumber || "");
       setWhatsappNumber(d.whatsappNumber || ""); setDescription(d.description || ""); setConfirmOwnership(Boolean(d.confirmOwnership));
-      setConfirmAccuracy(Boolean(d.confirmAccuracy)); setSelectedPlan(d.selectedPlan || null); setPackageType(d.packageType || "standard");
+      setConfirmAccuracy(Boolean(d.confirmAccuracy)); setSelectedPlan(entryMode ? initialPackage : d.selectedPlan || initialPackage); setPackageType(entryMode ? initialPackage : d.packageType || "standard");
+      setListingIntent(d.vehicleCategory === "mobile_unit" ? "mobile_unit" : "vehicle");
+      setListingFlowOpen(true);
       submissionIdRef.current = String(d.submissionId || submissionIdRef.current);
       localStorage.setItem("loadlink-vehicle-submission-id", submissionIdRef.current);
     } catch {
       submissionIdRef.current = localStorage.getItem("loadlink-vehicle-submission-id") || createSafeRandomId();
       localStorage.setItem("loadlink-vehicle-submission-id", submissionIdRef.current);
     }
-  }, []);
+    finally { setDraftHydrated(true); }
+  }, [resumeDraft, authReady, signedIn]);
 
   useEffect(() => {
-    const draft = { sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, gvmKg, payloadKg, rate, offerMode, rentalRate, rentalPeriod, specA, specB, specC, specD, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType, submissionId: submissionIdRef.current || localStorage.getItem("loadlink-vehicle-submission-id") || "" };
-    const timer = window.setTimeout(() => localStorage.setItem("loadlink-vehicle-draft-v1", JSON.stringify(draft)), 150);
+    if (!listingFlowOpen || !vehicleCategory || !draftHydrated || !signedIn) return;
+    const draft = { updatedAt: Date.now(), entryMode: entryMode || "vehicle", sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, gvmKg, payloadKg, rate, offerMode, rentalRate, rentalPeriod, specA, specB, specC, specD, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType, submissionId: submissionIdRef.current || localStorage.getItem("loadlink-vehicle-submission-id") || "" };
+    const timer = window.setTimeout(() => { try { localStorage.setItem("loadlink-vehicle-draft-v1", JSON.stringify(draft)); } catch {} }, 150);
     return () => window.clearTimeout(timer);
-  }, [sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, gvmKg, payloadKg, rate, offerMode, rentalRate, rentalPeriod, specA, specB, specC, specD, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType]);
+  }, [draftHydrated, signedIn, sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, gvmKg, payloadKg, rate, offerMode, rentalRate, rentalPeriod, specA, specB, specC, specD, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType]);
 
   useEffect(() => {
-    if (vehicleCategory !== "truck" || !brand || !modelName) return;
-    let active = true;
-    setImageLoading(true);
-    fetch(`/api/truck-image?brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(modelName)}&year=${year}`, { cache: "force-cache" })
-      .then((response) => response.json()).then((data) => { if (active) setReferenceImage(data); })
-      .catch(() => { if (active) setReferenceImage(null); }).finally(() => { if (active) setImageLoading(false); });
-    return () => { active = false; };
+    if (vehicleCategory !== "truck" || !brand || !modelName) { setReferenceImage(null); return; }
+    const reference = findTruckReference(brand, modelName);
+    setReferenceImage(reference ? truckReferenceResponse(reference, year) as ReferenceImage : null);
+    setImageLoading(false);
   }, [brand, modelName, vehicleCategory, year]);
 
   function choosePlan(plan: BusinessPlanId) {
@@ -258,9 +268,10 @@ export default function ListYourVehiclePage() {
   function confirmSelectedModel() {
     if (!selectedModel) { setMessage("Choose a valid year, truck brand and model first."); return; }
     setTitle(`${year} ${brand} ${modelName}`);
-    setTransmission(selectedModel.transmissions[0] || "");
-    setFuelType(selectedModel.fuels[0] || "Diesel");
-    setAxleConfiguration(selectedModel.axleConfigurations[0] || "4x2");
+    const reference = findTruckReference(brand, modelName);
+    setTransmission(reference?.verified_transmission || "");
+    setFuelType(reference?.verified_fuel || "");
+    setAxleConfiguration(selectedModel.axleConfigurations.length === 1 ? selectedModel.axleConfigurations[0] : "");
     setModelConfirmed(true);
     setMessage("");
   }
@@ -488,7 +499,7 @@ export default function ListYourVehiclePage() {
           registration_number: registrationNumber.trim().toUpperCase(), vin: vin.trim().toUpperCase(), engine_number: engineNumber.trim().toUpperCase(),
           odometer_km: Number(odometerKm), gvm_kg: gvmKg ? Number(gvmKg) : null, payload_kg: payloadKg ? Number(payloadKg) : null,
           reference_image_url: referenceImage?.imageUrl || null, reference_image_source: referenceImage?.sourceUrl || null,
-          factory_transmissions: selectedModel?.transmissions || [], specification_status: transmissionCheck?.requiresModificationProof ? "modified_pending_review" : "catalogue_match",
+          factory_transmissions: selectedModel?.transmissions || [], specification_status: transmissionCheck?.requiresModificationProof ? "modified_pending_review" : "owner_confirmed",
         }, { onConflict: "listing_id" });
         if (detailsResult.error) throw detailsResult.error;
       }
@@ -547,7 +558,7 @@ export default function ListYourVehiclePage() {
         continueLabel={dealershipId ? "Open dealership" : "View my posts"}
         onContinue={() => router.push(dealershipId ? "/dealer?posted=vehicle" : "/my-posts?posted=vehicle")}
       />
-      <Header darkMode={darkMode} sellerType={sellerType} dealerPost={dealerPost} onToggleTheme={toggleTheme} onToggleSellerType={() => {
+      {!embedded ? <Header darkMode={darkMode} sellerType={sellerType} dealerPost={dealerPost} onToggleTheme={toggleTheme} onToggleSellerType={() => {
         if (dealerPost) return;
         if (sellerType === "dealership") {
           setSellerType("private");
@@ -556,10 +567,10 @@ export default function ListYourVehiclePage() {
           setSellerType("dealership");
         }
         setMessage("");
-      }} />
+      }} /> : null}
 
-      <section className="relative min-h-[520px] overflow-hidden md:min-h-[620px]">
-        <img
+      {!entryMode ? <section className="relative min-h-[520px] overflow-hidden md:min-h-[620px]">
+        <LoadLinkImage
           src="/images/jobs/jobs-hero-fleet.jpg"
           alt="Approved LoadLink commercial vehicles and mobile units"
           className="absolute inset-0 h-full w-full object-cover object-center"
@@ -592,44 +603,44 @@ export default function ListYourVehiclePage() {
             </div>
           ) : null}
         </div>
-      </section>
+      </section> : null}
 
       {listingFlowOpen && !listingIntent && !dealerPost ? (
         <section id="vehicle-listing-choice" className={`scroll-mt-24 border-b px-4 py-8 md:px-6 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
-          <div className="mx-auto max-w-5xl text-center">
-            <h2 className="text-3xl font-black tracking-[-.04em]">What do you want to list?</h2>
-            <p className={`mx-auto mt-2 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Choose the exact listing type first. Seller and package options only appear after this choice.</p>
-            <div className="mx-auto mt-6 grid max-w-3xl gap-3 sm:grid-cols-3">
+          <div className="ll-vehicle-entry-choice mx-auto max-w-5xl text-left">
+            <h2 className="ll-vehicle-entry-title text-3xl font-black tracking-[-.04em]">List a vehicle</h2>
+            <p className={`mx-auto mt-2 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Choose your vehicle type to get started.</p>
+            <div className="ll-vehicle-type-choices mt-6 grid max-w-3xl gap-3 sm:grid-cols-2">
               <button type="button" onClick={() => {
                 setListingIntent("vehicle");
                 chooseCategory("truck");
-                setSelectedPlan(null);
-                setPackageType("standard");
+                setSelectedPlan(entryMode ? initialPackage : null);
+                setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-              }} className={`min-h-28 rounded-2xl border p-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
-                <span className="block text-xl font-black">Truck</span>
+              }} className={`ll-vehicle-type-card min-h-28 rounded-2xl border p-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <span className="ll-vehicle-type-icon"><LoadLinkIcon name="truck" size={24}/></span><span className="block text-xl font-black">Truck</span>
                 <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Commercial trucks and tractor units.</span>
               </button>
               <button type="button" onClick={() => {
                 setListingIntent("vehicle");
                 chooseCategory("trailer");
-                setSelectedPlan(null);
-                setPackageType("standard");
+                setSelectedPlan(entryMode ? initialPackage : null);
+                setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-              }} className={`min-h-28 rounded-2xl border p-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
-                <span className="block text-xl font-black">Trailer</span>
+              }} className={`ll-vehicle-type-card min-h-28 rounded-2xl border p-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <span className="ll-vehicle-type-icon"><LoadLinkIcon name="archive" size={24}/></span><span className="block text-xl font-black">Trailer</span>
                 <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Commercial trailer listings.</span>
               </button>
-              <button type="button" onClick={() => {
+              {!entryMode ?               <button type="button" onClick={() => {
                 setListingIntent("mobile_unit");
                 chooseCategory("mobile_unit");
-                setSelectedPlan(null);
-                setPackageType("standard");
+                setSelectedPlan(entryMode ? initialPackage : null);
+                setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-              }} className={`min-h-28 rounded-2xl border p-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+              }} className={`ll-vehicle-type-card min-h-28 rounded-2xl border p-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
                 <span className="block text-xl font-black">Mobile Unit</span>
                 <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Mobile fridge, kitchen, clinic, office and other units.</span>
-              </button>
+              </button> : null}
             </div>
           </div>
         </section>
@@ -653,8 +664,9 @@ export default function ListYourVehiclePage() {
         </section>
       ) : null}
 
-      {listingFlowOpen && signedIn && listingIntent && !selectedPlan ? <BusinessPlans darkMode={darkMode} selectable selectedPlan={selectedPlan} onSelect={choosePlan} /> : null}
+      {listingFlowOpen && signedIn && listingIntent && !selectedPlan ? <BusinessPlans darkMode={darkMode} selectable selectedPlan={selectedPlan === "pro" || selectedPlan === "dealer" ? selectedPlan : null} onSelect={choosePlan} /> : null}
 
+      {listingFlowOpen && signedIn && listingIntent && selectedPlan ? <LoadLinkVehicleWizardController20260825 darkMode={darkMode} listingKind={entryMode === "mobile-unit" ? "mobile-unit" : "vehicle"}/> : null}
       {listingFlowOpen && signedIn && listingIntent && selectedPlan ? <form id="vehicle-listing-form" onSubmit={submitVehicle} className="mx-auto grid max-w-5xl scroll-mt-24 gap-6 px-4 py-7 md:px-6 md:py-12">
         {categoryChosen ? <>
           <section className={`overflow-hidden rounded-2xl border ${surface}`}>
@@ -665,7 +677,7 @@ export default function ListYourVehiclePage() {
               <Field label="Make / manufacturer">{vehicleCategory === "truck" ? <select value={brand} onChange={(event) => { setBrand(event.target.value); setModelName(""); setModelConfirmed(false); }} className={inputClass} required><option value="">Choose manufacturer</option>{truckCatalog.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}</select> : <input value={brand} onChange={(event) => setBrand(event.target.value)} placeholder="Make or manufacturer" className={inputClass} required />}</Field>
               <Field label="Model">{vehicleCategory === "truck" ? <select value={modelName} onChange={(event) => { setModelName(event.target.value); setModelConfirmed(false); }} className={inputClass} disabled={!brand} required><option value="">Choose exact model</option>{availableModels.map((item) => <option key={item.name}>{item.name}</option>)}</select> : <input value={modelName} onChange={(event) => setModelName(event.target.value)} placeholder="Model name or number" className={inputClass} required />}</Field>
             </div>
-            {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>{imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Loading model reference…</p> : null}{referenceImage?.imageUrl ? <figure className="mt-4 max-w-xl"><img src={referenceImage.imageUrl} alt={referenceImage.title || "Truck reference"} className="aspect-[16/9] w-full rounded-xl object-cover" /><figcaption className={`mt-2 text-[11px] font-semibold leading-5 ${muted}`}>Model reference photo · {referenceImage.matchConfidence === "high" ? "high-confidence match" : referenceImage.matchConfidence === "medium" ? "model-family match" : "visual reference"}. Confirm your uploaded photos show the actual truck.{referenceImage.credit ? ` Credit: ${referenceImage.credit}.` : ""}{referenceImage.license ? ` ${referenceImage.license}.` : ""} {referenceImage.sourceUrl ? <a href={referenceImage.sourceUrl} target="_blank" rel="noreferrer" className="font-black underline underline-offset-2">Source</a> : null}</figcaption></figure> : null}</div> : <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={() => { setTitle(`${year} ${brand} ${modelName} ${vehicleSubtype}`.replace(/\s+/g, " ").trim()); setMessage(""); }} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm vehicle details</button></div>}
+            {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>{imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Loading model reference…</p> : null}{referenceImage?.imageUrl ? <figure className="mt-4 max-w-xl"><LoadLinkImage src={referenceImage.imageUrl} alt={referenceImage.title || "Truck reference"} className="aspect-[16/9] w-full rounded-xl object-cover" /><figcaption className={`mt-2 text-[11px] font-semibold leading-5 ${muted}`}>Model-family reference: {referenceImage.title}. Your truck’s year and specification may differ. Upload photos of your actual vehicle.{referenceImage.credit ? ` Credit: ${referenceImage.credit}.` : ""}{referenceImage.license ? ` ${referenceImage.license}.` : ""} {referenceImage.sourceUrl ? <a href={referenceImage.sourceUrl} target="_blank" rel="noreferrer" className="font-black underline underline-offset-2">Source</a> : null}</figcaption></figure> : <p className={`mt-3 text-xs ${muted}`}>A verified photograph is not available for this model and year yet.</p>}{referenceImage?.specSourceUrl ? <p className={`mt-3 text-xs ${muted}`}>Available verified specifications have been filled in. Confirm your vehicle’s gearbox and fuel type. <a href={referenceImage.specSourceUrl} target="_blank" rel="noreferrer" className="underline">Manufacturer specifications</a></p> : null}</div> : <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={() => { setTitle(`${year} ${brand} ${modelName} ${vehicleSubtype}`.replace(/\s+/g, " ").trim()); setMessage(""); }} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm vehicle details</button></div>}
           </section>
 
           {detailsReady ? <>
@@ -675,8 +687,8 @@ export default function ListYourVehiclePage() {
                 <Field label="Listing title" wide><input value={title} onChange={(event) => setTitle(event.target.value)} className={inputClass} required /></Field>
                 <Field label={vehicleCategory === "truck" ? "Body type" : "Type"}><select value={bodyType || vehicleSubtype} onChange={(event) => setBodyType(event.target.value)} className={inputClass}>{(vehicleCategory === "truck" ? truckBodyTypes : vehicleCategory === "trailer" ? trailerTypes : mobileUnitTypes).map((item) => <option key={item}>{item}</option>)}</select></Field>
                 <Field label="Condition"><select value={condition} onChange={(event) => setCondition(event.target.value)} className={inputClass}><option>Excellent</option><option>Very good</option><option>Good</option><option>Fair</option><option>Needs attention</option></select></Field>
-                <Field label="Transmission"><select value={transmission} onChange={(event) => setTransmission(event.target.value)} className={inputClass}>{gearboxOptions.map((item) => <option key={item}>{item}</option>)}</select></Field>
-                <Field label="Fuel / power type"><input value={fuelType} onChange={(event) => setFuelType(event.target.value)} placeholder={vehicleCategory === "trailer" ? "Not applicable" : "Diesel, petrol, electric"} className={inputClass} /></Field>
+                <Field label="Transmission"><select value={transmission} onChange={(event) => setTransmission(event.target.value)} className={inputClass} required><option value="">Choose gearbox</option>{gearboxOptions.map((item) => <option key={item}>{item}</option>)}</select></Field>
+                <Field label="Fuel / power type"><input value={fuelType} onChange={(event) => setFuelType(event.target.value)} placeholder={vehicleCategory === "trailer" ? "Not applicable" : "Confirm fuel / power type"} className={inputClass} required /></Field>
                 <Field label="Mileage / usage"><input type="number" min="0" value={odometerKm} onChange={(event) => setOdometerKm(event.target.value)} placeholder="Kilometres or usage reading" className={inputClass} required /></Field>
                 <Field label="Previous owners"><input type="number" min="0" value={previousOwners} onChange={(event) => setPreviousOwners(event.target.value)} placeholder="0" className={inputClass} /></Field>
                 <Field label="Service history"><select value={serviceHistory} onChange={(event) => setServiceHistory(event.target.value)} className={inputClass}><option>Full service history</option><option>Partial service history</option><option>No service history</option><option>Not applicable</option></select></Field>
@@ -701,7 +713,7 @@ export default function ListYourVehiclePage() {
 
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="03" title="Photos and verification" description="Upload clear product photos and the critical documents required for review." />
-              <div className="p-5 md:p-7"><label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>{vehiclePhotoProgress || `Minimum 2 photos · up to ${packageType === "pro" || packageType === "dealer" ? 15 : 5}`}</span><input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} disabled={preparingVehiclePhotos || saving} className="hidden" /></label>{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <img key={preview} src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 shrink-0 snap-start rounded-xl object-cover" />)}</div> : null}</div>
+              <div className="p-5 md:p-7"><label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>{vehiclePhotoProgress || `Minimum 2 photos · up to ${packageType === "pro" || packageType === "dealer" ? 15 : 5}`}</span><input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} disabled={preparingVehiclePhotos || saving} className="hidden" /></label>{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <LoadLinkImage key={preview} src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 shrink-0 snap-start rounded-xl object-cover" />)}</div> : null}</div>
               {sellerType === "dealership" && !dealerPost ? <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><Field label="Dealership name"><input value={dealershipName} onChange={(event) => setDealershipName(event.target.value)} className={inputClass} required /></Field><Field label="Company registration number"><input value={companyRegistrationNumber} onChange={(event) => setCompanyRegistrationNumber(event.target.value)} className={inputClass} required /></Field><Field label="SARS tax number"><input value={taxNumber} onChange={(event) => setTaxNumber(event.target.value)} className={inputClass} required /></Field><DocumentInput label="CIPC company registration" required file={documents.companyRegistration} onChange={(file) => setDocument("companyRegistration", file)} /><DocumentInput label="SARS tax document" required file={documents.taxDocument} onChange={(file) => setDocument("taxDocument", file)} /><DocumentInput label="Proof of business address" required file={documents.businessAddress} onChange={(file) => setDocument("businessAddress", file)} /><DocumentInput label="Representative authority" required file={documents.representativeAuthority} onChange={(file) => setDocument("representativeAuthority", file)} /></div> : null}
               <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><DocumentInput label="South African ID or passport" required file={documents.idDocument} onChange={(file) => setDocument("idDocument", file)} />{vehicleCategory === "truck" ? <DocumentInput label="Driver’s licence" required file={documents.driverLicence} onChange={(file) => setDocument("driverLicence", file)} /> : null}<DocumentInput label="Vehicle registration certificate" required file={documents.registrationPaper} onChange={(file) => setDocument("registrationPaper", file)} /><DocumentInput label="Proof of ownership or authority to list" required file={documents.ownershipProof} onChange={(file) => setDocument("ownershipProof", file)} /><DocumentInput label="Roadworthy certificate" file={documents.roadworthy} onChange={(file) => setDocument("roadworthy", file)} /><DocumentInput label="Operating licence" file={documents.operatingLicence} onChange={(file) => setDocument("operatingLicence", file)} />{transmissionCheck?.requiresModificationProof ? <DocumentInput label="Gearbox conversion paperwork" required file={documents.modificationProof} onChange={(file) => setDocument("modificationProof", file)} /> : null}</div>
             </section>

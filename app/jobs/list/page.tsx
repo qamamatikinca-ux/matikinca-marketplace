@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import GoogleLocationPicker, { type GoogleLocationSelection } from "@/components/GoogleLocationPicker";
@@ -369,7 +371,7 @@ export default function ListJobPage() {
                   <span className={`mt-1 block text-[10px] font-semibold ${muted}`}>Up to 5 clear images.</span>
                   <input type="file" accept="image/*" multiple onChange={photos} className="mt-3 block w-full text-xs" />
                 </label>
-                {previews.length ? <div className="mt-3 grid grid-cols-3 gap-2">{previews.map((url, index) => <div key={`${url}-${index}`} className="relative"><img src={url} alt={`Selected photo ${index + 1}`} className="aspect-square w-full rounded-[16px] object-cover" /><span className="absolute left-1.5 top-1.5 rounded-full bg-black/75 px-2 py-1 text-[8px] font-black text-white">Photo {index + 1}</span></div>)}</div> : null}
+                {previews.length ? <div className="mt-3 grid grid-cols-3 gap-2">{previews.map((url, index) => <div key={`${url}-${index}`} className="relative"><LoadLinkImage src={url} alt={`Selected photo ${index + 1}`} className="aspect-square w-full rounded-[16px] object-cover" /><span className="absolute left-1.5 top-1.5 rounded-full bg-black/75 px-2 py-1 text-[8px] font-black text-white">Photo {index + 1}</span></div>)}</div> : null}
               </>
             ) : null}
 

@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import { useEffect, useMemo, useState } from "react";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 import ListingReportDialog from "@/components/ListingReportDialog";
@@ -529,7 +531,7 @@ export default function LoadLinkInteractionSystem() {
                   return (
                     <button key={`${option.value}-${option.label}`} type="button" disabled={option.disabled} onClick={() => chooseOption(option.value)} className={`mb-2 grid min-h-[84px] w-full grid-cols-[64px_minmax(0,1fr)_24px] items-center gap-3 rounded-[17px] border p-2 text-left disabled:opacity-35 ${selected ? "border-[#f6b800] bg-[#f6b800]/12" : darkMode ? "border-white/12 bg-white/[.035]" : "border-black/10 bg-white/[.46]"}`}>
                       <span className={`h-16 w-16 overflow-hidden rounded-[13px] ${darkMode ? "bg-white/[.06]" : "bg-black/[.05]"}`}>
-                        {option.image ? <img src={option.image} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center bg-black text-[8px] font-black uppercase text-[#f6b800]">LoadLink</span>}
+                        {option.image ? <LoadLinkImage src={option.image} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center bg-black text-[8px] font-black uppercase text-[#f6b800]">LoadLink</span>}
                       </span>
                       <span className="min-w-0"><strong className="block truncate text-sm font-black">{optionPostTitle(option)}</strong><small className={`mt-1 block truncate text-[10px] font-semibold ${darkMode ? "text-white/45" : "text-black/45"}`}>{optionPostMeta(option)}</small></span>
                       <span className={`text-center ${selected ? "text-[#f6b800]" : "opacity-35"}`}>{selected ? <LoadLinkIcon name="check" size={17} strokeWidth={2.2} /> : "›"}</span>

@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
@@ -90,7 +92,7 @@ export default function ContractDetailPage() {
             <section className={`overflow-hidden rounded-[24px] border ${surface}`}>
               {row.photos?.length ? (
                 <div className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto bg-[#111]">
-                  {row.photos.map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt="" className="aspect-[16/9] w-full shrink-0 snap-center object-cover" />)}
+                  {row.photos.map((photo, index) => <LoadLinkImage key={`${photo}-${index}`} src={photo} alt="" className="aspect-[16/9] w-full shrink-0 snap-center object-cover" />)}
                 </div>
               ) : null}
               <div className="p-5 sm:p-7">
@@ -116,7 +118,7 @@ export default function ContractDetailPage() {
             <section className={`mt-4 rounded-[22px] border p-5 ${surface}`}>
               <p className="text-[9px] font-black uppercase tracking-[.11em] opacity-40">Posted by</p>
               <div className="mt-3 flex items-center gap-3">
-                <div className="h-12 w-12 overflow-hidden rounded-full bg-[#111] text-[#f6b800]">{row.poster_photo ? <img src={row.poster_photo} alt="" className="h-full w-full object-cover" /> : null}</div>
+                <div className="h-12 w-12 overflow-hidden rounded-full bg-[#111] text-[#f6b800]">{row.poster_photo ? <LoadLinkImage src={row.poster_photo} alt="" className="h-full w-full object-cover" /> : null}</div>
                 <div className="min-w-0"><p className="truncate text-sm font-black">{row.posted_by || "LoadLink poster"}</p><p className={`mt-0.5 text-xs font-semibold ${muted}`}>Contact through LoadLink before agreeing to work.</p></div>
               </div>
               <div className="mt-4 grid gap-2 sm:grid-cols-3">

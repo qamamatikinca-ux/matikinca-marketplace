@@ -1,5 +1,7 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+import { clearVehicleDraft } from "@/lib/vehicleDraft";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const STEP_LABELS = ["Type", "Vehicle details", "Photos & documents", "Review"] as const;
@@ -40,6 +42,8 @@ function confirmationButton(section: HTMLElement) {
 }
 
 export default function LoadLinkVehicleWizardController20260825({ darkMode, listingKind = "vehicle" }: { darkMode: boolean; listingKind?: ListingKind }) {
+  const pathname = usePathname();
+  const onListingRoute = pathname === "/list-your-vehicle" || pathname === "/list-your-truck";
   const [activeStep, setActiveStep] = useState(0);
   const [formReady, setFormReady] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -58,6 +62,7 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
   }, [activeStep]);
 
   useEffect(() => {
+    if (!onListingRoute) return;
     let frame = 0;
     const sync = () => {
       window.cancelAnimationFrame(frame);
@@ -65,7 +70,7 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
     };
     sync();
     const observer = new MutationObserver(sync);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.getElementById("listing-form") || document.body, { childList: true, subtree: true });
 
     return () => {
       window.cancelAnimationFrame(frame);
@@ -79,7 +84,7 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
       });
       if (form) delete form.dataset.loadlinkWizardReady;
     };
-  }, [applyStep]);
+  }, [applyStep, onListingRoute]);
 
   useEffect(() => {
     if (!formReady) return;
@@ -90,6 +95,21 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
     const timer = window.setTimeout(() => section.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
     return () => window.clearTimeout(timer);
   }, [activeStep, formReady]);
+
+  useEffect(() => {
+    if (!onListingRoute || !formReady) return;
+    const { form } = getWizardSections();
+    if (!form) return;
+    const showInvalid = (event: Event) => {
+      const { sections } = getWizardSections();
+      const index = sections.findIndex(section => section.contains(event.target as Node));
+      if (index < 0) return;
+      revealStep(index);
+      setActiveStep(index);
+    };
+    form.addEventListener("invalid", showInvalid, true);
+    return () => form.removeEventListener("invalid", showInvalid, true);
+  }, [onListingRoute, formReady]);
 
   const progress = useMemo(() => `${Math.round(((activeStep + 1) / STEP_LABELS.length) * 100)}%`, [activeStep]);
 
@@ -128,16 +148,16 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
 
   function confirmCancelListing() {
     try {
-      localStorage.removeItem("loadlink-vehicle-draft-v1");
-      localStorage.removeItem("loadlink-vehicle-submission-id");
+      clearVehicleDraft();
     } catch {}
     window.location.assign("/list-your-vehicle");
   }
 
+  if (!onListingRoute) return null;
   return (
     <>
       <section
-        className={`sticky top-20 z-30 border-y px-4 py-3 backdrop-blur-xl ${darkMode ? "border-white/10 bg-black/88" : "border-black/10 bg-[#f5f1e8]/90"}`}
+        data-loadlink-owned-vehicle-wizard="true" className={`sticky top-20 z-30 border-y px-4 py-3 backdrop-blur-xl ${darkMode ? "border-white/10 bg-black/88" : "border-black/10 bg-[#f5f1e8]/90"}`}
         aria-label={`${listingLabel} listing progress`}
         data-loadlink-source-wizard="jobs-style-working-v3"
       >
@@ -157,7 +177,7 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
 
       {formReady ? (
         <nav
-          className={`fixed inset-x-0 bottom-0 z-40 border-t px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-2xl ${darkMode ? "border-white/10 bg-black/88" : "border-black/10 bg-[#f5f1e8]/90"}`}
+          data-loadlink-owned-vehicle-wizard="true" className={`fixed inset-x-0 bottom-0 z-40 border-t px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-2xl ${darkMode ? "border-white/10 bg-black/88" : "border-black/10 bg-[#f5f1e8]/90"}`}
           aria-label={`${listingLabel} listing step controls`}
         >
           <div className="mx-auto flex max-w-5xl items-center gap-2">

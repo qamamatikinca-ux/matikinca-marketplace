@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import { ImgHTMLAttributes, useEffect, useState } from "react";
 
 type LogoTheme = "auto" | "light" | "dark";
@@ -70,7 +72,7 @@ export default function LoadLinkLogo({
       data-logo-theme={activeTheme}
     >
       {showGlow ? <span aria-hidden="true" className="loadlink-logo-glow" /> : null}
-      <img
+      <LoadLinkImage
         src={src}
         alt={alt}
         className={`loadlink-logo-img ${className}`}

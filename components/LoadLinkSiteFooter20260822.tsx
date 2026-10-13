@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import Link from "next/link";
 import RequireAuthLink from "@/components/RequireAuthLink";
 
@@ -24,7 +26,7 @@ export default function LoadLinkSiteFooter20260822({ darkMode }: { darkMode: boo
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex justify-center">
           <Link href="/" aria-label="LoadLink home" className="block max-w-full outline-none">
-            <img src={darkMode ? "/images/loadlink-logo-dark.png" : "/images/loadlink-logo-light.png"} alt="LoadLink" className="h-auto w-[min(68vw,320px)] object-contain" />
+            <LoadLinkImage src={darkMode ? "/images/loadlink-logo-dark.png" : "/images/loadlink-logo-light.png"} alt="LoadLink" className="h-auto w-[min(68vw,320px)] object-contain" />
           </Link>
         </div>
 
@@ -80,11 +82,11 @@ export default function LoadLinkSiteFooter20260822({ darkMode }: { darkMode: boo
             <p className="text-sm font-black">Get LoadLink</p>
             {playUrl ? (
               <a href={playUrl} target="_blank" rel="noreferrer" aria-label="Get LoadLink on Google Play" className="mt-2 inline-block">
-                <img src={PLAY_BADGE} alt="Get it on Google Play" className="h-[50px] w-auto object-contain" />
+                <LoadLinkImage src={PLAY_BADGE} alt="Get it on Google Play" className="h-[50px] w-auto object-contain" />
               </a>
             ) : (
               <div className="mt-2 inline-flex flex-col items-start md:items-end">
-                <img src={PLAY_BADGE} alt="Google Play" className="h-[50px] w-auto object-contain opacity-70 grayscale-[.15]" />
+                <LoadLinkImage src={PLAY_BADGE} alt="Google Play" className="h-[50px] w-auto object-contain opacity-70 grayscale-[.15]" />
                 <span className={`mt-1 text-[10px] font-bold ${darkMode ? "text-white/42" : "text-black/45"}`}>Android release coming soon</span>
               </div>
             )}

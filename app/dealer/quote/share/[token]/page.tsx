@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
 import Link from "next/link";
@@ -69,7 +71,7 @@ export default function SharedDealerQuotePage() {
       {loading ? <div className={`border p-6 ${paper}`}><div className="h-5 w-40 animate-pulse bg-current opacity-10" /><div className="mt-5 h-28 animate-pulse bg-current opacity-[.06]" /></div> : error || !quote ? <div className={`border p-6 sm:p-8 ${paper}`}><h1 className="text-2xl font-black">Quote unavailable</h1><p className="mt-2 text-sm opacity-60">{error || "The secure quote link can no longer be opened."}</p><Link href="/" className="mt-5 inline-flex min-h-11 items-center bg-black px-5 text-sm font-black text-white dark:bg-white dark:text-black">Open LoadLink</Link></div> : <article className={`border ${paper}`}>
         <div className="border-b border-current/10 px-5 py-5 sm:px-8 sm:py-7">
           <div className="flex flex-wrap items-start justify-between gap-5">
-            <div className="flex min-w-0 items-center gap-4">{quote.dealership_logo ? <img src={quote.dealership_logo} alt="" className="h-14 w-14 shrink-0 border border-current/10 object-cover" /> : <div className="grid h-14 w-14 shrink-0 place-items-center border border-current/10 text-lg font-black">LL</div>}<div className="min-w-0"><h1 className="truncate text-xl font-black sm:text-2xl">{quote.dealership_name}</h1><p className="mt-1 text-sm opacity-55">Vehicle quote · {quote.quote_number}</p></div></div>
+            <div className="flex min-w-0 items-center gap-4">{quote.dealership_logo ? <LoadLinkImage src={quote.dealership_logo} alt="" className="h-14 w-14 shrink-0 border border-current/10 object-cover" /> : <div className="grid h-14 w-14 shrink-0 place-items-center border border-current/10 text-lg font-black">LL</div>}<div className="min-w-0"><h1 className="truncate text-xl font-black sm:text-2xl">{quote.dealership_name}</h1><p className="mt-1 text-sm opacity-55">Vehicle quote · {quote.quote_number}</p></div></div>
             <div className="text-left sm:text-right"><div className="text-xs font-black uppercase tracking-[.12em] opacity-45">Total</div><div className="mt-1 text-2xl font-black">{zar(quote.total_amount)}</div></div>
           </div>
         </div>

@@ -18,6 +18,7 @@ const noStoreHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  images: { remotePatterns: [{ protocol: "https", hostname: "cqmjgulfbbwxyecsnzed.supabase.co", pathname: "/storage/v1/object/public/**" }], formats: ["image/webp"], minimumCacheTTL: 86400, deviceSizes: [360, 640, 750, 1080, 1280, 1920], qualities: [75] },
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },

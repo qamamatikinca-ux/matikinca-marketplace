@@ -95,6 +95,8 @@ export default function LoadLinkToastCenter() {
         return (
           <section
             key={item.id}
+            data-loadlink-toast-surface="true"
+            data-loadlink-toast-kind={item.kind}
             className="pointer-events-auto w-full max-w-[430px] overflow-hidden rounded-[25px] border border-white/15 bg-[linear-gradient(145deg,rgba(26,26,26,.73),rgba(7,7,7,.58))] text-white shadow-[0_24px_75px_rgba(0,0,0,.38)] backdrop-blur-3xl backdrop-saturate-150"
           >
             <div className="flex items-start gap-3 p-4">
@@ -102,21 +104,21 @@ export default function LoadLinkToastCenter() {
                 <LoadLinkIcon name={iconName} size={19} strokeWidth={2} />
               </span>
               <div className="min-w-0 flex-1 pt-0.5">
-                <p className="text-sm font-black tracking-[-.01em] text-white">{item.title}</p>
-                {item.message ? <p className="mt-1 text-xs font-semibold leading-5 text-white/76">{item.message}</p> : null}
+                <p className="ll-toast-title text-sm font-black tracking-[-.01em] text-white">{item.title}</p>
+                {item.message ? <p className="ll-toast-detail mt-1 text-xs font-semibold leading-5 text-white/76">{item.message}</p> : null}
                 {progress !== null ? (
                   <div className="mt-3 flex items-center gap-3">
                     <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/15">
                       <div className="h-full rounded-full bg-[#f6b800] transition-[width] duration-300" style={{ width: `${progress}%` }} />
                     </div>
-                    <span className="w-9 text-right text-[10px] font-black text-white/72">{Math.round(progress)}%</span>
+                    <span className="ll-toast-detail w-9 text-right text-[10px] font-black text-white/72">{Math.round(progress)}%</span>
                   </div>
                 ) : null}
                 {item.actionLabel && item.onAction ? (
                   <button
                     type="button"
                     onClick={() => { item.onAction?.(); dismiss(item.id); }}
-                    className="mt-3 h-9 rounded-xl border border-[#f6b800]/45 bg-[#f6b800]/[.09] px-3 text-[10px] font-black text-[#f6b800]"
+                    className="ll-toast-link mt-3 h-9 rounded-xl border border-[#f6b800]/45 bg-[#f6b800]/[.09] px-3 text-[10px] font-black text-[#f6b800]"
                   >
                     {item.actionLabel}
                   </button>
@@ -125,7 +127,7 @@ export default function LoadLinkToastCenter() {
               <button
                 type="button"
                 onClick={() => dismiss(item.id)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[.04] text-white/65"
+                className="ll-toast-close flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[.04] text-white/65"
                 aria-label="Dismiss notification"
               >
                 <LoadLinkIcon name="close" size={15} />

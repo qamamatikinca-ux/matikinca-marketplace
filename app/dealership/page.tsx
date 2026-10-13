@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import FollowingPage from "@/app/following/page";
 
 export default function DealershipDirectoryPage() {
-  redirect("/following?discover=1");
+  return <FollowingPage initialView="discover" />;
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
 
@@ -26,7 +28,7 @@ export default function AuthLandingShell({
     >
       <div className="mx-auto min-h-[100svh] w-full max-w-[760px] lg:flex lg:max-w-none">
         <section className={`loadlink-auth-hero relative h-[31svh] min-h-[220px] max-h-[300px] overflow-hidden sm:h-[44svh] sm:min-h-[330px] sm:max-h-[460px] lg:h-screen lg:max-h-none lg:min-h-screen lg:flex-1 ${darkMode ? "bg-[#100805]" : "bg-[#c95f17]"}`}>
-          <img
+          <LoadLinkImage
             src="/images/loadlink-login-hero-final.webp"
             alt="LoadLink logistics made easier"
             className={`loadlink-auth-hero-image absolute inset-0 h-full w-full object-cover object-[center_38%] sm:object-center lg:object-cover ${darkMode ? "opacity-[.82]" : "opacity-[.92]"}`}
@@ -39,7 +41,7 @@ export default function AuthLandingShell({
           <div className={`absolute inset-y-0 right-0 z-[2] hidden w-[34%] lg:block ${darkMode ? "bg-gradient-to-r from-transparent to-black" : "bg-gradient-to-r from-transparent to-[#f4efe3]"}`} aria-hidden="true" />
           <div className="absolute inset-x-0 top-0 z-10 p-4 sm:p-6 lg:p-9">
             <Link href="/" aria-label="LoadLink home" className="inline-flex h-10 items-center rounded-full border border-white/20 bg-black/24 px-3 shadow-sm backdrop-blur-xl">
-              <img src="/images/loadlink-logo-dark.png?v=universal-theme-v1" alt="LoadLink" className="h-[17px] w-auto max-w-[98px] object-contain" />
+              <LoadLinkImage src="/images/loadlink-logo-dark.png?v=universal-theme-v1" alt="LoadLink" className="h-[17px] w-auto max-w-[98px] object-contain" />
             </Link>
           </div>
         </section>

@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
@@ -182,7 +184,7 @@ function Avatar({ contact, size = "large" }: { contact: ContactIdentity; size?: 
   return (
     <div data-loadlink-call-avatar="true" className={`${dimensions} shrink-0 overflow-hidden rounded-full border border-[#f6b800]/45 bg-[#171717] text-[#f6b800] shadow-[0_18px_55px_rgba(0,0,0,.28)]`}>
       {contact.avatarUrl ? (
-        <img src={contact.avatarUrl} alt="" className="block h-full w-full object-cover object-center" />
+        <LoadLinkImage src={contact.avatarUrl} alt="" className="block h-full w-full object-cover object-center" />
       ) : (
         <span className="flex h-full w-full items-center justify-center text-xl font-black tracking-[-.04em]">{initials(contact.name)}</span>
       )}

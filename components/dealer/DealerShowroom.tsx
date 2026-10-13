@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { dealerFetch, removeDealerUpload, uploadDealerFile } from "@/lib/dealer/client";
 import type { DealerProfile, DealerWorkspaceState } from "@/lib/dealer/types";
@@ -122,10 +124,10 @@ export default function DealerShowroom({darkMode,profile,context,onProfile}:{dar
   return <div className="mx-auto grid max-w-[1040px] gap-4 pb-28">
     <section className={`overflow-hidden rounded-[26px] border ${surface}`}>
       <div className="relative aspect-[16/6] min-h-[180px] overflow-hidden bg-[#111]">
-        {profile.cover_image_url?<img src={profile.cover_image_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70"/>:null}
+        {profile.cover_image_url?<LoadLinkImage src={profile.cover_image_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70"/>:null}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"/>
         <div className="absolute inset-x-5 bottom-5 flex items-end gap-4 text-white">
-          <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-white/50 bg-black">{profile.profile_image_url?<img src={profile.profile_image_url} alt="" className="h-full w-full object-cover"/>:<div className="flex h-full items-center justify-center font-black">{form.name.slice(0,2).toUpperCase()}</div>}</div>
+          <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-white/50 bg-black">{profile.profile_image_url?<LoadLinkImage src={profile.profile_image_url} alt="" className="h-full w-full object-cover"/>:<div className="flex h-full items-center justify-center font-black">{form.name.slice(0,2).toUpperCase()}</div>}</div>
           <div className="min-w-0 flex-1"><h1 className="truncate text-2xl font-black tracking-[-.04em]">{form.name||"Your dealership"}</h1><p className="mt-1 truncate text-xs font-semibold text-white/62">{form.short_bio||"Add a short line customers will see."}</p></div>
           <span className="rounded-full border border-white/16 bg-black/45 px-3 py-1.5 text-[10px] font-black">{status}</span>
         </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import LoadLinkRatingStars from "@/components/LoadLinkRatingStars";
 
 import LoadLinkIcon from "@/components/LoadLinkIcon";
@@ -481,7 +483,7 @@ export default function LoadLinkReleaseCompletion20260821() {
           <div className={`ll-account-footer ${binding.compact ? "is-compact" : ""}`} onClick={(event) => event.stopPropagation()}>
             <div className="ll-account-footer-main">
               <div className="ll-account-footer-avatar" aria-hidden="true">
-                {reviewTarget.photo ? <img src={reviewTarget.photo} alt="" /> : <span>{initials(reviewTarget.name)}</span>}
+                {reviewTarget.photo ? <LoadLinkImage src={reviewTarget.photo} alt="" /> : <span>{initials(reviewTarget.name)}</span>}
               </div>
               <div className="ll-account-footer-copy">
                 <strong>{reviewTarget.name}</strong>
@@ -507,7 +509,7 @@ export default function LoadLinkReleaseCompletion20260821() {
           <section className="ll-account-review-panel">
             <header className="ll-account-review-header">
               <div className="ll-account-review-identity">
-                <div className="ll-account-review-avatar" aria-hidden="true">{target.photo ? <img src={target.photo} alt="" /> : <span>{initials(target.name)}</span>}</div>
+                <div className="ll-account-review-avatar" aria-hidden="true">{target.photo ? <LoadLinkImage src={target.photo} alt="" /> : <span>{initials(target.name)}</span>}</div>
                 <div><small>{target.accountType}</small><h2>{target.name}</h2><p>{target.count && target.average !== null ? `${target.average.toFixed(1)} from ${target.count} review${target.count === 1 ? "" : "s"}` : "No reviews yet"}</p></div>
               </div>
               <button type="button" className="ll-account-review-close" onClick={() => setTarget(null)} aria-label="Close"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>

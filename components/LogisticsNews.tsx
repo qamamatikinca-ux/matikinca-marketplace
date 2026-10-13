@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type Item = {
@@ -79,7 +81,7 @@ export default function LogisticsNews({ darkMode }: { darkMode: boolean }) {
                   className={`min-w-[82vw] snap-start overflow-hidden border md:min-w-[340px] md:max-w-[340px] ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}
                 >
                   <div className="relative h-44 bg-black/5">
-                    <img
+                    <LoadLinkImage
                       src={proxiedImage(item.image)}
                       alt=""
                       loading="lazy"

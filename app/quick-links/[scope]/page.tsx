@@ -1,5 +1,7 @@
 "use client";
 
+import LoadLinkImage from "@/components/LoadLinkImage";
+
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -104,7 +106,7 @@ export default function QuickLinkPicturePage() {
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <section className="relative isolate min-h-[430px] overflow-hidden bg-black text-white sm:min-h-[500px]">
-        <img
+        <LoadLinkImage
           src={imageFailed ? config.fallback : config.image}
           onError={() => setImageFailed(true)}
           alt=""
