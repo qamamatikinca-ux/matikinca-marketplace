@@ -168,7 +168,7 @@ async function tryPostService(url: string, key: string) {
     const rows = Array.isArray(payload.rows) ? payload.rows : [];
     const maps = await loadDealerMaps(url, key, rows);
     const dealers = { ...(payload.dealers || {}), ...maps.byDealerId };
-    return { rows: enrichDealerRows(rows, maps), dealers };
+    return { rows: enrichDealerRows(rows.map((row) => toPublicRow(row as Record<string, unknown>)), maps), dealers };
   } catch { return null; }
 }
 
@@ -178,11 +178,12 @@ export async function GET(request: Request) {
   const { url, key } = getSupabaseConfig();
   if (!url.startsWith("https://") || !key) return NextResponse.json({ error: "Listings are temporarily unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
 
-  const service = await tryPostService(url, key);
-  if (service) return NextResponse.json({ rows: service.rows, dealers: service.dealers, source: "post-service" }, { headers: { "Cache-Control": "public, max-age=5, s-maxage=15, stale-while-revalidate=60" } });
-
   const response = await supabaseRequest(url, key, "rpc/get_public_job_listings", { method: "POST", body: "{}" });
-  if (!response.ok) return NextResponse.json({ error: "Listings are temporarily unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  if (!response.ok) {
+    const service = await tryPostService(url, key);
+    if (service) return NextResponse.json({ rows: service.rows, dealers: service.dealers, source: "post-service" }, { headers: { "Cache-Control": "public, max-age=5, s-maxage=15, stale-while-revalidate=60" } });
+    return NextResponse.json({ error: "Listings are temporarily unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
 
   const rows = (await response.json()) as unknown;
   const now = Date.now();

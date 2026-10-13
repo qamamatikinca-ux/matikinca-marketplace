@@ -14,6 +14,11 @@ function prune(now: number) {
   for (const [key, state] of windows) {
     if (state.resetAt <= now) windows.delete(key);
   }
+  while (windows.size >= 4000) {
+    const oldest = windows.keys().next().value;
+    if (!oldest) break;
+    windows.delete(oldest);
+  }
 }
 
 export function serverRateLimit(request: Request, scope: string, limit: number, windowMs: number) {

@@ -159,7 +159,21 @@ function smartFollowUp() {
   const href = candidate.querySelector<HTMLAnchorElement>('a[href*="/listing/"]')?.getAttribute("href") || window.location.pathname;
   const notice = document.createElement("aside");
   notice.dataset.loadlinkSmartFollowup = "true";
-  notice.innerHTML = `<span>FOLLOW-UP</span><strong>${title}</strong><p>This opportunity is time-sensitive. Open it now if you can help today.</p><div><a href="${href}">Open</a><button type="button">Dismiss</button></div>`;
+  const label = document.createElement("span");
+  label.textContent = "FOLLOW-UP";
+  const heading = document.createElement("strong");
+  heading.textContent = title;
+  const detail = document.createElement("p");
+  detail.textContent = "This opportunity is time-sensitive. Open it now if you can help today.";
+  const actions = document.createElement("div");
+  const link = document.createElement("a");
+  link.textContent = "Open";
+  link.href = href.startsWith("/listing/") ? href : window.location.pathname;
+  const dismiss = document.createElement("button");
+  dismiss.type = "button";
+  dismiss.textContent = "Dismiss";
+  actions.append(link, dismiss);
+  notice.append(label, heading, detail, actions);
   notice.querySelector("button")?.addEventListener("click", () => {
     const next = Array.from(new Set([...dismissed, id])).slice(-100);
     try { localStorage.setItem(FOLLOW_UP_DISMISSED_KEY, JSON.stringify(next)); } catch {}
