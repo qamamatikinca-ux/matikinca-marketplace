@@ -85,6 +85,8 @@ function markOwnerCards() {
     article.dataset.loadlinkOwnerCard = "true";
     ensureButtonIcon(edit, "edit");
     ensureButtonIcon(remove, "trash");
+    edit.dataset.loadlinkOwnerEdit = "true";
+    remove.dataset.loadlinkOwnerRemove = "true";
     edit.parentElement?.setAttribute("data-loadlink-owner-actions", "true");
 
     Array.from(article.querySelectorAll<HTMLElement>("div")).forEach((node) => {
@@ -150,7 +152,9 @@ article[data-loadlink-owner-card="true"] details[data-loadlink-compact-details="
 article[data-loadlink-owner-card="true"] [data-loadlink-share-report="true"]{margin-top:12px!important;border-radius:14px!important;overflow:hidden!important}
 article[data-loadlink-owner-card="true"] [data-loadlink-share-report="true"]>button{min-height:42px!important;font-size:10px!important;letter-spacing:.05em!important}
 article[data-loadlink-owner-card="true"] [data-loadlink-owner-actions="true"]{margin-top:8px!important;gap:8px!important}
-article[data-loadlink-owner-card="true"] [data-loadlink-owner-actions="true"]>button{min-height:42px!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;border-radius:14px!important;padding:0 13px!important;font-size:10px!important;letter-spacing:.05em!important;background:transparent!important}
+article[data-loadlink-owner-card="true"] [data-loadlink-owner-actions="true"]>button{min-height:42px!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;border-radius:14px!important;padding:0 13px!important;font-size:10px!important;letter-spacing:.05em!important}
+article[data-loadlink-owner-card="true"] button[data-loadlink-owner-edit="true"]{background:#f6b800!important;border:1px solid #f6b800!important;color:#101010!important}
+article[data-loadlink-owner-card="true"] button[data-loadlink-owner-remove="true"]{background:transparent!important;border:1px solid rgba(225,65,65,.32)!important;color:#d44747!important}
 button[data-loadlink-account-action="true"]{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important}
 button[data-loadlink-account-action="true"] svg{display:block!important;flex:none!important}
 html[data-loadlink-theme="dark"] article[data-loadlink-owner-card="true"] [data-loadlink-owner-analytics="true"] p{color:#f6b800!important}

@@ -435,7 +435,7 @@ export default function MyPostsPage() {
         )}
       </section>
 
-      {editing ? <EditModal listing={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); loadListings(); }} /> : null}
+      {editing ? <EditModal listing={editing} darkMode={darkMode} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); loadListings(); }} /> : null}
       {lockedAnalytics ? <LockedAnalyticsModal onClose={() => setLockedAnalytics(null)} /> : null}
       {analyticsListing ? <AnalyticsModal listing={analyticsListing} data={analytics} loading={analyticsLoading} onClose={() => setAnalyticsListing(null)} /> : null}
     </main>
@@ -548,7 +548,7 @@ function ReviewPostCard({ listing, darkMode, surface, muted, onEdit }: { listing
   );
 }
 
-function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose: () => void; onSaved: () => void }) {
+function EditModal({ listing, darkMode, onClose, onSaved }: { listing: MyListing; darkMode: boolean; onClose: () => void; onSaved: () => void }) {
   const [title, setTitle] = useState(listing.title);
   const [city, setCity] = useState(listing.city);
   const [vehicleGroup, setVehicleGroup] = useState(listing.vehicle_group || "Trucks / Trailers");
@@ -680,7 +680,7 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
 
   const photosToShow = replacementPreviews.length ? replacementPreviews : (listing.photos || []).slice(0, photoLimit);
   const feedback = rejected ? (listing.moderation_notes || "Update the requested details and send the post back to LoadLink for review.") : "Changes to an active post are reviewed before they return to the marketplace.";
-  const inputClass = "mt-2 h-12 w-full rounded-2xl border border-white/10 bg-white/[.06] px-4 text-sm font-semibold text-white outline-none transition placeholder:text-white/[.28] focus:border-[#f6b800]/70 focus:bg-white/[.08]";
+  const inputClass = `mt-2 h-12 w-full rounded-2xl border px-4 text-sm font-semibold outline-none transition focus:border-[#f6b800]/70 ${darkMode ? "border-white/10 bg-white/[.06] text-white placeholder:text-white/[.28]" : "border-black/15 bg-white text-black placeholder:text-black/35"}`;
   const feedbackLower = feedback.toLowerCase();
   const rejectionFocus =
     /category|vehicle|wrong type|incorrect type/.test(feedbackLower) ? "category"
@@ -713,7 +713,7 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/[.72] px-0 py-0 backdrop-blur-md sm:px-4 sm:py-6">
+    <div data-loadlink-post-editor="true" role="dialog" aria-modal="true" aria-label="Edit listing" className="fixed inset-0 z-[9999] overflow-y-auto bg-black/[.72] px-0 py-0 backdrop-blur-md sm:px-4 sm:py-6">
       <section className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col bg-[#090909] text-white shadow-2xl sm:min-h-0 sm:max-h-[92dvh] sm:overflow-hidden sm:rounded-[30px] sm:border sm:border-white/10">
         <header className="sticky top-0 z-20 border-b border-white/10 bg-[#090909]/95 px-5 pb-4 pt-[max(18px,env(safe-area-inset-top))] backdrop-blur-xl sm:px-6 sm:pt-5">
           <div className="flex items-start gap-4">
@@ -856,7 +856,7 @@ function EditModal({ listing, onClose, onSaved }: { listing: MyListing; onClose:
 
                 <label className="block">
                   <span className="text-[11px] font-black text-white/[.68]">Location</span>
-                  <SouthAfricaLocationInput value={city} onChange={setCity} darkMode allowAllSouthAfrica={false} placeholder="City, town or province" ariaLabel="Listing location" className={inputClass} />
+                  <SouthAfricaLocationInput value={city} onChange={setCity} darkMode={darkMode} allowAllSouthAfrica={false} placeholder="City, town or province" ariaLabel="Listing location" className={inputClass} />
                 </label>
 
                 <label className="block">

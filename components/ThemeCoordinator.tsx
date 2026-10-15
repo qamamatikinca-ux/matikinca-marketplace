@@ -23,6 +23,8 @@ function syncTheme() {
 export default function ThemeCoordinator() {
   useLayoutEffect(() => {
     syncTheme();
+    // Reveal server-rendered markup only after React applies the saved visual mode.
+    const revealFrame = window.requestAnimationFrame(() => { delete document.documentElement.dataset.loadlinkHydrating; });
     const media = window.matchMedia?.("(prefers-color-scheme: dark)");
     const onVisible = () => { if (document.visibilityState === "visible") syncTheme(); };
     window.addEventListener("storage", syncTheme);
@@ -32,6 +34,7 @@ export default function ThemeCoordinator() {
     document.addEventListener("visibilitychange", onVisible);
     media?.addEventListener("change", syncTheme);
     return () => {
+      window.cancelAnimationFrame(revealFrame);
       window.removeEventListener("storage", syncTheme);
       window.removeEventListener("loadlink-theme-change", syncTheme);
       window.removeEventListener("pageshow", syncTheme);

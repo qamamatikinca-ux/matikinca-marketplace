@@ -11,11 +11,11 @@ export async function GET(request: Request) {
   try {
     const fields = "id,slug,name,profile_image_url,short_bio,physical_location,follower_count,active_listing_count";
     const response = await fetch(`${url}/rest/v1/public_dealership_profiles?select=${fields}&order=follower_count.desc&limit=100`, {
-      headers: { apikey: key }, next: { revalidate: 30 }, signal: AbortSignal.timeout(12_000),
+      headers: { apikey: key }, cache: "no-store", signal: AbortSignal.timeout(12_000),
     });
     if (!response.ok) throw new Error("Directory request failed");
     const rows = normalizePublicDealerships(await response.json());
-    return Response.json({ rows }, { headers: { "Cache-Control": "public, max-age=15, s-maxage=30, stale-while-revalidate=120" } });
+    return Response.json({ rows }, { headers: { "Cache-Control": "no-store" } });
   } catch {
     return Response.json({ rows: [], error: "Dealerships could not load. Please try again." }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }

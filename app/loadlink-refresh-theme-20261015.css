@@ -90,3 +90,23 @@ html body [data-loadlink-vehicle-step-nav] .loadlink-vehicle-step-actions > butt
   }
   html body [data-loadlink-vehicle-step-nav] .loadlink-vehicle-step-actions > :last-child { margin-left: auto; }
 }
+
+/* A saved theme is applied before React hydrates. Never expose a wrong-mode frame. */
+html[data-loadlink-hydrating="true"] body { visibility: hidden !important; }
+
+/* The edit form must match the selected appearance; preserve gold actions. */
+html[data-loadlink-theme="light"] [data-loadlink-post-editor] > section { background:#fff !important; color:#151515 !important; border-color:rgba(0,0,0,.12) !important; }
+html[data-loadlink-theme="light"] [data-loadlink-post-editor] :is(header,footer) { background:rgba(255,255,255,.98) !important; border-color:rgba(0,0,0,.12) !important; color:#151515 !important; }
+html[data-loadlink-theme="light"] [data-loadlink-post-editor] [class*="bg-[#0c0c0c]"],
+html[data-loadlink-theme="light"] [data-loadlink-post-editor] [class*="bg-black/"],
+html[data-loadlink-theme="light"] [data-loadlink-post-editor] [class*="bg-white/"] { background-color:rgba(0,0,0,.035) !important; }
+html[data-loadlink-theme="light"] [data-loadlink-post-editor] [class*="border-white"] { border-color:rgba(0,0,0,.12) !important; }
+html[data-loadlink-theme="light"] [data-loadlink-post-editor] [class*="text-white"] { color:rgba(17,17,17,.76) !important; }
+html[data-loadlink-theme="light"] [data-loadlink-post-editor] [class*="text-red-300"] { color:#b91c1c !important; }
+html[data-loadlink-theme="light"] [data-loadlink-post-editor] [class*="text-[#ffd45a]"] { color:#8a6500 !important; }
+html[data-loadlink-theme="light"] [data-loadlink-post-editor] :is(input:not([type="file"]),textarea,select) { color:#111 !important; background:#fff !important; border-color:rgba(0,0,0,.16) !important; color-scheme:light; }
+html[data-loadlink-theme="light"] [data-loadlink-post-editor] :is(input,textarea)::placeholder { color:rgba(0,0,0,.38) !important; }
+html[data-loadlink-theme="light"] [data-loadlink-post-editor] [class*="bg-[#f6b800]"] { background:#f6b800 !important; color:#111 !important; }
+html[data-loadlink-theme="light"] [data-loadlink-post-editor] .relative > span[class*="bg-black/"] { background:rgba(0,0,0,.7) !important; color:#fff !important; }
+/* Invalid or empty src attributes never paint a native question-mark/broken-image icon. */
+html body img:not([src]),html body img[src=""],html body img[src="#"] { visibility:hidden !important; }

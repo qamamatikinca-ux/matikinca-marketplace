@@ -15,7 +15,7 @@ export default function LoadLinkThemeToggle({
       onClick={onToggle}
       aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
       title={darkMode ? "Light mode" : "Dark mode"}
-      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#f6b800]/55 bg-black text-[#f6b800] shadow-[0_8px_20px_rgba(0,0,0,.14)] transition active:scale-[0.96] ${className}`}
+      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border shadow-[0_8px_20px_rgba(0,0,0,.10)] transition active:scale-[0.96] ${darkMode ? "border-[#f6b800]/55 bg-black text-[#f6b800]" : "border-black/15 bg-white text-black"} ${className}`}
     >
       {darkMode ? <SunIcon /> : <MoonIcon />}
     </button>
