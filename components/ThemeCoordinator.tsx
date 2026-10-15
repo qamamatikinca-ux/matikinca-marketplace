@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { applyLoadLinkTheme, readLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 function updateBrowserChrome(theme: "light" | "dark") {
@@ -11,7 +11,7 @@ function updateBrowserChrome(theme: "light" | "dark") {
     meta.name = "theme-color";
     document.head.appendChild(meta);
   }
-  meta.content = colour;
+  if (meta.content !== colour) meta.content = colour;
 }
 
 function syncTheme() {
@@ -21,7 +21,7 @@ function syncTheme() {
 }
 
 export default function ThemeCoordinator() {
-  useEffect(() => {
+  useLayoutEffect(() => {
     syncTheme();
     const media = window.matchMedia?.("(prefers-color-scheme: dark)");
     const onVisible = () => { if (document.visibilityState === "visible") syncTheme(); };

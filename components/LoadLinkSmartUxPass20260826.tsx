@@ -16,7 +16,7 @@ function findByText(pattern: RegExp, root: ParentNode = document) {
 
 function nearestCard(node: HTMLElement | null) {
   if (!node) return null;
-  return node.closest<HTMLElement>("section,article,[data-loadlink-card],.rounded-\[24px\],.rounded-\[28px\],.rounded-\[32px\]") || node.parentElement;
+  return node.closest<HTMLElement>('section,article,[data-loadlink-card],[class~="rounded-[24px]"],[class~="rounded-[28px]"],[class~="rounded-[32px]"]') || node.parentElement;
 }
 
 function applyMessagePolish() {
@@ -29,6 +29,9 @@ function applyMessagePolish() {
 }
 
 function enhanceDealerPoster() {
+  // A directory heading also says "verified dealerships". Only listing pages
+  // own a seller card; never inject seller controls into the directory.
+  if (!/^\/listing\/[^/]+\/?$/.test(window.location.pathname)) return;
   const dealershipEvidence = findByText(/verified dealership|dealership member|dealer account|loadlink dealership/i);
   if (!dealershipEvidence.length) return;
 
@@ -136,8 +139,9 @@ function rememberDriverSetup() {
 
 function standardiseSortControls() {
   if (!/^\/(jobs|contracts|vehicles)/.test(window.location.pathname)) return;
-  document.querySelectorAll<HTMLElement>("label,button,div").forEach((node) => {
-    if (/^sort by/i.test(normaliseText(node.textContent)) && node.querySelector("select")) node.dataset.loadlinkUnifiedSort = "true";
+  document.querySelectorAll<HTMLSelectElement>("select").forEach((select) => {
+    const control = select.closest<HTMLElement>("label,.loadlink-sort-control");
+    if (control && /^sort by/i.test(normaliseText(control.textContent))) control.dataset.loadlinkUnifiedSort = "true";
   });
 }
 

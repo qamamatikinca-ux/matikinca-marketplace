@@ -7,6 +7,7 @@ export default function LoadLinkBrokenImageGuard20260826() {
     function handleImageError(event: Event) {
       const image = event.target;
       if (!(image instanceof HTMLImageElement)) return;
+      if (image.dataset.loadlinkManagedImage === "true") return;
       const original = image.dataset.loadlinkOriginalSrc;
       if (original && image.src.includes("/_next/image") && image.dataset.loadlinkOriginalRetried !== "1") {
         image.dataset.loadlinkOriginalRetried = "1";

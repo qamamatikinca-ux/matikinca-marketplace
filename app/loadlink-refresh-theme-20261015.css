@@ -1,0 +1,92 @@
+/* Keep initial paint and hydrated controls on the same selected theme. */
+html[data-loadlink-theme="light"] {
+  --background: #fff;
+  --foreground: #111;
+  --ll-refresh-panel: rgba(255, 255, 255, .92);
+  --ll-refresh-field: #fff;
+  --ll-refresh-ink: #111;
+  --ll-refresh-muted: rgba(17, 17, 17, .55);
+  --ll-refresh-border: rgba(17, 17, 17, .14);
+}
+html[data-loadlink-theme="dark"] {
+  --background: #050505;
+  --foreground: #fff;
+  --ll-refresh-panel: rgba(15, 15, 15, .92);
+  --ll-refresh-field: #171717;
+  --ll-refresh-ink: #fff;
+  --ll-refresh-muted: rgba(255, 255, 255, .55);
+  --ll-refresh-border: rgba(255, 255, 255, .14);
+}
+html[data-loadlink-theme] body main.min-h-screen {
+  background-color: var(--loadlink-page) !important;
+  color: var(--loadlink-text) !important;
+}
+html[data-loadlink-theme] body [data-loadlink-site-header] {
+  background: var(--loadlink-surface) !important;
+  color: var(--loadlink-text) !important;
+}
+
+html[data-loadlink-theme] body [data-loadlink-jobs-page] [data-loadlink-jobs-search-shell],
+html[data-loadlink-theme] body [data-loadlink-jobs-page] [data-loadlink-jobs-secondary-action],
+html[data-loadlink-theme] body [data-loadlink-jobs-page] #matching-jobs .loadlink-sort-control {
+  background: var(--ll-refresh-panel) !important;
+  color: var(--ll-refresh-ink) !important;
+  border-color: var(--ll-refresh-border) !important;
+}
+html[data-loadlink-theme] body [data-loadlink-jobs-page] [data-loadlink-jobs-search-shell] :is(input, select),
+html[data-loadlink-theme] body [data-loadlink-jobs-page] #matching-jobs .loadlink-sort-control select {
+  background: var(--ll-refresh-field) !important;
+  color: var(--ll-refresh-ink) !important;
+  border-color: var(--ll-refresh-border) !important;
+  color-scheme: inherit;
+}
+html[data-loadlink-theme] body [data-loadlink-jobs-page] [data-loadlink-jobs-search-shell] input::placeholder,
+html[data-loadlink-theme] body [data-loadlink-jobs-page] #matching-jobs .loadlink-sort-control > span {
+  color: var(--ll-refresh-muted) !important;
+}
+html[data-loadlink-theme] body [data-loadlink-jobs-page] #matching-jobs .loadlink-sort-control select {
+  background: transparent !important;
+}
+
+/* Never paint a native broken-image icon while the real image is resolving. */
+img[data-loadlink-image-state="pending"],
+img[data-loadlink-image-state="unavailable"] { visibility: hidden !important; }
+[data-loadlink-page-loading="true"] { background: var(--background, #fff) !important; }
+
+/* Show only the active step, including before the wizard hydrates. */
+form#vehicle-listing-form:not([data-loadlink-wizard-ready="true"]) > section:nth-of-type(n+2):nth-of-type(-n+4),
+form#vehicle-listing-form > section[data-loadlink-wizard-active="false"] { display: none !important; }
+
+html body [data-loadlink-vehicle-step-nav] .loadlink-vehicle-step-actions {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr) !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+html body [data-loadlink-vehicle-step-nav] .loadlink-vehicle-step-actions[data-has-back="true"] {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.35fr) !important;
+}
+html body [data-loadlink-vehicle-step-nav] .loadlink-vehicle-step-actions > button {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 48px !important;
+  height: auto !important;
+  padding: 12px 8px !important;
+  border-radius: 16px !important;
+  font-size: 14px !important;
+  line-height: 1.25 !important;
+  letter-spacing: normal !important;
+  white-space: nowrap !important;
+}
+@media (min-width: 640px) {
+  html body [data-loadlink-vehicle-step-nav] .loadlink-vehicle-step-actions,
+  html body [data-loadlink-vehicle-step-nav] .loadlink-vehicle-step-actions[data-has-back="true"] {
+    display: flex !important;
+  }
+  html body [data-loadlink-vehicle-step-nav] .loadlink-vehicle-step-actions > button {
+    width: auto !important;
+    min-width: 100px !important;
+    padding-inline: 22px !important;
+  }
+  html body [data-loadlink-vehicle-step-nav] .loadlink-vehicle-step-actions > :last-child { margin-left: auto; }
+}

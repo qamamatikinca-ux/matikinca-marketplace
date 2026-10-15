@@ -1,5 +1,6 @@
 // LoadLink major revision — 2026-08-26
 import NetworkRecovery from "@/components/platform/NetworkRecovery";
+import LoadLinkBoundary from "@/components/platform/LoadLinkBoundary";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
@@ -31,8 +32,8 @@ import "./loadlink-completion-detail-20260823.css";
 import "./loadlink-smart-ux-20260826.css";
 import "./loadlink-call-chat-20261013.css";
 import "./loadlink-vehicle-experience-20261013.css";
+import "./loadlink-refresh-theme-20261015.css";
 import VehicleDraftResumeToast from "@/components/VehicleDraftResumeToast";
-import GlobalLoading from "@/components/GlobalLoading";
 import ChatLauncher from "@/components/ChatLauncher";
 import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";
 import AuthBootstrap from "@/components/AuthBootstrap";
@@ -101,11 +102,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         <meta name="color-scheme" content="light dark" />
         <meta name="theme-color" content="#ffffff" />
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var k='loadlink-theme',t=localStorage.getItem(k);if(t!=='dark'&&t!=='light'){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}var r=document.documentElement;r.dataset.loadlinkTheme=t;r.classList.toggle('dark',t==='dark');r.style.colorScheme=t;r.dataset.loadlinkSimple=localStorage.getItem('loadlink-simple-mode')==='true'?'true':'false';var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',t==='dark'?'#050505':'#ffffff')}catch(e){}})();` }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){var t,s=false;try{t=localStorage.getItem('loadlink-theme');s=localStorage.getItem('loadlink-simple-mode')==='true'}catch(e){}if(t!=='dark'&&t!=='light'){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}var r=document.documentElement;r.dataset.loadlinkTheme=t;r.classList.toggle('dark',t==='dark');r.style.colorScheme=t;r.dataset.loadlinkSimple=s?'true':'false';var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',t==='dark'?'#050505':'#f4efe3')})();` }} />
+        <noscript><style>{'img[data-loadlink-image-state="pending"]{visibility:visible!important}'}</style></noscript>
       </head>
-      <body data-loadlink-release="20261013-vehicle-experience-r3">
-        <ThemeCoordinator /><LoadLinkUiRepairV273 /><SimpleModeCoordinator /><AccountActivityTracker /><AuthMfaGate /><ProfileOnboardingGate /><MarketplaceRestrictionGuard /><AccountSettingsGlassFix /><LoadLinkSelectLabelFix /><LoadLinkInteractionSystem /><LoadLinkTouchScrollGuard /><LoadLinkShareEnhancer /><DealerPostBenefitsEnhancer /><MarketplaceUxPolishEnhancer /><PhotoGalleryModernizer /><LoadLinkUniversalUiGuard /><LoadLinkAuditUpdateBridge /><LoadLinkCriticalInteractionFixes /><LoadLinkFinalUxRepair20260820 /><LoadLinkFinalReleasePolishBootstrap20260821 /><LoadLinkReleaseCompletion20260821 /><LoadLinkReleaseRecovery20260821 /><LoadLinkProductRepair20260822 /><LoadLinkMobileUxCorrection20260822 /><ListingReportGuard /><ChatComposerActions /><LogisticsToolsFinalEnhancer /><DealerWorkspaceNavigationEnhancer /><DealerPackageDetailsEnhancer /><LoadLinkMajorUpdate20260823 /><LoadLinkCallBootstrap /><LoadLinkDealerChatStatus20260823 /><LoadLinkChatUiPolish20260823 /><LoadLinkChatMediaPreview20260823 /><LoadLinkChatInfoCompletion20260823 /><LoadLinkDealerStatusViewer20260823 /><LoadLinkLocationCompletion20260823 /><LoadLinkDistanceLayer20260823 /><LoadLinkDealershipOwnerEdit20260823 /><LoadLinkFinalProductPass20260823 /><LoadLinkFinalMarketplacePolish20260824 /><LoadLinkBrokenImageGuard20260826 /><LoadLinkSmartUxPass20260826 /><LoadLinkCookieConsent20260822 />
-        <Suspense fallback={null}><GlobalLoading /></Suspense>
+      <body data-loadlink-release="20261015-refresh-theme-r1">
+        <ThemeCoordinator /><LoadLinkUiRepairV273 /><SimpleModeCoordinator /><AccountActivityTracker /><AuthMfaGate /><ProfileOnboardingGate /><MarketplaceRestrictionGuard /><AccountSettingsGlassFix /><LoadLinkSelectLabelFix /><LoadLinkInteractionSystem /><LoadLinkTouchScrollGuard /><LoadLinkShareEnhancer /><DealerPostBenefitsEnhancer /><MarketplaceUxPolishEnhancer /><PhotoGalleryModernizer /><LoadLinkUniversalUiGuard /><LoadLinkAuditUpdateBridge /><LoadLinkCriticalInteractionFixes /><LoadLinkFinalUxRepair20260820 /><LoadLinkFinalReleasePolishBootstrap20260821 /><LoadLinkReleaseCompletion20260821 /><LoadLinkReleaseRecovery20260821 /><LoadLinkProductRepair20260822 /><LoadLinkMobileUxCorrection20260822 /><ListingReportGuard /><ChatComposerActions /><LogisticsToolsFinalEnhancer /><DealerWorkspaceNavigationEnhancer /><DealerPackageDetailsEnhancer /><LoadLinkMajorUpdate20260823 /><LoadLinkCallBootstrap /><LoadLinkDealerChatStatus20260823 /><LoadLinkChatUiPolish20260823 /><LoadLinkChatMediaPreview20260823 /><LoadLinkChatInfoCompletion20260823 /><LoadLinkDealerStatusViewer20260823 /><LoadLinkLocationCompletion20260823 /><LoadLinkDistanceLayer20260823 /><LoadLinkDealershipOwnerEdit20260823 /><LoadLinkFinalProductPass20260823 /><LoadLinkFinalMarketplacePolish20260824 /><LoadLinkBrokenImageGuard20260826 /><LoadLinkBoundary name="marketplace enhancements"><LoadLinkSmartUxPass20260826 /></LoadLinkBoundary><LoadLinkCookieConsent20260822 />
         <SwipeDotsEnhancer /><AuthBootstrap /><NotificationCenter /><ChatLauncher /><LoadLinkToastCenter /><VehicleDraftResumeToast /><LoadLinkDeleteConfirmationLayer /><NetworkRecovery />
         {children}
         <Suspense fallback={null}><LoadLinkRuntimeBoundary /></Suspense>

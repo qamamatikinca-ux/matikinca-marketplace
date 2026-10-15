@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { clearVehicleDraft } from "@/lib/vehicleDraft";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 
 const STEP_LABELS = ["Type", "Vehicle details", "Photos & documents", "Review"] as const;
 const FORM_ID = "vehicle-listing-form";
@@ -61,14 +61,14 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
     return ready;
   }, [activeStep]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!onListingRoute) return;
     let frame = 0;
     const sync = () => {
       window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => applyStep());
     };
-    sync();
+    applyStep();
     const observer = new MutationObserver(sync);
     observer.observe(document.getElementById("listing-form") || document.body, { childList: true, subtree: true });
 
@@ -177,14 +177,13 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
 
       {formReady ? (
         <nav
-          data-loadlink-owned-vehicle-wizard="true" className={`fixed inset-x-0 bottom-0 z-40 border-t px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-2xl ${darkMode ? "border-white/10 bg-black/88" : "border-black/10 bg-[#f5f1e8]/90"}`}
+          data-loadlink-owned-vehicle-wizard="true" data-loadlink-vehicle-step-nav="true" className={`fixed inset-x-0 bottom-0 z-40 border-t px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-2xl ${darkMode ? "border-white/10 bg-black/88" : "border-black/10 bg-[#f5f1e8]/90"}`}
           aria-label={`${listingLabel} listing step controls`}
         >
-          <div className="mx-auto flex max-w-5xl items-center gap-2">
-            <button type="button" onClick={() => setCancelOpen(true)} className={`h-12 rounded-[16px] border px-4 text-xs font-bold ${darkMode ? "border-white/14 bg-white/[.025] text-white/70" : "border-black/12 bg-white/30 text-black/65"}`}>Cancel {listingLabel} listing</button>
-            {activeStep > 0 ? <button type="button" onClick={goBack} className={`h-12 rounded-[16px] border px-5 text-xs font-bold ${darkMode ? "border-white/14" : "border-black/12"}`}>Back</button> : null}
-            <div className="flex-1" />
-            {activeStep < lastStep ? <button type="button" onClick={goNext} className="h-12 min-w-[118px] rounded-[16px] bg-[#f6b800] px-5 text-sm font-bold text-black transition active:scale-[.99]">Continue</button> : <span className="px-2 text-right text-[11px] font-semibold opacity-55">Review your details, then submit below.</span>}
+          <div className="loadlink-vehicle-step-actions mx-auto max-w-5xl" data-has-back={activeStep > 0}>
+            <button type="button" aria-label={`Cancel ${listingLabel} listing`} onClick={() => setCancelOpen(true)} className={`rounded-[16px] border font-bold ${darkMode ? "border-white/14 bg-white/[.025] text-white/70" : "border-black/12 bg-white/30 text-black/65"}`}>Cancel</button>
+            {activeStep > 0 ? <button type="button" onClick={goBack} className={`rounded-[16px] border font-bold ${darkMode ? "border-white/14" : "border-black/12"}`}>Back</button> : null}
+            {activeStep < lastStep ? <button type="button" onClick={goNext} className="rounded-[16px] bg-[#f6b800] font-bold text-black transition active:scale-[.99]">Continue</button> : <span className="text-right text-[11px] font-semibold opacity-55">Review, then submit below.</span>}
           </div>
         </nav>
       ) : null}

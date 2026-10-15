@@ -1,6 +1,7 @@
 "use client";
 
 import LoadLinkImage from "@/components/LoadLinkImage";
+import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 import { useEffect, useMemo, useState } from "react";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
@@ -153,26 +154,13 @@ function optionPostMeta(option: ChoiceOption) {
 }
 
 export default function LoadLinkInteractionSystem() {
-  const [darkMode, setDarkMode] = useState(false);
+  const { darkMode } = useLoadLinkTheme();
   const [dateTarget, setDateTarget] = useState<DateTarget | null>(null);
   const [choiceTarget, setChoiceTarget] = useState<ChoiceTarget | null>(null);
   const [suggestionTarget, setSuggestionTarget] = useState<SuggestionTarget | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [shownMonth, setShownMonth] = useState(() => monthStart(new Date()));
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
-
-  useEffect(() => {
-    const syncTheme = () => {
-      setDarkMode(
-        document.documentElement.dataset.loadlinkTheme === "dark" ||
-        document.documentElement.classList.contains("dark"),
-      );
-    };
-    syncTheme();
-    const observer = new MutationObserver(syncTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-loadlink-theme"] });
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     const openReport = (event: MouseEvent) => {

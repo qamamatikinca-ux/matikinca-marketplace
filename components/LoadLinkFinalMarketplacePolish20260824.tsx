@@ -45,6 +45,7 @@ function quickLinkFallback(href: string) {
 
 function repairImages() {
   document.querySelectorAll<HTMLImageElement>("img").forEach((image) => {
+    if (image.dataset.loadlinkManagedImage === "true") return;
     if (image.dataset.loadlinkFallbackBound === "true") return;
     const link = image.closest<HTMLAnchorElement>("a[href]");
     if (!link) return;
