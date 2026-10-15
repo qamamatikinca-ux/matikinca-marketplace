@@ -130,7 +130,7 @@ export default function ListYourVehiclePage() {
   }, [entryMode, entryReady, dealerPostingGate]);
 
   if (!booted) return <LoadLinkLoading />;
-  if (entryMode && dealershipRoute) return <LegacyVehicleListingPage entryMode={entryMode} resumeDraft={new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("resume") === "1"} />;
+  if (entryMode && dealershipRoute) return <LegacyVehicleListingPage entryMode={entryMode} initialPackage="dealer" resumeDraft={new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("resume") === "1"} />;
 
   if (!entryMode) {
     return (
