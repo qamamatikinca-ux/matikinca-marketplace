@@ -49,8 +49,8 @@ html[data-loadlink-theme] body [data-loadlink-jobs-page] #matching-jobs .loadlin
 }
 
 /* Never paint a native broken-image icon while the real image is resolving. */
-img[data-loadlink-image-state="pending"],
-img[data-loadlink-image-state="unavailable"] { visibility: hidden !important; }
+html body img[data-loadlink-managed-image="true"][data-loadlink-image-state="pending"],
+html body img[data-loadlink-managed-image="true"][data-loadlink-image-state="unavailable"] { visibility: hidden !important; }
 [data-loadlink-page-loading="true"] { background: var(--background, #fff) !important; }
 
 /* Show only the active step, including before the wizard hydrates. */
