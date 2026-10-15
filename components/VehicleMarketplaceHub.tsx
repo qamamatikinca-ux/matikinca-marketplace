@@ -164,7 +164,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
             <h2 className="text-4xl font-black tracking-[-.05em] md:text-5xl">Vehicles and mobile units available</h2>
             <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Approved commercial stock, presented with the same clear marketplace pattern as LoadLink jobs.</p>
           </div>
-          <label className={`loadlink-sort-control w-fit border ${surface}`}>
+          <label className={`loadlink-sort-control ${surface}`}>
             <span>Sort by</span>
             <select value={sort} onChange={(event) => setSort(event.target.value as SortMode)}>
               <option value="newest">Newest first</option>

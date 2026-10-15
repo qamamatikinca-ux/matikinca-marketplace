@@ -311,7 +311,7 @@ export default function MyPostsPage() {
             <FilterButton active={filter === "review"} onClick={() => setFilter("review")}>Review</FilterButton>
             <FilterButton active={filter === "closed"} onClick={() => setFilter("closed")}>Completed</FilterButton>
           </div>
-          <label className={`flex h-11 items-center gap-2 rounded-xl border px-3 ${surface}`}>
+          <label className={`loadlink-sort-control ${surface}`}>
             <span className={`text-[10px] font-black uppercase tracking-[.12em] ${muted}`}>Sort</span>
             <select value={sortMode} onChange={(event) => setSortMode(event.target.value as MyPostsSort)} className="bg-transparent text-xs font-black outline-none">
               <option value="newest">Newest first</option>

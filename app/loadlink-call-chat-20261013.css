@@ -63,3 +63,24 @@ html[data-loadlink-theme="light"] .ll-call-secondary { color: #25251f; border-co
   main form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), main form textarea, main form select { font-size: 16px !important; max-width: 100%; }
   main form input, main form select { min-height: 44px; }
 }
+
+/* Final 2026 call experience: WhatsApp-style full-screen audio with LoadLink identity. */
+.ll-call-active-overlay {padding:0!important;background:#0b0c0b!important;backdrop-filter:none!important;}
+.ll-call-active-sheet {width:100%!important;max-width:none!important;max-height:100dvh!important;height:100dvh!important;border:0!important;border-radius:0!important;padding:calc(env(safe-area-inset-top) + 22px) 24px calc(env(safe-area-inset-bottom) + 30px)!important;background:radial-gradient(ellipse 75% 45% at 50% 22%,rgba(246,184,0,.12),transparent 80%),linear-gradient(165deg,#1d201e 0%,#0b0d0c 66%,#070807 100%)!important;box-shadow:none!important;overflow:auto;}
+.ll-call-active-sheet header{max-width:540px;width:100%;margin-inline:auto;}
+.ll-call-active-sheet header p{font-size:11px!important;letter-spacing:.22em!important;color:#b4b6ad!important;}
+.ll-call-active-sheet header button{background:rgba(255,255,255,.1)!important;border-color:rgba(255,255,255,.15)!important;color:white!important;}
+.ll-call-active-sheet .ll-call-identity{gap:0;padding:32px 0;}
+.ll-call-active-sheet [data-loadlink-call-avatar]{width:132px!important;height:132px!important;border:3px solid rgba(246,184,0,.85)!important;box-shadow:0 0 0 9px rgba(246,184,0,.075),0 18px 55px rgba(0,0,0,.3)!important;}
+.ll-call-active-sheet h2{font-size:clamp(27px,7vw,37px)!important;font-weight:750!important;letter-spacing:-.04em!important;margin-top:28px!important;}
+.ll-call-active-sheet .ll-call-status{font-size:14px!important;color:#d3d4cf!important;font-weight:500!important;}
+.ll-call-active-sheet .ll-call-timer{font-size:24px!important;color:#f6b800!important;letter-spacing:.08em!important;margin-top:16px!important;}
+.ll-call-active-sheet .ll-call-allowance{font-size:11px!important;color:#959c95!important;}
+.ll-call-active-sheet .ll-call-controls{max-width:360px!important;gap:16px!important;margin:0 auto!important;}
+.ll-call-active-sheet .ll-call-control{width:clamp(76px,22vw,90px)!important;height:84px!important;border:0!important;border-radius:24px!important;background:rgba(255,255,255,.10)!important;color:#f3f4f1!important;font-size:11px!important;font-weight:700!important;gap:8px!important;}
+.ll-call-active-sheet .ll-call-control[aria-pressed="true"]{background:#f6b800!important;color:#111!important;}
+.ll-call-active-sheet .ll-call-end{width:66px!important;height:66px!important;margin-top:25px!important;background:#e5484d!important;box-shadow:0 14px 40px rgba(229,72,77,.22)!important;}
+.ll-call-sheet:not(.ll-call-active-sheet){border-radius:26px!important;}
+.ll-call-sheet:not(.ll-call-active-sheet) button{min-height:48px;}
+html[data-loadlink-theme="light"] .ll-call-active-sheet {color:#fff!important;background:radial-gradient(ellipse 75% 45% at 50% 22%,rgba(246,184,0,.12),transparent 80%),linear-gradient(165deg,#1d201e,#090a09)!important;}
+@media(max-height:680px){.ll-call-active-sheet [data-loadlink-call-avatar]{width:82px!important;height:82px!important}.ll-call-active-sheet .ll-call-identity{padding:14px 0}.ll-call-active-sheet h2{margin-top:13px!important}.ll-call-active-sheet .ll-call-controls{gap:7px!important}.ll-call-active-sheet .ll-call-end{margin-top:12px!important}}

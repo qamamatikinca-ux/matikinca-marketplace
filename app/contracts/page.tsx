@@ -238,7 +238,7 @@ export default function ContractsPage() {
             <h2 className="text-4xl font-black tracking-[-.05em]">Available contracts</h2>
             <p className={`mt-2 text-xs font-semibold ${muted}`}>{loading ? "Loading current contracts…" : `${filtered.length} current ${filtered.length === 1 ? "contract" : "contracts"}`}</p>
           </div>
-          <label className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 text-xs font-bold ${surface}`}>
+          <label className={`loadlink-sort-control ${surface}`}>
             <span className={muted}>Sort by</span>
             <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)} className="bg-transparent font-black outline-none"><option value="newest">Newest first</option><option value="starting">Starting soonest</option><option value="oldest">Oldest first</option></select>
           </label>
