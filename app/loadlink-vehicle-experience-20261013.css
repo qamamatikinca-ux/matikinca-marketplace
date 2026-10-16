@@ -30,7 +30,7 @@ html body .ll-call-active-sheet .ll-call-end { width: 62px !important; height: 6
 html body .ll-vehicle-entry-choice { max-width: 760px; padding: 8px 0 20px; }
 html body .ll-vehicle-entry-title { font-size: 28px !important; line-height: 1.15 !important; font-weight: 700 !important; }
 html body .ll-vehicle-entry-choice > p { font-size: 14px !important; line-height: 1.6 !important; }
-html body .ll-vehicle-type-card { position: relative; min-height: 148px; border-radius: 24px !important; padding: 22px !important; }
+html body .ll-vehicle-type-card { position: relative; min-height: 148px; border-radius: 9999px !important; padding: 22px 32px !important; }
 html body .ll-vehicle-type-card > span:not(.ll-vehicle-type-icon) { font-size: 18px !important; }
 html body .ll-vehicle-type-card > span:last-child { font-size: 12px !important; line-height: 1.6 !important; margin-top: 6px; }
 .ll-vehicle-type-icon { display: flex; width: 44px; height: 44px; align-items: center; justify-content: center; margin-bottom: 18px; border-radius: 14px; background: rgba(246,184,0,.14); color: #ad8000; }

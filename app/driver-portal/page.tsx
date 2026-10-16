@@ -60,12 +60,16 @@ export default function DriverPortalPage() {
           <div className="mx-auto mt-6 grid w-full max-w-md gap-3">
             <Link
               href="/drivers"
+              data-loadlink-hero-pill="true"
+              data-variant="primary"
               className="flex min-h-14 items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]"
             >
               View available drivers
             </Link>
             <RequireAuthLink
               href="/driver-profile"
+              data-loadlink-hero-pill="true"
+              data-variant="secondary"
               className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]"
             >
               {profileState === "existing" ? "Update driver profile" : profileState === "checking" ? "Driver profile" : "Create driver profile"}

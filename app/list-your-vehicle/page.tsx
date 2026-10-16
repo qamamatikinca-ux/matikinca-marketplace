@@ -143,22 +143,14 @@ export default function ListYourVehiclePage() {
             <h1 className="mx-auto max-w-4xl text-[clamp(3rem,12vw,5.7rem)] font-black leading-[.94] tracking-[-.055em]">List your truck, trailer or mobile unit.</h1>
             <p className="mx-auto mt-5 max-w-2xl text-sm font-semibold leading-7 text-white/72 md:text-base">Create a LoadLink listing in a guided flow, or browse commercial stock already on the marketplace.</p>
             <div data-loadlink-vehicle-entry-actions="true" className="mx-auto mt-6 grid w-full max-w-md gap-3">
-              <button type="button" onClick={() => openEntry("vehicle")} className="flex min-h-14 w-full items-center justify-center rounded-full border border-[#f6b800] bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]">List vehicle</button>
-              <button type="button" onClick={() => openEntry("mobile-unit")} className="flex min-h-14 w-full items-center justify-center rounded-full border border-[#f6b800] bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]">List mobile unit</button>
-              <a href="#vehicle-marketplace" className="flex min-h-14 w-full items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]">Browse marketplace</a>
+              <button type="button" data-loadlink-hero-pill="true" data-variant="primary" onClick={() => openEntry("vehicle")} className="flex min-h-14 w-full items-center justify-center rounded-full border border-[#f6b800] bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]">List vehicle</button>
+              <button type="button" data-loadlink-hero-pill="true" data-variant="primary" onClick={() => openEntry("mobile-unit")} className="flex min-h-14 w-full items-center justify-center rounded-full border border-[#f6b800] bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]">List mobile unit</button>
+              <a href="#vehicle-marketplace" data-loadlink-hero-pill="true" data-variant="secondary" className="flex min-h-14 w-full items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]">Browse marketplace</a>
             </div>
           </div>
         </section>
         <div id="vehicle-marketplace" className="scroll-mt-20"><VehicleMarketplaceHub darkMode={darkMode} /></div>
-        <style jsx global>{`
-          main[data-loadlink-vehicle-portal="working-entry-v11"] [data-loadlink-vehicle-entry-actions="true"] > :is(button,a) {
-            border-radius:9999px !important;
-            min-height:56px !important;
-            font-size:14px !important;
-            font-weight:900 !important;
-            letter-spacing:.1em !important;
-          }
-        `}</style>
+
       </main>
     );
   }
