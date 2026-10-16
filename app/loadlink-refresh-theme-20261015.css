@@ -26,7 +26,6 @@ html[data-loadlink-theme] body [data-loadlink-site-header] {
   color: var(--loadlink-text) !important;
 }
 
-html[data-loadlink-theme] body [data-loadlink-jobs-page] [data-loadlink-jobs-search-shell],
 html[data-loadlink-theme] body [data-loadlink-jobs-page] [data-loadlink-jobs-secondary-action],
 html[data-loadlink-theme] body [data-loadlink-jobs-page] #matching-jobs .loadlink-sort-control {
   background: var(--ll-refresh-panel) !important;
@@ -111,13 +110,46 @@ html[data-loadlink-theme="light"] [data-loadlink-post-editor] .relative > span[c
 /* Invalid or empty src attributes never paint a native question-mark/broken-image icon. */
 html body img:not([src]),html body img[src=""],html body img[src="#"] { visibility:hidden !important; }
 
-/* Align jobs discovery with the approved Contracts search surface. */
-html[data-loadlink-theme="light"] [data-loadlink-jobs-page] [data-loadlink-jobs-search-shell] { background:rgba(183,180,171,.82)!important; border:2px solid rgba(255,255,255,.85)!important; border-radius:34px!important; padding:30px 32px!important; backdrop-filter:blur(8px)!important; box-shadow:none!important; }
-html[data-loadlink-theme="light"] [data-loadlink-jobs-page] [data-loadlink-jobs-search-shell] label>span { color:#747575!important; letter-spacing:.08em!important; font-size:12px!important; }
-html[data-loadlink-theme="light"] [data-loadlink-jobs-page] [data-loadlink-jobs-search-shell] :is(input,select) { height:56px!important; min-height:56px!important; background:white!important; color:#171717!important; border:1.5px solid #d5d5d5!important; border-radius:17px!important; font-size:16px!important; }
-html[data-loadlink-theme="light"] [data-loadlink-jobs-page] [data-loadlink-jobs-search-shell] button { min-height:56px!important; border-radius:17px!important; width:100%!important; }
-html[data-loadlink-theme="light"] [data-loadlink-jobs-page] [data-loadlink-jobs-search-shell] select { color-scheme:light; }
+/* Jobs and Contracts use the same warm-grey search glass in light mode. */
+html[data-loadlink-theme="light"] body main[data-loadlink-jobs-page="true"] [data-loadlink-jobs-search-shell] {
+  background: rgba(174, 172, 164, .87) !important;
+  border: 2px solid rgba(255, 255, 255, .84) !important;
+  border-radius: 25px !important;
+  padding: 16px !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(12px) !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,.14) !important;
+}
+html[data-loadlink-theme="dark"] body main[data-loadlink-jobs-page="true"] [data-loadlink-jobs-search-shell] {
+  background: rgba(10,10,10,.76) !important;
+  border: 1px solid rgba(255,255,255,.22) !important;
+  border-radius: 25px !important;
+  padding: 16px !important;
+}
+html[data-loadlink-theme] body main[data-loadlink-jobs-page="true"] [data-loadlink-jobs-search-shell] label > span {
+  color: #717171 !important;
+  font-size: 10px !important;
+  letter-spacing: .15em !important;
+  line-height: 1.6 !important;
+}
+html[data-loadlink-theme="dark"] body main[data-loadlink-jobs-page="true"] [data-loadlink-jobs-search-shell] label > span { color: #c7ab68 !important; }
+html[data-loadlink-theme] body main[data-loadlink-jobs-page="true"] [data-loadlink-jobs-search-shell] :is(input,select) {
+  background: white !important;
+  color: #171717 !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  font-size: 16px !important;
+  border: 1px solid #dedede !important;
+  border-radius: 12px !important;
+  color-scheme: light;
+}
+html[data-loadlink-theme] body main[data-loadlink-jobs-page="true"] [data-loadlink-jobs-search-shell] button {
+  height: 48px !important;
+  min-height: 48px !important;
+  border-radius: 12px !important;
+  background: #f6b800 !important;
+  color: #111 !important;
+}
 /* One reusable sort presentation, retaining each page's own sort logic. */
 html[data-loadlink-theme] .loadlink-sort-control { display:inline-flex; align-items:center; gap:9px; min-height:44px; border-radius:12px; padding:0 13px; font-size:12px; font-weight:800; border:1px solid var(--ll-refresh-border)!important; background:var(--ll-refresh-panel)!important; color:var(--ll-refresh-ink)!important; }
 html[data-loadlink-theme] .loadlink-sort-control select { min-width:0; background:transparent!important; border:0!important; padding:0 20px 0 0; color:inherit!important; font-size:12px; font-weight:900; outline:none; }
-@media(max-width:639px){html[data-loadlink-theme="light"] [data-loadlink-jobs-page] [data-loadlink-jobs-search-shell] {padding:20px 18px!important;border-radius:28px!important;}html[data-loadlink-theme="light"] [data-loadlink-jobs-page] [data-loadlink-jobs-search-shell] :is(input,select){font-size:16px!important;}}

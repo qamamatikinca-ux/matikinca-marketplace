@@ -84,3 +84,23 @@ html[data-loadlink-theme="light"] .ll-call-secondary { color: #25251f; border-co
 .ll-call-sheet:not(.ll-call-active-sheet) button{min-height:48px;}
 html[data-loadlink-theme="light"] .ll-call-active-sheet {color:#fff!important;background:radial-gradient(ellipse 75% 45% at 50% 22%,rgba(246,184,0,.12),transparent 80%),linear-gradient(165deg,#1d201e,#090a09)!important;}
 @media(max-height:680px){.ll-call-active-sheet [data-loadlink-call-avatar]{width:82px!important;height:82px!important}.ll-call-active-sheet .ll-call-identity{padding:14px 0}.ll-call-active-sheet h2{margin-top:13px!important}.ll-call-active-sheet .ll-call-controls{gap:7px!important}.ll-call-active-sheet .ll-call-end{margin-top:12px!important}}
+
+/* Incoming calls have the same polished identity and controls as active calls. */
+[data-loadlink-call-incoming] { background: rgba(4,5,4,.86) !important; }
+[data-loadlink-call-incoming] .ll-call-sheet {
+  background: radial-gradient(circle at 50% 7%,rgba(246,184,0,.12),transparent 54%),#141714 !important;
+  color: #fff !important;
+  border: 1px solid rgba(246,184,0,.2) !important;
+  border-radius: 30px !important;
+  box-shadow: 0 34px 90px rgba(0,0,0,.5) !important;
+  padding: 30px 24px !important;
+}
+[data-loadlink-call-incoming] [data-loadlink-call-avatar] {
+  width: 112px !important;
+  height: 112px !important;
+  border: 3px solid #f6b800 !important;
+  box-shadow: 0 0 0 9px rgba(246,184,0,.10) !important;
+}
+[data-loadlink-call-incoming] .ll-call-decline { background: #dc454a !important; color: #fff !important; }
+[data-loadlink-call-incoming] .ll-call-accept { background: #f6b800 !important; color: #101010 !important; }
+html[data-loadlink-theme="light"] [data-loadlink-call-incoming] .ll-call-sheet {color:#fff!important;background:radial-gradient(circle at 50% 7%,rgba(246,184,0,.12),transparent 54%),#141714!important;}

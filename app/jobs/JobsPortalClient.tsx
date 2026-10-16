@@ -668,18 +668,18 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
 
           <div
             data-loadlink-jobs-search-shell="contracts-matched-v2"
-            className={`loadlink-glass mt-6 rounded-[28px] border-[2px] p-5 shadow-[0_16px_48px_rgba(0,0,0,.15)] backdrop-blur-md md:p-7 ${darkMode ? "border-white/25 bg-black/75 text-white" : "border-white/85 bg-[#b7b4ab]/85 text-black"}`}
+            className={`loadlink-glass mt-6 rounded-[24px] border p-4 shadow-[0_20px_60px_rgba(0,0,0,.18)] backdrop-blur-xl md:p-5 ${darkMode ? "border-white/20 bg-black/72 text-white" : "border-white/55 bg-[#b7b4ab]/85 text-black"}`}
           >
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-2">
               <label className="block min-w-0">
-                <span className={`mb-2 block text-[11px] font-black uppercase tracking-[.11em] ${darkMode ? "text-[#f6b800]" : "text-[#70716f]"}`}>Job or truck type</span>
+                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-[#f6b800]" : "text-[#70716f]"}`}>Job or truck type</span>
                 <input
                   list="loadlink-job-search-terms"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") searchJobs(); }}
                   placeholder="Side tipper, delivery, mining..."
-                  className="h-14 w-full min-w-0 rounded-[17px] border border-[#d4d4d4] bg-white px-4 text-base font-medium text-[#171717] outline-none placeholder:text-[#929292] focus:border-[#f6b800]"
+                  className="h-12 w-full min-w-0 rounded-xl border border-[#dedede] bg-white px-4 text-base font-semibold text-[#171717] outline-none placeholder:text-[#929292] focus:border-[#f6b800]"
                 />
                 <datalist id="loadlink-job-search-terms">
                   {jobSearchTerms.map((item) => <option key={item} value={item} />)}
@@ -687,23 +687,23 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
               </label>
 
               <label className="relative block min-w-0">
-                <span className={`mb-2 block text-[11px] font-black uppercase tracking-[.11em] ${darkMode ? "text-[#f6b800]" : "text-[#70716f]"}`}>Location</span>
+                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-[#f6b800]" : "text-[#70716f]"}`}>Location</span>
                 <SouthAfricaLocationInput
                   value={city}
                   onChange={setCity}
                   darkMode={false}
                   placeholder="City, town or province"
                   ariaLabel="Filter jobs by South African location"
-                  className="h-14 w-full min-w-0 rounded-[17px] border border-[#d4d4d4] bg-white px-4 text-base font-medium text-[#171717] outline-none placeholder:text-[#929292] focus:border-[#f6b800]"
+                  className="h-12 w-full min-w-0 rounded-xl border border-[#dedede] bg-white px-4 text-base font-semibold text-[#171717] outline-none placeholder:text-[#929292] focus:border-[#f6b800]"
                 />
               </label>
 
               <label className="block min-w-0 md:col-span-2">
-                <span className={`mb-2 block text-[11px] font-black uppercase tracking-[.11em] ${darkMode ? "text-[#f6b800]" : "text-[#70716f]"}`}>Category</span>
+                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-[#f6b800]" : "text-[#70716f]"}`}>Category</span>
                 <select
                   value={group}
                   onChange={(e) => setGroup(e.target.value as VehicleGroup | "")}
-                  className="h-14 w-full min-w-0 rounded-[17px] border border-[#d4d4d4] bg-white px-4 text-base font-medium text-[#171717] outline-none focus:border-[#f6b800]"
+                  className="h-12 w-full min-w-0 rounded-xl border border-[#dedede] bg-white px-4 text-base font-semibold text-[#171717] outline-none focus:border-[#f6b800]"
                 >
                   <option value="">All categories</option>
                   {vehicleGroups.map((item) => <option key={item} value={item}>{item}</option>)}
@@ -714,7 +714,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
             <button
               type="button"
               onClick={searchJobs}
-              className="mt-5 min-h-14 w-full rounded-[17px] border border-[#f6b800] bg-[#f6b800] px-7 text-base font-black uppercase tracking-[.06em] text-black transition active:scale-[.99]"
+              className="mt-4 min-h-12 w-full rounded-xl border border-[#f6b800] bg-[#f6b800] px-7 text-sm font-black uppercase tracking-wide text-black transition active:scale-[.99]"
             >
               {portalCopy.searchButton}
             </button>

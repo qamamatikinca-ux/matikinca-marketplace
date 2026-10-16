@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { loginHref } from "@/lib/auth";
 import { useLoadLinkAccount } from "@/lib/loadLinkAccountStore";
@@ -13,9 +14,21 @@ export default function ChatLauncher() {
   const { darkMode } = useLoadLinkTheme();
   const signedIn = Boolean(account.user);
   const { unread } = useUnreadMessages(signedIn);
+  const [searchVisible, setSearchVisible] = useState(false);
+  useEffect(() => {
+    if (pathname !== "/contracts" && pathname !== "/jobs") return;
+    let observer: IntersectionObserver | null = null;
+    const frame = window.requestAnimationFrame(() => {
+      const form = document.querySelector("[data-loadlink-contracts-search-shell], [data-loadlink-jobs-search-shell]");
+      if (!form) return;
+      observer = new IntersectionObserver(([entry]) => setSearchVisible(Boolean(entry?.isIntersecting)), { threshold: .05 });
+      observer.observe(form);
+    });
+    return () => { window.cancelAnimationFrame(frame); observer?.disconnect(); setSearchVisible(false); };
+  }, [pathname]);
 
   const dealerWorkspace = pathname === "/dealer" || pathname.startsWith("/dealer/") || pathname.startsWith("/dealer-dashboard");
-  if (pathname.startsWith("/messages") || pathname.startsWith("/login") || pathname.startsWith("/list-your-vehicle") || pathname.startsWith("/list-your-truck") || dealerWorkspace || !account.ready) return null;
+  if (pathname.startsWith("/messages") || pathname.startsWith("/login") || pathname.startsWith("/list-your-vehicle") || pathname.startsWith("/list-your-truck") || dealerWorkspace || !account.ready || ((pathname === "/contracts" || pathname === "/jobs") && searchVisible)) return null;
 
   const href = signedIn ? "/messages" : loginHref("/messages");
   const launcherTheme = darkMode
