@@ -193,3 +193,7 @@ html[data-loadlink-theme-fallback="true"] [data-loadlink-page-loading] * {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Match the dark-mode search fields across Jobs and Contracts without changing light mode. */
+html[data-loadlink-theme="dark"] body main[data-loadlink-jobs-page="true"] [data-loadlink-jobs-search-shell] :is(input,select),html[data-loadlink-theme="dark"] body main[data-loadlink-contracts-marketplace] [data-loadlink-contracts-search-shell] :is(input,select) {background:#303030!important;color:#fff!important;border:1px solid rgba(255,255,255,.15)!important; color-scheme:dark!important;}
+html[data-loadlink-theme="dark"] body main[data-loadlink-jobs-page="true"] [data-loadlink-jobs-search-shell] input::placeholder,html[data-loadlink-theme="dark"] body main[data-loadlink-contracts-marketplace] [data-loadlink-contracts-search-shell] input::placeholder{color:rgba(255,255,255,.43)!important;}

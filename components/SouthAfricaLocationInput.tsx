@@ -76,6 +76,9 @@ export default function SouthAfricaLocationInput({
     <div ref={wrapperRef} className={`relative ${open && !disabled ? "z-[121]" : ""}`}>
       <input
         id={inputId}
+        type="search"
+        inputMode="search"
+        enterKeyHint="search"
         name={name}
         value={value}
         required={required}

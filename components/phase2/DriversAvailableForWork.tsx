@@ -1,6 +1,7 @@
 "use client";
 
 import LoadLinkImage from "@/components/LoadLinkImage";
+import LoadLinkSortControl from "@/components/LoadLinkSortControl";
 
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
@@ -134,7 +135,7 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
 
       <div className={styles.content}>
         {fullPage ? <div className={styles.filterBar}><label className={styles.filterField}><span>Search drivers</span><input value={searchTerm} onChange={(event) => { setSearchTerm(event.target.value); setPage(1); }} placeholder="Name, licence, vehicle experience" /></label><label className={styles.filterField}><span>Location</span><SouthAfricaLocationInput value={cityFilter} onChange={(value) => { setCityFilter(value); setPage(1); }} darkMode={darkMode} placeholder="City, town or province" ariaLabel="Filter drivers by South African location" className={styles.locationInput} /></label></div> : null}
-        <div className={styles.resultsHeader}>{!showHero ? <div><h2 className={styles.embeddedHeading}>Approved drivers ready for work</h2></div> : <div><h2 className={styles.resultsTitle}>Available drivers</h2>{(searchTerm || cityFilter) ? <p className={styles.resultsCopy}>Showing matches for {[searchTerm, cityFilter].filter(Boolean).join(" · ")}.</p> : null}</div>}<label className={`${styles.sortControl} loadlink-sort-control`}><span>Sort</span><select value={sort} onChange={(event) => { setSort(event.target.value as SortOption); setPage(1); }}><option value="recommended">Recommended</option><option value="available">Available first</option><option value="experience">Most experience</option><option value="name">Name A–Z</option><option value="location">Location A–Z</option></select></label></div>
+        <div className={styles.resultsHeader}>{!showHero ? <div><h2 className={styles.embeddedHeading}>Approved drivers ready for work</h2></div> : <div><h2 className={styles.resultsTitle}>Available drivers</h2>{(searchTerm || cityFilter) ? <p className={styles.resultsCopy}>Showing matches for {[searchTerm, cityFilter].filter(Boolean).join(" · ")}.</p> : null}</div>}<LoadLinkSortControl darkMode={darkMode} value={sort} onChange={(value) => { setSort(value as SortOption); setPage(1); }} options={[{value:"recommended",label:"Recommended"},{value:"available",label:"Available first"},{value:"experience",label:"Most experience"},{value:"name",label:"Name A–Z"},{value:"location",label:"Location A–Z"}]} /></div>
 
         {notice ? <p role="alert" className={styles.empty}>{notice}</p> : null}
         {loading ? <div className={styles.empty}>Loading approved drivers…</div> : drivers.length === 0 ? <div className={styles.empty}>No approved driver profiles match this search yet.</div> : <div className={styles.grid}>{drivers.map((driver) => {

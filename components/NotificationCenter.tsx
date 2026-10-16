@@ -111,7 +111,7 @@ export default function NotificationCenter() {
       {open ? (
         <section
           data-loadlink-notification-panel="major-20260823"
-          className={`fixed bottom-[74px] left-3 z-[90] w-[calc(100vw-1.5rem)] max-w-[390px] overflow-hidden rounded-[24px] border ${darkMode ? "bg-[#0c0c0c]/94 text-white" : "bg-white/88 text-black"}`}
+          className={`fixed bottom-[74px] left-3 z-[90] w-[calc(100vw-1.5rem)] max-w-[390px] overflow-hidden rounded-[24px] border backdrop-blur-[7px] backdrop-saturate-110 ${darkMode ? "bg-[#0c0c0c]/94 text-white" : "bg-white/88 text-black"}`}
           aria-label="LoadLink notifications"
         >
           <header className={`flex items-center justify-between border-b px-4 py-3.5 ${border}`}>

@@ -12,10 +12,30 @@ import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import RequireAuthLink from "@/components/RequireAuthLink";
 import DriversAvailableForWork from "@/components/phase2/DriversAvailableForWork";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
+import { useEffect, useState } from "react";
+import { browserSupabase } from "@/lib/phase2/supabase";
 
 export default function DriverPortalPage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const page = darkMode ? "bg-black text-white" : "bg-[#fffaf0] text-black";
+  const [profileState, setProfileState] = useState<"checking" | "new" | "existing">("checking");
+  useEffect(() => {
+    let active = true;
+    async function check() {
+      try {
+        const sb = browserSupabase();
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) { if (active) setProfileState("new"); return; }
+        const { data, error } = await sb.from("driver_profiles").select("id,status").eq("user_id",user.id).limit(1).maybeSingle();
+        if (error) throw error;
+        if (active) setProfileState(data?.id ? "existing" : "new");
+      } catch { if (active) setProfileState("new"); }
+    }
+    void check();
+    const refresh=()=>void check();
+    window.addEventListener("loadlink-driver-profile-updated",refresh);
+    return () => { active=false; window.removeEventListener("loadlink-driver-profile-updated",refresh); };
+  }, []);
 
   return (
     <main className={`min-h-screen ${page}`}>
@@ -48,7 +68,7 @@ export default function DriverPortalPage() {
               href="/driver-profile"
               className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]"
             >
-              Create driver profile
+              {profileState === "existing" ? "Update driver profile" : profileState === "checking" ? "Driver profile" : "Create driver profile"}
             </RequireAuthLink>
           </div>
         </div>

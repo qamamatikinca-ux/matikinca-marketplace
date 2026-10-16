@@ -6,9 +6,10 @@ import { supabase } from "@/lib/supabaseClient";
 
 const STYLE_ID = "loadlink-universal-ui-guard-style";
 const SEARCH_TERMS = /(?:search|find|keyword|city|town|province|location)/i;
-const INTEGER_TERMS = /(?:year|age|quantity|qty|count|number of|fleet|seats|capacity|mileage|odometer|kilomet|postal|otp|pin|code)/i;
-const PHONE_TERMS = /(?:phone|mobile|whatsapp|contact number|telephone)/i;
-const DECIMAL_TERMS = /(?:price|rate|amount|budget|cost|weight|distance|ton|litre|liter|km)/i;
+// Explicit numeric intent only: no broad "code" match (licence codes contain letters).
+const INTEGER_TERMS = /(?:years? of experience|age in years|quantity|qty|number of|fleet size|seats|capacity|mileage|odometer|kilometres driven|postal code|zip code|one.time (?:pin|otp)|verification (?:pin|code))/i;
+const PHONE_TERMS = /(?:phone|mobile number|whatsapp number|contact number|telephone)/i;
+const DECIMAL_TERMS = /(?:price|rate|amount|budget|cost|weight|distance in|tonnage|litres|liters)/i;
 const INTERNAL_REPAIR_TEXT = /(?:run|apply|install).{0,45}(?:loadlink|supabase|marketplace).{0,35}(?:sql|patch|migration)|(?:supabase|postgres|pgrst).{0,30}(?:repair|sql|schema cache)|(?:vapid|push-notifications-setup\.txt)/i;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PENDING_REPORTS_KEY = "loadlink-pending-reports";
@@ -22,32 +23,30 @@ function descriptor(input: HTMLInputElement) {
 }
 
 function fixNumericInput(input: HTMLInputElement) {
-  if (["date", "time", "datetime-local", "file", "password", "email"].includes(input.type)) return;
+  if (input.disabled || input.readOnly) return;
+  const type = input.type.toLowerCase();
+  if (["date", "time", "datetime-local", "file", "password", "email", "url", "hidden", "checkbox", "radio"].includes(type)) return;
+  // Honour actual numeric, telephone and decimal controls before text heuristics.
+  if (type === "number" || type === "range") {
+    input.inputMode = input.step && input.step !== "1" && input.step !== "any" ? "decimal" : "numeric";
+    return;
+  }
+  if (type === "tel") { input.inputMode = "tel"; return; }
+
   const key = descriptor(input);
-
-  // Search/discovery controls must always summon a normal text/search keyboard.
-  // This runs before the numeric heuristics so words such as "number", "km" or
-  // "location" inside a search placeholder can never turn the field numeric.
-  if (SEARCH_TERMS.test(key) && !PHONE_TERMS.test(key)) {
-    input.type = "search";
-    input.inputMode = "search";
-    input.enterKeyHint = "search";
-    input.removeAttribute("pattern");
-    return;
-  }
-
   if (PHONE_TERMS.test(key)) {
-    if (input.type === "text" || input.type === "search") input.type = "tel";
     input.inputMode = "tel";
-    input.autocomplete = input.autocomplete || "tel";
-    return;
-  }
-  if (INTEGER_TERMS.test(key)) {
+  } else if (SEARCH_TERMS.test(key)) {
+    input.inputMode = "search";
+  } else if (INTEGER_TERMS.test(key)) {
     input.inputMode = "numeric";
-    if (!input.pattern) input.pattern = "[0-9]*";
-    return;
+  } else if (DECIMAL_TERMS.test(key)) {
+    input.inputMode = "decimal";
+  } else {
+    // Reset stale keyboard hints on recycled React inputs (iOS Safari).
+    input.inputMode = "text";
+    input.removeAttribute("pattern");
   }
-  if (DECIMAL_TERMS.test(key)) input.inputMode = "decimal";
 }
 
 function hideDeliveryBadges(root: ParentNode) {
@@ -242,6 +241,11 @@ export default function LoadLinkUniversalUiGuard() {
     };
 
     scan();
+    // Capture focus before Safari chooses its keyboard layout.
+    const onInputFocus = (event: FocusEvent) => {
+      if (event.target instanceof HTMLInputElement) fixNumericInput(event.target);
+    };
+    document.addEventListener("focusin", onInputFocus, true);
     tryReportSync();
     const timers = [160, 500, 1200, 2400].map((delay) => window.setTimeout(() => scan(), delay));
     const reportTimer = window.setInterval(tryReportSync, 15_000);
@@ -264,6 +268,7 @@ export default function LoadLinkUniversalUiGuard() {
       window.clearInterval(reportTimer);
       window.removeEventListener("focus", tryReportSync);
       window.removeEventListener("loadlink-account-state-changed", tryReportSync as EventListener);
+      document.removeEventListener("focusin", onInputFocus, true);
       document.removeEventListener("click", onDocumentClick);
     };
   }, [pathname]);

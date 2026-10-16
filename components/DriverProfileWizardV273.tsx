@@ -73,6 +73,8 @@ export default function DriverProfileWizardV273() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [uploadingType, setUploadingType] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadProcessing, setUploadProcessing] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<MessageType>("info");
   const [submitted, setSubmitted] = useState(false);
@@ -211,7 +213,19 @@ export default function DriverProfileWizardV273() {
       setMessageType("error"); setMessage(`${label}: the file must be smaller than 8 MB.`); return;
     }
     setUploadingType(type);
-    window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: `loadlink-driver-doc-${type}`, kind: "progress", title: `Uploading ${label}`, message: "LoadLink is securing and attaching this document.", progress: 38 } }));
+    setUploadProgress(0);
+    setUploadProcessing(false);
+    const report = (progress: number, processing = false) => {
+      setUploadProgress(progress);
+      setUploadProcessing(processing);
+      window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: {
+        id: `loadlink-driver-doc-${type}`, kind: "progress",
+        title: processing ? `Processing ${label}` : `Uploading ${label}`,
+        message: processing ? "Transfer complete. LoadLink is verifying and securely attaching the document." : "Uploading document to LoadLink.",
+        ...(processing ? {} : { progress }),
+      } }));
+    };
+    report(0);
     try {
       await saveProfile(false);
       const token = await authToken();
@@ -219,9 +233,26 @@ export default function DriverProfileWizardV273() {
       const data = new FormData();
       data.append("documentType", type);
       data.append("file", file);
-      const response = await fetch("/api/phase2/documents", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: data });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || `${label} could not be uploaded.`);
+      // XHR exposes actual bytes transferred; fetch does not provide upload progress.
+      const result = await new Promise<{ ok?: boolean; error?: string }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/phase2/documents");
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        xhr.timeout = 120000;
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable && event.total > 0) report(Math.min(100, Math.round(event.loaded / event.total * 100)));
+        };
+        xhr.upload.onload = () => report(100, true);
+        xhr.onerror = () => reject(new Error("Network interrupted during document upload."));
+        xhr.ontimeout = () => reject(new Error("Document upload timed out. Please retry."));
+        xhr.onload = () => {
+          let body: { ok?: boolean; error?: string } = {};
+          try { body = JSON.parse(xhr.responseText || "{}"); } catch {}
+          if (xhr.status >= 200 && xhr.status < 300 && body.ok) resolve(body);
+          else reject(new Error(body.error || `${label} could not be uploaded.`));
+        };
+        xhr.send(data);
+      });
       setMessageType("success");
       setMessage(`${label} uploaded successfully.`);
       window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: `loadlink-driver-doc-${type}`, kind: "success", title: `${label} uploaded`, message: "The document is attached to your LoadLink driver profile.", duration: 4800 } }));
@@ -232,6 +263,8 @@ export default function DriverProfileWizardV273() {
       window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: `loadlink-driver-doc-${type}`, kind: "error", title: `${label} not uploaded`, message: "The file was not attached. Check the document and try again.", duration: 6500 } }));
     } finally {
       setUploadingType("");
+      setUploadProgress(0);
+      setUploadProcessing(false);
     }
   }
 
@@ -258,6 +291,7 @@ export default function DriverProfileWizardV273() {
       setForm((current) => ({ ...current, status: "pending", profile_status: "submitted", review_reason: "", missing_document_type: "" }));
       setMessageType("success");
       setMessage("Profile submitted. LoadLink has received it for review.");
+      window.dispatchEvent(new Event("loadlink-driver-profile-updated"));
       window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { kind: "success", title: "Driver profile submitted", message: "LoadLink received your profile and documents for review.", duration: 5200 } }));
     } catch (error) {
       setMessageType("error");
@@ -274,7 +308,7 @@ export default function DriverProfileWizardV273() {
     <section className="border-b border-[#f6b800]/25 bg-black text-white">
       <div className="mx-auto max-w-3xl px-4 py-8">
         <div className="flex items-center gap-2"><span className="rounded-full bg-[#f6b800] px-3 py-1 text-[9px] font-black uppercase tracking-[.12em] text-black">Driver profile</span>{submitted ? <span className="rounded-full border border-white/20 px-3 py-1 text-[9px] font-black uppercase tracking-[.12em] text-white/70">Review in progress</span> : null}</div>
-        <h1 className="mt-4 text-[40px] font-black tracking-[-.06em] sm:text-[48px]">Build your driver profile</h1>
+        <h1 className="mt-4 text-[40px] font-black tracking-[-.06em] sm:text-[48px]">{submitted ? "Update your driver profile" : "Build your driver profile"}</h1>
         <p className="mt-2 max-w-xl text-xs font-semibold leading-5 text-white/50">Complete each step, check your details, then send one clean profile to LoadLink for review.</p>
       </div>
     </section>
@@ -324,11 +358,11 @@ export default function DriverProfileWizardV273() {
         {step === 4 ? <>
           <StepTitle title="Essential documents" copy="Upload only the documents needed to confirm your identity and driving credentials." muted={muted} />
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <DocumentUpload type="identity" label={LABELS.identity} required fileName={documentMap.identity?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "identity"} darkMode={darkMode} onFile={(file) => void upload("identity", file)} />
-            <DocumentUpload type="drivers_licence" label={LABELS.drivers_licence} required fileName={documentMap.drivers_licence?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "drivers_licence"} darkMode={darkMode} onFile={(file) => void upload("drivers_licence", file)} />
-            {form.prdp_required ? <DocumentUpload type="prdp" label={LABELS.prdp} required fileName={documentMap.prdp?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "prdp"} darkMode={darkMode} onFile={(file) => void upload("prdp", file)} /> : null}
-            <DocumentUpload type="cv" label={LABELS.cv} fileName={documentMap.cv?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "cv"} darkMode={darkMode} onFile={(file) => void upload("cv", file)} />
-            <DocumentUpload type="driving_certificate" label={LABELS.driving_certificate} fileName={documentMap.driving_certificate?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "driving_certificate"} darkMode={darkMode} onFile={(file) => void upload("driving_certificate", file)} />
+            <DocumentUpload type="identity" label={LABELS.identity} required fileName={documentMap.identity?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "identity"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("identity", file)} />
+            <DocumentUpload type="drivers_licence" label={LABELS.drivers_licence} required fileName={documentMap.drivers_licence?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "drivers_licence"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("drivers_licence", file)} />
+            {form.prdp_required ? <DocumentUpload type="prdp" label={LABELS.prdp} required fileName={documentMap.prdp?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "prdp"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("prdp", file)} /> : null}
+            <DocumentUpload type="cv" label={LABELS.cv} fileName={documentMap.cv?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "cv"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("cv", file)} />
+            <DocumentUpload type="driving_certificate" label={LABELS.driving_certificate} fileName={documentMap.driving_certificate?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "driving_certificate"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("driving_certificate", file)} />
           </div>
           <p className={`mt-4 text-[10px] font-semibold leading-5 ${muted}`}>Accepted: PDF, JPG or PNG. Maximum 8 MB per document. Your driver documents are not published publicly.</p>
         </> : null}
@@ -372,7 +406,7 @@ function ReviewRow({ label, value, onEdit }: { label: string; value: string; onE
   return <div className="flex items-start gap-3 px-4 py-4"><span className="w-20 shrink-0 text-[9px] font-black uppercase opacity-40">{label}</span><span className="min-w-0 flex-1 break-words text-xs font-bold">{value}</span><button type="button" onClick={onEdit} className="shrink-0 text-[9px] font-black text-[#b88600] underline underline-offset-3">Edit</button></div>;
 }
 
-function DocumentUpload({ label, required = false, fileName, busy, uploading, darkMode, onFile }: { type: string; label: string; required?: boolean; fileName?: string; busy: boolean; uploading: boolean; darkMode: boolean; onFile: (file: File | null) => void }) {
+function DocumentUpload({ label, required = false, fileName, busy, uploading, progress, processing, darkMode, onFile }: { type: string; label: string; required?: boolean; fileName?: string; busy: boolean; uploading: boolean; progress: number; processing: boolean; darkMode: boolean; onFile: (file: File | null) => void }) {
   function change(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] || null;
     event.target.value = "";
@@ -380,8 +414,8 @@ function DocumentUpload({ label, required = false, fileName, busy, uploading, da
   }
   return <label className={`relative flex min-h-32 cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border p-4 transition hover:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.035]" : "border-black/10 bg-[#faf9f5]"}`}>
     <span><strong className="block text-sm font-black">{label}</strong><span className={`mt-1 block text-[9px] font-black uppercase tracking-[.1em] ${required ? "text-[#b88600]" : "opacity-40"}`}>{required ? "Required" : "Optional"}</span></span>
-    <span className="mt-4"><span className="block truncate text-xs font-semibold opacity-55">{uploading ? "Uploading…" : fileName || "Choose PDF, JPG or PNG"}</span>{fileName && !uploading ? <span className="mt-1 block text-[9px] font-black text-[#b88600]">Tap to replace</span> : null}</span>
+    <span className="mt-4"><span className="block truncate text-xs font-semibold opacity-55">{uploading ? (processing ? "Verifying and attaching…" : `Uploading ${progress}%`) : fileName || "Choose PDF, JPG or PNG"}</span>{fileName && !uploading ? <span className="mt-1 block text-[9px] font-black text-[#b88600]">Tap to replace</span> : null}</span>
     <input disabled={busy} type="file" accept="application/pdf,image/jpeg,image/png" onChange={change} className="hidden" />
-    {uploading ? <span className="absolute inset-x-0 bottom-0 h-1 overflow-hidden bg-current/10"><span className="block h-full w-2/3 animate-pulse bg-[#f6b800]" /></span> : null}
+    {uploading ? <span className="absolute inset-x-0 bottom-0 h-1 overflow-hidden bg-current/10"><span className="block h-full bg-[#f6b800] transition-[width] duration-150" style={{ width: `${progress}%` }} /></span> : null}
   </label>;
 }
