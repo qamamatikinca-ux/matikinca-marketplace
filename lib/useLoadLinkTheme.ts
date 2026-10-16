@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useLayoutEffect, useState } from "react";
+import { flushSync } from "react-dom";
 
 export type LoadLinkTheme = "light" | "dark";
 const STORAGE_KEY = "loadlink-theme";
@@ -29,11 +30,60 @@ export function applyLoadLinkTheme(theme: LoadLinkTheme) {
   }
 }
 
+let themeTransitionRunning = false;
+let fallbackCleanup: number | null = null;
+
+// Keep root theme attributes and all React darkMode classes in the same commit,
+// preventing mixed-mode frames during a user-initiated theme switch.
 export function setLoadLinkTheme(theme: LoadLinkTheme) {
-  if (typeof window === "undefined") return;
-  try { window.localStorage.setItem(STORAGE_KEY, theme); } catch {}
-  applyLoadLinkTheme(theme);
-  window.dispatchEvent(new CustomEvent("loadlink-theme-change", { detail: { theme } }));
+  if (typeof window === "undefined" || themeTransitionRunning) return;
+  const root = document.documentElement;
+  if (readLoadLinkTheme() === theme && root.dataset.loadlinkTheme === theme) return;
+
+  const commit = () => {
+    try { window.localStorage.setItem(STORAGE_KEY, theme); } catch {}
+    flushSync(() => {
+      applyLoadLinkTheme(theme);
+      window.dispatchEvent(new CustomEvent("loadlink-theme-change", { detail: { theme } }));
+    });
+  };
+
+  const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (reducedMotion || root.dataset.loadlinkHydrating === "true") {
+    commit();
+    return;
+  }
+
+  const doc = document as Document & {
+    startViewTransition?: (update: () => void) => { finished: Promise<void> };
+  };
+  // A single crossfade between fully rendered states is cheaper and cleaner
+  // than dozens of asynchronous per-card flashes, especially on iOS Safari.
+  if (typeof doc.startViewTransition === "function") {
+    themeTransitionRunning = true;
+    root.dataset.loadlinkThemeTransition = "true";
+    try {
+      const transition = doc.startViewTransition(commit);
+      void transition.finished.catch(() => undefined).finally(() => {
+        delete root.dataset.loadlinkThemeTransition;
+        themeTransitionRunning = false;
+      });
+    } catch {
+      delete root.dataset.loadlinkThemeTransition;
+      themeTransitionRunning = false;
+      commit();
+    }
+    return;
+  }
+
+  // Fallback is restricted to visual properties; truck loader stays unchanged.
+  root.dataset.loadlinkThemeFallback = "true";
+  commit();
+  if (fallbackCleanup !== null) window.clearTimeout(fallbackCleanup);
+  fallbackCleanup = window.setTimeout(() => {
+    delete root.dataset.loadlinkThemeFallback;
+    fallbackCleanup = null;
+  }, 300);
 }
 
 export function useLoadLinkTheme() {
@@ -64,8 +114,8 @@ export function useLoadLinkTheme() {
   }, []);
 
   const setTheme = useCallback((next: LoadLinkTheme) => {
+    // Every mounted theme hook responds to the same atomic theme-change event.
     setLoadLinkTheme(next);
-    setThemeState(next);
   }, []);
 
   const toggleTheme = useCallback(() => {

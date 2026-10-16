@@ -153,3 +153,43 @@ html[data-loadlink-theme] body main[data-loadlink-jobs-page="true"] [data-loadli
 /* One reusable sort presentation, retaining each page's own sort logic. */
 html[data-loadlink-theme] .loadlink-sort-control { display:inline-flex; align-items:center; gap:9px; min-height:44px; border-radius:12px; padding:0 13px; font-size:12px; font-weight:800; border:1px solid var(--ll-refresh-border)!important; background:var(--ll-refresh-panel)!important; color:var(--ll-refresh-ink)!important; }
 html[data-loadlink-theme] .loadlink-sort-control select { min-width:0; background:transparent!important; border:0!important; padding:0 20px 0 0; color:inherit!important; font-size:12px; font-weight:900; outline:none; }
+
+/* Coordinated, user-initiated theme switch only. Existing palette remains unchanged. */
+@keyframes loadlink-theme-old-fade {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes loadlink-theme-new-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+html[data-loadlink-theme-transition="true"]::view-transition-old(root) {
+  animation: 240ms ease-in-out both loadlink-theme-old-fade;
+}
+html[data-loadlink-theme-transition="true"]::view-transition-new(root) {
+  animation: 240ms ease-in-out both loadlink-theme-new-fade;
+}
+html[data-loadlink-theme-fallback="true"] body,
+html[data-loadlink-theme-fallback="true"] body :is(
+  main, header, nav, aside, section, article, footer,
+  button, a, input, select, textarea,
+  [data-loadlink-site-header], .loadlink-glass, .loadlink-sort-control
+) {
+  transition-property: background-color, color, border-color, box-shadow !important;
+  transition-duration: 240ms !important;
+  transition-timing-function: ease-in-out !important;
+}
+html[data-loadlink-theme-fallback="true"] [data-loadlink-page-loading],
+html[data-loadlink-theme-fallback="true"] [data-loadlink-page-loading] * {
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-loadlink-theme-transition="true"]::view-transition-old(root),
+  html[data-loadlink-theme-transition="true"]::view-transition-new(root) {
+    animation-duration: 0.01ms !important;
+  }
+  html[data-loadlink-theme-fallback="true"] body,
+  html[data-loadlink-theme-fallback="true"] body * {
+    transition-duration: 0.01ms !important;
+  }
+}
