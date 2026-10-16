@@ -79,13 +79,22 @@ export default function AccountSettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [preferenceSaving, setPreferenceSaving] = useState<PreferenceKey | null>(null);
   const [hasDriverProfile, setHasDriverProfile] = useState(false);
-  const [settingsView, setSettingsView] = useState<"profile" | "messages" | "security">("profile");
+  const [settingsView, setSettingsView] = useState<"profile" | "work" | "notifications" | "messages" | "security" | "billing" | "team">("profile");
   const [pushState, setPushState] = useState<PushState>("disabled");
   const [pushBusy, setPushBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const syncHash = () => { if (window.location.hash === "#message-privacy") setSettingsView("messages"); };
+    const syncHash = () => {
+      const hash = window.location.hash;
+      if (hash === "#message-privacy") setSettingsView("messages");
+      else if (hash === "#notifications") setSettingsView("notifications");
+      else if (hash === "#work") setSettingsView("work");
+      else if (hash === "#billing") setSettingsView("billing");
+      else if (hash === "#security") setSettingsView("security");
+      else if (hash === "#team") setSettingsView("team");
+      else if (hash === "#profile") setSettingsView("profile");
+    };
     syncHash();
     window.addEventListener("hashchange", syncHash);
     void load();
@@ -271,7 +280,7 @@ export default function AccountSettingsPage() {
 
   if (loading) return <LoadLinkLoading />;
 
-  const tabClass = (view: "profile" | "messages" | "security") => `min-w-0 flex-1 rounded-xl px-3 py-3 text-xs font-semibold transition ${settingsView === view ? "bg-[#f6b800] text-black shadow-sm" : (darkMode ? "text-white/55 hover:bg-white/[.05]" : "text-black/55 hover:bg-black/[.04]")}`;
+  const tabClass = (view: typeof settingsView) => `shrink-0 rounded-xl px-4 py-3 text-xs font-semibold transition ${settingsView === view ? "bg-[#f6b800] text-black shadow-sm" : (darkMode ? "text-white/55 hover:bg-white/[.05]" : "text-black/55 hover:bg-black/[.04]")}`;
 
   return (
     <main className={`min-h-screen ${page}`}>
@@ -280,21 +289,25 @@ export default function AccountSettingsPage() {
       <section className="mx-auto max-w-6xl px-4 py-7 sm:px-5 md:px-8 md:py-10">
         <div className="max-w-3xl">
           <h1 className="text-3xl font-black tracking-[-.035em] md:text-4xl">Settings</h1>
-          <p className={`mt-1.5 text-sm font-semibold leading-6 ${muted}`}>Profile, messages and security.</p>
+          <p className={`mt-1.5 text-sm font-semibold leading-6 ${muted}`}>Manage your profile, work, notifications, privacy and billing.</p>
         </div>
 
 
-        <div className={`mt-5 flex max-w-xl gap-1 rounded-2xl border p-1.5 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-white"}`}>
-          <button type="button" onClick={() => setSettingsView("profile")} className={tabClass("profile")}>Profile</button>
-          <button type="button" onClick={() => setSettingsView("messages")} className={tabClass("messages")}>Messages</button>
-          <button type="button" onClick={() => setSettingsView("security")} className={tabClass("security")}>Security</button>
-        </div>
+        <nav aria-label="Settings categories" className={`mt-5 flex max-w-3xl gap-1 overflow-x-auto rounded-2xl border p-1.5 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-white"}`}>
+          {([
+            ["profile", "Profile"], ["work", "Work"], ["notifications", "Notifications"],
+            ["messages", "Messages"], ["security", "Security"], ["billing", "Billing"],
+            ...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team", "Team"]] : []),
+          ] as Array<[typeof settingsView, string]>).map(([view, label]) => (
+            <button key={view} type="button" aria-current={settingsView === view ? "page" : undefined} onClick={() => setSettingsView(view)} className={tabClass(view)}>{label}</button>
+          ))}
+        </nav>
 
         {dirty && settingsView === "profile" ? <p className={`mt-4 text-sm font-medium ${muted}`}>You have unsaved profile changes.</p> : null}
         {message ? <div role="status" className={`mt-5 max-w-3xl rounded-xl border p-3 text-sm font-medium ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-white"}`}>{message}</div> : null}
 
         {settingsView === "profile" ? (
-          <div className="mt-6 grid gap-5 lg:grid-cols-[250px_1fr]">
+          <div id="profile" className="mt-6 grid gap-5 lg:grid-cols-[250px_1fr]">
             <aside className={`h-fit border p-5 ${surface}`}>
               <div className="mx-auto flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-current/15 bg-black text-xl font-bold text-white">{form.avatar_url ? <LoadLinkImage src={form.avatar_url} alt="Profile" className="h-full w-full object-cover" /> : initials}</div>
               <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void uploadAvatar(event)} className="hidden" />
@@ -317,11 +330,61 @@ export default function AccountSettingsPage() {
                 <Field label="WhatsApp number"><input value={form.whatsapp_number} onChange={(event) => field("whatsapp_number", event.target.value)} inputMode="tel" placeholder="0821234567" className={input} /></Field>
                 <div className="md:col-span-2"><Field label="Professional summary"><textarea value={form.bio} onChange={(event) => field("bio", event.target.value)} maxLength={500} className={textarea} /></Field></div>
               </div>
-              <h3 className="mt-7 text-base font-bold">Notifications</h3>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2"><Toggle label="Email account updates" checked={form.email_notifications} busy={preferenceSaving === "email_notifications"} onChange={(value) => void savePreference("email_notifications", value)} darkMode={darkMode} /><Toggle label="New chat messages" checked={form.chat_notifications} busy={preferenceSaving === "chat_notifications"} onChange={(value) => void savePreference("chat_notifications", value)} darkMode={darkMode} /><Toggle label="Listing and review updates" checked={form.listing_notifications} busy={preferenceSaving === "listing_notifications"} onChange={(value) => void savePreference("listing_notifications", value)} darkMode={darkMode} /><Toggle label="Product news" checked={form.marketing_notifications} busy={preferenceSaving === "marketing_notifications"} onChange={(value) => void savePreference("marketing_notifications", value)} darkMode={darkMode} /></div>
+
               <button type="submit" disabled={saving || !dirty} className="mt-6 h-11 rounded-xl bg-[#f6b800] px-5 text-xs font-semibold text-black disabled:opacity-40">{saving ? "Saving…" : dirty ? "Save changes" : "Saved"}</button>
             </form>
           </div>
+        ) : null}
+
+        {settingsView === "work" ? (
+          <section id="work" className={`mt-6 max-w-3xl border p-5 md:p-7 ${surface}`}>
+            <h2 className="text-xl font-bold">Work and availability</h2>
+            <p className={`mt-2 text-sm leading-6 ${muted}`}>Your active work preferences and listing information are managed through these existing LoadLink tools.</p>
+            <div className="mt-5 grid gap-2">
+              <SettingsRoute href="/account/settings#profile" title="Operating location" description="Edit the city and province on your professional profile." darkMode={darkMode} onClick={() => setSettingsView("profile")} />
+              <SettingsRoute href={hasDriverProfile ? "/driver-profile" : "/driver-portal"} title="Driver profile and availability" description={hasDriverProfile ? "Update your driver profile or availability." : "Create a professional driver profile."} darkMode={darkMode} />
+              <SettingsRoute href="/list-your-vehicle" title="Vehicle and mobile-unit listings" description="List equipment or resume a listing." darkMode={darkMode} />
+              <SettingsRoute href="/jobs" title="Find transport jobs" description="Search current work using filters." darkMode={darkMode} />
+              <SettingsRoute href="/contracts" title="Find contracts" description="Explore recurring or long-term transport opportunities." darkMode={darkMode} />
+            </div>
+          </section>
+        ) : null}
+
+        {settingsView === "notifications" ? (
+          <section id="notifications" className={`mt-6 max-w-3xl border p-5 md:p-7 ${surface}`}>
+            <h2 className="text-xl font-bold">Notification preferences</h2>
+            <p className={`mt-2 text-sm leading-6 ${muted}`}>Choose which LoadLink updates you receive. These preferences are saved to your account.</p>
+            <div className="mt-5 grid gap-2 sm:grid-cols-2">
+              <Toggle label="Email account updates" checked={form.email_notifications} busy={preferenceSaving === "email_notifications"} onChange={(value) => void savePreference("email_notifications", value)} darkMode={darkMode} />
+              <Toggle label="New chat messages" checked={form.chat_notifications} busy={preferenceSaving === "chat_notifications"} onChange={(value) => void savePreference("chat_notifications", value)} darkMode={darkMode} />
+              <Toggle label="Listing and review updates" checked={form.listing_notifications} busy={preferenceSaving === "listing_notifications"} onChange={(value) => void savePreference("listing_notifications", value)} darkMode={darkMode} />
+              <Toggle label="Product news" checked={form.marketing_notifications} busy={preferenceSaving === "marketing_notifications"} onChange={(value) => void savePreference("marketing_notifications", value)} darkMode={darkMode} />
+            </div>
+            <div className="mt-5 grid gap-2">
+              <SettingsRoute href="/notifications" title="Notification inbox" description="See notifications and mark them read." darkMode={darkMode} />
+              <SettingsRoute href="/account/settings#message-privacy" title="Messages and push alerts" description="Manage notification previews and mobile push permissions." darkMode={darkMode} onClick={() => setSettingsView("messages")} />
+            </div>
+          </section>
+        ) : null}
+
+        {settingsView === "billing" ? (
+          <section id="billing" className={`mt-6 max-w-3xl border p-5 md:p-7 ${surface}`}>
+            <h2 className="text-xl font-bold">Billing and subscriptions</h2>
+            <p className={`mt-2 text-sm leading-6 ${muted}`}>Check account entitlements, invoices and active package tools.</p>
+            <div className={`mt-5 rounded-xl border p-4 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-black/[.015]"}`}><Info label="Current package" value={form.subscription_plan} /></div>
+            <div className="mt-4 grid gap-2">
+              <SettingsRoute href="/account/packages" title="Package and payment history" description="See your plan, charges and account access." darkMode={darkMode} />
+              <SettingsRoute href="/packages/manage" title="Manage subscription" description="Open the existing package-management tools." darkMode={darkMode} />
+            </div>
+          </section>
+        ) : null}
+
+        {settingsView === "team" && form.subscription_plan.toLowerCase().includes("dealer") ? (
+          <section id="team" className={`mt-6 max-w-3xl border p-5 md:p-7 ${surface}`}>
+            <h2 className="text-xl font-bold">Dealership team access</h2>
+            <p className={`mt-2 text-sm leading-6 ${muted}`}>Manage your dealership's authorised staff through the existing Dealer workspace.</p>
+            <div className="mt-5"><SettingsRoute href="/dealer" title="Manage dealership and team" description="Open team access, permissions and inventory tools." darkMode={darkMode} /></div>
+          </section>
         ) : null}
 
         {settingsView === "messages" ? (
@@ -353,6 +416,12 @@ export default function AccountSettingsPage() {
 
 }
 
+function SettingsRoute({ href, title, description, darkMode, onClick }: { href: string; title: string; description: string; darkMode: boolean; onClick?: () => void }) {
+  return <Link href={href} onClick={onClick} className={`flex min-h-16 items-center justify-between gap-3 rounded-xl border px-4 py-3 transition active:scale-[.99] ${darkMode ? "border-white/10 bg-white/[.02] hover:bg-white/[.055]" : "border-black/10 bg-black/[.015] hover:bg-black/[.04]"}`}>
+    <span className="min-w-0"><strong className="block text-sm font-bold">{title}</strong><span className={`mt-1 block text-xs font-semibold leading-5 ${darkMode ? "text-white/55" : "text-black/55"}`}>{description}</span></span>
+    <span aria-hidden="true" className="shrink-0 text-xl opacity-55">›</span>
+  </Link>;
+}
 function Field({ label, children }: { label: string; children: ReactNode }) { return <label className="block text-xs font-semibold uppercase tracking-[.09em]">{label}{children}</label>; }
 function Toggle({ label, description, checked, busy, onChange, darkMode }: { label: string; description?: string; checked: boolean; busy?: boolean; onChange: (value: boolean) => void; darkMode: boolean }) { return <div className={`flex min-h-14 items-center justify-between gap-4 rounded-xl border px-4 py-3 ${darkMode ? "border-white/10 bg-white/[.02]" : "border-black/10 bg-black/[.015]"}`}><span className="min-w-0"><strong className="block text-sm font-semibold normal-case tracking-normal">{label}</strong>{description ? <span className={`mt-1 block text-xs font-semibold leading-5 ${darkMode ? "text-white/45" : "text-black/45"}`}>{description}</span> : null}</span><button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)} disabled={busy} className={`relative h-7 w-12 shrink-0 rounded-full border transition disabled:opacity-55 ${checked ? "border-[#f6b800] bg-[#f6b800]" : darkMode ? "border-white/20 bg-white/10" : "border-black/20 bg-black/10"}`}><span className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} /></button></div>; }
 function Info({ label, value }: { label: string; value: string }) { return <div className="mb-4 last:mb-0"><p className="text-[10px] font-semibold uppercase tracking-[.1em] opacity-50">{label}</p><p className="mt-1 break-words text-sm font-semibold capitalize">{value}</p></div>; }
