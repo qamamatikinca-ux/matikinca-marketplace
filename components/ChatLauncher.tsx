@@ -44,7 +44,7 @@ export default function ChatLauncher() {
       className={`fixed bottom-[5.5rem] right-5 z-[69] flex h-14 w-14 items-center justify-center rounded-full border backdrop-blur-xl transition active:scale-95 ${launcherTheme}`}
     >
       <MessageBubbleIcon />
-      {signedIn && unread > 0 ? <span className={`absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full border-2 bg-[#f6b800] px-1 text-[10px] font-black text-black shadow-lg ${darkMode ? "border-[#151515]" : "border-white"}`}>{unread > 99 ? "99+" : unread}</span> : null}
+      {signedIn && unread > 0 ? <span className={`absolute -right-1.5 -top-1.5 flex h-6 min-w-6 max-w-20 items-center justify-center rounded-full border-2 bg-[#f6b800] px-1 text-[10px] font-black text-black shadow-lg ${darkMode ? "border-[#151515]" : "border-white"}`}>{unread.toLocaleString("en-ZA")}</span> : null}
     </Link>
   );
 }

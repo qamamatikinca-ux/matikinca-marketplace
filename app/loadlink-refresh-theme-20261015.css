@@ -197,3 +197,58 @@ html[data-loadlink-theme-fallback="true"] [data-loadlink-page-loading] * {
 /* Match the dark-mode search fields across Jobs and Contracts without changing light mode. */
 html[data-loadlink-theme="dark"] body main[data-loadlink-jobs-page="true"] [data-loadlink-jobs-search-shell] :is(input,select),html[data-loadlink-theme="dark"] body main[data-loadlink-contracts-marketplace] [data-loadlink-contracts-search-shell] :is(input,select) {background:#303030!important;color:#fff!important;border:1px solid rgba(255,255,255,.15)!important; color-scheme:dark!important;}
 html[data-loadlink-theme="dark"] body main[data-loadlink-jobs-page="true"] [data-loadlink-jobs-search-shell] input::placeholder,html[data-loadlink-theme="dark"] body main[data-loadlink-contracts-marketplace] [data-loadlink-contracts-search-shell] input::placeholder{color:rgba(255,255,255,.43)!important;}
+
+/* One consistent View Jobs sorting surface across every marketplace and directory. */
+html[data-loadlink-theme] body [data-loadlink-shared-sort="view-jobs"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  min-height: 44px !important;
+  max-width: 100% !important;
+  padding: 0 14px !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--ll-refresh-border) !important;
+  background: var(--ll-refresh-panel) !important;
+  color: var(--ll-refresh-ink) !important;
+  box-shadow: none !important;
+  letter-spacing: normal !important;
+}
+html[data-loadlink-theme] body [data-loadlink-shared-sort="view-jobs"] > span {
+  font-size: 12px !important;
+  color: var(--ll-refresh-muted) !important;
+  font-weight: 700 !important;
+  text-transform: none !important;
+}
+html[data-loadlink-theme] body [data-loadlink-shared-sort="view-jobs"] > select {
+  min-height: 42px !important;
+  max-width: min(58vw, 210px) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--ll-refresh-ink) !important;
+  padding: 0 22px 0 0 !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  box-shadow: none !important;
+  outline-offset: -3px !important;
+}
+html[data-loadlink-theme="dark"] body [data-loadlink-shared-sort="view-jobs"] > select option {
+  background: #171717 !important; color: #fff !important;
+}
+html[data-loadlink-theme="light"] body [data-loadlink-shared-sort="view-jobs"] > select option {
+  background: #fff !important; color: #111 !important;
+}
+/* Jobs and Contracts keep neutral grey field labels in dark mode, not gold. */
+html[data-loadlink-theme="dark"] body main[data-loadlink-jobs-page="true"] [data-loadlink-jobs-search-shell] label > span,
+html[data-loadlink-theme="dark"] body main[data-loadlink-contracts-marketplace] [data-loadlink-contracts-search-shell] label > span {
+  color: #9d9d9d !important;
+}
+/* Notification filters remain filters, but share the site's rounded controls. */
+html[data-loadlink-theme] body [data-loadlink-notification-filter="true"] {
+  background: var(--ll-refresh-panel) !important;
+  border-color: var(--ll-refresh-border) !important;
+  border-radius: 14px !important;
+}
