@@ -48,6 +48,7 @@ export default function ListYourVehiclePage() {
   const [initialPackage, setInitialPackage] = useState<ListingPackage>("standard");
   const [draftDecision, setDraftDecision] = useState<"pending" | "resume" | "fresh">("fresh");
   const [dealerPostingGate, setDealerPostingGate] = useState<DealerPostingGate>(null);
+  const [showMarketplace, setShowMarketplace] = useState(false);
   const page = darkMode ? "bg-black text-white" : "bg-[#f5f1e8] text-black";
 
   useEffect(() => {
@@ -129,6 +130,14 @@ export default function ListYourVehiclePage() {
     return () => window.clearTimeout(timer);
   }, [entryMode, entryReady, dealerPostingGate]);
 
+  useEffect(() => {
+    if (!showMarketplace || entryMode) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById("vehicle-marketplace")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [showMarketplace, entryMode]);
+
   if (!booted) return <LoadLinkLoading />;
   if (entryMode && dealershipRoute) return <LegacyVehicleListingPage entryMode={entryMode} initialPackage="dealer" resumeDraft={new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("resume") === "1"} />;
 
@@ -145,11 +154,11 @@ export default function ListYourVehiclePage() {
             <div data-loadlink-vehicle-entry-actions="true" className="mx-auto mt-6 grid w-full max-w-md gap-3">
               <button type="button" data-loadlink-hero-pill="true" data-variant="primary" onClick={() => openEntry("vehicle")} className="flex min-h-14 w-full items-center justify-center rounded-full border border-[#f6b800] bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]">List vehicle</button>
               <button type="button" data-loadlink-hero-pill="true" data-variant="primary" onClick={() => openEntry("mobile-unit")} className="flex min-h-14 w-full items-center justify-center rounded-full border border-[#f6b800] bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]">List mobile unit</button>
-              <a href="#vehicle-marketplace" data-loadlink-hero-pill="true" data-variant="secondary" className="flex min-h-14 w-full items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]">Browse marketplace</a>
+              <a href="#vehicle-marketplace" onClick={(event) => { event.preventDefault(); setShowMarketplace(true); }} data-loadlink-hero-pill="true" data-variant="secondary" className="flex min-h-14 w-full items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]">Browse marketplace</a>
             </div>
           </div>
         </section>
-        <div id="vehicle-marketplace" className="scroll-mt-20"><VehicleMarketplaceHub darkMode={darkMode} /></div>
+        {showMarketplace ? <div id="vehicle-marketplace" className="scroll-mt-20"><VehicleMarketplaceHub darkMode={darkMode} /></div> : null}
 
       </main>
     );
