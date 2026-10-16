@@ -1,5 +1,8 @@
 "use client";
 
+import LoadLinkSortControl from "@/components/LoadLinkSortControl";
+
+
 import LoadLinkImage from "@/components/LoadLinkImage";
 
 import Link from "next/link";
@@ -238,10 +241,7 @@ export default function ContractsPage() {
             <h2 className="text-4xl font-black tracking-[-.05em]">Available contracts</h2>
             <p className={`mt-2 text-xs font-semibold ${muted}`}>{loading ? "Loading current contracts…" : `${filtered.length} current ${filtered.length === 1 ? "contract" : "contracts"}`}</p>
           </div>
-          <label className={`loadlink-sort-control ${surface}`}>
-            <span className={muted}>Sort by</span>
-            <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)} className="bg-transparent font-black outline-none"><option value="newest">Newest first</option><option value="starting">Starting soonest</option><option value="oldest">Oldest first</option></select>
-          </label>
+          <LoadLinkSortControl darkMode={darkMode} value={sortMode} onChange={(value) => setSortMode(value as SortMode)} options={[{ value: "newest", label: "Newest first" }, { value: "starting", label: "Starting soonest" }, { value: "oldest", label: "Oldest first" }]} />
         </div>
 
         {error ? <div className="mb-5 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm font-bold text-red-600">{error}</div> : null}

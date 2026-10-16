@@ -1,5 +1,8 @@
 "use client";
 
+import LoadLinkSortControl from "@/components/LoadLinkSortControl";
+
+
 import LoadLinkImage from "@/components/LoadLinkImage";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
@@ -740,14 +743,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
             <p className={`mt-2 text-xs font-semibold ${darkMode ? "text-white/45" : "text-black/45"}`}>Sort by the date the job was posted or the date the vehicle is needed.</p>
           </div>
           <div className="flex items-center gap-2">
-            <label className={`loadlink-sort-control flex h-11 items-center gap-2 rounded-xl border px-3 text-xs font-bold ${darkMode ? "border-white/15 bg-[#111]" : "border-black/10 bg-white"}`}>
-              <span className={darkMode ? "text-white/45" : "text-black/45"}>Sort by</span>
-              <select value={sortMode} onChange={(event) => setSortMode(event.target.value as JobSortMode)} className="bg-transparent font-black outline-none">
-                <option value="newest">Newest first</option>
-                <option value="needed_soon">Needed soonest</option>
-                <option value="oldest">Oldest first</option>
-              </select>
-            </label>
+            <LoadLinkSortControl darkMode={darkMode} value={sortMode} onChange={(value) => setSortMode(value as JobSortMode)} options={[{ value: "newest", label: "Newest first" }, { value: "needed_soon", label: "Needed soonest" }, { value: "oldest", label: "Oldest first" }]} />
             <RequireAuthLink href={portalCopy.listHref} className={`hidden h-11 items-center border px-4 text-xs font-black uppercase tracking-wide md:inline-flex ${darkMode ? "border-[#f6b800] text-[#f6b800]" : "border-black text-black"}`}>{portalCopy.listLabel}</RequireAuthLink>
           </div>
         </div>

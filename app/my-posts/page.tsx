@@ -1,5 +1,8 @@
 "use client";
 
+import LoadLinkSortControl from "@/components/LoadLinkSortControl";
+
+
 import LoadLinkImage from "@/components/LoadLinkImage";
 
 import LoadLinkIcon from "@/components/LoadLinkIcon";
@@ -311,15 +314,7 @@ export default function MyPostsPage() {
             <FilterButton active={filter === "review"} onClick={() => setFilter("review")}>Review</FilterButton>
             <FilterButton active={filter === "closed"} onClick={() => setFilter("closed")}>Completed</FilterButton>
           </div>
-          <label className={`loadlink-sort-control ${surface}`}>
-            <span className={`text-[10px] font-black uppercase tracking-[.12em] ${muted}`}>Sort</span>
-            <select value={sortMode} onChange={(event) => setSortMode(event.target.value as MyPostsSort)} className="bg-transparent text-xs font-black outline-none">
-              <option value="newest">Newest first</option>
-              <option value="views">Most viewed</option>
-              <option value="status">Status</option>
-              <option value="oldest">Oldest first</option>
-            </select>
-          </label>
+          <LoadLinkSortControl darkMode={darkMode} value={sortMode} onChange={(value) => setSortMode(value as MyPostsSort)} options={[{ value: "newest", label: "Newest first" }, { value: "views", label: "Most viewed" }, { value: "status", label: "Status" }, { value: "oldest", label: "Oldest first" }]} />
         </div>
 
         {message ? <div className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm font-bold text-red-500">{message}</div> : null}

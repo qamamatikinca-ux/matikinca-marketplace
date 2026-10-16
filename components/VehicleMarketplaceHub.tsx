@@ -1,5 +1,8 @@
 "use client";
 
+import LoadLinkSortControl from "@/components/LoadLinkSortControl";
+
+
 import LoadLinkImage from "@/components/LoadLinkImage";
 
 import LoadLinkIcon from "@/components/LoadLinkIcon";
@@ -164,14 +167,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
             <h2 className="text-4xl font-black tracking-[-.05em] md:text-5xl">Vehicles and mobile units available</h2>
             <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Approved commercial stock, presented with the same clear marketplace pattern as LoadLink jobs.</p>
           </div>
-          <label className={`loadlink-sort-control ${surface}`}>
-            <span>Sort by</span>
-            <select value={sort} onChange={(event) => setSort(event.target.value as SortMode)}>
-              <option value="newest">Newest first</option>
-              <option value="price_low">Price low to high</option>
-              <option value="price_high">Price high to low</option>
-            </select>
-          </label>
+          <LoadLinkSortControl darkMode={darkMode} value={sort} onChange={(value) => setSort(value as SortMode)} options={[{ value: "newest", label: "Newest first" }, { value: "price_low", label: "Price low to high" }, { value: "price_high", label: "Price high to low" }]} />
         </div>
 
         <div className="mt-6 flex max-w-full gap-2 overflow-x-auto pb-1">
