@@ -1,4 +1,4 @@
-export const MANUAL_DAILY_PRICE_CENTS = 1500;
+export const MANUAL_DAILY_PRICE_CENTS = 1400;
 export const MANUAL_DAILY_UNAVAILABLE = "Daily vehicle billing is being updated. New Manual payments are temporarily unavailable.";
 export function isManualDailyProduct(product: unknown): boolean {
   if (!product || typeof product !== "object") return false;

@@ -8,11 +8,13 @@ import { useEffect } from "react";
 export default function PhotoLimitUpgradeToast({
   open,
   onClose,
-  limit = 5,
+  limit = 2,
+  plan = "standard",
 }: {
   open: boolean;
   onClose: () => void;
   limit?: number;
+  plan?: "standard" | "pro" | "dealer";
 }) {
   useEffect(() => {
     if (!open) return;
@@ -32,9 +34,9 @@ export default function PhotoLimitUpgradeToast({
             </svg>
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="ll-toast-title text-sm font-black">Standard includes {limit} photos</h2>
+            <h2 className="ll-toast-title text-sm font-black">{plan === "standard" ? "Standard" : plan === "pro" ? "Pro" : "Dealer"} includes {limit} photos</h2>
             <p className="ll-toast-detail mt-1 text-xs font-semibold leading-5 opacity-60">
-              We kept the first {limit}. Upgrade if you want to show more photos and unlock Pro listing features.
+              We kept the first {limit} photos. Compare packages for higher limits and additional listing features.
             </p>
             <div className="mt-3 flex gap-2">
               <Link href="/account/packages" className="flex h-10 flex-1 items-center justify-center rounded-[14px] bg-black px-4 text-xs font-black text-white">
