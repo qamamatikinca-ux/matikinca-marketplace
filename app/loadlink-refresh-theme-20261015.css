@@ -191,7 +191,7 @@ html[data-loadlink-theme="dark"] body main[data-loadlink-jobs-page="true"] [data
 html[data-loadlink-theme="dark"] body main[data-loadlink-jobs-page="true"] [data-loadlink-jobs-search-shell] input::placeholder,html[data-loadlink-theme="dark"] body main[data-loadlink-contracts-marketplace] [data-loadlink-contracts-search-shell] input::placeholder{color:rgba(255,255,255,.43)!important;}
 
 /* Canonical View Jobs sort control: one compact shape on every page. */
-html[data-loadlink-theme] body label[data-loadlink-shared-sort="view-jobs"] {
+html[data-loadlink-theme] body :is(label,button)[data-loadlink-shared-sort="view-jobs"] {
   display: inline-flex !important;
   flex: 0 0 auto !important;
   align-self: flex-start !important;
@@ -212,7 +212,7 @@ html[data-loadlink-theme] body label[data-loadlink-shared-sort="view-jobs"] {
   text-transform: none !important;
   letter-spacing: normal !important;
 }
-html[data-loadlink-theme] body label[data-loadlink-shared-sort="view-jobs"] > span {
+html[data-loadlink-theme] body :is(label,button)[data-loadlink-shared-sort="view-jobs"] > span {
   display: inline !important;
   flex: 0 0 auto !important;
   font-size: 12px !important;
@@ -221,7 +221,7 @@ html[data-loadlink-theme] body label[data-loadlink-shared-sort="view-jobs"] > sp
   letter-spacing: normal !important;
   color: var(--ll-refresh-muted) !important;
 }
-html[data-loadlink-theme] body label[data-loadlink-shared-sort="view-jobs"] > select {
+html[data-loadlink-theme] body :is(label,button)[data-loadlink-shared-sort="view-jobs"] > select {
   display: block !important;
   flex: 1 1 auto !important;
   width: auto !important;
@@ -291,3 +291,7 @@ html[data-loadlink-theme] body [data-loadlink-notification-filter="true"] {
   border-color: var(--ll-refresh-border) !important;
   border-radius: 14px !important;
 }
+
+/* Apply the exact same View Jobs sort shell to the advanced sort dialog trigger. */
+html[data-loadlink-theme] body button[data-loadlink-shared-sort="view-jobs"] > strong { max-width: 190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:900; color:inherit; }
+html[data-loadlink-theme] body button[data-loadlink-shared-sort="view-jobs"] > svg { flex-shrink:0; }

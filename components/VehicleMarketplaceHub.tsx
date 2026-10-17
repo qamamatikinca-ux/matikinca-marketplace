@@ -50,7 +50,7 @@ function readMeta(description: string | null | undefined, label: string) {
 function isVehicleListing(row: VehicleRow) {
   const kind = String(row.listing_kind || "").toLowerCase();
   if (["vehicle", "asset", "truck_sale", "vehicle_listing"].includes(kind)) return true;
-  return /^Listing type:\s*(Truck|Trailer|Mobile Unit)/im.test(String(row.description || ""));
+  return /^Listing type:\s*(Truck|Bakkie|Van|Trailer|Mobile Unit)/im.test(String(row.description || ""));
 }
 
 function isMobileUnit(row: VehicleRow) {
@@ -133,7 +133,7 @@ function cardSpecifications(row: VehicleRow, kind: EquipmentKind) {
     ? ["Year", "Vehicle subtype", "Axle configuration", "Condition"]
     : kind === "mobile_unit"
     ? ["Vehicle subtype", "Condition", "Temperature range", "Power supply"]
-    : ["Year", "Make", "Model", "Condition"];
+    : ["Year", "Make", "Model", "Mileage", "Condition"];
   return fields.map((field) => {
     const value = readMeta(row.description, field);
     return value ? { label: field === "Vehicle subtype" ? "Type" : field, value } : null;

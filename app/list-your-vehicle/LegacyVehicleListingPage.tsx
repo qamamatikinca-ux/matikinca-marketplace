@@ -36,6 +36,7 @@ const BusinessPlans = dynamic(() => import("@/components/BusinessPlans"), { ssr:
 const VehicleMarketplaceHub = dynamic(() => import("@/components/VehicleMarketplaceHub"), { ssr: false, loading: () => <div className="mx-auto my-8 h-64 max-w-6xl animate-pulse rounded-2xl bg-current/[.05]" /> });
 import { findTruckReference, truckReferenceResponse } from "@/lib/truckModelReferences";
 import { getTruckModel, getTruckModels, truckCatalog, truckYears, validateTruckTransmission } from "@/lib/truckCatalog";
+import { getLightCommercialModels, lightCommercialCatalog, lightCommercialYears } from "@/lib/southAfricanLightCommercialCatalog";
 
 
 const truckBodyTypes = [
@@ -44,11 +45,12 @@ const truckBodyTypes = [
   "Crane truck", "Logging truck", "Other",
 ];
 const trailerTypes = ["Flatbed", "Tautliner", "Side Tipper", "End Tipper", "Refrigerated", "Tanker", "Lowbed", "Livestock", "Car Carrier", "Container", "Other"];
+const bakkieVanTypes = ["Single cab bakkie", "Extended cab bakkie", "Double cab bakkie", "Panel van", "Crew van", "Passenger van", "Minibus / people carrier", "Pickup / light commercial", "Other"];
 const mobileUnitTypes = ["Mobile Toilet", "Mobile Fridge", "Food Truck", "Mobile Kitchen", "Mobile Clinic", "Mobile Office", "Mobile Workshop", "Mobile Classroom", "Mobile Accommodation", "Mobile Shower", "Cold Room", "Other"];
 const gearboxOptions = ["Manual", "Automatic", "Automated manual", "Electric direct drive", "Not applicable", "Converted / custom"];
 const acceptedDocuments = ".jpg,.jpeg,.png,.webp,.pdf";
 
-type VehicleCategory = "truck" | "trailer" | "mobile_unit";
+type VehicleCategory = "truck" | "bakkie_van" | "trailer" | "mobile_unit";
 type ListingIntent = "vehicle" | "mobile_unit";
 type SellerType = "private" | "dealership";
 type OfferMode = "sale" | "rental" | "sale_or_rental" | "poa";
@@ -77,10 +79,11 @@ const emptyVerificationFiles: VerificationFiles = {
 function normalizePhone(value: string) { return value.replace(/[^\d+]/g, ""); }
 function isValidSouthAfricanPhone(value: string) { const clean = normalizePhone(value); return /^0\d{9}$/.test(clean) || /^\+27\d{9}$/.test(clean); }
 function safeFileName(value: string) { return value.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/^-+|-+$/g, "") || "document"; }
-function categoryLabel(category: VehicleCategory) { return category === "truck" ? "Truck" : category === "trailer" ? "Trailer" : "Mobile Unit"; }
+function categoryLabel(category: VehicleCategory) { return category === "truck" ? "Truck" : category === "bakkie_van" ? "Bakkie or Van" : category === "trailer" ? "Trailer" : "Mobile Unit"; }
 function offerLabel(mode: OfferMode) { return mode === "sale" ? "For sale only" : mode === "rental" ? "Rental only" : mode === "sale_or_rental" ? "Sale or rental" : "Price on application (POA)"; }
 function unitSpecSchema(category: VehicleCategory | null, subtype: string): Array<[string, string]> {
   const clean = subtype.toLowerCase();
+  if (category === "bakkie_van") return [["Engine / power", "Engine size, output or power rating"], ["Cab / seating", "Single cab, double cab or passenger seats"], ["Cargo dimensions", "Load bin, panel dimensions or cargo volume"], ["Features", "Canopy, towbar, refrigeration or safety equipment"]];
   if (category === "truck") return [["Engine / power", "Engine displacement, output or power rating"], ["Cab configuration", "Sleeper cab, day cab, crew cab"], ["Braking / retarder", "Retarder, engine brake, EBS or ABS"], ["Suspension", "Air, steel or mixed suspension"]];
   if (category === "trailer") return [["Braking system", "EBS, ABS, drum or disc"], ["Suspension", "Air or mechanical suspension"], ["Body / deck dimensions", "Length, width and usable body/deck size"], ["Loading configuration", "Rear doors, side access, ramps, tipper setup, etc."]];
   if (clean.includes("fridge") || clean.includes("cold room") || clean.includes("refrigerated")) return [["Temperature range", "Operating temperature range"], ["Refrigeration system", "Unit brand/model and cooling setup"], ["Power supply", "Mains, generator, solar or hybrid"], ["Internal capacity", "Usable refrigerated space / volume"]];
@@ -160,6 +163,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const vehiclePreviewUrlsRef = useRef<string[]>([]);
 
   const availableModels = useMemo(() => vehicleCategory === "truck" ? getTruckModels(brand, year) : [], [brand, vehicleCategory, year]);
+  const bakkieVanModels = useMemo(() => vehicleCategory === "bakkie_van" ? getLightCommercialModels(brand, year) : [], [brand, vehicleCategory, year]);
   const selectedModel = useMemo(() => vehicleCategory === "truck" ? getTruckModel(brand, modelName, year) : null, [brand, modelName, vehicleCategory, year]);
   const transmissionCheck = useMemo(() => vehicleCategory === "truck" && transmission ? validateTruckTransmission(brand, modelName, year, transmission) : null, [brand, modelName, transmission, vehicleCategory, year]);
   const specSchema = useMemo(() => unitSpecSchema(vehicleCategory, bodyType || vehicleSubtype), [bodyType, vehicleCategory, vehicleSubtype]);
@@ -269,7 +273,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   function chooseCategory(category: VehicleCategory) {
     setVehicleCategory(category);
     setVehicleSubtype("");
-    setBodyType(category === "truck" ? "Tractor unit / horse" : "");
+    setBodyType(category === "truck" ? "Tractor unit / horse" : category === "bakkie_van" ? "Single cab bakkie" : "");
     setBrand(""); setModelName(""); setModelConfirmed(false); setReferenceImage(null);
     setTransmission(category === "trailer" ? "Not applicable" : "");
     setFuelType(category === "trailer" ? "Not applicable" : "");
@@ -291,6 +295,14 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     setTransmission(reference?.verified_transmission || "");
     setFuelType(reference?.verified_fuel || "");
     setAxleConfiguration(selectedModel.axleConfigurations.length === 1 ? selectedModel.axleConfigurations[0] : "");
+    setModelConfirmed(true);
+    setMessage("");
+  }
+
+  function confirmBakkieVanModel() {
+    if (year < 2009 || year > new Date().getFullYear()) { setMessage("Select a model year from 2009 to the current year."); return; }
+    if (!brand.trim() || !modelName.trim() || !bodyType.trim()) { setMessage("Enter the make, model and body type as shown on the papers."); return; }
+    setTitle(`${year} ${brand.trim()} ${modelName.trim()}`);
     setModelConfirmed(true);
     setMessage("");
   }
@@ -392,10 +404,13 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   }
 
   function validateBeforeSubmit() {
-    if (!vehicleCategory) return "Choose whether you are listing a truck, trailer or mobile unit.";
+    if (!vehicleCategory) return "Choose a truck, bakkie or van, trailer, or mobile unit.";
     if (vehicleCategory === "truck") {
       if (!modelConfirmed || !selectedModel) return "Confirm the exact truck model before continuing.";
       if (!transmissionCheck?.valid) return transmissionCheck?.message || "Choose a valid gearbox.";
+    } else if (vehicleCategory === "bakkie_van") {
+      if (year < 2009 || year > new Date().getFullYear()) return "Bakkie and van listings support model years from 2009 onwards.";
+      if (!brand.trim() || !modelName.trim() || !bodyType.trim() || !modelConfirmed) return "Enter make, model and body type, then confirm the vehicle details.";
     } else {
       if (!vehicleSubtype) return `Choose the ${vehicleCategory === "trailer" ? "trailer" : "mobile unit"} type.`;
       if (!brand.trim() || !modelName.trim()) return "Enter the make and model.";
@@ -411,7 +426,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     if (sellerType === "dealership" && packageType === "dealer" && vehiclePhotos.length < 10) return "Dealer listings require at least 10 clear photos. Your Dealer package supports up to 15.";
     if (vehiclePhotos.length < 2) return "Upload at least two clear photos of the actual vehicle or unit.";
     if (!documents.idDocument || !documents.registrationPaper || !documents.ownershipProof) return "Upload your ID, registration paper and proof of ownership or authority to list.";
-    if (vehicleCategory === "truck" && !documents.driverLicence) return "Upload the driver’s licence for the truck listing.";
+    if ((vehicleCategory === "truck" || vehicleCategory === "bakkie_van") && !documents.driverLicence) return "Upload the driver’s licence for this vehicle listing.";
     if (transmissionCheck?.requiresModificationProof && !documents.modificationProof) return "Upload gearbox conversion or engineering paperwork.";
     if (sellerType === "dealership" && !dealerPost) {
       if (!dealershipName.trim() || !companyRegistrationNumber.trim() || !taxNumber.trim()) return "Enter the dealership and registration information.";
@@ -464,7 +479,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       const representativeAuthorityPath = sellerType === "dealership" && !dealerPost && documents.representativeAuthority ? await uploadVerificationDocument(documents.representativeAuthority, user.id, folder, "Representative authority") : null;
 
       const label = categoryLabel(vehicleCategory!);
-      const subtype = vehicleCategory === "truck" ? bodyType : vehicleSubtype;
+      const subtype = vehicleCategory === "truck" || vehicleCategory === "bakkie_van" ? bodyType : vehicleSubtype;
       const displayRate = offerMode === "poa" ? "POA" : offerMode === "rental" ? `${formatListingRate(rate)} / ${rentalPeriod}` : formatListingRate(rate);
       const storedDescription = [
         `Listing type: ${label}`,
@@ -497,7 +512,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
 
       const listingPayload = {
         title: title.trim(), city,
-        vehicle_group: vehicleCategory === "mobile_unit" ? "Mobile Units" : "Trucks / Trailers",
+        vehicle_group: vehicleCategory === "mobile_unit" ? "Mobile Units" : vehicleCategory === "bakkie_van" ? "Vehicles" : "Trucks / Trailers",
         rate: displayRate, posted_by: postedBy.trim(), contact_number: contactNumber.trim(), whatsapp_number: whatsappNumber.trim(),
         description: storedDescription, photos: photoUrls,
         sponsored: packageType === "pro" || packageType === "dealer", package_type: packageType,
@@ -518,7 +533,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
           registration_number: registrationNumber.trim().toUpperCase(), vin: vin.trim().toUpperCase(), engine_number: engineNumber.trim().toUpperCase(),
           odometer_km: Number(odometerKm), gvm_kg: gvmKg ? Number(gvmKg) : null, payload_kg: payloadKg ? Number(payloadKg) : null,
           reference_image_url: referenceImage?.imageUrl || null, reference_image_source: referenceImage?.sourceUrl || null,
-          factory_transmissions: selectedModel?.transmissions || [], specification_status: transmissionCheck?.requiresModificationProof ? "modified_pending_review" : "owner_confirmed",
+          factory_transmissions: selectedModel?.transmissions || [], specification_status: transmissionCheck?.requiresModificationProof ? "modified_pending_review" : "catalogue_match",
         }, { onConflict: "listing_id" });
         if (detailsResult.error) throw detailsResult.error;
       }
@@ -575,7 +590,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const inputClass = `h-14 w-full rounded-xl border px-4 font-semibold outline-none backdrop-blur-lg focus:border-[#f6b800] ${darkMode ? "border-white/14 bg-white/[.055] text-white placeholder:text-white/30" : "border-black/10 bg-white/72 text-black placeholder:text-black/35"}`;
   const textAreaClass = `${inputClass} min-h-32 py-4`;
   const categoryChosen = Boolean(vehicleCategory);
-  const detailsReady = vehicleCategory === "truck" ? modelConfirmed : Boolean(vehicleSubtype && brand.trim() && modelName.trim());
+  const detailsReady = vehicleCategory === "truck" || vehicleCategory === "bakkie_van" ? modelConfirmed : Boolean(vehicleSubtype && brand.trim() && modelName.trim());
 
   return (
     <main className={`min-h-screen transition-colors ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
@@ -656,6 +671,17 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Commercial trucks and tractor units.</span>
               </button>
               <button type="button" onClick={() => {
+                setListingIntent("vehicle"); chooseCategory("bakkie_van");
+                setYear(Math.min(new Date().getFullYear(), 2026));
+                setSelectedPlan(entryMode ? initialPackage : null);
+                setPackageType(entryMode ? initialPackage : "standard");
+                window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+              }} className={`ll-vehicle-type-card min-h-28 rounded-[24px] border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <span className="ll-vehicle-type-icon"><LoadLinkIcon name="truck" size={24}/></span>
+                <span className="block text-xl font-black">Bakkie &amp; Van</span>
+                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>South African bakkies and vans, 2009 to current.</span>
+              </button>
+              <button type="button" onClick={() => {
                 setListingIntent("vehicle");
                 chooseCategory("trailer");
                 setSelectedPlan(entryMode ? initialPackage : null);
@@ -704,14 +730,15 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       {listingFlowOpen && signedIn && listingIntent && selectedPlan ? <form id="vehicle-listing-form" onSubmit={submitVehicle} className="mx-auto grid max-w-5xl scroll-mt-24 gap-6 px-4 py-7 md:px-6 md:py-12">
         {categoryChosen ? <>
           <section className={`overflow-hidden rounded-2xl border ${surface}`}>
-            <SectionHeading step="01" title={`${categoryLabel(vehicleCategory!)} identity`} description={vehicleCategory === "truck" ? "Select the registration year, manufacturer and exact truck model." : "Choose the unit type and enter the make and model exactly as shown on the registration papers."} />
+            <SectionHeading step="01" title={`${categoryLabel(vehicleCategory!)} identity`} description={vehicleCategory === "truck" ? "Select the registration year, manufacturer and exact truck model." : vehicleCategory === "bakkie_van" ? "Choose any South African bakkie or van from 2009 onwards. Use a suggested make/model or enter another valid one." : "Choose the unit type and enter the make and model exactly as shown on the registration papers."} />
             <div className="grid gap-5 p-5 md:grid-cols-3 md:p-7">
-              {vehicleCategory !== "truck" ? <Field label={`${vehicleCategory === "trailer" ? "Trailer" : "Mobile unit"} type`}><select value={vehicleSubtype} onChange={(event) => { setVehicleSubtype(event.target.value); setBodyType(event.target.value); }} className={inputClass} required><option value="">Select type</option>{(vehicleCategory === "trailer" ? trailerTypes : mobileUnitTypes).map((item) => <option key={item}>{item}</option>)}</select></Field> : null}
-              <Field label="Registration / model year"><select value={year} onChange={(event) => { setYear(Number(event.target.value)); setModelName(""); setModelConfirmed(false); }} className={inputClass}>{truckYears.map((item) => <option key={item} value={item}>{item}</option>)}</select></Field>
-              <Field label="Make / manufacturer">{vehicleCategory === "truck" ? <select value={brand} onChange={(event) => { setBrand(event.target.value); setModelName(""); setModelConfirmed(false); }} className={inputClass} required><option value="">Choose manufacturer</option>{truckCatalog.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}</select> : <input value={brand} onChange={(event) => setBrand(event.target.value)} placeholder="Make or manufacturer" className={inputClass} required />}</Field>
-              <Field label="Model">{vehicleCategory === "truck" ? <select value={modelName} onChange={(event) => selectTruckModel(event.target.value)} className={inputClass} disabled={!brand} required><option value="">Choose model family</option>{availableModels.map((item) => <option key={item.name}>{item.name}</option>)}</select> : <input value={modelName} onChange={(event) => setModelName(event.target.value)} placeholder="Model name or number" className={inputClass} required />}</Field>
+              {vehicleCategory !== "truck" && vehicleCategory !== "bakkie_van" ? <Field label={`${vehicleCategory === "trailer" ? "Trailer" : "Mobile unit"} type`}><select value={vehicleSubtype} onChange={(event) => { setVehicleSubtype(event.target.value); setBodyType(event.target.value); }} className={inputClass} required><option value="">Select type</option>{(vehicleCategory === "trailer" ? trailerTypes : mobileUnitTypes).map((item) => <option key={item}>{item}</option>)}</select></Field> : null}
+              <Field label="Registration / model year"><select value={year} onChange={(event) => { setYear(Number(event.target.value)); setModelName(""); setModelConfirmed(false); }} className={inputClass}>{(vehicleCategory === "bakkie_van" ? lightCommercialYears : truckYears).map((item) => <option key={item} value={item}>{item}</option>)}</select></Field>
+              <Field label="Make / manufacturer">{vehicleCategory === "truck" ? <select value={brand} onChange={(e) => {setBrand(e.target.value);setModelName("");setModelConfirmed(false);}} className={inputClass} required><option value="">Choose manufacturer</option>{truckCatalog.map((item)=><option key={item.name} value={item.name}>{item.name}</option>)}</select> : vehicleCategory === "bakkie_van" ? <><input list="loadlink-light-commercial-makes" value={brand} onChange={e=>{setBrand(e.target.value);setModelName("");setModelConfirmed(false);}} placeholder="Choose or enter any make" className={inputClass} required /><datalist id="loadlink-light-commercial-makes">{lightCommercialCatalog.map(item=><option key={item.name} value={item.name}/>)}</datalist></> : <input value={brand} onChange={e=>setBrand(e.target.value)} placeholder="Make or manufacturer" className={inputClass} required />}</Field>
+              <Field label="Model">{vehicleCategory === "truck" ? <select value={modelName} onChange={e=>selectTruckModel(e.target.value)} className={inputClass} disabled={!brand} required><option value="">Choose model family</option>{availableModels.map(item=><option key={item.name}>{item.name}</option>)}</select> : vehicleCategory === "bakkie_van" ? <><input list="loadlink-light-commercial-models" value={modelName} onChange={e=>{setModelName(e.target.value);setModelConfirmed(false);}} placeholder="Select or type your exact model" className={inputClass} required /><datalist id="loadlink-light-commercial-models">{bakkieVanModels.map(name=><option key={name} value={name}/>)}</datalist><p className={`mt-2 text-xs ${muted}`}>All makes, derivatives and imports may be entered manually if not suggested.</p></> : <input value={modelName} onChange={e=>setModelName(e.target.value)} placeholder="Model name or number" className={inputClass} required />}</Field>
+
             </div>
-            {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>{imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Loading model reference…</p> : null}{referenceImage?.imageUrl ? <figure className="mt-4 max-w-xl"><LoadLinkImage loading="eager" fetchPriority="high" src={referenceImage.imageUrl} alt={referenceImage.title || "Truck reference"} className="aspect-[16/9] w-full rounded-xl bg-current/[.025] object-contain" /><figcaption className={`mt-2 text-[11px] font-semibold leading-5 ${muted}`}>Model-family reference: {referenceImage.title}. Your truck’s year and specification may differ. Upload photos of your actual vehicle.{referenceImage.credit ? ` Credit: ${referenceImage.credit}.` : ""}{referenceImage.license ? ` ${referenceImage.license}.` : ""} {referenceImage.sourceUrl ? <a href={referenceImage.sourceUrl} target="_blank" rel="noreferrer" className="font-black underline underline-offset-2">Source</a> : null}</figcaption></figure> : <p className={`mt-3 text-xs ${muted}`}>A verified photograph is not available for this model and year yet.</p>}{referenceImage?.specSourceUrl ? <p className={`mt-3 text-xs ${muted}`}>{referenceImage.verifiedFuel || referenceImage.verifiedTransmission ? "Verified specifications have been filled in. Confirm your vehicle’s gearbox and fuel type." : "Specifications vary by version. Select the gearbox and fuel type fitted to your vehicle."} <a href={referenceImage.specSourceUrl} target="_blank" rel="noreferrer" className="underline">Manufacturer specifications</a></p> : null}</div> : <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={() => { setTitle(`${year} ${brand} ${modelName} ${vehicleSubtype}`.replace(/\s+/g, " ").trim()); setMessage(""); }} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm vehicle details</button></div>}
+            {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>{imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Loading model reference…</p> : null}{referenceImage?.imageUrl ? <figure className="mt-4 max-w-xl"><LoadLinkImage loading="eager" fetchPriority="high" src={referenceImage.imageUrl} alt={referenceImage.title || "Truck reference"} className="aspect-[16/9] w-full rounded-xl bg-current/[.025] object-contain" /><figcaption className={`mt-2 text-[11px] font-semibold leading-5 ${muted}`}>Model-family reference: {referenceImage.title}. Your truck’s year and specification may differ. Upload photos of your actual vehicle.{referenceImage.credit ? ` Credit: ${referenceImage.credit}.` : ""}{referenceImage.license ? ` ${referenceImage.license}.` : ""} {referenceImage.sourceUrl ? <a href={referenceImage.sourceUrl} target="_blank" rel="noreferrer" className="font-black underline underline-offset-2">Source</a> : null}</figcaption></figure> : <p className={`mt-3 text-xs ${muted}`}>A verified photograph is not available for this model and year yet.</p>}{referenceImage?.specSourceUrl ? <p className={`mt-3 text-xs ${muted}`}>{referenceImage.verifiedFuel || referenceImage.verifiedTransmission ? "Verified specifications have been filled in. Confirm your vehicle’s gearbox and fuel type." : "Specifications vary by version. Select the gearbox and fuel type fitted to your vehicle."} <a href={referenceImage.specSourceUrl} target="_blank" rel="noreferrer" className="underline">Manufacturer specifications</a></p> : null}</div> : vehicleCategory === "bakkie_van" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmBakkieVanModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm bakkie or van model</button><p className={`mt-2 text-xs ${muted}`}>Verify the exact make, model and year against the registration papers.</p></div> : <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={() => { setTitle(`${year} ${brand} ${modelName} ${vehicleSubtype}`.replace(/\s+/g, " ").trim()); setMessage(""); }} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm vehicle details</button></div>}
           </section>
 
           {detailsReady ? <>
@@ -719,7 +746,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
               <SectionHeading step="02" title="Vehicle details" description="Add the information buyers need before opening the full product view." />
               <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7">
                 <Field label="Listing title" wide><input value={title} onChange={(event) => setTitle(event.target.value)} className={inputClass} required /></Field>
-                <Field label={vehicleCategory === "truck" ? "Body type" : "Type"}><select value={bodyType || vehicleSubtype} onChange={(event) => setBodyType(event.target.value)} className={inputClass}>{(vehicleCategory === "truck" ? truckBodyTypes : vehicleCategory === "trailer" ? trailerTypes : mobileUnitTypes).map((item) => <option key={item}>{item}</option>)}</select></Field>
+                <Field label={vehicleCategory === "truck" ? "Body type" : "Type"}><select value={bodyType || vehicleSubtype} onChange={(event) => setBodyType(event.target.value)} className={inputClass}>{(vehicleCategory === "truck" ? truckBodyTypes : vehicleCategory === "bakkie_van" ? bakkieVanTypes : vehicleCategory === "trailer" ? trailerTypes : mobileUnitTypes).map((item) => <option key={item}>{item}</option>)}</select></Field>
                 <Field label="Condition"><select value={condition} onChange={(event) => setCondition(event.target.value)} className={inputClass}><option>Excellent</option><option>Very good</option><option>Good</option><option>Fair</option><option>Needs attention</option></select></Field>
                 <Field label="Transmission"><select value={transmission} onChange={(event) => setTransmission(event.target.value)} className={inputClass} required><option value="">Choose gearbox</option>{gearboxOptions.map((item) => <option key={item}>{item}</option>)}</select></Field>
                 <Field label="Fuel / power type"><input value={fuelType} onChange={(event) => setFuelType(event.target.value)} placeholder={vehicleCategory === "trailer" ? "Not applicable" : "Confirm fuel / power type"} className={inputClass} required /></Field>
@@ -749,7 +776,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
               <SectionHeading step="03" title="Photos and verification" description="Upload clear product photos and the critical documents required for review." />
               <div className="p-5 md:p-7"><label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>{vehiclePhotoProgress || `Minimum 2 photos · up to ${packageType === "pro" || packageType === "dealer" ? 15 : 5}`}</span><input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} disabled={preparingVehiclePhotos || saving} className="hidden" /></label>{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <LoadLinkImage key={preview} src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 shrink-0 snap-start rounded-xl object-cover" />)}</div> : null}</div>
               {sellerType === "dealership" && !dealerPost ? <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><Field label="Dealership name"><input value={dealershipName} onChange={(event) => setDealershipName(event.target.value)} className={inputClass} required /></Field><Field label="Company registration number"><input value={companyRegistrationNumber} onChange={(event) => setCompanyRegistrationNumber(event.target.value)} className={inputClass} required /></Field><Field label="SARS tax number"><input value={taxNumber} onChange={(event) => setTaxNumber(event.target.value)} className={inputClass} required /></Field><DocumentInput label="CIPC company registration" required file={documents.companyRegistration} onChange={(file) => setDocument("companyRegistration", file)} /><DocumentInput label="SARS tax document" required file={documents.taxDocument} onChange={(file) => setDocument("taxDocument", file)} /><DocumentInput label="Proof of business address" required file={documents.businessAddress} onChange={(file) => setDocument("businessAddress", file)} /><DocumentInput label="Representative authority" required file={documents.representativeAuthority} onChange={(file) => setDocument("representativeAuthority", file)} /></div> : null}
-              <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><DocumentInput label="South African ID or passport" required file={documents.idDocument} onChange={(file) => setDocument("idDocument", file)} />{vehicleCategory === "truck" ? <DocumentInput label="Driver’s licence" required file={documents.driverLicence} onChange={(file) => setDocument("driverLicence", file)} /> : null}<DocumentInput label="Vehicle registration certificate" required file={documents.registrationPaper} onChange={(file) => setDocument("registrationPaper", file)} /><DocumentInput label="Proof of ownership or authority to list" required file={documents.ownershipProof} onChange={(file) => setDocument("ownershipProof", file)} /><DocumentInput label="Roadworthy certificate" file={documents.roadworthy} onChange={(file) => setDocument("roadworthy", file)} /><DocumentInput label="Operating licence" file={documents.operatingLicence} onChange={(file) => setDocument("operatingLicence", file)} />{transmissionCheck?.requiresModificationProof ? <DocumentInput label="Gearbox conversion paperwork" required file={documents.modificationProof} onChange={(file) => setDocument("modificationProof", file)} /> : null}</div>
+              <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><DocumentInput label="South African ID or passport" required file={documents.idDocument} onChange={(file) => setDocument("idDocument", file)} />{(vehicleCategory === "truck" || vehicleCategory === "bakkie_van") ? <DocumentInput label="Driver’s licence" required file={documents.driverLicence} onChange={(file) => setDocument("driverLicence", file)} /> : null}<DocumentInput label="Vehicle registration certificate" required file={documents.registrationPaper} onChange={(file) => setDocument("registrationPaper", file)} /><DocumentInput label="Proof of ownership or authority to list" required file={documents.ownershipProof} onChange={(file) => setDocument("ownershipProof", file)} /><DocumentInput label="Roadworthy certificate" file={documents.roadworthy} onChange={(file) => setDocument("roadworthy", file)} /><DocumentInput label="Operating licence" file={documents.operatingLicence} onChange={(file) => setDocument("operatingLicence", file)} />{transmissionCheck?.requiresModificationProof ? <DocumentInput label="Gearbox conversion paperwork" required file={documents.modificationProof} onChange={(file) => setDocument("modificationProof", file)} /> : null}</div>
             </section>
 
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
