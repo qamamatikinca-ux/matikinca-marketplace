@@ -132,6 +132,8 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [payloadKg, setPayloadKg] = useState("");
   const [rate, setRate] = useState("");
   const [offerMode, setOfferMode] = useState<OfferMode>("sale");
+  const [requestBoost, setRequestBoost] = useState(false);
+  const [boostRequestNotice, setBoostRequestNotice] = useState("");
   const [rentalRate, setRentalRate] = useState("");
   const [rentalPeriod, setRentalPeriod] = useState<RentalPeriod>("month");
   const [specA, setSpecA] = useState("");
@@ -541,6 +543,20 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       await syncAccountState().catch(() => undefined);
       clearVehicleDraft();
       submissionIdRef.current = createSafeRandomId();
+      if (requestBoost) {
+        // An opt-in request generates a manual R14 payment reference. The boost
+        // is NOT activated until payment is confirmed by the existing backend.
+        const boost = await supabase.from("job_boosts").insert({
+          listing_id: listingId, user_id: user.id,
+          amount_cents: 1400, currency: "ZAR", status: "pending_payment",
+          metadata: { listing_type: "vehicle", source: "vehicle_posting_flow" },
+        }).select("payment_reference").single();
+        if (boost.error) {
+          setBoostRequestNotice("Your listing was submitted, but its optional promotion request could not be created. You can still manage the listing in My Posts.");
+        } else {
+          setBoostRequestNotice(`Promotion requested. R14 payment reference: ${boost.data?.payment_reference || "Check your notifications"}. It activates only after payment is confirmed.`);
+        }
+      }
       setSubmittedListingId(listingId);
       setSubmissionSuccess(true);
     } catch (error) {
@@ -563,6 +579,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
 
   return (
     <main className={`min-h-screen transition-colors ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
+      {boostRequestNotice ? <div role="status" className="fixed inset-x-4 top-4 z-[9999] mx-auto max-w-xl rounded-2xl border border-[#f6b800]/40 bg-[#131313] px-5 py-4 text-sm font-semibold text-white shadow-xl"><button type="button" onClick={() => setBoostRequestNotice("")} className="float-right ml-2 text-[#f6b800]">Close</button>{boostRequestNotice}</div> : null}
       <PhotoLimitUpgradeToast open={photoLimitToast} onClose={() => setPhotoLimitToast(false)} limit={5} />
       <SubmissionSuccess
         open={submissionSuccess}
@@ -738,6 +755,14 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="04" title="Contact and confirmation" description="Confirm the details before the product is added to LoadLink." />
               <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7"><Field label={sellerType === "dealership" ? "Dealership / contact name" : "Owner / company name"}><input value={postedBy} onChange={(event) => setPostedBy(event.target.value)} className={inputClass} required /></Field><Field label="Contact number"><input value={contactNumber} onChange={(event) => setContactNumber(event.target.value)} placeholder="0821234567" className={inputClass} required /></Field><Field label="WhatsApp number — optional"><input value={whatsappNumber} onChange={(event) => setWhatsappNumber(event.target.value)} placeholder="0821234567" className={inputClass} /></Field><Field label="Selected plan"><div className={`${inputClass} flex items-center`}>{false ? "Manual listing — R15 per vehicle per day" : selectedPlan === "pro" ? "Pro listing — analytics enabled" : "Dealer package — dealership inventory"}</div></Field></div>
+              <div className="border-t border-current/10 p-5 md:p-7">
+                <h3 className="text-lg font-black">Promote your listing</h3>
+                <p className={`mt-2 text-xs leading-5 ${muted}`}>Optional R14 promotion request. Your listing is reviewed normally; if approved and payment is confirmed, it receives a 7-day placement in Promoted Listings. No payment is taken when you submit this form.</p>
+                <label className={`mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border p-4 ${darkMode ? "border-white/15 bg-white/[.035]" : "border-black/10 bg-black/[.02]"}`}>
+                  <input type="checkbox" checked={requestBoost} onChange={e => setRequestBoost(e.target.checked)} className="mt-1 h-5 w-5 accent-[#f6b800]" />
+                  <span className="text-sm font-bold">Request a 7-day promoted placement — R14 (payment required)</span>
+                </label>
+              </div>
               <div className="grid gap-3 px-5 pb-5 md:px-7 md:pb-7"><CheckRow checked={confirmOwnership} onChange={setConfirmOwnership} label="I own this vehicle or have written authority from the owner to list it." /><CheckRow checked={confirmAccuracy} onChange={setConfirmAccuracy} label="I confirm that the details, mileage, ownership history and uploaded documents are accurate." /></div>
               <div className="border-t border-[#f6b800]/25 bg-black p-5 text-white md:p-7">{message ? <div className="mb-4 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm font-bold leading-6 text-red-300">{message}</div> : null}<button type="submit" disabled={saving || preparingVehiclePhotos} className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[0.12em] text-black disabled:opacity-50">{saving ? "Submitting vehicle…" : dealershipId ? "Add to dealership inventory" : "Submit vehicle for verification"}</button><p className="mt-3 text-center text-xs leading-5 text-white/45">The product will appear in the dealership slider when linked to an approved dealership. Analytics remains available only on Pro listings.</p></div>
             </section>

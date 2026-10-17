@@ -22,6 +22,9 @@ type VehicleRow = {
   description?: string | null;
   photos?: string[] | null;
   listing_kind?: string | null;
+  sponsored?: boolean | null;
+  boost_expires_at?: string | null;
+  display_tier?: number | null;
   created_at?: string | null;
   posted_by?: string | null;
   poster_photo?: string | null;
@@ -118,6 +121,25 @@ function truckMileage(row: VehicleRow) {
   return Number.isFinite(number) && number >= 0 ? number.toLocaleString("en-ZA") + " km" : null;
 }
 
+function isActiveVehiclePromotion(row: VehicleRow) {
+  return Boolean(row.sponsored) && Boolean(row.boost_expires_at) &&
+    new Date(String(row.boost_expires_at)).getTime() > Date.now();
+}
+
+function cardSpecifications(row: VehicleRow, kind: EquipmentKind) {
+  const fields = kind === "truck"
+    ? ["Year", "Make", "Model", "Mileage"]
+    : kind === "trailer"
+    ? ["Year", "Vehicle subtype", "Axle configuration", "Condition"]
+    : kind === "mobile_unit"
+    ? ["Vehicle subtype", "Condition", "Temperature range", "Power supply"]
+    : ["Year", "Make", "Model", "Condition"];
+  return fields.map((field) => {
+    const value = readMeta(row.description, field);
+    return value ? { label: field === "Vehicle subtype" ? "Type" : field, value } : null;
+  }).filter((item): item is { label: string; value: string } => Boolean(item)).slice(0, 4);
+}
+
 function readSeenIds() {
   const ids = new Set<string>();
   try {
@@ -192,6 +214,9 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
     });
   },[mode,rows,sort,intent]);
 
+  const promoted = useMemo(() =>
+    rows.filter(isActiveVehiclePromotion).sort((a,b) => Number(b.display_tier || 1) - Number(a.display_tier || 1) ||
+      new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).slice(0, 6), [rows]);
   const totalPages = Math.max(1, Math.ceil(visible.length / LISTINGS_PER_PAGE));
   const paginatedVisible = useMemo(() => {
     const start = (currentPage - 1) * LISTINGS_PER_PAGE;
@@ -225,6 +250,34 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
       <span id="vehicle-marketplace-vehicles" className="block scroll-mt-24" aria-hidden="true" />
       <span id="vehicle-marketplace-units" className="block scroll-mt-24" aria-hidden="true" />
       <div className="mx-auto max-w-5xl">
+        {!loading && promoted.length > 0 ? (
+          <section aria-labelledby="promoted-vehicle-heading" className={`mb-10 rounded-[24px] border p-4 sm:p-6 ${darkMode ? "border-[#f6b800]/30 bg-[#15130b]" : "border-[#d4b659]/45 bg-[#fffbef]"}`}>
+            <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <span className={`text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-[#f6b800]" : "text-[#9a7600]"}`}>Featured stock</span>
+                <h2 id="promoted-vehicle-heading" className="mt-1 text-2xl font-black tracking-[-.04em] sm:text-3xl">Promoted listings</h2>
+                <p className={`mt-1 text-xs font-semibold ${muted}`}>Paid placements, clearly marked and prioritised on LoadLink.</p>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {promoted.map((row) => (
+                <Link key={row.id} href={`/vehicles/${row.id}`} onClick={() => markSeen(String(row.id))}
+                  className={`group overflow-hidden rounded-2xl border ${darkMode ? "border-white/12 bg-[#101010]" : "border-black/10 bg-white"}`}>
+                  <div className="relative aspect-[16/9] overflow-hidden bg-black">
+                    <LoadLinkImage src={row.photos?.[0] || "/images/truck-1.jpg"} alt={row.title || "Commercial vehicle"}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025]" />
+                    <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1 text-[10px] font-black uppercase text-black">Promoted</span>
+                  </div>
+                  <div className="p-4">
+                    <p className={`text-xs font-semibold ${muted}`}>{equipmentKind(row).replace("_", " ")} · {row.city || "South Africa"}</p>
+                    <h3 className="mt-1 line-clamp-2 text-base font-black">{row.title || "Commercial vehicle"}</h3>
+                    <p className={`mt-2 text-xl font-black ${darkMode ? "text-[#f6b800]" : "text-[#956f00]"}`}>{formatListingRate(row.rate)}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
         <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="text-4xl font-black tracking-[-.05em] md:text-5xl">Vehicles and mobile units available</h2>
@@ -254,7 +307,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
                 const type = readMeta(row.description, "Vehicle subtype") || readMeta(row.description, "Listing type") || row.vehicle_group || "Commercial vehicle";
                 const offer = readMeta(row.description, "Offer") || "Available";
                 const kind = equipmentKind(row);
-                const mileage = kind === "truck" ? truckMileage(row) : null;
+
                 const kindLabel = kind === "mobile_unit" ? "Mobile unit" : kind === "trailer" ? "Trailer" : kind === "truck" ? "Truck" : "Vehicle";
                 const wasSeen = seen.has(String(row.id));
                 const href = `/vehicles/${row.id}`;
@@ -264,26 +317,37 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
                     data-listing-card="true"
                     data-loadlink-vehicle-card="true"
                     data-listing-id={row.id}
-                    className={`overflow-hidden border ${surface}`}
+                    className={`min-w-0 overflow-hidden rounded-[22px] border shadow-[0_10px_32px_rgba(0,0,0,.07)] ${surface}`}
                   >
                     <Link href={href} onClick={() => markSeen(String(row.id))} className="group relative block w-full overflow-hidden bg-black text-left">
-                      <div className="aspect-[4/3] w-full overflow-hidden md:aspect-[16/9]">
+                      <div className="aspect-[16/11] w-full overflow-hidden sm:aspect-[16/10]">
                         <LoadLinkImage src={row.photos?.[0] || "/images/truck-1.jpg"} alt={row.title || "LoadLink vehicle"} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" />
                       </div>
                       <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/45" />
-                      <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[9px] font-black uppercase tracking-[.12em] text-black">{offer}</span>
+                      <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.08em] text-black">{offer}</span>
+                      <span className="absolute bottom-3 left-3 rounded-full bg-black/75 px-3 py-1.5 text-[10px] font-black uppercase text-white backdrop-blur">{row.photos?.length || 1} photo{(row.photos?.length || 1) === 1 ? "" : "s"}</span>
+                      {isActiveVehiclePromotion(row) ? <span className="absolute right-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase text-black">Promoted</span> : null}
                       {wasSeen ? <span className="absolute bottom-3 right-3 rounded-full bg-black/75 px-3 py-1.5 text-[10px] font-black text-white backdrop-blur">Seen</span> : null}
                     </Link>
 
-                    <div className="p-5">
-                      <p className="text-3xl font-black tracking-[-.04em] text-[#b88900]">{formatListingRate(row.rate)}</p>
+                    <div className="p-4 sm:p-5">
+                      <p className={`text-2xl font-black tracking-[-.04em] ${darkMode ? "text-[#f6b800]" : "text-[#947000]"}`}>{formatListingRate(row.rate)}</p>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <span className="rounded-full bg-[#2f9f5b] px-3 py-1.5 text-[10px] font-black uppercase text-white">{kindLabel}</span>
                         <span className={`rounded-full px-3 py-1.5 text-[10px] font-black uppercase ${softPill}`}>{type}</span>
                       </div>
-                      <Link href={href} onClick={() => markSeen(String(row.id))} className="mt-4 block text-2xl font-black tracking-[-.03em] hover:underline hover:underline-offset-4">{row.title || "Commercial vehicle"}</Link>
+                      <Link href={href} onClick={() => markSeen(String(row.id))} className="mt-3 block text-xl font-black leading-snug tracking-[-.035em] hover:underline hover:underline-offset-4">{row.title || "Commercial vehicle"}</Link>
                       <p className={`mt-2 text-sm font-semibold ${muted}`}>{row.city || "South Africa"} · {postedLabel(row.created_at)}</p>
-                      {mileage ? <p className={`mt-2 text-sm font-semibold ${muted}`}>Mileage: <strong className={darkMode ? "text-white" : "text-black"}>{mileage}</strong></p> : null}
+                      {cardSpecifications(row, kind).length ? (
+                        <dl className={`mt-4 grid grid-cols-2 gap-x-3 gap-y-3 rounded-xl border p-3 ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-black/[.025]"}`}>
+                          {cardSpecifications(row, kind).map((spec) => (
+                            <div key={spec.label} className="min-w-0">
+                              <dt className={`text-[10px] font-bold uppercase tracking-[.08em] ${muted}`}>{spec.label}</dt>
+                              <dd className="mt-1 truncate text-xs font-black" title={spec.value}>{spec.value}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      ) : null}
                       {row.posted_by ? <p className={`mt-2 text-sm ${muted}`}>Listed by <strong className={darkMode ? "text-white" : "text-black"}>{row.dealership_name || row.posted_by}</strong></p> : null}
 
                       <DealershipListingActions20260822
