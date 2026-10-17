@@ -15,7 +15,27 @@ const HEADERS = { "Cache-Control": "public, s-maxage=86400, stale-while-revalida
 const NO_STORE = { "Cache-Control": "no-store" };
 const cleanCredit = (value: string) => value.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').slice(0, 180);
 
-async function searchCommons(make: string, model: string, year: number): Promise<LightCommercialPhoto[]> {
+function identifiableBodyStyle(filename:string){
+  const lower=filename.toLowerCase().replace(/[_-]/g," ");
+  if(/double\s*cab|dual\s*cab/.test(lower))return "double-cab";
+  if(/single\s*cab/.test(lower))return "single-cab";
+  if(/extended\s*cab|super\s*cab|extra\s*cab/.test(lower))return "extended-cab";
+  if(/crew\s*van/.test(lower))return "crew-van";
+  if(/passenger\s*van/.test(lower))return "passenger-van";
+  if(/panel\s*van/.test(lower))return "panel-van";
+  return "";
+}
+function chosenBodyStyle(body:string){
+  const b=body.toLowerCase();
+  if(b==="double cab bakkie")return "double-cab";
+  if(b==="single cab bakkie")return "single-cab";
+  if(b==="extended cab bakkie")return "extended-cab";
+  if(b==="crew van")return "crew-van";
+  if(b==="passenger van"||b==="minibus / people carrier")return "passenger-van";
+  if(b==="panel van")return "panel-van";
+  return "";
+}
+async function searchCommons(make: string, model: string, year: number, bodyType: string): Promise<LightCommercialPhoto[]> {
   const endpoint = new URL("https://commons.wikimedia.org/w/api.php");
   const params = endpoint.searchParams;
   params.set("action", "query"); params.set("format", "json");
@@ -32,6 +52,8 @@ async function searchCommons(make: string, model: string, year: number): Promise
   if (data.error) throw new Error("Reference provider unavailable");
   return Object.values(data.query?.pages || {}).sort((a, b) => (a.index || 0) - (b.index || 0)).flatMap(row => {
     const info = row.imageinfo?.[0];
+    const observedBody=identifiableBodyStyle(row.title||"");
+    if(observedBody && chosenBodyStyle(bodyType) && observedBody!==chosenBodyStyle(bodyType))return [];
     if (!info || !row.title || !referenceFilenameMatches(row.title, make, model) || !referenceFilenameMatchesYear(row.title, year)
       || !/^image\/(?:jpeg|png|webp)$/.test(info.mime || "") || (info.width || 0) < 460 || (info.height || 0) < 260) return [];
     // Thumbnails moved to thumb.wikimedia.org. Rejecting that host discarded valid results.
@@ -61,7 +83,7 @@ export async function GET(request: NextRequest) {
   if (stored.length)
     return NextResponse.json({ photos: stored, availability, kind: "model_family_reference" }, { headers: HEADERS });
   try {
-    const photos = await searchCommons(reference.make, model, year);
+    const photos = await searchCommons(reference.make, model, year, bodyType);
     // An empty lookup must not leave this model without pictures for a full day.
     return NextResponse.json({ photos, availability, kind: "model_family_reference" }, { headers: photos.length ? HEADERS : NO_STORE });
   } catch {

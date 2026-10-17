@@ -14,7 +14,8 @@
     "height": 720,
     "referenceYearFrom": 2019,
     "referenceYearTo": 2019,
-    "referenceMatch": "exact-year"
+    "referenceMatch": "exact-year",
+    "referenceBodyStyle": "double-cab"
   },
   {
     "make": "Ford",
@@ -31,7 +32,8 @@
     "height": 542,
     "referenceYearFrom": 2022,
     "referenceYearTo": 2026,
-    "referenceMatch": "generation"
+    "referenceMatch": "generation",
+    "referenceBodyStyle": "double-cab"
   },
   {
     "make": "Isuzu",
@@ -48,7 +50,8 @@
     "height": 508,
     "referenceYearFrom": null,
     "referenceYearTo": null,
-    "referenceMatch": "unverified"
+    "referenceMatch": "unverified",
+    "referenceBodyStyle": null
   },
   {
     "make": "Volkswagen",
@@ -65,7 +68,8 @@
     "height": 638,
     "referenceYearFrom": 2021,
     "referenceYearTo": 2026,
-    "referenceMatch": "generation"
+    "referenceMatch": "generation",
+    "referenceBodyStyle": null
   },
   {
     "make": "Toyota",
@@ -82,7 +86,8 @@
     "height": 712,
     "referenceYearFrom": null,
     "referenceYearTo": null,
-    "referenceMatch": "unverified"
+    "referenceMatch": "unverified",
+    "referenceBodyStyle": null
   },
   {
     "make": "Mercedes-Benz",
@@ -99,7 +104,8 @@
     "height": 640,
     "referenceYearFrom": null,
     "referenceYearTo": null,
-    "referenceMatch": "unverified"
+    "referenceMatch": "unverified",
+    "referenceBodyStyle": null
   },
   {
     "make": "Mazda",
@@ -116,7 +122,8 @@
     "height": 641,
     "referenceYearFrom": null,
     "referenceYearTo": null,
-    "referenceMatch": "unverified"
+    "referenceMatch": "unverified",
+    "referenceBodyStyle": null
   },
   {
     "make": "Volkswagen",
@@ -133,7 +140,8 @@
     "height": 605,
     "referenceYearFrom": 2023,
     "referenceYearTo": 2026,
-    "referenceMatch": "generation"
+    "referenceMatch": "generation",
+    "referenceBodyStyle": "double-cab"
   },
   {
     "make": "Volkswagen",
@@ -150,7 +158,8 @@
     "height": 550,
     "referenceYearFrom": 2015,
     "referenceYearTo": 2019,
-    "referenceMatch": "generation"
+    "referenceMatch": "generation",
+    "referenceBodyStyle": null
   },
   {
     "make": "Renault",
@@ -167,7 +176,8 @@
     "height": 640,
     "referenceYearFrom": 2010,
     "referenceYearTo": 2010,
-    "referenceMatch": "exact-year"
+    "referenceMatch": "exact-year",
+    "referenceBodyStyle": "panel-van"
   },
   {
     "make": "Nissan",
@@ -184,7 +194,8 @@
     "height": 707,
     "referenceYearFrom": 2020,
     "referenceYearTo": 2020,
-    "referenceMatch": "exact-year"
+    "referenceMatch": "exact-year",
+    "referenceBodyStyle": "single-cab"
   },
   {
     "make": "Toyota",
@@ -201,7 +212,8 @@
     "height": 540,
     "referenceYearFrom": 2020,
     "referenceYearTo": 2020,
-    "referenceMatch": "exact-year"
+    "referenceMatch": "exact-year",
+    "referenceBodyStyle": null
   },
   {
     "make": "Ford",
@@ -218,7 +230,8 @@
     "height": 720,
     "referenceYearFrom": 2023,
     "referenceYearTo": 2023,
-    "referenceMatch": "exact-year"
+    "referenceMatch": "exact-year",
+    "referenceBodyStyle": "passenger-van"
   },
   {
     "make": "Mitsubishi",
@@ -235,7 +248,8 @@
     "height": 640,
     "referenceYearFrom": null,
     "referenceYearTo": null,
-    "referenceMatch": "unverified"
+    "referenceMatch": "unverified",
+    "referenceBodyStyle": null
   },
   {
     "make": "Mercedes-Benz",
@@ -252,7 +266,8 @@
     "height": 611,
     "referenceYearFrom": 2013,
     "referenceYearTo": 2013,
-    "referenceMatch": "exact-year"
+    "referenceMatch": "exact-year",
+    "referenceBodyStyle": "crew-van"
   },
   {
     "make": "Hyundai",
@@ -269,6 +284,7 @@
     "height": 563,
     "referenceYearFrom": null,
     "referenceYearTo": null,
-    "referenceMatch": "unverified"
+    "referenceMatch": "unverified",
+    "referenceBodyStyle": null
   }
 ]

@@ -335,7 +335,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     if (vehicleCategory !== "bakkie_van" || !brand.trim() || !modelName.trim() || (lightCommercialYearStatus && !lightCommercialYearStatus.valid)) {
       setLightCommercialPhotos([]); setLightCommercialPhotoLoading(false); setLightCommercialPhotoUnavailable(false); return;
     }
-    const stored = storedLightCommercialPhotos(brand, modelName, year);
+    const stored = storedLightCommercialPhotos(brand, modelName, year, bodyType);
     if (stored.length) {
       setLightCommercialPhotos(stored); setLightCommercialPhotoLoading(false); setLightCommercialPhotoUnavailable(false); return;
     }
@@ -345,7 +345,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       try {
-        const query = new URLSearchParams({make:brand.trim(), model:modelName.trim(), year:String(year), kind:"bakkie_van", v:"3"});
+        const query = new URLSearchParams({make:brand.trim(), model:modelName.trim(), year:String(year), body:bodyType, kind:"bakkie_van", v:"4"});
         const response = await fetch(`/api/light-commercial-reference?${query}`, {signal:AbortSignal.any([controller.signal, AbortSignal.timeout(12000)])});
         if(!response.ok) throw new Error("reference lookup failed");
         const data = await response.json() as {photos?:LightCommercialPhoto[]};
@@ -357,7 +357,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       } finally {if(!controller.signal.aborted) setLightCommercialPhotoLoading(false);}
     },420);
     return () => {window.clearTimeout(timer);controller.abort();};
-  }, [vehicleCategory,brand,modelName,year,lightCommercialYearStatus]);
+  }, [vehicleCategory,brand,modelName,year,bodyType,lightCommercialYearStatus]);
 
 
   useEffect(() => {
@@ -392,7 +392,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   function chooseCategory(category: VehicleCategory) {
     setVehicleCategory(category);
     setVehicleSubtype("");
-    setBodyType(category === "truck" ? "Tractor unit / horse" : category === "bakkie_van" ? "Single cab bakkie" : "");
+    setBodyType(category === "truck" ? "Tractor unit / horse" : "");
     setBrand(""); setModelName(""); setModelConfirmed(false); setReferenceImage(null);
     setTransmission(category === "trailer" ? "Not applicable" : "");
     setFuelType(category === "trailer" ? "Not applicable" : "");
@@ -873,6 +873,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
               <Field label="Make / manufacturer">{vehicleCategory === "truck" ? <select value={brand} onChange={(e) => {setBrand(e.target.value);setModelName("");setModelConfirmed(false);}} className={inputClass} required><option value="">Choose manufacturer</option>{truckCatalog.map((item)=><option key={item.name} value={item.name}>{item.name}</option>)}</select> : vehicleCategory === "bakkie_van" ? <><input list="loadlink-light-commercial-makes" value={brand} onChange={e=>{setBrand(e.target.value);setModelName("");setModelConfirmed(false);}} placeholder="Choose or enter any make" className={inputClass} required /><datalist id="loadlink-light-commercial-makes">{lightCommercialCatalog.map(item=><option key={item.name} value={item.name}/>)}</datalist></> : <input value={brand} onChange={e=>setBrand(e.target.value)} placeholder="Make or manufacturer" className={inputClass} required />}</Field>
               <Field label="Model">{vehicleCategory === "truck" ? <select value={modelName} onChange={e=>selectTruckModel(e.target.value)} className={inputClass} disabled={!brand} required><option value="">Choose model family</option>{availableModels.map(item=><option key={item.name}>{item.name}</option>)}</select> : vehicleCategory === "bakkie_van" ? <><input list="loadlink-light-commercial-models" value={modelName} onChange={e=>{setModelName(e.target.value);setModelConfirmed(false);}} placeholder="Select or type your exact model" className={inputClass} required /><datalist id="loadlink-light-commercial-models">{bakkieVanModels.map(name=><option key={name} value={name}/>)}</datalist><p className={`mt-2 text-xs ${muted}`}>Enter the exact make and model from the registration papers.</p></> : <input value={modelName} onChange={e=>setModelName(e.target.value)} placeholder="Model name or number" className={inputClass} required />}</Field>
 
+              {vehicleCategory==="bakkie_van" ? <Field label="Cab / van body type"><select value={bodyType} onChange={event=>{setBodyType(event.target.value);setModelConfirmed(false);}} required className={inputClass}><option value="">Choose the actual body type</option>{bakkieVanTypes.map(item=><option key={item}>{item}</option>)}</select></Field> : null}
             </div>
             {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7">
               <button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>

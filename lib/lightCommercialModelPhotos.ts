@@ -10,6 +10,7 @@ export type LightCommercialPhoto = {
   yearFrom?: number;
   yearTo?: number;
   matchKind?: "exact-year" | "generation";
+  referenceBodyStyle?: string;
 };
 
 export const normalizeReferenceName = (value: string) => value.toLowerCase().normalize("NFD")
@@ -32,19 +33,24 @@ export function lightCommercialReferenceDetails(make: string, model: string) {
  * A photo without a confirmed production-year window is never used as a year-specific
  * reference. Manually entered trim variants must not inherit an unrelated base-model photo.
  */
-export function storedLightCommercialPhotos(make: string, model: string, year: number): LightCommercialPhoto[] {
+export function storedLightCommercialPhotos(make: string, model: string, year: number, bodyType: string = ""): LightCommercialPhoto[] {
   const reference=lightCommercialReferenceDetails(make,model);
   if (normalizeReferenceName(model) !== normalizeReferenceName(reference.model)) return [];
+  const wantedBody=normalizeReferenceName(bodyType);
+  const bodyMap:Record<string,string>={"single cab bakkie":"single-cab","double cab bakkie":"double-cab","extended cab bakkie":"extended-cab","panel van":"panel-van","passenger van":"passenger-van","crew van":"crew-van","minibus people carrier":"passenger-van"};
+  const chosenStyle=bodyMap[wantedBody]||"";
   return photographs.filter(photo =>
     normalizeReferenceName(photo.make)===normalizeReferenceName(reference.make) &&
     normalizeReferenceName(photo.model)===normalizeReferenceName(reference.model) &&
     typeof photo.referenceYearFrom==="number" && typeof photo.referenceYearTo==="number" &&
     year>=photo.referenceYearFrom && year<=photo.referenceYearTo &&
-    photo.referenceMatch!=="unverified"
+    photo.referenceMatch!=="unverified" &&
+    (!chosenStyle || !photo.referenceBodyStyle || photo.referenceBodyStyle===chosenStyle)
   ).map(photo=>({
     url:photo.url,fallbackUrl:photo.sourceImageUrl,title:photo.title,credit:photo.credit,license:photo.license,
     yearFrom:photo.referenceYearFrom||undefined,yearTo:photo.referenceYearTo||undefined,
-    matchKind:photo.referenceMatch==="generation"?"generation" as const:"exact-year" as const
+    matchKind:photo.referenceMatch==="generation"?"generation" as const:"exact-year" as const,
+    referenceBodyStyle:photo.referenceBodyStyle||undefined
   }));
 }
 
