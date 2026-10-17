@@ -94,7 +94,7 @@ function VehicleCategoryPhoto({ src, alt }: { src: string; alt: string }) {
   }, [src]);
 
   return (
-    <span className="relative mb-3 block h-28 w-full overflow-hidden rounded-[16px] bg-white/[.045] sm:h-36">
+    <span className="relative mb-4 block h-36 w-full overflow-hidden rounded-[16px] bg-white/[.045] sm:h-40">
       {!loaded ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 animate-pulse bg-current/[.045]" /> : null}
       <LoadLinkImage
         ref={photoRef}
@@ -135,8 +135,6 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [message, setMessage] = useState("");
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [photoLimitToast, setPhotoLimitToast] = useState(false);
-  const [listingQuotaToast, setListingQuotaToast] = useState("");
-  const [quotaSnapshot, setQuotaSnapshot] = useState<{monthly_used:number;monthly_limit:number|null;photo_limit:number}|null>(null);
   const [submittedListingId, setSubmittedListingId] = useState<string | null>(null);
   const [sellerType, setSellerType] = useState<SellerType>("private");
   const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory | null>(entryMode === "mobile-unit" ? "mobile_unit" : null);
@@ -211,17 +209,6 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     serviceHistory,description,photoCount:vehiclePhotos.length,packageType
   }),[vehicleCategory,year,brand,modelName,bodyType,condition,transmission,fuelType,odometerKm,gvmKg,payloadKg,offerMode,rate,rentalRate,rentalPeriod,serviceHistory,description,vehiclePhotos.length,packageType]);
   const specSchema = useMemo(() => unitSpecSchema(vehicleCategory, bodyType || vehicleSubtype), [bodyType, vehicleCategory, vehicleSubtype]);
-
-  useEffect(() => {
-    if (!signedIn || !selectedPlan || !vehicleCategory) {setQuotaSnapshot(null);return;}
-    let active=true;
-    void Promise.resolve(supabase.rpc("loadlink_vehicle_preflight",{p_vin:"",p_registration:""}))
-      .then(({data,error}) => {
-        if (!active || error || !data) return;
-        setQuotaSnapshot(data as {monthly_used:number;monthly_limit:number|null;photo_limit:number});
-      }).catch(()=>{});
-    return ()=>{active=false;};
-  },[signedIn,selectedPlan,vehicleCategory]);
 
   useEffect(() => {
     if (!window.location.hash) window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -409,7 +396,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         const source = candidates[index];
         const validation = validateImageFile(source, source.name || `Vehicle photo ${index + 1}`);
         if (validation) throw new Error(validation);
-        const quality = await inspectLoadLinkImage(source, {vehicle:true});
+        const quality = await inspectLoadLinkImage(source);
         showLoadLinkImageQuality(quality.messages);
         setVehiclePhotoProgress(`Preparing vehicle photo ${index + 1} of ${candidates.length}…`);
         const prepared = await prepareImageFileForForm(source, {
@@ -553,10 +540,8 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       if(preflight.error) throw preflight.error;
       const pre = preflight.data as {owned_duplicate?:boolean;monthly_used?:number;monthly_limit?:number|null;photo_limit?:number} | null;
       if(pre?.owned_duplicate) throw new Error("This vehicle is already listed on your account. Edit the existing listing instead.");
-      if(pre?.monthly_limit!==null&&pre?.monthly_limit!==undefined&&Number(pre.monthly_used||0)>=pre.monthly_limit) {
-        const notice = `You have reached ${pre.monthly_limit} new vehicle listings this month. You can compare packages for more listings.`;
-        setListingQuotaToast(notice);throw new Error(notice);
-      }
+      if(pre?.monthly_limit!==null&&pre?.monthly_limit!==undefined&&Number(pre.monthly_used||0)>=pre.monthly_limit)
+        throw new Error(`You have used all ${pre.monthly_limit} new vehicle listings for this month. See Packages for your options.`);
       if(pre?.photo_limit && vehiclePhotos.length>pre.photo_limit)throw new Error(`Your package allows ${pre.photo_limit} photos per listing.`);
       const submissionId = currentSubmissionId();
       const ownerKey = getAccountOwnerKey(user.id); createdOwnerKey = ownerKey;
@@ -638,16 +623,6 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         if (detailsResult.error) throw detailsResult.error;
       }
 
-      // Private identity claim covers trucks, bakkies, trailers and mobile units.
-      // Supabase applies owner-only access and securely flags cross-account matches.
-      const claim = await supabase.from("vehicle_identity_claims").insert({
-        listing_id:listingId,user_id:user.id,
-        vin_normalized:vin.trim().toUpperCase(),
-        plate_normalized:registrationNumber.trim().toUpperCase(),
-        vehicle_category:vehicleCategory!
-      });
-      if(claim.error) throw claim.error;
-
       const verificationResult = await supabase.from("vehicle_verifications").upsert({
         listing_id: listingId, user_id: user.id, id_document_path: idPath, licence_document_path: licencePath,
         registration_document_path: registrationPath, ownership_document_path: ownershipPath, roadworthy_document_path: roadworthyPath,
@@ -705,11 +680,6 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   return (
     <main className={`min-h-screen transition-colors ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
       {boostRequestNotice ? <div role="status" className="fixed inset-x-4 top-4 z-[9999] mx-auto max-w-xl rounded-2xl border border-[#f6b800]/40 bg-[#131313] px-5 py-4 text-sm font-semibold text-white shadow-xl"><button type="button" onClick={() => setBoostRequestNotice("")} className="float-right ml-2 text-[#f6b800]">Close</button>{boostRequestNotice}</div> : null}
-      {listingQuotaToast ? <div role="status" className="fixed inset-x-4 bottom-20 z-[12010] mx-auto max-w-md rounded-2xl border border-[#f6b800]/35 bg-[#101010] p-4 text-sm text-white shadow-xl">
-        <p className="font-black">Monthly listing limit reached</p>
-        <p className="mt-2 text-xs leading-5 text-white/70">{listingQuotaToast}</p>
-        <div className="mt-4 flex gap-3"><a href="/account/packages" className="inline-flex min-h-10 items-center rounded-xl bg-[#f6b800] px-4 text-xs font-black text-black">View packages</a>
-        <button type="button" onClick={()=>setListingQuotaToast("")} className="rounded-xl border border-white/20 px-4 text-xs font-bold">Dismiss</button></div></div> : null}
       <PhotoLimitUpgradeToast open={photoLimitToast} onClose={() => setPhotoLimitToast(false)} limit={packageType === "dealer" ? 30 : packageType === "pro" ? 10 : 2} plan={packageType} />
       <SubmissionSuccess
         open={submissionSuccess}
@@ -902,14 +872,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
 
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="03" title="Photos and verification" description="Upload clear product photos and the critical documents required for review." />
-              <div className="p-5 md:p-7">
-                {quotaSnapshot ? <div className="mb-4 rounded-xl border border-current/10 px-4 py-3">
-                  <p className="text-xs font-black">Your package allowance</p>
-                  <p className={`mt-1 text-xs ${muted}`}>{quotaSnapshot.monthly_limit===null?"Unlimited monthly listings":`${quotaSnapshot.monthly_used} of ${quotaSnapshot.monthly_limit} listings used this month`} · Up to {quotaSnapshot.photo_limit} photos per listing</p>
-                  {quotaSnapshot.monthly_limit!==null && quotaSnapshot.monthly_used>=quotaSnapshot.monthly_limit ?
-                    <a href="/account/packages" className="mt-2 inline-flex text-xs font-black text-[#f6b800] underline underline-offset-4">Monthly limit reached — view packages</a> : null}
-                </div>:null}
-                <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>{vehiclePhotoProgress || `Minimum 2 photos · up to ${packageType === "dealer" ? 30 : packageType === "pro" ? 10 : 2}`}</span><input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} disabled={preparingVehiclePhotos || saving} className="hidden" /></label>{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <LoadLinkImage key={preview} src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 shrink-0 snap-start rounded-xl object-cover" />)}</div> : null}</div>
+              <div className="p-5 md:p-7"><label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>{vehiclePhotoProgress || `Minimum 2 photos · up to ${packageType === "dealer" ? 30 : packageType === "pro" ? 10 : 2}`}</span><input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} disabled={preparingVehiclePhotos || saving} className="hidden" /></label>{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <LoadLinkImage key={preview} src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 shrink-0 snap-start rounded-xl object-cover" />)}</div> : null}</div>
               {sellerType === "dealership" && !dealerPost ? <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><Field label="Dealership name"><input value={dealershipName} onChange={(event) => setDealershipName(event.target.value)} className={inputClass} required /></Field><Field label="Company registration number"><input value={companyRegistrationNumber} onChange={(event) => setCompanyRegistrationNumber(event.target.value)} className={inputClass} required /></Field><Field label="SARS tax number"><input value={taxNumber} onChange={(event) => setTaxNumber(event.target.value)} className={inputClass} required /></Field><DocumentInput label="CIPC company registration" required file={documents.companyRegistration} onChange={(file) => setDocument("companyRegistration", file)} /><DocumentInput label="SARS tax document" required file={documents.taxDocument} onChange={(file) => setDocument("taxDocument", file)} /><DocumentInput label="Proof of business address" required file={documents.businessAddress} onChange={(file) => setDocument("businessAddress", file)} /><DocumentInput label="Representative authority" required file={documents.representativeAuthority} onChange={(file) => setDocument("representativeAuthority", file)} /></div> : null}
               <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><DocumentInput label="South African ID or passport" required file={documents.idDocument} onChange={(file) => setDocument("idDocument", file)} />{(vehicleCategory === "truck" || vehicleCategory === "bakkie_van") ? <DocumentInput label="Driver’s licence" required file={documents.driverLicence} onChange={(file) => setDocument("driverLicence", file)} /> : null}<DocumentInput label="Vehicle registration certificate" required file={documents.registrationPaper} onChange={(file) => setDocument("registrationPaper", file)} /><DocumentInput label="Proof of ownership or authority to list" required file={documents.ownershipProof} onChange={(file) => setDocument("ownershipProof", file)} /><DocumentInput label="Roadworthy certificate" file={documents.roadworthy} onChange={(file) => setDocument("roadworthy", file)} /><DocumentInput label="Operating licence" file={documents.operatingLicence} onChange={(file) => setDocument("operatingLicence", file)} />{transmissionCheck?.requiresModificationProof ? <DocumentInput label="Gearbox conversion paperwork" required file={documents.modificationProof} onChange={(file) => setDocument("modificationProof", file)} /> : null}</div>
             </section>
