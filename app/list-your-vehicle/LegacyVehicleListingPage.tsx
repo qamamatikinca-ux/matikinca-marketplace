@@ -215,7 +215,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   useEffect(() => {
     if (!signedIn || !selectedPlan || !vehicleCategory) {setQuotaSnapshot(null);return;}
     let active=true;
-    void supabase.rpc("loadlink_vehicle_preflight",{p_vin:"",p_registration:""})
+    void Promise.resolve(supabase.rpc("loadlink_vehicle_preflight",{p_vin:"",p_registration:""}))
       .then(({data,error}) => {
         if (!active || error || !data) return;
         setQuotaSnapshot(data as {monthly_used:number;monthly_limit:number|null;photo_limit:number});
