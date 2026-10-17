@@ -285,13 +285,13 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
           </div>
           <LoadLinkSortControl darkMode={darkMode} value={sort} onChange={value=>setSort(value as SortMode)}
  options={[{value:"newest",label:"Newest first"},{value:"price_low",label:"Price: low to high"},{value:"price_high",label:"Price: high to low"}]}
- equipment={{value:mode,onChange:value=>setMode(value as ViewMode),options:[{value:"all",label:"All equipment"},{value:"vehicles",label:"Vehicles"},{value:"trucks",label:"Trucks"},{value:"trailers_units",label:"Trailers & mobile units"}]}}
+ equipment={{value:mode,onChange:value=>setMode(value as ViewMode),options:[{value:"all",label:"All equipment"},{value:"trucks",label:"Trucks"},{value:"vehicles",label:"Vehicles"},{value:"trailers_units",label:"Trailers & mobile units"}]}}
  filter={{value:intent,onChange:value=>setIntent(value as Intent),resultCount:visible.length,options:[{value:"all",label:"All listings"},{value:"sale",label:"For sale",description:"Available to buy"},{value:"rental",label:"For rent",description:"Available to hire or rent"}]}}
  />
         </div>
 
         <div className="mt-6 flex max-w-full gap-2 overflow-x-auto pb-1">
-          {([["all", "All equipment"], ["vehicles", "Vehicles"], ["trucks", "Trucks"], ["trailers_units", "Trailers & mobile units"]] as Array<[ViewMode, string]>).map(([value, label]) => (
+          {([["all", "All equipment"], ["trucks", "Trucks"], ["vehicles", "Vehicles"], ["trailers_units", "Trailers & mobile units"]] as Array<[ViewMode, string]>).map(([value, label]) => (
             <button key={value} type="button" onClick={() => setMode(value)} className={`shrink-0 rounded-full border px-4 py-2.5 text-xs font-black transition ${mode === value ? "border-[#f6b800] bg-[#f6b800] text-black" : surface}`}>{label}</button>
           ))}
         </div>
