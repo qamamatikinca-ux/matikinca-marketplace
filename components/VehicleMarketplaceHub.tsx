@@ -31,7 +31,8 @@ type VehicleRow = {
   dealership_logo?: string | null;
 };
 
-type ViewMode = "all" | "vehicles" | "units";
+type ViewMode = "all" | "trucks" | "trailers" | "units";
+type Intent = "all" | "sale" | "rental";
 type SortMode = "newest" | "price_low" | "price_high";
 
 const SEEN_KEY = "loadlink-seen-listings-v2";
@@ -53,8 +54,19 @@ function isMobileUnit(row: VehicleRow) {
   return type.includes("mobile unit") || String(row.vehicle_group || "").toLowerCase().includes("mobile unit");
 }
 
-function numericPrice(row: VehicleRow) {
-  const explicit = readMeta(row.description, "Sale price") || String(row.rate || "");
+function equipment(row:VehicleRow):Exclude<ViewMode,"all">{
+ const type=readMeta(row.description,"Listing type").toLowerCase(), subtype=readMeta(row.description,"Vehicle subtype").toLowerCase(), group=String(row.vehicle_group||"").toLowerCase();
+ if(type.includes("mobile unit")||group.includes("mobile unit"))return "units";
+ if(type.includes("trailer")||group.includes("trailer")||/trailer|flatbed|lowbed|tautliner/.test(subtype))return "trailers";
+ return "trucks";
+}
+function intentMatch(row:VehicleRow,intent:Intent){
+ if(intent==="all")return true;
+ const offer=readMeta(row.description,"Offer").toLowerCase();
+ return intent==="sale"?/sale|buy|purchase/.test(offer)||!!readMeta(row.description,"Sale price"):/rental|rent|hire|lease/.test(offer)||!!readMeta(row.description,"Rental rate");
+}
+function numericPrice(row: VehicleRow, intent:Intent) {
+  const explicit = intent==="rental"?readMeta(row.description,"Rental rate"):intent==="sale"?readMeta(row.description,"Sale price"):readMeta(row.description,"Sale price")||readMeta(row.description,"Rental rate")||String(row.rate||"");
   const clean = explicit.replace(/\s+/g, "").replace(/,/g, "");
   const match = clean.match(/(?:R|ZAR)?([0-9]+(?:\.[0-9]+)?)/i);
   return match ? Number(match[1]) : Number.POSITIVE_INFINITY;
@@ -84,6 +96,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<ViewMode>("all");
   const [sort, setSort] = useState<SortMode>("newest");
+  const [intent,setIntent]=useState<Intent>("all");
   const [seen, setSeen] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -113,21 +126,25 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
   useEffect(() => {
     function syncHash() {
       if (window.location.hash === "#vehicle-marketplace-units") setMode("units");
-      if (window.location.hash === "#vehicle-marketplace-vehicles") setMode("vehicles");
+      if (window.location.hash === "#vehicle-marketplace-vehicles") setMode("all");
     }
     syncHash();
     window.addEventListener("hashchange", syncHash);
     return () => window.removeEventListener("hashchange", syncHash);
   }, []);
 
-  const visible = useMemo(() => {
-    const filtered = rows.filter((row) => mode === "all" || (mode === "units" ? isMobileUnit(row) : !isMobileUnit(row)));
-    return [...filtered].sort((first, second) => {
-      if (sort === "price_low") return numericPrice(first) - numericPrice(second);
-      if (sort === "price_high") return numericPrice(second) - numericPrice(first);
-      return new Date(second.created_at || 0).getTime() - new Date(first.created_at || 0).getTime();
+  const visible=useMemo(()=>{
+    const filtered=rows.filter(row=>(mode==="all"||equipment(row)===mode)&&intentMatch(row,intent));
+    return [...filtered].sort((first,second)=>{
+      if(sort!=="newest"){
+        const a=numericPrice(first,intent),b=numericPrice(second,intent);
+        if(!Number.isFinite(a))return Number.isFinite(b)?1:0;
+        if(!Number.isFinite(b))return -1;
+        return sort==="price_low"?a-b:b-a;
+      }
+      return new Date(second.created_at||0).getTime()-new Date(first.created_at||0).getTime();
     });
-  }, [mode, rows, sort]);
+  },[mode,rows,sort,intent]);
 
   const totalPages = Math.max(1, Math.ceil(visible.length / LISTINGS_PER_PAGE));
   const paginatedVisible = useMemo(() => {
@@ -135,7 +152,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
     return visible.slice(start, start + LISTINGS_PER_PAGE);
   }, [currentPage, visible]);
 
-  useEffect(() => { setCurrentPage(1); }, [mode, sort]);
+  useEffect(() => { setCurrentPage(1); }, [mode, sort, intent]);
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages); }, [currentPage, totalPages]);
 
   function changePage(nextPage: number) {
@@ -167,11 +184,15 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
             <h2 className="text-4xl font-black tracking-[-.05em] md:text-5xl">Vehicles and mobile units available</h2>
             <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Approved commercial stock, presented with the same clear marketplace pattern as LoadLink jobs.</p>
           </div>
-          <LoadLinkSortControl darkMode={darkMode} value={sort} onChange={(value) => setSort(value as SortMode)} options={[{ value: "newest", label: "Newest first" }, { value: "price_low", label: "Price low to high" }, { value: "price_high", label: "Price high to low" }]} />
+          <LoadLinkSortControl darkMode={darkMode} value={sort} onChange={value=>setSort(value as SortMode)}
+ options={[{value:"newest",label:"Newest first"},{value:"price_low",label:"Price: low to high"},{value:"price_high",label:"Price: high to low"}]}
+ equipment={{value:mode,onChange:value=>setMode(value as ViewMode),options:[{value:"all",label:"All equipment"},{value:"trucks",label:"Trucks"},{value:"trailers",label:"Trailers"},{value:"units",label:"Mobile units"}]}}
+ filter={{value:intent,onChange:value=>setIntent(value as Intent),resultCount:visible.length,options:[{value:"all",label:"All listings"},{value:"sale",label:"For sale",description:"Available to buy"},{value:"rental",label:"For rent",description:"Available to hire or rent"}]}}
+ />
         </div>
 
         <div className="mt-6 flex max-w-full gap-2 overflow-x-auto pb-1">
-          {([["all", "All approved"], ["vehicles", "Trucks & trailers"], ["units", "Mobile units"]] as Array<[ViewMode, string]>).map(([value, label]) => (
+          {([["all", "All equipment"], ["trucks", "Trucks"], ["trailers", "Trailers"], ["units", "Mobile units"]] as Array<[ViewMode, string]>).map(([value, label]) => (
             <button key={value} type="button" onClick={() => setMode(value)} className={`shrink-0 rounded-full border px-4 py-2.5 text-xs font-black transition ${mode === value ? "border-[#f6b800] bg-[#f6b800] text-black" : surface}`}>{label}</button>
           ))}
         </div>
@@ -235,7 +256,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
         ) : (
           <div className={`loadlink-glass mt-6 rounded-[24px] border p-8 text-center ${surface}`}>
             <h3 className="text-xl font-black">No approved listings in this category yet</h3>
-            <p className={`mx-auto mt-2 max-w-md text-sm font-semibold leading-6 ${muted}`}>Try All approved or return later as new verified stock is added.</p>
+            <p className={`mx-auto mt-2 max-w-md text-sm font-semibold leading-6 ${muted}`}>Try All equipment and All listings, or change your filters.</p>
           </div>
         )}
       </div>
