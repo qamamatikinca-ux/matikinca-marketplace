@@ -32,6 +32,7 @@ import { getLoadLinkIntelligence } from "@/lib/loadlinkIntelligence";
 import { getVehicleListingAccess } from "@/lib/packageAccess";
 import { inspectLoadLinkImage, showLoadLinkImageQuality } from "@/lib/loadlinkImageQuality";
 import { submitListingDirect } from "@/lib/listingSubmission";
+import { assessVehicleListing } from "@/lib/vehiclePostingIntelligence";
 
 const BusinessPlans = dynamic(() => import("@/components/BusinessPlans"), { ssr: false, loading: () => <div className="mx-auto my-6 h-28 max-w-6xl animate-pulse rounded-2xl bg-current/[.05]" /> });
 const VehicleMarketplaceHub = dynamic(() => import("@/components/VehicleMarketplaceHub"), { ssr: false, loading: () => <div className="mx-auto my-8 h-64 max-w-6xl animate-pulse rounded-2xl bg-current/[.05]" /> });
@@ -201,6 +202,12 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const bakkieVanModels = useMemo(() => vehicleCategory === "bakkie_van" ? getLightCommercialModels(brand, year) : [], [brand, vehicleCategory, year]);
   const selectedModel = useMemo(() => vehicleCategory === "truck" ? getTruckModel(brand, modelName, year) : null, [brand, modelName, vehicleCategory, year]);
   const transmissionCheck = useMemo(() => vehicleCategory === "truck" && transmission ? validateTruckTransmission(brand, modelName, year, transmission) : null, [brand, modelName, transmission, vehicleCategory, year]);
+  const smartChecks = useMemo(() => assessVehicleListing({
+    category:vehicleCategory||"",year,make:brand,model:modelName,bodyType,condition,
+    transmission,fuel:fuelType,mileage:odometerKm,gvm:gvmKg,payload:payloadKg,
+    offer:offerMode,salePrice:rate,rentalPrice:rentalRate,rentalPeriod,
+    serviceHistory,description,photoCount:vehiclePhotos.length,packageType
+  }),[vehicleCategory,year,brand,modelName,bodyType,condition,transmission,fuelType,odometerKm,gvmKg,payloadKg,offerMode,rate,rentalRate,rentalPeriod,serviceHistory,description,vehiclePhotos.length,packageType]);
   const specSchema = useMemo(() => unitSpecSchema(vehicleCategory, bodyType || vehicleSubtype), [bodyType, vehicleCategory, vehicleSubtype]);
 
   useEffect(() => {
@@ -489,6 +496,8 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     if (!isValidSouthAfricanPhone(contactNumber)) return "Enter a valid South African contact number.";
     if (whatsappNumber && !isValidSouthAfricanPhone(whatsappNumber)) return "Enter a valid WhatsApp number or leave it blank.";
     if (preparingVehiclePhotos) return "Wait for the selected photos to finish preparing.";
+    const blocking = smartChecks.find(item=>item.level==="warning");
+    if (blocking) return blocking.message;
     if (sellerType === "dealership" && packageType === "dealer" && vehiclePhotos.length < 10) return "Dealer listings require at least 10 clear photos. Your Dealer package supports up to 30.";
     if (vehiclePhotos.length < 2) return "Upload at least two clear photos of the actual vehicle or unit.";
     if (!documents.idDocument || !documents.registrationPaper || !documents.ownershipProof) return "Upload your ID, registration paper and proof of ownership or authority to list.";
@@ -525,6 +534,15 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         if (["approved_for_payment","payment_pending"].includes(String(intelligence.plan_state))) throw new Error("Complete your approved plan payment before publishing a vehicle.");
         throw new Error("Standard requires R14 paid daily listing access. Visit Packages to purchase access, or upgrade to Pro or Dealer.");
       }
+      const preflight = await supabase.rpc("loadlink_vehicle_preflight",{
+        p_vin:vin.trim(),p_registration:registrationNumber.trim()
+      });
+      if(preflight.error) throw preflight.error;
+      const pre = preflight.data as {owned_duplicate?:boolean;monthly_used?:number;monthly_limit?:number|null;photo_limit?:number} | null;
+      if(pre?.owned_duplicate) throw new Error("This vehicle is already listed on your account. Edit the existing listing instead.");
+      if(pre?.monthly_limit!==null&&pre?.monthly_limit!==undefined&&Number(pre.monthly_used||0)>=pre.monthly_limit)
+        throw new Error(`You have used all ${pre.monthly_limit} new vehicle listings for this month. See Packages for your options.`);
+      if(pre?.photo_limit && vehiclePhotos.length>pre.photo_limit)throw new Error(`Your package allows ${pre.photo_limit} photos per listing.`);
       const submissionId = currentSubmissionId();
       const ownerKey = getAccountOwnerKey(user.id); createdOwnerKey = ownerKey;
       const folder = submissionId;
@@ -593,7 +611,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       if (!createdListingId) throw new Error("The vehicle listing could not be created.");
       const listingId = createdListingId;
 
-      if (vehicleCategory === "truck") {
+      if (vehicleCategory === "truck" || vehicleCategory === "bakkie_van") {
         const detailsResult = await supabase.from("truck_listing_details").upsert({
           listing_id: listingId, user_id: user.id, vehicle_year: year, brand, model: modelName, body_type: bodyType,
           transmission, fuel_type: fuelType, axle_configuration: axleConfiguration,
@@ -862,6 +880,11 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="04" title="Contact and confirmation" description="Confirm the details before the product is added to LoadLink." />
               <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7"><Field label={sellerType === "dealership" ? "Dealership / contact name" : "Owner / company name"}><input value={postedBy} onChange={(event) => setPostedBy(event.target.value)} className={inputClass} required /></Field><Field label="Contact number"><input value={contactNumber} onChange={(event) => setContactNumber(event.target.value)} placeholder="0821234567" className={inputClass} required /></Field><Field label="WhatsApp number — optional"><input value={whatsappNumber} onChange={(event) => setWhatsappNumber(event.target.value)} placeholder="0821234567" className={inputClass} /></Field><Field label="Selected plan"><div className={`${inputClass} flex items-center`}>{packageType === "standard" ? "Standard — R14 per active listing day" : selectedPlan === "pro" ? "Pro — daily vehicle charge included" : "Dealer — daily vehicle charge included"}</div></Field></div>
+              <div className="border-t border-current/10 p-5 md:p-7">
+                <h3 className="text-base font-black">Listing checks</h3>
+                <p className={`mt-1 text-xs ${muted}`}>These checks help improve accuracy. They do not verify ownership or guarantee the vehicle's condition.</p>
+                {smartChecks.length ? <ul className="mt-3 space-y-2">{smartChecks.slice(0,6).map((check,index)=><li key={index} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${check.level==="warning"?"border-amber-500/30":"border-current/10"}`}>{check.message}</li>)}</ul> : <p className="mt-2 text-sm font-semibold">All basic listing checks passed.</p>}
+              </div>
               <div className="border-t border-current/10 p-5 md:p-7">
                 <h3 className="text-lg font-black">Promote your listing</h3>
                 <p className={`mt-2 text-xs leading-5 ${muted}`}>Optional R14 promotion request. Your listing is reviewed normally; if approved and payment is confirmed, it receives a 7-day placement in Promoted Listings. No payment is taken when you submit this form.</p>

@@ -12,6 +12,7 @@ import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import RequireAuthLink from "@/components/RequireAuthLink";
 import VehicleFullDetails from "@/components/VehicleFullDetails";
 import { formatListingRate } from "@/lib/formatCurrency";
+import { jobVehicleRelevance } from "@/lib/vehiclePostingIntelligence";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 type VehicleListing = {
@@ -32,7 +33,7 @@ type VehicleListing = {
 
 function isVehicle(row: VehicleListing) {
   const kind = String(row.listing_kind || "").toLowerCase();
-  return ["vehicle", "asset", "truck_sale", "vehicle_listing"].includes(kind) || /^Listing type:\s*(Truck|Trailer|Mobile Unit)/im.test(String(row.description || ""));
+  return ["vehicle", "asset", "truck_sale", "vehicle_listing"].includes(kind) || /^Listing type:\s*(Truck|Bakkie|Van|Trailer|Mobile Unit)/im.test(String(row.description || ""));
 }
 
 function whatsappHref(number: string | null | undefined, listing: VehicleListing) {
@@ -49,6 +50,7 @@ export default function VehicleProductPage() {
   const [listing, setListing] = useState<VehicleListing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [relatedJobs, setRelatedJobs] = useState<Array<{id:string;title?:string|null;city?:string|null}>>([]);
 
   useEffect(() => {
     let active = true;
@@ -65,6 +67,14 @@ export default function VehicleProductPage() {
           return;
         }
         setListing(row);
+        const desc = String(row.description || "");
+        const subtype = desc.match(/^Vehicle subtype:\s*(.+)$/im)?.[1]?.trim() || "";
+        const category = desc.match(/^Listing type:\s*(.+)$/im)?.[1]?.trim() || "vehicle";
+        const matches = ((payload.rows || []) as Array<{id:string;title?:string|null;city?:string|null;description?:string|null;listing_kind?:string|null}>)
+          .filter(x => x.listing_kind === "job" || x.listing_kind === "contract")
+          .map(x => ({...x, score:jobVehicleRelevance([x.title||"",x.description||"",x.city||""].join(" "),category,subtype,row.city||"")}))
+          .filter(x => x.score >= 4).sort((a,b) => b.score-a.score).slice(0,3);
+        setRelatedJobs(matches);
       })
       .catch(() => active && setError("This vehicle could not be loaded right now."))
       .finally(() => active && setLoading(false));
@@ -130,6 +140,11 @@ export default function VehicleProductPage() {
               </div>
             </section>
 
+            {relatedJobs.length ? <section className={`mt-5 rounded-[28px] border p-5 md:p-7 ${surface}`}>
+              <h2 className="text-xl font-black">Potential transport opportunities</h2>
+              <p className={`mt-2 text-sm ${muted}`}>Suggested from vehicle details and location. Check each job's requirements; suitability is not guaranteed.</p>
+              <div className="mt-4 grid gap-2">{relatedJobs.map(job=><Link key={job.id} href="/jobs" className="flex min-h-14 items-center justify-between rounded-xl border border-current/10 p-4 text-sm font-semibold"><span>{job.title||"Transport opportunity"}{job.city?" · "+job.city:""}</span><LoadLinkIcon name="chevronRight" size={18}/></Link>)}</div>
+            </section> : null}
             <section className={`mt-5 rounded-[28px] border p-5 md:p-7 ${surface}`}>
               <VehicleFullDetails description={String(listing.description || "")} city={String(listing.city || "")} dealershipId={listing.dealership_id || null} darkMode={darkMode} />
             </section>
