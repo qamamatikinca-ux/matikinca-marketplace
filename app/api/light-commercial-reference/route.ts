@@ -71,6 +71,7 @@ export async function GET(request: NextRequest) {
   const kind = request.nextUrl.searchParams.get("kind")==="truck" ? "truck" : "bakkie_van";
   const make = (request.nextUrl.searchParams.get("make") || "").trim();
   const model = (request.nextUrl.searchParams.get("model") || "").trim();
+  const bodyType = (request.nextUrl.searchParams.get("body") || "").trim().slice(0,80);
   const year = Number(request.nextUrl.searchParams.get("year") || 0);
   if (!make || !model || make.length > 64 || model.length > 64 || !/^[a-zA-Z0-9À-ÿ .'-]+$/.test(make + model)
     || !Number.isInteger(year) || year < 2009 || year > new Date().getFullYear())

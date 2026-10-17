@@ -444,8 +444,8 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         const source = candidates[index];
         const validation = validateImageFile(source, source.name || `Vehicle photo ${index + 1}`);
         if (validation) throw new Error(validation);
-        const quality = await inspectLoadLinkImage(source);
-        showLoadLinkImageQuality(quality.messages);
+        // Photo-quality analysis is advisory; unsupported phone codecs must not block a valid upload.
+        try { const quality = await inspectLoadLinkImage(source); showLoadLinkImageQuality(quality.messages); } catch { /* preparation below validates the actual image */ }
         setVehiclePhotoProgress(`Preparing vehicle photo ${index + 1} of ${candidates.length}…`);
         const prepared = await prepareImageFileForForm(source, {
           maxWidth: 1440,

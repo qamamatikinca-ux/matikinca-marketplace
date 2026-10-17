@@ -31,6 +31,17 @@ type DealerMaps = {
   byUserId: Record<string, DealerMeta>;
 };
 
+function isPublicListingRow(row: Record<string, unknown>) {
+  if (row.moderation_status !== "approved") return false;
+  if (row.status && row.status !== "active") return false;
+  if (["removed","sold","unavailable"].includes(String(row.stock_status || ""))) return false;
+  if (row.expires_at) {
+    const expiry = new Date(String(row.expires_at)).getTime();
+    if (!Number.isFinite(expiry) || expiry <= Date.now()) return false;
+  }
+  return true;
+}
+
 function toPublicRow(row: Record<string, unknown>) {
   return Object.fromEntries(PUBLIC_FIELDS.split(",").map((field) => [field, row[field] ?? null]));
 }
@@ -165,7 +176,7 @@ async function tryPostService(url: string, key: string) {
     const response = await fetch(`${url}/functions/v1/loadlink-post-service?limit=120`, { next: { revalidate: 15 }, headers: { apikey: key } });
     if (!response.ok) return null;
     const payload = await response.json() as { rows?: unknown[]; dealers?: Record<string, unknown> };
-    const rows = Array.isArray(payload.rows) ? payload.rows : [];
+    const rows = (Array.isArray(payload.rows) ? payload.rows : []).filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === "object" && isPublicListingRow(row as Record<string, unknown>));
     const maps = await loadDealerMaps(url, key, rows);
     const dealers = { ...(payload.dealers || {}), ...maps.byDealerId };
     return { rows: enrichDealerRows(rows.map((row) => toPublicRow(row as Record<string, unknown>)), maps), dealers };
@@ -186,16 +197,8 @@ export async function GET(request: Request) {
   }
 
   const rows = (await response.json()) as unknown;
-  const now = Date.now();
   const visibleRows = Array.isArray(rows)
-    ? (rows as Array<Record<string, unknown> & { status?: string | null; moderation_status?: string | null; expires_at?: string | null; stock_status?: string | null }>).filter((row) => {
-        const active = !row.status || row.status === "active";
-        const approved = row.moderation_status === undefined || row.moderation_status === "approved";
-        const expiry = row.expires_at ? new Date(row.expires_at).getTime() : 0;
-        const current = !expiry || !Number.isFinite(expiry) || expiry > now;
-        const inStock = !row.stock_status || !["removed","sold","unavailable"].includes(String(row.stock_status).toLowerCase());
-        return active && approved && current && inStock;
-      }).map(toPublicRow)
+    ? (rows as Array<Record<string, unknown>>).filter(isPublicListingRow).map(toPublicRow)
     : [];
 
   const maps = await loadDealerMaps(url, key, visibleRows);
