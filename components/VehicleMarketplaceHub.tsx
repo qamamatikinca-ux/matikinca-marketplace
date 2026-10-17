@@ -62,9 +62,9 @@ function equipmentKind(row: VehicleRow): EquipmentKind {
   const subtype = readMeta(row.description, "Vehicle subtype").toLowerCase();
   const group = String(row.vehicle_group || "").toLowerCase();
   const title = String(row.title || "").toLowerCase();
-  const mobilePattern = /mobile[\\s_-]*(?:unit|fridge|freezer|kitchen|toilet|clinic|office|workshop|classroom|accommodation|shower)|food[\\s-]*truck|cold[\\s-]*room|portable[\\s-]*(?:unit|fridge|freezer|office)/i;
-  const trailerPattern = /trailer|tautliner|lowbed|low-bed|flatbed|flat-bed|car carrier|semi[\\s-]*trailer/i;
-  const truckPattern = /truck|tractor[\\s-]*unit|prime[\\s-]*mover|side[\\s-]*tipper|tipper[\\s-]*truck|rigid[\\s-]*truck/i;
+  const mobilePattern = /mobile[\s_-]*(?:unit|fridge|freezer|kitchen|toilet|clinic|office|workshop|classroom|accommodation|shower)|food[\s-]*truck|cold[\s-]*room|portable[\s-]*(?:unit|fridge|freezer|office)/i;
+  const trailerPattern = /trailer|tautliner|lowbed|low-bed|flatbed|flat-bed|car carrier|semi[\s-]*trailer/i;
+  const truckPattern = /truck|tractor[\s-]*unit|prime[\s-]*mover|side[\s-]*tipper|tipper[\s-]*truck|rigid[\s-]*truck/i;
 
   // Form-generated descriptions have the strongest evidence.
   if (mobilePattern.test(type) || type === "mobile unit") return "mobile_unit";
@@ -97,7 +97,7 @@ function intentMatch(row: VehicleRow, intent: Intent) {
   const forRent = Boolean(readMeta(row.description, "Rental rate")) ||
     /rent|hire|lease/.test(offer) ||
     /for (?:hire|rent)|to rent/.test(title) ||
-    /\\b(?:a|per)\\s*(?:day|week|month)\\b|\\/(?:day|week|month)\\b/.test(rate);
+    /(?:\b(?:a|per)\s*(?:day|week|month)\b|\/(?:day|week|month)\b)/.test(rate);
   return intent === "sale" ? forSale : forRent;
 }
 
@@ -106,13 +106,13 @@ function numericPrice(row: VehicleRow, intent: Intent) {
     : intent === "sale" ? readMeta(row.description, "Sale price")
     : readMeta(row.description, "Sale price") || readMeta(row.description, "Rental rate");
   const raw = explicit || (intent === "all" ? String(row.rate || "") : "");
-  const match = raw.replace(/[\\s,]/g, "").match(/(?:R|ZAR)?(\\d+(?:\\.\\d+)?)/i);
+  const match = raw.replace(/[\s,]/g, "").match(/(?:R|ZAR)?(\d+(?:\.\d+)?)/i);
   return match ? Number(match[1]) : Number.POSITIVE_INFINITY;
 }
 
 function truckMileage(row: VehicleRow) {
   const raw = readMeta(row.description, "Mileage");
-  const match = raw.match(/^([\\d\\s,.]+)\\s*(?:km|kilometres?)?$/i);
+  const match = raw.match(/^([\d\s,.]+)\s*(?:km|kilometres?)?$/i);
   if (!match) return null;
   const number = Number(match[1].replace(/[^0-9]/g, ""));
   return Number.isFinite(number) && number >= 0 ? number.toLocaleString("en-ZA") + " km" : null;
