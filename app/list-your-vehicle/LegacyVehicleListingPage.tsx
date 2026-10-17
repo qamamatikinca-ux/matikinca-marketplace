@@ -29,6 +29,7 @@ import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { createSafeRandomId, imageExtension, inferUploadContentType, prepareImageFileForForm, readableUploadError, revokePreviewUrl, validateImageFile } from "@/lib/mobilePosting";
 import { getFreshAuthenticatedUser, postingErrorMessage, withTransientRetry } from "@/lib/reliableSupabase";
 import { getLoadLinkIntelligence } from "@/lib/loadlinkIntelligence";
+import { getVehicleListingAccess } from "@/lib/packageAccess";
 import { inspectLoadLinkImage, showLoadLinkImageQuality } from "@/lib/loadlinkImageQuality";
 import { submitListingDirect } from "@/lib/listingSubmission";
 
@@ -188,8 +189,8 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       if (requestedPlan === "pro" || requestedPlan === "dealer") {
         setSelectedPlan(requestedPlan);
         setPackageType(requestedPlan);
-      } else if (requestedPlan === "manual") {
-        setSelectedPlan(null);
+      } else if (requestedPlan === "manual" || requestedPlan === "standard") {
+        setSelectedPlan("standard");
         setPackageType("standard");
       }
       const requestedDealer = params.get("dealership") || "";
@@ -451,12 +452,13 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       const user = await getFreshAuthenticatedUser();
       if (!user) throw new Error("Your sign-in session could not be confirmed.");
       const intelligence = await getLoadLinkIntelligence();
-      if (!intelligence.capabilities.can_post_vehicle) {
+      const standardAccess = !intelligence.capabilities.can_post_vehicle ? await getVehicleListingAccess() : null;
+      if (!intelligence.capabilities.can_post_vehicle && !(standardAccess?.allowed && standardAccess.plan === "manual")) {
         if (["blocked","suspended"].includes(intelligence.account_status)) throw new Error(intelligence.account_reason || "You cannot post while this account is restricted.");
         if (intelligence.plan === "dealer" && !intelligence.dealer_ready) throw new Error("Your Dealer plan is active, but the dealership must be approved before stock can be published.");
         if (intelligence.plan_state === "under_review") throw new Error("Your plan request is still under review.");
         if (["approved_for_payment","payment_pending"].includes(String(intelligence.plan_state))) throw new Error("Complete your approved plan payment before publishing a vehicle.");
-        throw new Error("Choose an active Pro or Dealer plan before publishing a vehicle.");
+        throw new Error("Standard requires R14 paid daily listing access. Visit Packages to purchase access, or upgrade to Pro or Dealer.");
       }
       const submissionId = currentSubmissionId();
       const ownerKey = getAccountOwnerKey(user.id); createdOwnerKey = ownerKey;
@@ -724,7 +726,10 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         </section>
       ) : null}
 
-      {listingFlowOpen && signedIn && listingIntent && !selectedPlan ? <BusinessPlans darkMode={darkMode} selectable selectedPlan={selectedPlan === "pro" || selectedPlan === "dealer" ? selectedPlan : null} onSelect={choosePlan} /> : null}
+      {listingFlowOpen && signedIn && listingIntent && !selectedPlan ? <>
+        <section className="mx-auto max-w-6xl px-4 pt-5"><button type="button" onClick={() => {setSelectedPlan("standard");setPackageType("standard");setSellerType("private");}} className="flex min-h-12 w-full items-center justify-center rounded-full border border-[#f6b800] bg-[#f6b800] px-4 text-sm font-black text-black">Standard — R14 per listing day</button><p className={`mt-2 text-center text-xs ${muted}`}>Two photos and two new listings monthly. Paid daily access required before submission.</p></section>
+        <BusinessPlans darkMode={darkMode} selectable selectedPlan={null} onSelect={choosePlan} />
+      </> : null}
 
       {listingFlowOpen && signedIn && listingIntent && selectedPlan ? <LoadLinkVehicleWizardController20260825 darkMode={darkMode} listingKind={entryMode === "mobile-unit" ? "mobile-unit" : "vehicle"}/> : null}
       {listingFlowOpen && signedIn && listingIntent && selectedPlan ? <form id="vehicle-listing-form" onSubmit={submitVehicle} className="mx-auto grid max-w-5xl scroll-mt-24 gap-6 px-4 py-7 md:px-6 md:py-12">
