@@ -81,6 +81,34 @@ const emptyVerificationFiles: VerificationFiles = {
 function normalizePhone(value: string) { return value.replace(/[^\d+]/g, ""); }
 function isValidSouthAfricanPhone(value: string) { const clean = normalizePhone(value); return /^0\d{9}$/.test(clean) || /^\+27\d{9}$/.test(clean); }
 function safeFileName(value: string) { return value.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/^-+|-+$/g, "") || "document"; }
+
+/** Local category photography: reveal each image only after it has finished loading. */
+function VehicleCategoryPhoto({ src, alt }: { src: string; alt: string }) {
+  const [loaded, setLoaded] = useState(false);
+  const photoRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    const image = photoRef.current;
+    setLoaded(Boolean(image?.complete && image.naturalWidth > 0));
+  }, [src]);
+
+  return (
+    <span className="relative mb-4 block h-36 w-full overflow-hidden rounded-[16px] bg-white/[.045] sm:h-40">
+      {!loaded ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 animate-pulse bg-current/[.045]" /> : null}
+      <LoadLinkImage
+        ref={photoRef}
+        src={src}
+        alt={alt}
+        loading="eager"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        className={`h-full w-full object-cover object-center transition-[opacity,transform] duration-700 ease-out ${loaded ? "scale-100 opacity-100" : "scale-[1.025] opacity-0"}`}
+      />
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+    </span>
+  );
+}
+
 function categoryLabel(category: VehicleCategory) { return category === "truck" ? "Truck" : category === "bakkie_van" ? "Bakkie or Van" : category === "trailer" ? "Trailer" : "Mobile Unit"; }
 function offerLabel(mode: OfferMode) { return mode === "sale" ? "For sale only" : mode === "rental" ? "Rental only" : mode === "sale_or_rental" ? "Sale or rental" : "Price on application (POA)"; }
 function unitSpecSchema(category: VehicleCategory | null, subtype: string): Array<[string, string]> {
@@ -706,7 +734,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
               }} className={`ll-vehicle-type-card min-h-28 rounded-[24px] border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
-                <span className="ll-vehicle-type-icon"><LoadLinkIcon name="truck" size={24}/></span><span className="block text-xl font-black">Truck</span>
+                <VehicleCategoryPhoto src="/images/vehicle-types/truck.webp" alt="Truck at a warehouse loading dock" /><span className="block text-xl font-black">Truck</span>
                 <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Commercial trucks and tractor units.</span>
               </button>
               <button type="button" onClick={() => {
@@ -716,7 +744,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
               }} className={`ll-vehicle-type-card min-h-28 rounded-[24px] border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
-                <span className="ll-vehicle-type-icon"><LoadLinkIcon name="truck" size={24}/></span>
+                <VehicleCategoryPhoto src="/images/vehicle-types/bakkie-van.webp" alt="Red pickup bakkie driving through a shallow river" />
                 <span className="block text-xl font-black">Bakkie &amp; Van</span>
                 <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Bakkies and vans for business and work use.</span>
               </button>
@@ -727,7 +755,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
               }} className={`ll-vehicle-type-card min-h-28 rounded-[24px] border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
-                <span className="ll-vehicle-type-icon"><LoadLinkIcon name="archive" size={24}/></span><span className="block text-xl font-black">Trailer</span>
+                <VehicleCategoryPhoto src="/images/vehicle-types/trailer.webp" alt="Galvanised utility trailer parked on paving" /><span className="block text-xl font-black">Trailer</span>
                 <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Commercial trailer listings.</span>
               </button>
               {!entryMode ?               <button type="button" onClick={() => {
