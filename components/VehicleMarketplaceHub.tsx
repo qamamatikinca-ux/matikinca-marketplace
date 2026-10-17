@@ -307,7 +307,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
           <div className={`loadlink-glass mt-6 rounded-[24px] border p-8 text-center ${surface}`}>
             <h3 className="text-xl font-black">No approved listings in this category yet</h3>
             <p className={`mx-auto mt-2 max-w-md text-sm font-semibold leading-6 ${muted}`}>Try All equipment and All listings, or change your filters.</p>
-            {(mode !== "all" || intent !== "all") ? <button type="button" onClick={() => {setMode("all");setIntent("all");}} className="mt-4 min-h-10 rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">Clear filters</button> : null>
+            {(mode !== "all" || intent !== "all") ? <button type="button" onClick={() => {setMode("all");setIntent("all");}} className="mt-4 min-h-10 rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">Clear filters</button> : null}
           </div>
         )}
       </div>
