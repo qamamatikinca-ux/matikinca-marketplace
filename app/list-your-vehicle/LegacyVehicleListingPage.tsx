@@ -119,6 +119,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [modelConfirmed, setModelConfirmed] = useState(false);
   const [referenceImage, setReferenceImage] = useState<ReferenceImage | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
+  const [lightCommercialPhotos, setLightCommercialPhotos] = useState<Array<{ url: string; title: string; sourceUrl: string; credit: string; license: string }>>([]);
+  const [lightCommercialPhotoLoading, setLightCommercialPhotoLoading] = useState(false);
+  const [lightCommercialPhotoUnavailable, setLightCommercialPhotoUnavailable] = useState(false);
   const [title, setTitle] = useState("");
   const [city, setCity] = useState("Johannesburg");
   const [bodyType, setBodyType] = useState("");
@@ -262,6 +265,29 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     setReferenceImage(reference ? truckReferenceResponse(reference, year) as ReferenceImage : null);
     setImageLoading(false);
   }, [brand, modelName, vehicleCategory, year]);
+
+  useEffect(() => {
+    if (vehicleCategory !== "bakkie_van" || !brand.trim() || !modelName.trim()) {
+      setLightCommercialPhotos([]); setLightCommercialPhotoLoading(false); setLightCommercialPhotoUnavailable(false); return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLightCommercialPhotoLoading(true);
+      setLightCommercialPhotoUnavailable(false);
+      try {
+        const query = new URLSearchParams({make:brand.trim(), model:modelName.trim(), year:String(year)});
+        const response = await fetch(`/api/light-commercial-reference?${query}`, {signal:controller.signal});
+        if(!response.ok) throw new Error("reference lookup failed");
+        const data = await response.json() as {photos?:Array<{url:string;title:string;sourceUrl:string;credit:string;license:string}>};
+        if(controller.signal.aborted) return;
+        setLightCommercialPhotos(data.photos || []);
+        setLightCommercialPhotoUnavailable(!(data.photos || []).length);
+      } catch {
+        if(!controller.signal.aborted) {setLightCommercialPhotos([]);setLightCommercialPhotoUnavailable(true);}
+      } finally {if(!controller.signal.aborted) setLightCommercialPhotoLoading(false);}
+    },420);
+    return () => {window.clearTimeout(timer);controller.abort();};
+  }, [vehicleCategory,brand,modelName,year]);
 
   function choosePlan(plan: BusinessPlanId) {
     setSelectedPlan(plan);
@@ -743,7 +769,16 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
               <Field label="Model">{vehicleCategory === "truck" ? <select value={modelName} onChange={e=>selectTruckModel(e.target.value)} className={inputClass} disabled={!brand} required><option value="">Choose model family</option>{availableModels.map(item=><option key={item.name}>{item.name}</option>)}</select> : vehicleCategory === "bakkie_van" ? <><input list="loadlink-light-commercial-models" value={modelName} onChange={e=>{setModelName(e.target.value);setModelConfirmed(false);}} placeholder="Select or type your exact model" className={inputClass} required /><datalist id="loadlink-light-commercial-models">{bakkieVanModels.map(name=><option key={name} value={name}/>)}</datalist><p className={`mt-2 text-xs ${muted}`}>Enter the exact make and model from the registration papers.</p></> : <input value={modelName} onChange={e=>setModelName(e.target.value)} placeholder="Model name or number" className={inputClass} required />}</Field>
 
             </div>
-            {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>{imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Loading model reference…</p> : null}{referenceImage?.imageUrl ? <figure className="mt-4 max-w-xl"><LoadLinkImage loading="eager" fetchPriority="high" src={referenceImage.imageUrl} alt={referenceImage.title || "Truck reference"} className="aspect-[16/9] w-full rounded-xl bg-current/[.025] object-contain" /><figcaption className={`mt-2 text-[11px] font-semibold leading-5 ${muted}`}>Model-family reference: {referenceImage.title}. Your truck’s year and specification may differ. Upload photos of your actual vehicle.{referenceImage.credit ? ` Credit: ${referenceImage.credit}.` : ""}{referenceImage.license ? ` ${referenceImage.license}.` : ""} {referenceImage.sourceUrl ? <a href={referenceImage.sourceUrl} target="_blank" rel="noreferrer" className="font-black underline underline-offset-2">Source</a> : null}</figcaption></figure> : <p className={`mt-3 text-xs ${muted}`}>A verified photograph is not available for this model and year yet.</p>}{referenceImage?.specSourceUrl ? <p className={`mt-3 text-xs ${muted}`}>{referenceImage.verifiedFuel || referenceImage.verifiedTransmission ? "Verified specifications have been filled in. Confirm your vehicle’s gearbox and fuel type." : "Specifications vary by version. Select the gearbox and fuel type fitted to your vehicle."} <a href={referenceImage.specSourceUrl} target="_blank" rel="noreferrer" className="underline">Manufacturer specifications</a></p> : null}</div> : vehicleCategory === "bakkie_van" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmBakkieVanModel} className="inline-flex min-h-12 max-w-full items-center justify-center whitespace-nowrap rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase text-black transition-transform duration-150 active:scale-[.98]">Confirm vehicle</button><p className={`mt-2 text-xs ${muted}`}>Verify the exact make, model and year against the registration papers.</p></div> : <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={() => { setTitle(`${year} ${brand} ${modelName} ${vehicleSubtype}`.replace(/\s+/g, " ").trim()); setMessage(""); }} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm vehicle details</button></div>}
+            {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>{imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Loading model reference…</p> : null}{referenceImage?.imageUrl ? <figure className="mt-4 max-w-xl"><LoadLinkImage loading="eager" fetchPriority="high" src={referenceImage.imageUrl} alt={referenceImage.title || "Truck reference"} className="aspect-[16/9] w-full rounded-xl bg-current/[.025] object-contain" /><figcaption className={`mt-2 text-[11px] font-semibold leading-5 ${muted}`}>Model-family reference: {referenceImage.title}. Your truck’s year and specification may differ. Upload photos of your actual vehicle.{referenceImage.credit ? ` Credit: ${referenceImage.credit}.` : ""}{referenceImage.license ? ` ${referenceImage.license}.` : ""} {referenceImage.sourceUrl ? <a href={referenceImage.sourceUrl} target="_blank" rel="noreferrer" className="font-black underline underline-offset-2">Source</a> : null}</figcaption></figure> : <p className={`mt-3 text-xs ${muted}`}>A verified photograph is not available for this model and year yet.</p>}{referenceImage?.specSourceUrl ? <p className={`mt-3 text-xs ${muted}`}>{referenceImage.verifiedFuel || referenceImage.verifiedTransmission ? "Verified specifications have been filled in. Confirm your vehicle’s gearbox and fuel type." : "Specifications vary by version. Select the gearbox and fuel type fitted to your vehicle."} <a href={referenceImage.specSourceUrl} target="_blank" rel="noreferrer" className="underline">Manufacturer specifications</a></p> : null}</div> : vehicleCategory === "bakkie_van" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmBakkieVanModel} className="inline-flex min-h-12 max-w-full items-center justify-center whitespace-nowrap rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase text-black transition-transform duration-150 active:scale-[.98]">Confirm vehicle</button><p className={`mt-2 text-xs ${muted}`}>Verify the exact make, model and year against the registration papers.</p>
+              {lightCommercialPhotoLoading ? <div className={`mt-4 flex min-h-32 items-center justify-center rounded-xl border text-sm font-semibold ${muted}`}>Looking for model-family photos…</div> : null}
+              {lightCommercialPhotos.length > 0 ? <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {lightCommercialPhotos.map(photo => <figure key={photo.url} className="min-w-0 overflow-hidden rounded-xl border border-current/10">
+                  <LoadLinkImage src={photo.url} alt={photo.title} loading="lazy" className="aspect-[16/10] w-full bg-current/[.025] object-contain" />
+                  <figcaption className={`p-3 text-xs leading-5 ${muted}`}>Illustrative model-family reference, not your vehicle or guaranteed model year. <a href={photo.sourceUrl} target="_blank" rel="noopener noreferrer" className="font-bold underline underline-offset-2">Source &amp; licence: {photo.license}</a>{photo.credit ? ` · ${photo.credit}` : ""}</figcaption>
+                </figure>)}
+              </div> : null}
+              {!lightCommercialPhotoLoading && lightCommercialPhotoUnavailable ? <p className={`mt-3 text-xs ${muted}`}>No reliably identified, licensed reference photos were found for this model. You can still continue and upload photos of your actual vehicle.</p> : null}
+              </div> : <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={() => { setTitle(`${year} ${brand} ${modelName} ${vehicleSubtype}`.replace(/\s+/g, " ").trim()); setMessage(""); }} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm vehicle details</button></div>}
           </section>
 
           {detailsReady ? <>
