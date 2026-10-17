@@ -10,7 +10,7 @@ export async function inspectLoadLinkImage(file: File, options: { profile?: bool
   canvas.width = Math.max(1, Math.round(bitmap.width * scale));
   canvas.height = Math.max(1, Math.round(bitmap.height * scale));
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) return { width: bitmap.width, height: bitmap.height, brightness: 255, contrast: 100, messages: [] };
+  if (!ctx) { const result={ width: bitmap.width, height: bitmap.height, brightness: 255, contrast: 100, messages: [] as string[] }; bitmap.close(); return result; }
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
   let total = 0, totalSquare = 0, count = 0;
@@ -45,7 +45,9 @@ export async function inspectLoadLinkImage(file: File, options: { profile?: bool
       }
     } catch {}
   }
-  return { width: bitmap.width, height: bitmap.height, brightness: Math.round(brightness), contrast: Math.round(contrast), messages: Array.from(new Set(messages)) };
+  const quality = { width: bitmap.width, height: bitmap.height, brightness: Math.round(brightness), contrast: Math.round(contrast), messages: Array.from(new Set(messages)) };
+  bitmap.close();
+  return quality;
 }
 
 export function showLoadLinkImageQuality(messages: string[]) {

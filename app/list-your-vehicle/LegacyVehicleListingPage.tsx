@@ -94,7 +94,7 @@ function VehicleCategoryPhoto({ src, alt }: { src: string; alt: string }) {
   }, [src]);
 
   return (
-    <span className="relative mb-4 block h-36 w-full overflow-hidden rounded-[16px] bg-white/[.045] sm:h-40">
+    <span className="relative mb-3 block h-28 w-full overflow-hidden rounded-[16px] bg-white/[.045] sm:h-36">
       {!loaded ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 animate-pulse bg-current/[.045]" /> : null}
       <LoadLinkImage
         ref={photoRef}
@@ -136,6 +136,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [photoLimitToast, setPhotoLimitToast] = useState(false);
   const [listingQuotaToast, setListingQuotaToast] = useState("");
+  const [quotaSnapshot, setQuotaSnapshot] = useState<{monthly_used:number;monthly_limit:number|null;photo_limit:number}|null>(null);
   const [submittedListingId, setSubmittedListingId] = useState<string | null>(null);
   const [sellerType, setSellerType] = useState<SellerType>("private");
   const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory | null>(entryMode === "mobile-unit" ? "mobile_unit" : null);
@@ -210,6 +211,17 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     serviceHistory,description,photoCount:vehiclePhotos.length,packageType
   }),[vehicleCategory,year,brand,modelName,bodyType,condition,transmission,fuelType,odometerKm,gvmKg,payloadKg,offerMode,rate,rentalRate,rentalPeriod,serviceHistory,description,vehiclePhotos.length,packageType]);
   const specSchema = useMemo(() => unitSpecSchema(vehicleCategory, bodyType || vehicleSubtype), [bodyType, vehicleCategory, vehicleSubtype]);
+
+  useEffect(() => {
+    if (!signedIn || !selectedPlan || !vehicleCategory) {setQuotaSnapshot(null);return;}
+    let active=true;
+    void supabase.rpc("loadlink_vehicle_preflight",{p_vin:"",p_registration:""})
+      .then(({data,error}) => {
+        if (!active || error || !data) return;
+        setQuotaSnapshot(data as {monthly_used:number;monthly_limit:number|null;photo_limit:number});
+      }).catch(()=>{});
+    return ()=>{active=false;};
+  },[signedIn,selectedPlan,vehicleCategory]);
 
   useEffect(() => {
     if (!window.location.hash) window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -890,7 +902,14 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
 
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="03" title="Photos and verification" description="Upload clear product photos and the critical documents required for review." />
-              <div className="p-5 md:p-7"><label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>{vehiclePhotoProgress || `Minimum 2 photos · up to ${packageType === "dealer" ? 30 : packageType === "pro" ? 10 : 2}`}</span><input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} disabled={preparingVehiclePhotos || saving} className="hidden" /></label>{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <LoadLinkImage key={preview} src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 shrink-0 snap-start rounded-xl object-cover" />)}</div> : null}</div>
+              <div className="p-5 md:p-7">
+                {quotaSnapshot ? <div className="mb-4 rounded-xl border border-current/10 px-4 py-3">
+                  <p className="text-xs font-black">Your package allowance</p>
+                  <p className={`mt-1 text-xs ${muted}`}>{quotaSnapshot.monthly_limit===null?"Unlimited monthly listings":`${quotaSnapshot.monthly_used} of ${quotaSnapshot.monthly_limit} listings used this month`} · Up to {quotaSnapshot.photo_limit} photos per listing</p>
+                  {quotaSnapshot.monthly_limit!==null && quotaSnapshot.monthly_used>=quotaSnapshot.monthly_limit ?
+                    <a href="/account/packages" className="mt-2 inline-flex text-xs font-black text-[#f6b800] underline underline-offset-4">Monthly limit reached — view packages</a> : null}
+                </div>:null}
+                <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>{vehiclePhotoProgress || `Minimum 2 photos · up to ${packageType === "dealer" ? 30 : packageType === "pro" ? 10 : 2}`}</span><input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} disabled={preparingVehiclePhotos || saving} className="hidden" /></label>{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <LoadLinkImage key={preview} src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 shrink-0 snap-start rounded-xl object-cover" />)}</div> : null}</div>
               {sellerType === "dealership" && !dealerPost ? <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><Field label="Dealership name"><input value={dealershipName} onChange={(event) => setDealershipName(event.target.value)} className={inputClass} required /></Field><Field label="Company registration number"><input value={companyRegistrationNumber} onChange={(event) => setCompanyRegistrationNumber(event.target.value)} className={inputClass} required /></Field><Field label="SARS tax number"><input value={taxNumber} onChange={(event) => setTaxNumber(event.target.value)} className={inputClass} required /></Field><DocumentInput label="CIPC company registration" required file={documents.companyRegistration} onChange={(file) => setDocument("companyRegistration", file)} /><DocumentInput label="SARS tax document" required file={documents.taxDocument} onChange={(file) => setDocument("taxDocument", file)} /><DocumentInput label="Proof of business address" required file={documents.businessAddress} onChange={(file) => setDocument("businessAddress", file)} /><DocumentInput label="Representative authority" required file={documents.representativeAuthority} onChange={(file) => setDocument("representativeAuthority", file)} /></div> : null}
               <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><DocumentInput label="South African ID or passport" required file={documents.idDocument} onChange={(file) => setDocument("idDocument", file)} />{(vehicleCategory === "truck" || vehicleCategory === "bakkie_van") ? <DocumentInput label="Driver’s licence" required file={documents.driverLicence} onChange={(file) => setDocument("driverLicence", file)} /> : null}<DocumentInput label="Vehicle registration certificate" required file={documents.registrationPaper} onChange={(file) => setDocument("registrationPaper", file)} /><DocumentInput label="Proof of ownership or authority to list" required file={documents.ownershipProof} onChange={(file) => setDocument("ownershipProof", file)} /><DocumentInput label="Roadworthy certificate" file={documents.roadworthy} onChange={(file) => setDocument("roadworthy", file)} /><DocumentInput label="Operating licence" file={documents.operatingLicence} onChange={(file) => setDocument("operatingLicence", file)} />{transmissionCheck?.requiresModificationProof ? <DocumentInput label="Gearbox conversion paperwork" required file={documents.modificationProof} onChange={(file) => setDocument("modificationProof", file)} /> : null}</div>
             </section>

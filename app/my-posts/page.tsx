@@ -573,19 +573,22 @@ function EditModal({ listing, darkMode, onClose, onSaved }: { listing: MyListing
   const [replacementFiles, setReplacementFiles] = useState<File[]>([]);
   const [replacementPreviews, setReplacementPreviews] = useState<string[]>([]);
   const [preparingPhotos, setPreparingPhotos] = useState(false);
+  const [upgradePrompt, setUpgradePrompt] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [guidedMode, setGuidedMode] = useState(false);
   const [guideStep, setGuideStep] = useState(0);
   const [showFullEditor, setShowFullEditor] = useState((listing.moderation_status || "pending") !== "rejected");
-  const photoLimit = ["pro", "dealer"].includes(listing.package_type || "") ? 15 : 5;
+  const photoLimit = listing.package_type === "dealer" ? 30 : listing.package_type === "pro" ? 10 : 2;
   const rejected = (listing.moderation_status || "pending") === "rejected";
   const vehicleGroups = ["Catering / Event", "Trucks / Trailers", "Farming / Mining"] as const;
 
   useEffect(() => () => replacementPreviews.forEach(revokePreviewUrl), [replacementPreviews]);
 
   async function choosePhotos(event: ChangeEvent<HTMLInputElement>) {
-    const selected = Array.from(event.target.files || []).slice(0, photoLimit);
+    const files = Array.from(event.target.files || []);
+    const selected = files.slice(0, photoLimit);
+    setUpgradePrompt(files.length > photoLimit);
     event.target.value = "";
     if (!selected.length) return;
     setError("");
@@ -729,6 +732,11 @@ function EditModal({ listing, darkMode, onClose, onSaved }: { listing: MyListing
 
   return (
     <div data-loadlink-post-editor="true" role="dialog" aria-modal="true" aria-label="Edit listing" className="fixed inset-0 z-[9999] overflow-y-auto bg-black/[.72] px-0 py-0 backdrop-blur-md sm:px-4 sm:py-6">
+      {upgradePrompt ? <div role="status" className="fixed inset-x-4 bottom-20 z-[10020] mx-auto max-w-md rounded-2xl border border-[#f6b800]/35 bg-[#111] p-4 text-sm text-white shadow-xl">
+        <p className="font-black">Photo limit reached</p>
+        <p className="mt-1 text-xs leading-5 text-white/70">Your package includes {photoLimit} photos. We kept the first {photoLimit} selected images.</p>
+        <div className="mt-3 flex gap-3"><Link href="/account/packages" className="inline-flex min-h-10 items-center rounded-xl bg-[#f6b800] px-4 text-xs font-black text-black">View packages</Link><button type="button" onClick={()=>setUpgradePrompt(false)} className="rounded-xl border border-white/20 px-4 text-xs font-black">Dismiss</button></div>
+      </div> : null}
       <section className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col bg-[#090909] text-white shadow-2xl sm:min-h-0 sm:max-h-[92dvh] sm:overflow-hidden sm:rounded-[30px] sm:border sm:border-white/10">
         <header className="sticky top-0 z-20 border-b border-white/10 bg-[#090909]/95 px-5 pb-4 pt-[max(18px,env(safe-area-inset-top))] backdrop-blur-xl sm:px-6 sm:pt-5">
           <div className="flex items-start gap-4">
