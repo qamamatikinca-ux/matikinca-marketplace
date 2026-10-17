@@ -38,6 +38,7 @@ const VehicleMarketplaceHub = dynamic(() => import("@/components/VehicleMarketpl
 import { findTruckReference, truckReferenceResponse } from "@/lib/truckModelReferences";
 import { getTruckModel, getTruckModels, truckCatalog, truckYears, validateTruckTransmission } from "@/lib/truckCatalog";
 import { getLightCommercialModels, getLightCommercialModelYearStatus, lightCommercialCatalog, lightCommercialYears } from "@/lib/southAfricanLightCommercialCatalog";
+import { storedLightCommercialPhotos, type LightCommercialPhoto } from "@/lib/lightCommercialModelPhotos";
 
 
 const truckBodyTypes = [
@@ -119,7 +120,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [modelConfirmed, setModelConfirmed] = useState(false);
   const [referenceImage, setReferenceImage] = useState<ReferenceImage | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
-  const [lightCommercialPhotos, setLightCommercialPhotos] = useState<Array<{ url: string; fallbackUrl?: string; title: string; sourceUrl: string; credit: string; license: string }>>([]);
+  const [lightCommercialPhotos, setLightCommercialPhotos] = useState<LightCommercialPhoto[]>([]);
   const [lightCommercialPhotoLoading, setLightCommercialPhotoLoading] = useState(false);
   const [lightCommercialPhotoUnavailable, setLightCommercialPhotoUnavailable] = useState(false);
   const [lightCommercialPhotoFailed, setLightCommercialPhotoFailed] = useState<string[]>([]);
@@ -269,18 +270,24 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   }, [brand, modelName, vehicleCategory, year]);
 
   useEffect(() => {
-    if (vehicleCategory !== "bakkie_van" || !brand.trim() || !modelName.trim()) {
+    setLightCommercialPhotoFailed([]);
+    if (vehicleCategory !== "bakkie_van" || !brand.trim() || !modelName.trim() || (lightCommercialYearStatus && !lightCommercialYearStatus.valid)) {
       setLightCommercialPhotos([]); setLightCommercialPhotoLoading(false); setLightCommercialPhotoUnavailable(false); return;
     }
+    const stored = storedLightCommercialPhotos(brand, modelName);
+    if (stored.length) {
+      setLightCommercialPhotos(stored); setLightCommercialPhotoLoading(false); setLightCommercialPhotoUnavailable(false); return;
+    }
+    setLightCommercialPhotos([]);
+    setLightCommercialPhotoLoading(true);
+    setLightCommercialPhotoUnavailable(false);
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
-      setLightCommercialPhotoLoading(true);
-      setLightCommercialPhotoUnavailable(false);
       try {
-        const query = new URLSearchParams({make:brand.trim(), model:modelName.trim(), year:String(year)});
-        const response = await fetch(`/api/light-commercial-reference?${query}`, {signal:controller.signal});
+        const query = new URLSearchParams({make:brand.trim(), model:modelName.trim(), year:String(year), v:"2"});
+        const response = await fetch(`/api/light-commercial-reference?${query}`, {signal:AbortSignal.any([controller.signal, AbortSignal.timeout(12000)])});
         if(!response.ok) throw new Error("reference lookup failed");
-        const data = await response.json() as {photos?:Array<{url:string;fallbackUrl?:string;title:string;sourceUrl:string;credit:string;license:string}>};
+        const data = await response.json() as {photos?:LightCommercialPhoto[]};
         if(controller.signal.aborted) return;
         setLightCommercialPhotos(data.photos || []); setLightCommercialPhotoFailed([]);
         setLightCommercialPhotoUnavailable(!(data.photos || []).length);
@@ -289,7 +296,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       } finally {if(!controller.signal.aborted) setLightCommercialPhotoLoading(false);}
     },420);
     return () => {window.clearTimeout(timer);controller.abort();};
-  }, [vehicleCategory,brand,modelName,year]);
+  }, [vehicleCategory,brand,modelName,year,lightCommercialYearStatus]);
 
   function choosePlan(plan: BusinessPlanId) {
     setSelectedPlan(plan);
