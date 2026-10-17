@@ -281,9 +281,9 @@ html body [data-loadlink-hero-pill="true"][data-variant="secondary"] {
   color: #fff !important;
   border: 1px solid rgba(255,255,255,.55) !important;
 }
-/* Vehicle categories are action buttons, not square cards. */
+/* Vehicle category choices use rounded cards; the separate hero CTAs stay full pills. */
 html body button.ll-vehicle-type-card {
-  border-radius: 9999px !important;
+  border-radius: 24px !important;
 }
 /* Notification filters remain filters, but share the site's rounded controls. */
 html[data-loadlink-theme] body [data-loadlink-notification-filter="true"] {

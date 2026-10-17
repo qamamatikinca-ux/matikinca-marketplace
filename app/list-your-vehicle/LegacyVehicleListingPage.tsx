@@ -634,7 +634,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 setSelectedPlan(entryMode ? initialPackage : null);
                 setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-              }} className={`ll-vehicle-type-card min-h-28 rounded-full border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+              }} className={`ll-vehicle-type-card min-h-28 rounded-[24px] border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
                 <span className="ll-vehicle-type-icon"><LoadLinkIcon name="truck" size={24}/></span><span className="block text-xl font-black">Truck</span>
                 <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Commercial trucks and tractor units.</span>
               </button>
@@ -644,7 +644,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 setSelectedPlan(entryMode ? initialPackage : null);
                 setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-              }} className={`ll-vehicle-type-card min-h-28 rounded-full border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+              }} className={`ll-vehicle-type-card min-h-28 rounded-[24px] border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
                 <span className="ll-vehicle-type-icon"><LoadLinkIcon name="archive" size={24}/></span><span className="block text-xl font-black">Trailer</span>
                 <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Commercial trailer listings.</span>
               </button>
@@ -654,7 +654,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 setSelectedPlan(entryMode ? initialPackage : null);
                 setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-              }} className={`ll-vehicle-type-card min-h-28 rounded-full border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+              }} className={`ll-vehicle-type-card min-h-28 rounded-[24px] border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
                 <span className="block text-xl font-black">Mobile Unit</span>
                 <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Mobile fridge, kitchen, clinic, office and other units.</span>
               </button> : null}

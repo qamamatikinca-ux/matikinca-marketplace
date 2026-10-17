@@ -31,7 +31,8 @@ type VehicleRow = {
   dealership_logo?: string | null;
 };
 
-type ViewMode = "all" | "trucks" | "trailers" | "units";
+type ViewMode = "all" | "vehicles" | "trucks" | "trailers_units";
+type EquipmentKind = "vehicle" | "truck" | "trailer" | "mobile_unit";
 type Intent = "all" | "sale" | "rental";
 type SortMode = "newest" | "price_low" | "price_high";
 
@@ -54,22 +55,67 @@ function isMobileUnit(row: VehicleRow) {
   return type.includes("mobile unit") || String(row.vehicle_group || "").toLowerCase().includes("mobile unit");
 }
 
-function equipment(row:VehicleRow):Exclude<ViewMode,"all">{
- const type=readMeta(row.description,"Listing type").toLowerCase(), subtype=readMeta(row.description,"Vehicle subtype").toLowerCase(), group=String(row.vehicle_group||"").toLowerCase();
- if(type.includes("mobile unit")||group.includes("mobile unit"))return "units";
- if(type.includes("trailer")||group.includes("trailer")||/trailer|flatbed|lowbed|tautliner/.test(subtype))return "trailers";
- return "trucks";
+// Respect the listing's explicit category, including legacy records such as
+// "Listing type: Mobile fridge". Never default unrecognised stock to Trucks.
+function equipmentKind(row: VehicleRow): EquipmentKind {
+  const type = readMeta(row.description, "Listing type").toLowerCase();
+  const subtype = readMeta(row.description, "Vehicle subtype").toLowerCase();
+  const group = String(row.vehicle_group || "").toLowerCase();
+  const title = String(row.title || "").toLowerCase();
+  const mobilePattern = /mobile[\\s_-]*(?:unit|fridge|freezer|kitchen|toilet|clinic|office|workshop|classroom|accommodation|shower)|food[\\s-]*truck|cold[\\s-]*room|portable[\\s-]*(?:unit|fridge|freezer|office)/i;
+  const trailerPattern = /trailer|tautliner|lowbed|low-bed|flatbed|flat-bed|car carrier|semi[\\s-]*trailer/i;
+  const truckPattern = /truck|tractor[\\s-]*unit|prime[\\s-]*mover|side[\\s-]*tipper|tipper[\\s-]*truck|rigid[\\s-]*truck/i;
+
+  // Form-generated descriptions have the strongest evidence.
+  if (mobilePattern.test(type) || type === "mobile unit") return "mobile_unit";
+  if (trailerPattern.test(type)) return "trailer";
+  if (truckPattern.test(type)) return "truck";
+  if (/car|bakkie|van|suv|sedan|pickup|motorbike|motorcycle|bus|vehicle/i.test(type)) return "vehicle";
+
+  // Handle older listings where listing type is a specific product, not a category.
+  if (mobilePattern.test(subtype) || mobilePattern.test(title) || mobilePattern.test(group)) return "mobile_unit";
+  if (trailerPattern.test(subtype) || trailerPattern.test(title) || group.includes("trailers") && !group.includes("trucks")) return "trailer";
+  if (truckPattern.test(subtype) || truckPattern.test(title) || group === "trucks") return "truck";
+  return "vehicle";
 }
-function intentMatch(row:VehicleRow,intent:Intent){
- if(intent==="all")return true;
- const offer=readMeta(row.description,"Offer").toLowerCase();
- return intent==="sale"?/sale|buy|purchase/.test(offer)||!!readMeta(row.description,"Sale price"):/rental|rent|hire|lease/.test(offer)||!!readMeta(row.description,"Rental rate");
+
+function equipmentMatches(kind: EquipmentKind, view: ViewMode) {
+  return view === "all" ||
+    (view === "vehicles" && kind === "vehicle") ||
+    (view === "trucks" && kind === "truck") ||
+    (view === "trailers_units" && (kind === "trailer" || kind === "mobile_unit"));
 }
-function numericPrice(row: VehicleRow, intent:Intent) {
-  const explicit = intent==="rental"?readMeta(row.description,"Rental rate"):intent==="sale"?readMeta(row.description,"Sale price"):readMeta(row.description,"Sale price")||readMeta(row.description,"Rental rate")||String(row.rate||"");
-  const clean = explicit.replace(/\s+/g, "").replace(/,/g, "");
-  const match = clean.match(/(?:R|ZAR)?([0-9]+(?:\.[0-9]+)?)/i);
+
+function intentMatch(row: VehicleRow, intent: Intent) {
+  if (intent === "all") return true;
+  const offer = readMeta(row.description, "Offer").toLowerCase();
+  const title = String(row.title || "").toLowerCase();
+  const rate = String(row.rate || "").toLowerCase();
+  const forSale = Boolean(readMeta(row.description, "Sale price")) ||
+    /sale|purchase|buy/.test(offer) ||
+    /for sale|available to buy/.test(title);
+  const forRent = Boolean(readMeta(row.description, "Rental rate")) ||
+    /rent|hire|lease/.test(offer) ||
+    /for (?:hire|rent)|to rent/.test(title) ||
+    /\\b(?:a|per)\\s*(?:day|week|month)\\b|\\/(?:day|week|month)\\b/.test(rate);
+  return intent === "sale" ? forSale : forRent;
+}
+
+function numericPrice(row: VehicleRow, intent: Intent) {
+  const explicit = intent === "rental" ? readMeta(row.description, "Rental rate")
+    : intent === "sale" ? readMeta(row.description, "Sale price")
+    : readMeta(row.description, "Sale price") || readMeta(row.description, "Rental rate");
+  const raw = explicit || (intent === "all" ? String(row.rate || "") : "");
+  const match = raw.replace(/[\\s,]/g, "").match(/(?:R|ZAR)?(\\d+(?:\\.\\d+)?)/i);
   return match ? Number(match[1]) : Number.POSITIVE_INFINITY;
+}
+
+function truckMileage(row: VehicleRow) {
+  const raw = readMeta(row.description, "Mileage");
+  const match = raw.match(/^([\\d\\s,.]+)\\s*(?:km|kilometres?)?$/i);
+  if (!match) return null;
+  const number = Number(match[1].replace(/[^0-9]/g, ""));
+  return Number.isFinite(number) && number >= 0 ? number.toLocaleString("en-ZA") + " km" : null;
 }
 
 function readSeenIds() {
@@ -125,8 +171,8 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
 
   useEffect(() => {
     function syncHash() {
-      if (window.location.hash === "#vehicle-marketplace-units") setMode("units");
-      if (window.location.hash === "#vehicle-marketplace-vehicles") setMode("all");
+      if (window.location.hash === "#vehicle-marketplace-units") setMode("trailers_units");
+      if (window.location.hash === "#vehicle-marketplace-vehicles") setMode("vehicles");
     }
     syncHash();
     window.addEventListener("hashchange", syncHash);
@@ -134,7 +180,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
   }, []);
 
   const visible=useMemo(()=>{
-    const filtered=rows.filter(row=>(mode==="all"||equipment(row)===mode)&&intentMatch(row,intent));
+    const filtered=rows.filter(row=>equipmentMatches(equipmentKind(row),mode)&&intentMatch(row,intent));
     return [...filtered].sort((first,second)=>{
       if(sort!=="newest"){
         const a=numericPrice(first,intent),b=numericPrice(second,intent);
@@ -186,13 +232,13 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
           </div>
           <LoadLinkSortControl darkMode={darkMode} value={sort} onChange={value=>setSort(value as SortMode)}
  options={[{value:"newest",label:"Newest first"},{value:"price_low",label:"Price: low to high"},{value:"price_high",label:"Price: high to low"}]}
- equipment={{value:mode,onChange:value=>setMode(value as ViewMode),options:[{value:"all",label:"All equipment"},{value:"trucks",label:"Trucks"},{value:"trailers",label:"Trailers"},{value:"units",label:"Mobile units"}]}}
+ equipment={{value:mode,onChange:value=>setMode(value as ViewMode),options:[{value:"all",label:"All equipment"},{value:"vehicles",label:"Vehicles"},{value:"trucks",label:"Trucks"},{value:"trailers_units",label:"Trailers & mobile units"}]}}
  filter={{value:intent,onChange:value=>setIntent(value as Intent),resultCount:visible.length,options:[{value:"all",label:"All listings"},{value:"sale",label:"For sale",description:"Available to buy"},{value:"rental",label:"For rent",description:"Available to hire or rent"}]}}
  />
         </div>
 
         <div className="mt-6 flex max-w-full gap-2 overflow-x-auto pb-1">
-          {([["all", "All equipment"], ["trucks", "Trucks"], ["trailers", "Trailers"], ["units", "Mobile units"]] as Array<[ViewMode, string]>).map(([value, label]) => (
+          {([["all", "All equipment"], ["vehicles", "Vehicles"], ["trucks", "Trucks"], ["trailers_units", "Trailers & mobile units"]] as Array<[ViewMode, string]>).map(([value, label]) => (
             <button key={value} type="button" onClick={() => setMode(value)} className={`shrink-0 rounded-full border px-4 py-2.5 text-xs font-black transition ${mode === value ? "border-[#f6b800] bg-[#f6b800] text-black" : surface}`}>{label}</button>
           ))}
         </div>
@@ -207,6 +253,9 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
               {paginatedVisible.map((row) => {
                 const type = readMeta(row.description, "Vehicle subtype") || readMeta(row.description, "Listing type") || row.vehicle_group || "Commercial vehicle";
                 const offer = readMeta(row.description, "Offer") || "Available";
+                const kind = equipmentKind(row);
+                const mileage = kind === "truck" ? truckMileage(row) : null;
+                const kindLabel = kind === "mobile_unit" ? "Mobile unit" : kind === "trailer" ? "Trailer" : kind === "truck" ? "Truck" : "Vehicle";
                 const wasSeen = seen.has(String(row.id));
                 const href = `/vehicles/${row.id}`;
                 return (
@@ -229,11 +278,12 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
                     <div className="p-5">
                       <p className="text-3xl font-black tracking-[-.04em] text-[#b88900]">{formatListingRate(row.rate)}</p>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="rounded-full bg-[#2f9f5b] px-3 py-1.5 text-[10px] font-black uppercase text-white">Vehicle</span>
+                        <span className="rounded-full bg-[#2f9f5b] px-3 py-1.5 text-[10px] font-black uppercase text-white">{kindLabel}</span>
                         <span className={`rounded-full px-3 py-1.5 text-[10px] font-black uppercase ${softPill}`}>{type}</span>
                       </div>
                       <Link href={href} onClick={() => markSeen(String(row.id))} className="mt-4 block text-2xl font-black tracking-[-.03em] hover:underline hover:underline-offset-4">{row.title || "Commercial vehicle"}</Link>
                       <p className={`mt-2 text-sm font-semibold ${muted}`}>{row.city || "South Africa"} · {postedLabel(row.created_at)}</p>
+                      {mileage ? <p className={`mt-2 text-sm font-semibold ${muted}`}>Mileage: <strong className={darkMode ? "text-white" : "text-black"}>{mileage}</strong></p> : null}
                       {row.posted_by ? <p className={`mt-2 text-sm ${muted}`}>Listed by <strong className={darkMode ? "text-white" : "text-black"}>{row.dealership_name || row.posted_by}</strong></p> : null}
 
                       <DealershipListingActions20260822
@@ -257,6 +307,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
           <div className={`loadlink-glass mt-6 rounded-[24px] border p-8 text-center ${surface}`}>
             <h3 className="text-xl font-black">No approved listings in this category yet</h3>
             <p className={`mx-auto mt-2 max-w-md text-sm font-semibold leading-6 ${muted}`}>Try All equipment and All listings, or change your filters.</p>
+            {(mode !== "all" || intent !== "all") ? <button type="button" onClick={() => {setMode("all");setIntent("all");}} className="mt-4 min-h-10 rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">Clear filters</button> : null>
           </div>
         )}
       </div>
