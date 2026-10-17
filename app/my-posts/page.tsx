@@ -56,6 +56,7 @@ type MyListing = {
   listing_kind?: string | null;
   expires_at?: string | null;
   stock_status?: string | null;
+  availability_confirmed_at?: string | null;
 };
 
 
@@ -144,7 +145,7 @@ export default function MyPostsPage() {
       const results: MyListing[] = [];
       const byUser = await supabase
         .from("job_listings")
-        .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,status,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status")
+        .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,status,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status,availability_confirmed_at")
         .eq("user_id", currentUserId)
         .order("created_at", { ascending: false });
 
@@ -152,7 +153,7 @@ export default function MyPostsPage() {
       else if (/status|column|schema cache/i.test(byUser.error.message)) {
         const fallback = await supabase
           .from("job_listings")
-          .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status")
+          .select("id,title,city,vehicle_group,rate,posted_by,contact_number,description,photos,sponsored,package_type,created_at,view_count,last_viewed_at,owner_key,user_id,moderation_status,moderation_notes,moderated_at,listing_kind,expires_at,stock_status,availability_confirmed_at")
           .eq("user_id", currentUserId)
           .order("created_at", { ascending: false });
         if (fallback.error) throw fallback.error;
@@ -205,8 +206,17 @@ export default function MyPostsPage() {
     setListings((current) => current.map((item) => item.id === listing.id ? { ...item, status } : item));
   }
 
+  async function confirmVehicleAvailability(listing:MyListing,available:boolean){
+    setMessage("");
+    const result=await supabase.rpc("loadlink_confirm_my_vehicle_availability",{p_listing_id:listing.id,p_is_available:available});
+    if(result.error){setMessage(result.error.message||"Could not update vehicle availability.");return;}
+    setListings(current=>current.map(item=>item.id===listing.id?{...item,
+      stock_status:available?"available":"removed",availability_confirmed_at:new Date().toISOString()}:item));
+    setMessage(available?"Vehicle availability confirmed.":"Vehicle hidden from the marketplace. You can restore it while paid access remains valid.");
+  }
+
   async function renewListing(listing: MyListing) {
-    const raw = window.prompt("How many days would you like to renew this listing for? Each day costs R15.", "7");
+    const raw = window.prompt("How many days would you like to renew this listing for? Standard costs R14 per listing day.", "7");
     if (!raw) return;
     const days = Math.max(1, Math.min(365, Math.floor(Number(raw) || 0)));
     if (!days) return;
@@ -377,6 +387,16 @@ export default function MyPostsPage() {
                           </div>
                         ) : null}
 
+                        {listing.listing_kind==="vehicle" && moderationStatus==="approved" && status==="active" ? (
+                          <div className={`mt-3 rounded-xl border p-3 ${darkMode?"border-white/10 bg-white/[.025]":"border-black/10 bg-black/[.025]"}`}>
+                            <p className="text-xs font-black">Vehicle availability</p>
+                            <p className={`mt-1 text-[11px] leading-5 ${muted}`}>{listing.stock_status==="removed"?"Hidden from public search":listing.availability_confirmed_at?("Last confirmed "+formatDate(listing.availability_confirmed_at)):"Please confirm that this vehicle is still available."}</p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button type="button" onClick={()=>void confirmVehicleAvailability(listing,true)} className="rounded-xl bg-[#f6b800] px-3 py-2 text-xs font-black text-black">{listing.stock_status==="removed"?"Restore availability":"Still available"}</button>
+                              {listing.stock_status!=="removed"?<button type="button" onClick={()=>void confirmVehicleAvailability(listing,false)} className="rounded-xl border border-current/15 px-3 py-2 text-xs font-black">Hide listing</button>:null}
+                            </div>
+                          </div>
+                        ):null}
                         {isManualVehicle && listing.expires_at ? <div className={`mt-3 rounded-xl border px-3 py-2.5 ${expired ? "border-red-500/35 bg-red-500/10" : "border-[#f6b800]/25 bg-[#f6b800]/8"}`}><p className="text-[10px] font-black">{expired ? "Listing expired" : `Expires ${formatDate(listing.expires_at)}`}</p>{!expired ? <button type="button" onClick={() => void renewListing(listing)} className="mt-1.5 text-[10px] font-black text-[#b88900] underline underline-offset-4">Renew</button> : null}</div> : null}
 
                         {moderationStatus === "rejected" ? (

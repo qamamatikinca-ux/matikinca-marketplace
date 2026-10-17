@@ -135,6 +135,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [message, setMessage] = useState("");
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [photoLimitToast, setPhotoLimitToast] = useState(false);
+  const [listingQuotaToast, setListingQuotaToast] = useState("");
   const [submittedListingId, setSubmittedListingId] = useState<string | null>(null);
   const [sellerType, setSellerType] = useState<SellerType>("private");
   const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory | null>(entryMode === "mobile-unit" ? "mobile_unit" : null);
@@ -396,7 +397,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         const source = candidates[index];
         const validation = validateImageFile(source, source.name || `Vehicle photo ${index + 1}`);
         if (validation) throw new Error(validation);
-        const quality = await inspectLoadLinkImage(source);
+        const quality = await inspectLoadLinkImage(source, {vehicle:true});
         showLoadLinkImageQuality(quality.messages);
         setVehiclePhotoProgress(`Preparing vehicle photo ${index + 1} of ${candidates.length}…`);
         const prepared = await prepareImageFileForForm(source, {
@@ -540,8 +541,10 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       if(preflight.error) throw preflight.error;
       const pre = preflight.data as {owned_duplicate?:boolean;monthly_used?:number;monthly_limit?:number|null;photo_limit?:number} | null;
       if(pre?.owned_duplicate) throw new Error("This vehicle is already listed on your account. Edit the existing listing instead.");
-      if(pre?.monthly_limit!==null&&pre?.monthly_limit!==undefined&&Number(pre.monthly_used||0)>=pre.monthly_limit)
-        throw new Error(`You have used all ${pre.monthly_limit} new vehicle listings for this month. See Packages for your options.`);
+      if(pre?.monthly_limit!==null&&pre?.monthly_limit!==undefined&&Number(pre.monthly_used||0)>=pre.monthly_limit) {
+        const notice = `You have reached ${pre.monthly_limit} new vehicle listings this month. You can compare packages for more listings.`;
+        setListingQuotaToast(notice);throw new Error(notice);
+      }
       if(pre?.photo_limit && vehiclePhotos.length>pre.photo_limit)throw new Error(`Your package allows ${pre.photo_limit} photos per listing.`);
       const submissionId = currentSubmissionId();
       const ownerKey = getAccountOwnerKey(user.id); createdOwnerKey = ownerKey;
@@ -623,6 +626,16 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         if (detailsResult.error) throw detailsResult.error;
       }
 
+      // Private identity claim covers trucks, bakkies, trailers and mobile units.
+      // Supabase applies owner-only access and securely flags cross-account matches.
+      const claim = await supabase.from("vehicle_identity_claims").insert({
+        listing_id:listingId,user_id:user.id,
+        vin_normalized:vin.trim().toUpperCase(),
+        plate_normalized:registrationNumber.trim().toUpperCase(),
+        vehicle_category:vehicleCategory!
+      });
+      if(claim.error) throw claim.error;
+
       const verificationResult = await supabase.from("vehicle_verifications").upsert({
         listing_id: listingId, user_id: user.id, id_document_path: idPath, licence_document_path: licencePath,
         registration_document_path: registrationPath, ownership_document_path: ownershipPath, roadworthy_document_path: roadworthyPath,
@@ -680,6 +693,11 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   return (
     <main className={`min-h-screen transition-colors ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}>
       {boostRequestNotice ? <div role="status" className="fixed inset-x-4 top-4 z-[9999] mx-auto max-w-xl rounded-2xl border border-[#f6b800]/40 bg-[#131313] px-5 py-4 text-sm font-semibold text-white shadow-xl"><button type="button" onClick={() => setBoostRequestNotice("")} className="float-right ml-2 text-[#f6b800]">Close</button>{boostRequestNotice}</div> : null}
+      {listingQuotaToast ? <div role="status" className="fixed inset-x-4 bottom-20 z-[12010] mx-auto max-w-md rounded-2xl border border-[#f6b800]/35 bg-[#101010] p-4 text-sm text-white shadow-xl">
+        <p className="font-black">Monthly listing limit reached</p>
+        <p className="mt-2 text-xs leading-5 text-white/70">{listingQuotaToast}</p>
+        <div className="mt-4 flex gap-3"><a href="/account/packages" className="inline-flex min-h-10 items-center rounded-xl bg-[#f6b800] px-4 text-xs font-black text-black">View packages</a>
+        <button type="button" onClick={()=>setListingQuotaToast("")} className="rounded-xl border border-white/20 px-4 text-xs font-bold">Dismiss</button></div></div> : null}
       <PhotoLimitUpgradeToast open={photoLimitToast} onClose={() => setPhotoLimitToast(false)} limit={packageType === "dealer" ? 30 : packageType === "pro" ? 10 : 2} plan={packageType} />
       <SubmissionSuccess
         open={submissionSuccess}

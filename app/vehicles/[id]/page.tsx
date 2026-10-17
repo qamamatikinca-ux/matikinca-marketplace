@@ -14,6 +14,7 @@ import VehicleFullDetails from "@/components/VehicleFullDetails";
 import { formatListingRate } from "@/lib/formatCurrency";
 import { jobVehicleRelevance } from "@/lib/vehiclePostingIntelligence";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
+import { supabase } from "@/lib/supabaseClient";
 
 type VehicleListing = {
   id: string;
@@ -28,6 +29,8 @@ type VehicleListing = {
   photos?: string[] | null;
   listing_kind?: string | null;
   dealership_id?: string | null;
+  user_id?: string | null;
+  availability_confirmed_at?: string | null;
   stock_status?: string | null;
 };
 
@@ -50,7 +53,22 @@ export default function VehicleProductPage() {
   const [listing, setListing] = useState<VehicleListing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [relatedJobs, setRelatedJobs] = useState<Array<{id:string;title?:string|null;city?:string|null}>>([]);
+  const [viewerId,setViewerId] = useState<string|null>(null);
+  const [availabilitySaving,setAvailabilitySaving] = useState(false);
+  const [availabilityNotice,setAvailabilityNotice] = useState("");
+  useEffect(()=>{let live=true;void supabase.auth.getUser().then(({data})=>{if(live)setViewerId(data.user?.id||null)}).catch(()=>{});return ()=>{live=false}},[]);
+  async function confirmAvailability(available:boolean){
+    if(!listing || !viewerId || viewerId!==listing.user_id)return;
+    setAvailabilitySaving(true);setAvailabilityNotice("");
+    const {data,error}=await supabase.rpc("loadlink_confirm_my_vehicle_availability",{p_listing_id:listing.id,p_is_available:available});
+    if(error){setAvailabilityNotice(error.message||"Could not update this listing. Try again.");}
+    else{
+      setAvailabilityNotice(available?"Availability confirmed.":"Listing hidden from the public marketplace.");
+      setListing(current=>current?{...current,stock_status:available?"available":"removed",availability_confirmed_at:String(data?.confirmed_at||new Date().toISOString())}:current);
+    }
+    setAvailabilitySaving(false);
+  }
+  const [relatedJobs,setRelatedJobs] = useState<Array<{id:string;title?:string|null;city?:string|null}>>([]);
 
   useEffect(() => {
     let active = true;
@@ -80,6 +98,19 @@ export default function VehicleProductPage() {
       .finally(() => active && setLoading(false));
     return () => { active = false; };
   }, [id]);
+
+  useEffect(()=>{
+    if(!viewerId || loading || listing)return;
+    let active=true;
+    void supabase.from("job_listings")
+      .select("id,title,city,vehicle_group,rate,posted_by,contact_number,whatsapp_number,description,photos,listing_kind,dealership_id,stock_status,user_id")
+      .eq("id",id).eq("user_id",viewerId).maybeSingle()
+      .then(({data,error})=>{
+        if(!active||error||!data||!isVehicle(data as VehicleListing))return;
+        setListing(data as VehicleListing);setError("");
+      });
+    return ()=>{active=false;};
+  },[viewerId,loading,listing,id]);
 
   const photos = useMemo(() => (listing?.photos || []).filter(Boolean), [listing?.photos]);
   const page = darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black";
@@ -132,6 +163,15 @@ export default function VehicleProductPage() {
                   </div>
                 </div>
 
+                {viewerId && listing.user_id===viewerId ? <div className={`mt-5 rounded-xl border p-4 ${darkMode?"border-white/15 bg-white/[.035]":"border-black/10 bg-black/[.025]"}`}>
+                  <h3 className="text-sm font-black">Manage availability</h3>
+                  <p className={`mt-1 text-xs ${muted}`}>Confirm that this vehicle is still available, or temporarily hide it. This does not renew expired paid access.</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button disabled={availabilitySaving} type="button" onClick={()=>void confirmAvailability(true)} className="rounded-xl bg-[#f6b800] px-4 py-2.5 text-xs font-black text-black disabled:opacity-50">Still available</button>
+                    <button disabled={availabilitySaving} type="button" onClick={()=>void confirmAvailability(false)} className="rounded-xl border border-current/20 px-4 py-2.5 text-xs font-black disabled:opacity-50">Hide listing</button>
+                  </div>
+                  {availabilityNotice?<p role="status" className="mt-3 text-xs font-semibold">{availabilityNotice}</p>:null}
+                </div>:null}
                 <div className="mt-6 grid gap-2 sm:grid-cols-3">
                   {listing.contact_number ? <a href={`tel:${String(listing.contact_number).replace(/\s/g, "")}`} className="flex min-h-13 items-center justify-center rounded-xl border border-[#168eea] bg-[#168eea] px-4 text-xs font-black uppercase text-white">Call seller</a> : null}
                   <RequireAuthLink href={`/messages?listing=${encodeURIComponent(listing.id)}&suggest=1`} className="flex min-h-13 items-center justify-center rounded-xl border border-[#f6b800] bg-[#f6b800] px-4 text-xs font-black uppercase text-black">Message</RequireAuthLink>
@@ -143,7 +183,7 @@ export default function VehicleProductPage() {
             {relatedJobs.length ? <section className={`mt-5 rounded-[28px] border p-5 md:p-7 ${surface}`}>
               <h2 className="text-xl font-black">Potential transport opportunities</h2>
               <p className={`mt-2 text-sm ${muted}`}>Suggested from vehicle details and location. Check each job's requirements; suitability is not guaranteed.</p>
-              <div className="mt-4 grid gap-2">{relatedJobs.map(job=><Link key={job.id} href="/jobs" className="flex min-h-14 items-center justify-between rounded-xl border border-current/10 p-4 text-sm font-semibold"><span>{job.title||"Transport opportunity"}{job.city?" · "+job.city:""}</span><LoadLinkIcon name="chevronRight" size={18}/></Link>)}</div>
+              <div className="mt-4 grid gap-2">{relatedJobs.map(job=><Link key={job.id} href={`/listing/${job.id}`} className="flex min-h-14 items-center justify-between rounded-xl border border-current/10 p-4 text-sm font-semibold"><span>{job.title||"Transport opportunity"}{job.city?" · "+job.city:""}</span><LoadLinkIcon name="chevronRight" size={18}/></Link>)}</div>
             </section> : null}
             <section className={`mt-5 rounded-[28px] border p-5 md:p-7 ${surface}`}>
               <VehicleFullDetails description={String(listing.description || "")} city={String(listing.city || "")} dealershipId={listing.dealership_id || null} darkMode={darkMode} />

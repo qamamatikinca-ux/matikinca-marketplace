@@ -2,7 +2,7 @@
 
 export type LoadLinkImageQuality = { width: number; height: number; brightness: number; contrast: number; messages: string[] };
 
-export async function inspectLoadLinkImage(file: File, options: { profile?: boolean } = {}): Promise<LoadLinkImageQuality> {
+export async function inspectLoadLinkImage(file: File, options: { profile?: boolean; vehicle?: boolean } = {}): Promise<LoadLinkImageQuality> {
   const bitmap = await createImageBitmap(file);
   const max = 180;
   const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
@@ -23,6 +23,13 @@ export async function inspectLoadLinkImage(file: File, options: { profile?: bool
   const messages: string[] = [];
   if (brightness < 58) messages.push("This photo is quite dark. A brighter photo may be easier to recognise.");
   if (contrast < 14) messages.push("This photo has very little detail. A clearer photo may work better.");
+  if (options.vehicle) {
+    if (bitmap.width < 720 || bitmap.height < 480) messages.push("This vehicle photo is low resolution. Try a clearer original photo.");
+    const aspect = Math.max(bitmap.width,bitmap.height)/Math.max(1,Math.min(bitmap.width,bitmap.height));
+    if (aspect > 2.5) messages.push("This photo is unusually narrow. A wider vehicle photo may show the condition more clearly.");
+    if (bitmap.width < bitmap.height && bitmap.height/Math.max(bitmap.width,1) > 1.85)
+      messages.push("This resembles a phone screenshot or tall crop. If possible, upload a direct photograph of the vehicle.");
+  }
   if (options.profile && typeof window !== "undefined") {
     try {
       const FaceDetectorClass = (window as any).FaceDetector;

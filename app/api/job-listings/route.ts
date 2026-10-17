@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const PUBLIC_FIELDS = [
-  "id","title","city","vehicle_group","rate","posted_by","contact_number","whatsapp_number","poster_photo","description","photos","sponsored","package_type","created_at","view_count","last_viewed_at","user_id","listing_kind","status","moderation_status","expires_at","stock_status","dealership_id",
+  "id","title","city","vehicle_group","rate","posted_by","contact_number","whatsapp_number","poster_photo","description","photos","sponsored","package_type","created_at","view_count","last_viewed_at","user_id","listing_kind","status","moderation_status","expires_at","stock_status","dealership_id","boost_expires_at","display_tier","availability_confirmed_at","completion_score","dealer_stock_number",
 ].join(",");
 
 type DealerMeta = {
@@ -193,7 +193,7 @@ export async function GET(request: Request) {
         const approved = row.moderation_status === undefined || row.moderation_status === "approved";
         const expiry = row.expires_at ? new Date(row.expires_at).getTime() : 0;
         const current = !expiry || !Number.isFinite(expiry) || expiry > now;
-        const inStock = !row.stock_status || row.stock_status !== "removed";
+        const inStock = !row.stock_status || !["removed","sold","unavailable"].includes(String(row.stock_status).toLowerCase());
         return active && approved && current && inStock;
       }).map(toPublicRow)
     : [];
