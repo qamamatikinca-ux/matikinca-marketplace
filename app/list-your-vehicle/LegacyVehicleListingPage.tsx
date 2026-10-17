@@ -727,7 +727,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       ) : null}
 
       {listingFlowOpen && signedIn && listingIntent && !selectedPlan ? <>
-        <section className="mx-auto max-w-6xl px-4 pt-5"><button type="button" onClick={() => {setSelectedPlan("standard");setPackageType("standard");setSellerType("private");}} className="flex min-h-12 w-full items-center justify-center rounded-full border border-[#f6b800] bg-[#f6b800] px-4 text-sm font-black text-black">Standard — R14 per listing day</button><p className={`mt-2 text-center text-xs ${muted}`}>Two photos and two new listings monthly. Paid daily access required before submission.</p></section>
+        <section className="mx-auto max-w-6xl px-4 pt-5"><button type="button" onClick={() => {setSelectedPlan("standard");setPackageType("standard");setSellerType("private");}} className="flex min-h-12 w-full items-center justify-center rounded-full border border-[#f6b800] bg-[#f6b800] px-4 text-sm font-black text-black">Standard — R14 per listing day</button><p className={`mt-2 text-center text-xs ${muted}`}>Two photos and five new listings monthly. Paid daily access required before submission.</p></section>
         <BusinessPlans darkMode={darkMode} selectable selectedPlan={null} onSelect={choosePlan} />
       </> : null}
 
