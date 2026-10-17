@@ -46,3 +46,15 @@ export function getLightCommercialModels(make:string,year:number){
  return lightCommercialCatalog.find(b=>b.name.toLowerCase()===make.trim().toLowerCase())?.models
    .filter(m=>m.from<=year && (m.to===undefined||m.to>=year)).map(m=>m.name)||[];
 }
+
+/** Advisory availability check based on curated model-family dates, not an official VIN check. */
+export function getLightCommercialModelYearStatus(make: string, model: string, year: number) {
+  const brand = lightCommercialCatalog.find(item => item.name.toLowerCase() === make.trim().toLowerCase());
+  const normalized = model.trim().toLowerCase();
+  if (!brand || !normalized) return null;
+  const candidate = [...brand.models].sort((a,b)=>b.name.length-a.name.length)
+    .find(item => normalized === item.name.toLowerCase() || normalized.startsWith(item.name.toLowerCase()+" "));
+  if (!candidate) return null;
+  if (year >= candidate.from && (!candidate.to || year <= candidate.to)) return { valid: true, from: candidate.from, to: candidate.to || null, model: candidate.name };
+  return { valid: false, from: candidate.from, to: candidate.to || null, model: candidate.name };
+}

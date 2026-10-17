@@ -37,7 +37,7 @@ const BusinessPlans = dynamic(() => import("@/components/BusinessPlans"), { ssr:
 const VehicleMarketplaceHub = dynamic(() => import("@/components/VehicleMarketplaceHub"), { ssr: false, loading: () => <div className="mx-auto my-8 h-64 max-w-6xl animate-pulse rounded-2xl bg-current/[.05]" /> });
 import { findTruckReference, truckReferenceResponse } from "@/lib/truckModelReferences";
 import { getTruckModel, getTruckModels, truckCatalog, truckYears, validateTruckTransmission } from "@/lib/truckCatalog";
-import { getLightCommercialModels, lightCommercialCatalog, lightCommercialYears } from "@/lib/southAfricanLightCommercialCatalog";
+import { getLightCommercialModels, getLightCommercialModelYearStatus, lightCommercialCatalog, lightCommercialYears } from "@/lib/southAfricanLightCommercialCatalog";
 
 
 const truckBodyTypes = [
@@ -119,9 +119,10 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [modelConfirmed, setModelConfirmed] = useState(false);
   const [referenceImage, setReferenceImage] = useState<ReferenceImage | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
-  const [lightCommercialPhotos, setLightCommercialPhotos] = useState<Array<{ url: string; title: string; sourceUrl: string; credit: string; license: string }>>([]);
+  const [lightCommercialPhotos, setLightCommercialPhotos] = useState<Array<{ url: string; fallbackUrl?: string; title: string; sourceUrl: string; credit: string; license: string }>>([]);
   const [lightCommercialPhotoLoading, setLightCommercialPhotoLoading] = useState(false);
   const [lightCommercialPhotoUnavailable, setLightCommercialPhotoUnavailable] = useState(false);
+  const [lightCommercialPhotoFailed, setLightCommercialPhotoFailed] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [city, setCity] = useState("Johannesburg");
   const [bodyType, setBodyType] = useState("");
@@ -167,6 +168,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const vehiclePreviewUrlsRef = useRef<string[]>([]);
 
   const availableModels = useMemo(() => vehicleCategory === "truck" ? getTruckModels(brand, year) : [], [brand, vehicleCategory, year]);
+  const lightCommercialYearStatus = useMemo(() => vehicleCategory === "bakkie_van" ? getLightCommercialModelYearStatus(brand, modelName, year) : null, [brand, modelName, year, vehicleCategory]);
   const bakkieVanModels = useMemo(() => vehicleCategory === "bakkie_van" ? getLightCommercialModels(brand, year) : [], [brand, vehicleCategory, year]);
   const selectedModel = useMemo(() => vehicleCategory === "truck" ? getTruckModel(brand, modelName, year) : null, [brand, modelName, vehicleCategory, year]);
   const transmissionCheck = useMemo(() => vehicleCategory === "truck" && transmission ? validateTruckTransmission(brand, modelName, year, transmission) : null, [brand, modelName, transmission, vehicleCategory, year]);
@@ -278,9 +280,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         const query = new URLSearchParams({make:brand.trim(), model:modelName.trim(), year:String(year)});
         const response = await fetch(`/api/light-commercial-reference?${query}`, {signal:controller.signal});
         if(!response.ok) throw new Error("reference lookup failed");
-        const data = await response.json() as {photos?:Array<{url:string;title:string;sourceUrl:string;credit:string;license:string}>};
+        const data = await response.json() as {photos?:Array<{url:string;fallbackUrl?:string;title:string;sourceUrl:string;credit:string;license:string}>};
         if(controller.signal.aborted) return;
-        setLightCommercialPhotos(data.photos || []);
+        setLightCommercialPhotos(data.photos || []); setLightCommercialPhotoFailed([]);
         setLightCommercialPhotoUnavailable(!(data.photos || []).length);
       } catch {
         if(!controller.signal.aborted) {setLightCommercialPhotos([]);setLightCommercialPhotoUnavailable(true);}
@@ -328,6 +330,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
 
   function confirmBakkieVanModel() {
     if (year < 2009 || year > new Date().getFullYear()) { setMessage("Select a model year from 2009 to the current year."); return; }
+    if (lightCommercialYearStatus && !lightCommercialYearStatus.valid) { setMessage(`The ${brand} ${lightCommercialYearStatus.model} is not listed for ${year}. Check the year or exact model variant before continuing.`); return; }
     if (!brand.trim() || !modelName.trim() || !bodyType.trim()) { setMessage("Enter the make, model and body type as shown on the papers."); return; }
     setTitle(`${year} ${brand.trim()} ${modelName.trim()}`);
     setModelConfirmed(true);
@@ -437,6 +440,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       if (!transmissionCheck?.valid) return transmissionCheck?.message || "Choose a valid gearbox.";
     } else if (vehicleCategory === "bakkie_van") {
       if (year < 2009 || year > new Date().getFullYear()) return "Bakkie and van listings support model years from 2009 onwards.";
+      if (lightCommercialYearStatus && !lightCommercialYearStatus.valid) return "This model is not listed for the selected year. Check the registration year and model variant.";
       if (!brand.trim() || !modelName.trim() || !bodyType.trim() || !modelConfirmed) return "Enter make, model and body type, then confirm the vehicle details.";
     } else {
       if (!vehicleSubtype) return `Choose the ${vehicleCategory === "trailer" ? "trailer" : "mobile unit"} type.`;
@@ -769,12 +773,13 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
               <Field label="Model">{vehicleCategory === "truck" ? <select value={modelName} onChange={e=>selectTruckModel(e.target.value)} className={inputClass} disabled={!brand} required><option value="">Choose model family</option>{availableModels.map(item=><option key={item.name}>{item.name}</option>)}</select> : vehicleCategory === "bakkie_van" ? <><input list="loadlink-light-commercial-models" value={modelName} onChange={e=>{setModelName(e.target.value);setModelConfirmed(false);}} placeholder="Select or type your exact model" className={inputClass} required /><datalist id="loadlink-light-commercial-models">{bakkieVanModels.map(name=><option key={name} value={name}/>)}</datalist><p className={`mt-2 text-xs ${muted}`}>Enter the exact make and model from the registration papers.</p></> : <input value={modelName} onChange={e=>setModelName(e.target.value)} placeholder="Model name or number" className={inputClass} required />}</Field>
 
             </div>
-            {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>{imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Loading model reference…</p> : null}{referenceImage?.imageUrl ? <figure className="mt-4 max-w-xl"><LoadLinkImage loading="eager" fetchPriority="high" src={referenceImage.imageUrl} alt={referenceImage.title || "Truck reference"} className="aspect-[16/9] w-full rounded-xl bg-current/[.025] object-contain" /><figcaption className={`mt-2 text-[11px] font-semibold leading-5 ${muted}`}>Model-family reference: {referenceImage.title}. Your truck’s year and specification may differ. Upload photos of your actual vehicle.{referenceImage.credit ? ` Credit: ${referenceImage.credit}.` : ""}{referenceImage.license ? ` ${referenceImage.license}.` : ""} {referenceImage.sourceUrl ? <a href={referenceImage.sourceUrl} target="_blank" rel="noreferrer" className="font-black underline underline-offset-2">Source</a> : null}</figcaption></figure> : <p className={`mt-3 text-xs ${muted}`}>A verified photograph is not available for this model and year yet.</p>}{referenceImage?.specSourceUrl ? <p className={`mt-3 text-xs ${muted}`}>{referenceImage.verifiedFuel || referenceImage.verifiedTransmission ? "Verified specifications have been filled in. Confirm your vehicle’s gearbox and fuel type." : "Specifications vary by version. Select the gearbox and fuel type fitted to your vehicle."} <a href={referenceImage.specSourceUrl} target="_blank" rel="noreferrer" className="underline">Manufacturer specifications</a></p> : null}</div> : vehicleCategory === "bakkie_van" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmBakkieVanModel} className="inline-flex min-h-12 max-w-full items-center justify-center whitespace-nowrap rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase text-black transition-transform duration-150 active:scale-[.98]">Confirm vehicle</button><p className={`mt-2 text-xs ${muted}`}>Verify the exact make, model and year against the registration papers.</p>
+            {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>{imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Loading model reference…</p> : null}{referenceImage?.imageUrl ? <figure className="mt-4 max-w-xl"><LoadLinkImage loading="eager" fetchPriority="high" src={referenceImage.imageUrl} alt={referenceImage.title || "Truck reference"} className="aspect-[16/9] w-full rounded-xl bg-current/[.025] object-contain" /><figcaption className={`mt-2 text-[11px] font-semibold leading-5 ${muted}`}>Model-family reference: {referenceImage.title}. Your truck’s year and specification may differ. Upload photos of your actual vehicle.{referenceImage.credit ? ` Credit: ${referenceImage.credit}.` : ""}{referenceImage.license ? ` ${referenceImage.license}.` : ""}</figcaption></figure> : <p className={`mt-3 text-xs ${muted}`}>A verified photograph is not available for this model and year yet.</p>}{referenceImage?.specSourceUrl ? <p className={`mt-3 text-xs ${muted}`}>{referenceImage.verifiedFuel || referenceImage.verifiedTransmission ? "Verified specifications have been filled in. Confirm your vehicle’s gearbox and fuel type." : "Specifications vary by version. Select the gearbox and fuel type fitted to your vehicle."}</p> : null}</div> : vehicleCategory === "bakkie_van" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmBakkieVanModel} className="inline-flex min-h-12 max-w-full items-center justify-center whitespace-nowrap rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase text-black transition-transform duration-150 active:scale-[.98]">Confirm vehicle</button><p className={`mt-2 text-xs ${muted}`}>Verify the exact make, model and year against the registration papers.</p>
+              {lightCommercialYearStatus && !lightCommercialYearStatus.valid ? <p role="alert" className="mt-3 rounded-xl border border-amber-500/40 p-3 text-sm font-semibold text-amber-500">This {brand} {lightCommercialYearStatus.model} is not listed as produced in {year}. Check the model variant or registration year before confirming.</p> : null}
               {lightCommercialPhotoLoading ? <div className={`mt-4 flex min-h-32 items-center justify-center rounded-xl border text-sm font-semibold ${muted}`}>Looking for model-family photos…</div> : null}
               {lightCommercialPhotos.length > 0 ? <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {lightCommercialPhotos.map(photo => <figure key={photo.url} className="min-w-0 overflow-hidden rounded-xl border border-current/10">
-                  <LoadLinkImage src={photo.url} alt={photo.title} loading="lazy" className="aspect-[16/10] w-full bg-current/[.025] object-contain" />
-                  <figcaption className={`p-3 text-xs leading-5 ${muted}`}>Illustrative model-family reference, not your vehicle or guaranteed model year. <a href={photo.sourceUrl} target="_blank" rel="noopener noreferrer" className="font-bold underline underline-offset-2">Source &amp; licence: {photo.license}</a>{photo.credit ? ` · ${photo.credit}` : ""}</figcaption>
+                  <LoadLinkImage src={lightCommercialPhotoFailed.includes(photo.url) && photo.fallbackUrl ? photo.fallbackUrl : photo.url} onError={() => setLightCommercialPhotoFailed(current => current.includes(photo.url) ? current : [...current, photo.url])} alt={photo.title} loading="eager" className="aspect-[16/10] w-full bg-current/[.025] object-contain" />
+                  <figcaption className={`p-3 text-xs leading-5 ${muted}`}>Illustrative model-family reference only. Upload photographs of the actual vehicle.</figcaption>
                 </figure>)}
               </div> : null}
               {!lightCommercialPhotoLoading && lightCommercialPhotoUnavailable ? <p className={`mt-3 text-xs ${muted}`}>No reliably identified, licensed reference photos were found for this model. You can still continue and upload photos of your actual vehicle.</p> : null}
