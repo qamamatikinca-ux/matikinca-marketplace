@@ -11,7 +11,10 @@
     "sourceImageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/34/Nissan_Navara_4x2_VL_2019.jpg/960px-Nissan_Navara_4x2_VL_2019.jpg",
     "sha256": "3df1466deac7b99c1dd58f3368e5c43a132088175448a22b80cebb063be8c8d7",
     "width": 960,
-    "height": 720
+    "height": 720,
+    "referenceYearFrom": 2019,
+    "referenceYearTo": 2019,
+    "referenceMatch": "exact-year"
   },
   {
     "make": "Ford",
@@ -25,7 +28,10 @@
     "sourceImageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/28/Ford_Ranger_%28T6%2C_P703%29_Wildtrak_IMG_7320.jpg/960px-Ford_Ranger_%28T6%2C_P703%29_Wildtrak_IMG_7320.jpg",
     "sha256": "ec48db220b72a9bd86446110528916dd92c26986fb88a00f06b73e6aee42fd8b",
     "width": 960,
-    "height": 542
+    "height": 542,
+    "referenceYearFrom": 2022,
+    "referenceYearTo": 2026,
+    "referenceMatch": "generation"
   },
   {
     "make": "Isuzu",
@@ -39,7 +45,10 @@
     "sourceImageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/09/Isuzu_D-Max_161730.jpg/960px-Isuzu_D-Max_161730.jpg",
     "sha256": "6c2d3a1fb56111cc48917c9f684a691e0963ecc27ca72ad728af5a43d01e2e03",
     "width": 960,
-    "height": 508
+    "height": 508,
+    "referenceYearFrom": null,
+    "referenceYearTo": null,
+    "referenceMatch": "unverified"
   },
   {
     "make": "Volkswagen",
@@ -53,7 +62,10 @@
     "sourceImageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e0/Volkswagen_Caddy_V_IMG_3702.jpg/960px-Volkswagen_Caddy_V_IMG_3702.jpg",
     "sha256": "e7f989996f230f8ee66346cc313258a544debe24bdbfa201ee03267e5158835c",
     "width": 960,
-    "height": 638
+    "height": 638,
+    "referenceYearFrom": 2021,
+    "referenceYearTo": 2026,
+    "referenceMatch": "generation"
   },
   {
     "make": "Toyota",
@@ -67,7 +79,10 @@
     "sourceImageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d4/SouthAfricanMinibus.jpg/960px-SouthAfricanMinibus.jpg",
     "sha256": "ace8ff294866d88e83e1800e082625fdbbbcc64e6454b9dd25b8e362dd620482",
     "width": 960,
-    "height": 712
+    "height": 712,
+    "referenceYearFrom": null,
+    "referenceYearTo": null,
+    "referenceMatch": "unverified"
   },
   {
     "make": "Mercedes-Benz",
@@ -81,7 +96,10 @@
     "sourceImageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4b/%D0%90%D0%BB%D0%BC%D0%B0%D1%82%D1%8B%2C_Mercedes_Sprinter_%D0%BD%D0%B0_%D0%A2%D0%BE%D0%BB%D0%B5_%D0%B1%D0%B8-%D0%A0%D0%BE%D0%B7%D1%8B%D0%B1%D0%B0%D0%BA%D0%B8%D0%B5%D0%B2%D0%B0.jpg/960px-%D0%90%D0%BB%D0%BC%D0%B0%D1%82%D1%8B%2C_Mercedes_Sprinter_%D0%BD%D0%B0_%D0%A2%D0%BE%D0%BB%D0%B5_%D0%B1%D0%B8-%D0%A0%D0%BE%D0%B7%D1%8B%D0%B1%D0%B0%D0%BA%D0%B8%D0%B5%D0%B2%D0%B0.jpg",
     "sha256": "eeae1ce32ff6452c8160ef242c22df6cd6d2b72c5540cf7616b649f800f7ed52",
     "width": 960,
-    "height": 640
+    "height": 640,
+    "referenceYearFrom": null,
+    "referenceYearTo": null,
+    "referenceMatch": "unverified"
   },
   {
     "make": "Mazda",
@@ -95,7 +113,10 @@
     "sourceImageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e0/Mazda_BT-50_front_20080103.jpg/960px-Mazda_BT-50_front_20080103.jpg",
     "sha256": "353613b0332eeb88226542e38319ac1b23ccfd8be28dd69c0b696d2d9352d1de",
     "width": 960,
-    "height": 641
+    "height": 641,
+    "referenceYearFrom": null,
+    "referenceYearTo": null,
+    "referenceMatch": "unverified"
   },
   {
     "make": "Volkswagen",
@@ -109,7 +130,10 @@
     "sourceImageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c9/Volkswagen_Amarok_Mk2_1X7A0852.jpg/960px-Volkswagen_Amarok_Mk2_1X7A0852.jpg",
     "sha256": "d88a350e5b711eb9fe06599aed8db7ff0553117eec34af415e798f2902d66147",
     "width": 960,
-    "height": 605
+    "height": 605,
+    "referenceYearFrom": 2023,
+    "referenceYearTo": 2026,
+    "referenceMatch": "generation"
   },
   {
     "make": "Volkswagen",
@@ -123,7 +147,10 @@
     "sourceImageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/20/VOLKSWAGEN_T6_TRANSPORTER_HONG_KONG.jpg/960px-VOLKSWAGEN_T6_TRANSPORTER_HONG_KONG.jpg",
     "sha256": "de53c7919385e16a21bd2db176e110da1bb06fe513a8594a7c248adeba87e9ee",
     "width": 960,
-    "height": 550
+    "height": 550,
+    "referenceYearFrom": 2015,
+    "referenceYearTo": 2019,
+    "referenceMatch": "generation"
   },
   {
     "make": "Renault",
@@ -137,7 +164,10 @@
     "sourceImageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/07/DiePost_Paketzustellfahrzeug_Renault_Master_III%2C_Modell_2010.jpg/960px-DiePost_Paketzustellfahrzeug_Renault_Master_III%2C_Modell_2010.jpg",
     "sha256": "a6fb69b657d9c352d828bedebd027398fef445b81386551d0bf48ec65dd6a513",
     "width": 960,
-    "height": 640
+    "height": 640,
+    "referenceYearFrom": 2010,
+    "referenceYearTo": 2010,
+    "referenceMatch": "exact-year"
   },
   {
     "make": "Nissan",
@@ -151,7 +181,10 @@
     "sourceImageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Nissan_NP200_1.6i_%282020%29_%2852720615181%29.jpg/960px-Nissan_NP200_1.6i_%282020%29_%2852720615181%29.jpg",
     "sha256": "d4cd3933bdd5c358d2339fedf98e41d0459fb0c8c12546f8f2b4c97c2ab3975f",
     "width": 960,
-    "height": 707
+    "height": 707,
+    "referenceYearFrom": 2020,
+    "referenceYearTo": 2020,
+    "referenceMatch": "exact-year"
   },
   {
     "make": "Toyota",
@@ -165,7 +198,10 @@
     "sourceImageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/48/2020_Toyota_Hilux_E_%28front_left_side_view%29.jpg/960px-2020_Toyota_Hilux_E_%28front_left_side_view%29.jpg",
     "sha256": "a5dd5948dd3c64363546630f84345840c2ed164bf931b1f4770f7da2e54d87bc",
     "width": 960,
-    "height": 540
+    "height": 540,
+    "referenceYearFrom": 2020,
+    "referenceYearTo": 2020,
+    "referenceMatch": "exact-year"
   },
   {
     "make": "Ford",
@@ -179,7 +215,10 @@
     "sourceImageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/18/2023_Ford_Transit_T-350HD_XL_high_roof_extended_length_passenger_van%2C_front_left%2C_09-28-2024.jpg/960px-2023_Ford_Transit_T-350HD_XL_high_roof_extended_length_passenger_van%2C_front_left%2C_09-28-2024.jpg",
     "sha256": "e96dffb2e1cf205b14ded40b23adb7f7299e3639f6e1ce68700855d234754d7a",
     "width": 913,
-    "height": 720
+    "height": 720,
+    "referenceYearFrom": 2023,
+    "referenceYearTo": 2023,
+    "referenceMatch": "exact-year"
   },
   {
     "make": "Mitsubishi",
@@ -193,7 +232,10 @@
     "sourceImageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/03/Mitsubishi_Triton_2.4_Athlete_4WD_White_Diamond_-_front.jpg/960px-Mitsubishi_Triton_2.4_Athlete_4WD_White_Diamond_-_front.jpg",
     "sha256": "c4618caaa97f4109340fde59f6d032981c5ca41fb9dba691278869065673280c",
     "width": 960,
-    "height": 640
+    "height": 640,
+    "referenceYearFrom": null,
+    "referenceYearTo": null,
+    "referenceMatch": "unverified"
   },
   {
     "make": "Mercedes-Benz",
@@ -207,7 +249,10 @@
     "sourceImageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1b/2013_Mercedes_Vito_122_CDi_Dualiner_Auto.jpg/960px-2013_Mercedes_Vito_122_CDi_Dualiner_Auto.jpg",
     "sha256": "151f3520f692a9482cb67a9289465afea4fcebce7e7da1f21ce2aa3841456833",
     "width": 960,
-    "height": 611
+    "height": 611,
+    "referenceYearFrom": 2013,
+    "referenceYearTo": 2013,
+    "referenceMatch": "exact-year"
   },
   {
     "make": "Hyundai",
@@ -221,6 +266,9 @@
     "sourceImageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/75/2012_Hyundai_Porter_2_Hi-Super.jpg/960px-2012_Hyundai_Porter_2_Hi-Super.jpg",
     "sha256": "faa06e445135d37bd94815992316c559b61f04e45ac8d2874bff6dd58a9052ec",
     "width": 960,
-    "height": 563
+    "height": 563,
+    "referenceYearFrom": null,
+    "referenceYearTo": null,
+    "referenceMatch": "unverified"
   }
 ]

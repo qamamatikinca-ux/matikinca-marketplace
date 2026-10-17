@@ -7,6 +7,9 @@ export type LightCommercialPhoto = {
   title: string;
   credit: string;
   license: string;
+  yearFrom?: number;
+  yearTo?: number;
+  matchKind?: "exact-year" | "generation";
 };
 
 export const normalizeReferenceName = (value: string) => value.toLowerCase().normalize("NFD")
@@ -25,11 +28,33 @@ export function lightCommercialReferenceDetails(make: string, model: string) {
   return { make: brand?.name || make.trim(), model: candidate?.name || model.trim() };
 }
 
-export function storedLightCommercialPhotos(make: string, model: string): LightCommercialPhoto[] {
-  const reference = lightCommercialReferenceDetails(make, model);
-  return photographs.filter(photo => normalizeReferenceName(photo.make) === normalizeReferenceName(reference.make)
-    && normalizeReferenceName(photo.model) === normalizeReferenceName(reference.model))
-    .map(photo => ({ url: photo.url, fallbackUrl: photo.sourceImageUrl, title: photo.title, credit: photo.credit, license: photo.license }));
+/**
+ * A photo without a confirmed production-year window is never used as a year-specific
+ * reference. Manually entered trim variants must not inherit an unrelated base-model photo.
+ */
+export function storedLightCommercialPhotos(make: string, model: string, year: number): LightCommercialPhoto[] {
+  const reference=lightCommercialReferenceDetails(make,model);
+  if (normalizeReferenceName(model) !== normalizeReferenceName(reference.model)) return [];
+  return photographs.filter(photo =>
+    normalizeReferenceName(photo.make)===normalizeReferenceName(reference.make) &&
+    normalizeReferenceName(photo.model)===normalizeReferenceName(reference.model) &&
+    typeof photo.referenceYearFrom==="number" && typeof photo.referenceYearTo==="number" &&
+    year>=photo.referenceYearFrom && year<=photo.referenceYearTo &&
+    photo.referenceMatch!=="unverified"
+  ).map(photo=>({
+    url:photo.url,fallbackUrl:photo.sourceImageUrl,title:photo.title,credit:photo.credit,license:photo.license,
+    yearFrom:photo.referenceYearFrom||undefined,yearTo:photo.referenceYearTo||undefined,
+    matchKind:photo.referenceMatch==="generation"?"generation" as const:"exact-year" as const
+  }));
+}
+
+export function referenceFilenameMatchesYear(filename: string, year: number): boolean {
+  // Only files that identify the requested model year are eligible. A model-family
+  // photo without a labelled year is not evidence of that year's appearance.
+  const name=filename.replace(/^File:/i,"").replace(/\.[^.]+$/,"");
+  const years=Array.from(name.matchAll(/(?:^|[^0-9])((?:19|20)\d{2})(?=[^0-9]|$)/g)).map(x=>Number(x[1]));
+  if(!years.length)return false;
+  return years[0]===year;
 }
 
 /** Wikimedia serves scaled photographs from both of these exact hosts. */
@@ -46,6 +71,8 @@ export function referenceFilenameMatches(filename: string, make: string, model: 
   const aliases: Record<string, string[]> = {
     "volkswagen": ["volkswagen", "vw"], "mercedes benz": ["mercedes benz", "mercedes"],
     "gwm": ["gwm", "great wall"], "ldv": ["ldv", "maxus"],
+    "mercedes benz trucks": ["mercedes benz", "mercedes"], "volvo trucks": ["volvo"],
+    "renault trucks": ["renault"], "mack trucks": ["mack"], "man": ["man"],
   };
   const brands = aliases[normalizeReferenceName(make)] || [normalizeReferenceName(make)];
   const modelName = normalizeReferenceName(model);

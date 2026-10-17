@@ -110,6 +110,32 @@ function VehicleCategoryPhoto({ src, alt }: { src: string; alt: string }) {
   );
 }
 
+
+/** Images are illustrative only when the selected year is supported by catalogue evidence. */
+function VehicleModelReferencePhoto({ photo, year }: { photo: LightCommercialPhoto; year: number }) {
+  const [src, setSrc] = useState(photo.url);
+  const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => { setSrc(photo.url);setFailed(false);setLoaded(false); },[photo.url]);
+  const onError=()=>{
+    if(photo.fallbackUrl && src!==photo.fallbackUrl){setSrc(photo.fallbackUrl);setLoaded(false);}
+    else setFailed(true);
+  };
+  return <figure className="min-w-0 overflow-hidden rounded-xl border border-current/10">
+    {failed ? <div role="status" className="flex aspect-[16/10] items-center justify-center bg-current/[.04] px-4 text-center text-sm font-semibold">Reference photo could not load. Your own vehicle photos can still be uploaded.</div>
+      : <div className="relative aspect-[16/10] overflow-hidden bg-current/[.04]">
+        {!loaded ? <div className="absolute inset-0 animate-pulse bg-current/[.04]"/> : null}
+        <img src={src} alt={photo.title+" reference for model year "+year} loading="eager" decoding="async"
+          onLoad={()=>setLoaded(true)} onError={onError}
+          className={`h-full w-full object-contain transition-opacity duration-500 ${loaded?"opacity-100":"opacity-0"}`} />
+      </div>}
+    <figcaption className="p-3 text-xs leading-5 opacity-65">
+      {photo.matchKind==="generation" ? `Model-generation example compatible with ${year}. Appearance and trim may differ.` : `Model-year reference labelled ${year}. Check the vehicle's trim and registration papers.`}
+      {" "}Upload actual vehicle photographs for your listing.
+    </figcaption>
+  </figure>;
+}
+
 function categoryLabel(category: VehicleCategory) { return category === "truck" ? "Truck" : category === "bakkie_van" ? "Bakkie or Van" : category === "trailer" ? "Trailer" : "Mobile Unit"; }
 function offerLabel(mode: OfferMode) { return mode === "sale" ? "For sale only" : mode === "rental" ? "Rental only" : mode === "sale_or_rental" ? "Sale or rental" : "Price on application (POA)"; }
 function unitSpecSchema(category: VehicleCategory | null, subtype: string): Array<[string, string]> {
@@ -152,7 +178,8 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [lightCommercialPhotos, setLightCommercialPhotos] = useState<LightCommercialPhoto[]>([]);
   const [lightCommercialPhotoLoading, setLightCommercialPhotoLoading] = useState(false);
   const [lightCommercialPhotoUnavailable, setLightCommercialPhotoUnavailable] = useState(false);
-  const [lightCommercialPhotoFailed, setLightCommercialPhotoFailed] = useState<string[]>([]);
+  const [truckYearPhotos, setTruckYearPhotos] = useState<LightCommercialPhoto[]>([]);
+  const [truckPhotoUnavailable, setTruckPhotoUnavailable] = useState(false);
   const [title, setTitle] = useState("");
   const [city, setCity] = useState("Johannesburg");
   const [bodyType, setBodyType] = useState("");
@@ -305,11 +332,10 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   }, [brand, modelName, vehicleCategory, year]);
 
   useEffect(() => {
-    setLightCommercialPhotoFailed([]);
     if (vehicleCategory !== "bakkie_van" || !brand.trim() || !modelName.trim() || (lightCommercialYearStatus && !lightCommercialYearStatus.valid)) {
       setLightCommercialPhotos([]); setLightCommercialPhotoLoading(false); setLightCommercialPhotoUnavailable(false); return;
     }
-    const stored = storedLightCommercialPhotos(brand, modelName);
+    const stored = storedLightCommercialPhotos(brand, modelName, year);
     if (stored.length) {
       setLightCommercialPhotos(stored); setLightCommercialPhotoLoading(false); setLightCommercialPhotoUnavailable(false); return;
     }
@@ -319,12 +345,12 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       try {
-        const query = new URLSearchParams({make:brand.trim(), model:modelName.trim(), year:String(year), v:"2"});
+        const query = new URLSearchParams({make:brand.trim(), model:modelName.trim(), year:String(year), kind:"bakkie_van", v:"3"});
         const response = await fetch(`/api/light-commercial-reference?${query}`, {signal:AbortSignal.any([controller.signal, AbortSignal.timeout(12000)])});
         if(!response.ok) throw new Error("reference lookup failed");
         const data = await response.json() as {photos?:LightCommercialPhoto[]};
         if(controller.signal.aborted) return;
-        setLightCommercialPhotos(data.photos || []); setLightCommercialPhotoFailed([]);
+        setLightCommercialPhotos(data.photos || []);
         setLightCommercialPhotoUnavailable(!(data.photos || []).length);
       } catch {
         if(!controller.signal.aborted) {setLightCommercialPhotos([]);setLightCommercialPhotoUnavailable(true);}
@@ -332,6 +358,28 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     },420);
     return () => {window.clearTimeout(timer);controller.abort();};
   }, [vehicleCategory,brand,modelName,year,lightCommercialYearStatus]);
+
+
+  useEffect(() => {
+    if(vehicleCategory!=="truck" || !brand.trim() || !modelName.trim() || !selectedModel || referenceImage?.imageUrl){
+      setTruckYearPhotos([]);setTruckPhotoUnavailable(false);setImageLoading(false);return;
+    }
+    const controller=new AbortController();
+    setImageLoading(true);setTruckPhotoUnavailable(false);setTruckYearPhotos([]);
+    const timer=window.setTimeout(async ()=>{
+      try{
+        const params=new URLSearchParams({make:brand.trim(),model:modelName.trim(),year:String(year),kind:"truck",v:"3"});
+        const response=await fetch(`/api/light-commercial-reference?${params}`,{signal:controller.signal});
+        if(!response.ok)throw new Error("Unable to load model references");
+        const data=await response.json() as {photos?:LightCommercialPhoto[]};
+        if(controller.signal.aborted)return;
+        setTruckYearPhotos(data.photos||[]);
+        setTruckPhotoUnavailable(!(data.photos||[]).length);
+      }catch{if(!controller.signal.aborted){setTruckYearPhotos([]);setTruckPhotoUnavailable(true);}}
+      finally{if(!controller.signal.aborted)setImageLoading(false);}
+    },400);
+    return ()=>{window.clearTimeout(timer);controller.abort();};
+  },[vehicleCategory,brand,modelName,year,selectedModel,referenceImage?.imageUrl]);
 
   function choosePlan(plan: BusinessPlanId) {
     setSelectedPlan(plan);
@@ -826,16 +874,18 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
               <Field label="Model">{vehicleCategory === "truck" ? <select value={modelName} onChange={e=>selectTruckModel(e.target.value)} className={inputClass} disabled={!brand} required><option value="">Choose model family</option>{availableModels.map(item=><option key={item.name}>{item.name}</option>)}</select> : vehicleCategory === "bakkie_van" ? <><input list="loadlink-light-commercial-models" value={modelName} onChange={e=>{setModelName(e.target.value);setModelConfirmed(false);}} placeholder="Select or type your exact model" className={inputClass} required /><datalist id="loadlink-light-commercial-models">{bakkieVanModels.map(name=><option key={name} value={name}/>)}</datalist><p className={`mt-2 text-xs ${muted}`}>Enter the exact make and model from the registration papers.</p></> : <input value={modelName} onChange={e=>setModelName(e.target.value)} placeholder="Model name or number" className={inputClass} required />}</Field>
 
             </div>
-            {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>{imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Loading model reference…</p> : null}{referenceImage?.imageUrl ? <figure className="mt-4 max-w-xl"><LoadLinkImage loading="eager" fetchPriority="high" src={referenceImage.imageUrl} alt={referenceImage.title || "Truck reference"} className="aspect-[16/9] w-full rounded-xl bg-current/[.025] object-contain" /><figcaption className={`mt-2 text-[11px] font-semibold leading-5 ${muted}`}>Model-family reference: {referenceImage.title}. Your truck’s year and specification may differ. Upload photos of your actual vehicle.{referenceImage.credit ? ` Credit: ${referenceImage.credit}.` : ""}{referenceImage.license ? ` ${referenceImage.license}.` : ""}</figcaption></figure> : <p className={`mt-3 text-xs ${muted}`}>A verified photograph is not available for this model and year yet.</p>}{referenceImage?.specSourceUrl ? <p className={`mt-3 text-xs ${muted}`}>{referenceImage.verifiedFuel || referenceImage.verifiedTransmission ? "Verified specifications have been filled in. Confirm your vehicle’s gearbox and fuel type." : "Specifications vary by version. Select the gearbox and fuel type fitted to your vehicle."}</p> : null}</div> : vehicleCategory === "bakkie_van" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmBakkieVanModel} className="inline-flex min-h-12 max-w-full items-center justify-center whitespace-nowrap rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase text-black transition-transform duration-150 active:scale-[.98]">Confirm vehicle</button><p className={`mt-2 text-xs ${muted}`}>Verify the exact make, model and year against the registration papers.</p>
+            {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7">
+              <button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>
+              {imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Finding a model-year reference…</p> : null}
+              {referenceImage?.imageUrl ? <div className="mt-4 max-w-xl"><VehicleModelReferencePhoto photo={{url:referenceImage.imageUrl,title:referenceImage.title,credit:"",license:"",matchKind:"generation"}} year={year}/></div> : null}
+              {!referenceImage?.imageUrl && truckYearPhotos.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2">{truckYearPhotos.map(photo=><VehicleModelReferencePhoto key={photo.url} photo={photo} year={year}/>)}</div> : null}
+              {!referenceImage?.imageUrl && !imageLoading && truckPhotoUnavailable ? <p role="status" className={`mt-3 text-xs ${muted}`}>No year-verified photo is available for this truck model. Please check the manufacturer's specifications and upload photos of your actual truck.</p> : null}
+              {referenceImage?.specSourceUrl ? <p className={`mt-3 text-xs ${muted}`}>Model specifications can vary by year and trim. Confirm gearbox and fuel type against your vehicle.</p> : null}
+            </div> : vehicleCategory === "bakkie_van" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmBakkieVanModel} className="inline-flex min-h-12 max-w-full items-center justify-center whitespace-nowrap rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase text-black transition-transform duration-150 active:scale-[.98]">Confirm vehicle</button><p className={`mt-2 text-xs ${muted}`}>Verify the exact make, model and year against the registration papers.</p>
               {lightCommercialYearStatus && !lightCommercialYearStatus.valid ? <p role="alert" className="mt-3 rounded-xl border border-amber-500/40 p-3 text-sm font-semibold text-amber-500">This {brand} {lightCommercialYearStatus.model} is not listed as produced in {year}. Check the model variant or registration year before confirming.</p> : null}
               {lightCommercialPhotoLoading ? <div className={`mt-4 flex min-h-32 items-center justify-center rounded-xl border text-sm font-semibold ${muted}`}>Looking for model-family photos…</div> : null}
-              {lightCommercialPhotos.length > 0 ? <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {lightCommercialPhotos.map(photo => <figure key={photo.url} className="min-w-0 overflow-hidden rounded-xl border border-current/10">
-                  <LoadLinkImage src={lightCommercialPhotoFailed.includes(photo.url) && photo.fallbackUrl ? photo.fallbackUrl : photo.url} onError={() => setLightCommercialPhotoFailed(current => current.includes(photo.url) ? current : [...current, photo.url])} alt={photo.title} loading="eager" className="aspect-[16/10] w-full bg-current/[.025] object-contain" />
-                  <figcaption className={`p-3 text-xs leading-5 ${muted}`}>Illustrative model-family reference only. Upload photographs of the actual vehicle.</figcaption>
-                </figure>)}
-              </div> : null}
-              {!lightCommercialPhotoLoading && lightCommercialPhotoUnavailable ? <p className={`mt-3 text-xs ${muted}`}>No reliably identified, licensed reference photos were found for this model. You can still continue and upload photos of your actual vehicle.</p> : null}
+              {lightCommercialPhotos.length > 0 ? <div className="mt-4 grid gap-3 sm:grid-cols-2">{lightCommercialPhotos.map(photo => <VehicleModelReferencePhoto key={photo.url} photo={photo} year={year} />)}</div> : null}
+              {!lightCommercialPhotoLoading && lightCommercialPhotoUnavailable ? <p className={`mt-3 text-xs ${muted}`}>No year-matched reference picture is available for this make, model and year. Check the registration details and upload photos of the actual vehicle.</p> : null}
               </div> : <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={() => { setTitle(`${year} ${brand} ${modelName} ${vehicleSubtype}`.replace(/\s+/g, " ").trim()); setMessage(""); }} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm vehicle details</button></div>}
           </section>
 

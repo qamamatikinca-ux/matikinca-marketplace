@@ -5,7 +5,7 @@ export function findTruckReference(brand: string, model: string) {
   return catalog.find(row => row.brand === brand && row.model === model) || null;
 }
 export function referencePhotoMatchesYear(row: TruckModelReference, year: number) {
-  return !!row.photo_url && (!row.photo_from_year || year >= row.photo_from_year) && (!row.photo_to_year || year <= row.photo_to_year);
+  return !!row.photo_url && (row.photo_from_year != null || row.photo_to_year != null) && (!row.photo_from_year || year >= row.photo_from_year) && (!row.photo_to_year || year <= row.photo_to_year);
 }
 export function truckReferenceResponse(row: TruckModelReference, year: number) {
   const photo = referencePhotoMatchesYear(row, year);
