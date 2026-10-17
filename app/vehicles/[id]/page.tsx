@@ -13,7 +13,6 @@ import RequireAuthLink from "@/components/RequireAuthLink";
 import VehicleFullDetails from "@/components/VehicleFullDetails";
 import { formatListingRate } from "@/lib/formatCurrency";
 import { jobVehicleRelevance } from "@/lib/vehiclePostingIntelligence";
-import { jobVehicleRelevance } from "@/lib/vehiclePostingIntelligence";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { supabase } from "@/lib/supabaseClient";
 
