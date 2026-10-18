@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       const sameQuantity = Number(metadata.quantity) === quantity;
       const authorizationUrl = String(metadata.authorization_url || "");
       const created = new Date(row.created_at || 0).getTime();
-      if (Number(row.amount_cents) === quantity * 1400 && String(row.currency).toUpperCase() === "ZAR" && Number(metadata.duration_days) === 1 && Number(metadata.unit_price_cents) === 1500 && sameQuantity && authorizationUrl && Number.isFinite(created) && Date.now() - created < 30 * 60 * 1000) {
+      if (Number(row.amount_cents) === quantity * 1400 && String(row.currency).toUpperCase() === "ZAR" && Number(metadata.duration_days) === 1 && Number(metadata.unit_price_cents) === 1400 && sameQuantity && authorizationUrl && Number.isFinite(created) && Date.now() - created < 30 * 60 * 1000) {
         return Response.json({
           authorization_url: authorizationUrl,
           reference: row.reference,
