@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 type Message = { from: "bot" | "user"; text: string };
-const initial = ["Talk to an agent", "Find something on LoadLink", "Post or manage a listing", "Fix a problem"];
+const initial = ["Talk to an agent", "View my support cases", "Find something on LoadLink", "Post or manage a listing", "Fix a problem"];
 
 export default function LinkBot() {
   const { darkMode } = useLoadLinkTheme();
@@ -19,6 +19,7 @@ export default function LinkBot() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [handover, setHandover] = useState(false);
+  const [includeRecentQuestions,setIncludeRecentQuestions]=useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, busy]);
@@ -31,7 +32,7 @@ export default function LinkBot() {
   function startAgentHandover() {
     setOpen(true);
     setHandover(true);
-    setMessages((current) => [...current, { from: "bot", text: "Describe what happened, including the affected page or listing and what you expected. I’ll place it in the LoadLink Support queue." }]);
+    setMessages((current) => [...current, { from: "bot", text: "Describe what happened, including the affected page or listing. Your issue will become a numbered support case. You can choose whether to include recent LinkBot questions." }]);
     setChoices(["Cancel support handover"]);
   }
 
@@ -52,17 +53,19 @@ export default function LinkBot() {
       const pathname = window.location.pathname;
       const listingMatch = pathname.match(/^\/listing\/([0-9a-f-]{36})$/i);
       const subject = listingMatch ? "Help with a LoadLink listing" : `Help with ${pathname === "/help" ? "LoadLink" : pathname.replace(/^\//, "").replaceAll("-", " ")}`;
+      const recentQuestions=includeRecentQuestions ? messages.filter(item=>item.from==="user"&&!/^(talk to an agent|try support request again)$/i.test(item.text)).slice(-4).map(item=>item.text.slice(0,350)).join("\n- ") : "";
       const result = await supabase.rpc("loadlink_create_support_ticket", {
         p_subject: subject,
-        p_description: `${clean}\n\nPage: ${window.location.href}`.slice(0, 5000),
+        p_description: `${clean}${recentQuestions ? `\n\nRecent LinkBot questions shared with consent:\n- ${recentQuestions}` : ""}\n\nPage: ${window.location.origin}${pathname}`.slice(0, 5000),
         p_related_entity_type: listingMatch ? "listing" : "page",
         p_related_entity_id: listingMatch?.[1] || pathname,
       });
       if (result.error) throw result.error;
       const ticketNumber = String(result.data?.ticket_number || "Your support ticket");
-      setMessages((current) => [...current, { from: "bot", text: `${ticketNumber} is now in the LoadLink Support queue. You’ll receive an account notification when it is reviewed.` }]);
+      setMessages((current) => [...current, { from: "bot", text: `${ticketNumber} is now in the LoadLink Support queue. You can track this case and reply to a support employee in My support cases.` }]);
       setHandover(false);
-      setChoices(["Ask another question", "Open notifications"]);
+      setIncludeRecentQuestions(false);
+      setChoices(["View my support cases", "Ask another question", "Open notifications"]);
       window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { kind: "success", title: "Support request sent", message: `${ticketNumber} was added to the LoadLink Support queue.`, duration: 5200 } }));
     } catch (error) {
       const raw = error instanceof Error ? error.message : String((error as { message?: unknown })?.message || "");
@@ -88,6 +91,10 @@ export default function LinkBot() {
       setHandover(false);
       setMessages((current) => [...current, { from: "bot", text: "Support handover cancelled. I can keep helping you here." }]);
       setChoices(initial);
+      return;
+    }
+    if (/^view my support cases$/i.test(clean)) {
+      window.location.assign("/support/cases");
       return;
     }
     if (/^sign in$/i.test(clean)) {
@@ -158,6 +165,7 @@ export default function LinkBot() {
               </div>
               <div className="mt-4 flex flex-wrap gap-2">{choices.map((choice) => <button key={choice} onClick={() => void ask(choice)} className={`rounded-full border px-3 py-2 text-xs font-bold ${softBorder}`}>{choice}</button>)}</div>
             </div>
+            {handover ? <label className={`mx-4 mb-2 flex items-center gap-2 text-[11px] ${darkMode ? "text-white/65" : "text-black/65"}`}><input type="checkbox" checked={includeRecentQuestions} onChange={e=>setIncludeRecentQuestions(e.target.checked)} /> Include recent LinkBot questions in this support case</label> : null}
             <form onSubmit={submit} className={`flex gap-2 border-t p-3 pb-[calc(.75rem+env(safe-area-inset-bottom))] ${softBorder}`}>
               <textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder={handover ? "Describe the issue for LoadLink Support" : "What are you trying to do?"} rows={1} className={`max-h-24 min-w-0 flex-1 resize-none rounded-2xl border px-3 py-3 text-sm outline-none ${darkMode ? "border-white/12 bg-white/[.045] text-white placeholder:text-white/35" : "border-black/10 bg-white/70 text-black placeholder:text-black/35"}`} />
               <button disabled={busy} className={`${darkMode ? "bg-white text-black" : "bg-black text-white"} rounded-full px-4 font-black disabled:opacity-45`}>Send</button>
