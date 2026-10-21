@@ -145,15 +145,19 @@ function standardiseSortControls() {
   });
 }
 
-function smartFollowUp() {
-  if (window.location.pathname.startsWith("/messages")) return;
+export function smartFollowUp() {
+  if (!/^\/(?:$|jobs(?:\/|$)|contracts(?:\/|$)|listing\/)/.test(window.location.pathname)) {
+    document.querySelector('[data-loadlink-smart-followup="true"]')?.remove();
+    return;
+  }
   if (document.querySelector('[data-loadlink-smart-followup="true"]')) return;
   let dismissed: string[] = [];
   try { dismissed = JSON.parse(localStorage.getItem(FOLLOW_UP_DISMISSED_KEY) || "[]"); } catch {}
 
   const candidates = Array.from(document.querySelectorAll<HTMLElement>("article,section,a")).filter((node) => {
     const text = normaliseText(node.textContent);
-    return /needed (today|by today)|today.*(?:truck|trailer|vehicle|unit)|(?:truck|trailer|vehicle|unit).*today/i.test(text) && text.length < 900;
+    const listing=node.getAttribute("data-listing-id") || node.querySelector<HTMLAnchorElement>('a[href*="/listing/"]')?.getAttribute("href");
+    return Boolean(listing) && /needed (today|by today)|today.*(?:truck|trailer|vehicle|unit)|(?:truck|trailer|vehicle|unit).*today/i.test(text) && text.length < 900;
   });
   const candidate = candidates.find((node) => {
     const id = node.getAttribute("data-listing-id") || node.querySelector<HTMLAnchorElement>('a[href*="/listing/"]')?.href || normaliseText(node.textContent).slice(0, 80);

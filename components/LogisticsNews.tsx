@@ -28,7 +28,7 @@ export default function LogisticsNews({ darkMode }: { darkMode: boolean }) {
   const refresh = useCallback(async (initial = false) => {
     if (initial) setLoading(true);
     try {
-      const response = await fetch(`/api/logistics-news?ts=${Date.now()}`, { cache: "no-store" });
+      const response = await fetch("/api/logistics-news");
       if (!response.ok) throw new Error("News request failed");
       const data = await response.json();
       if (alive.current && Array.isArray(data.items) && data.items.length) setItems(data.items);
@@ -43,7 +43,7 @@ export default function LogisticsNews({ darkMode }: { darkMode: boolean }) {
     alive.current = true;
     void refresh(true);
 
-    const timer = window.setInterval(() => void refresh(false), 10 * 60 * 1000);
+    const timer = window.setInterval(() => void refresh(false), 60 * 60 * 1000);
     const onFocus = () => void refresh(false);
     const onVisibility = () => { if (document.visibilityState === "visible") void refresh(false); };
     window.addEventListener("focus", onFocus);
@@ -58,13 +58,13 @@ export default function LogisticsNews({ darkMode }: { darkMode: boolean }) {
   }, [refresh]);
 
   return (
-    <section className={`px-5 py-14 md:px-12 ${darkMode ? "bg-black text-white" : "bg-white text-black"}`}>
+    <section data-loadlink-publisher-news="true" className={`px-5 py-14 md:px-12 ${darkMode ? "bg-black text-white" : "bg-white text-black"}`}>
       <div className="mx-auto max-w-6xl">
         <div className="flex items-end justify-between gap-4">
           <div>
             <h2 className="text-4xl font-black">South African logistics news</h2>
           </div>
-          <span className="hidden text-xs font-bold opacity-45 md:block">Live headlines · refreshed automatically</span>
+          <span className="hidden text-xs font-bold opacity-45 md:block">Publisher headlines · checked daily</span>
         </div>
 
         <div className="no-scrollbar mt-7 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3">
@@ -78,15 +78,21 @@ export default function LogisticsNews({ darkMode }: { darkMode: boolean }) {
                   href={item.url}
                   target="_blank"
                   rel="noreferrer"
-                  className={`min-w-[82vw] snap-start overflow-hidden border md:min-w-[340px] md:max-w-[340px] ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}
+                  className={`rounded-2xl min-w-[82vw] snap-start overflow-hidden border md:min-w-[340px] md:max-w-[340px] ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}
                 >
                   <div className="relative h-44 bg-black/5">
                     <LoadLinkImage
-                      src={proxiedImage(item.image)}
+                      src={item.image}
                       alt=""
                       loading="lazy"
                       onError={(event) => {
-                        event.currentTarget.src = "/images/news/logistics-fallback.jpg";
+                        if (event.currentTarget.dataset.newsProxyTried !== "true") {
+                          event.currentTarget.dataset.newsProxyTried = "true";
+                          event.currentTarget.removeAttribute("srcset");
+                          event.currentTarget.src = proxiedImage(item.image);
+                          return;
+                        }
+                        event.currentTarget.style.visibility = "hidden";
                       }}
                       className="h-full w-full object-cover"
                     />
@@ -96,9 +102,10 @@ export default function LogisticsNews({ darkMode }: { darkMode: boolean }) {
                   </div>
                   <div className="p-5">
                     <p className="text-xs font-black uppercase tracking-[.14em] text-[#b88900]">{item.source}</p>
+                    <p className="mt-2 text-xs opacity-55">{new Date(item.publishedAt).toLocaleDateString("en-ZA",{day:"numeric",month:"short",year:"numeric"})}</p>
                     <h3 className="mt-2 text-xl font-black leading-tight">{item.title}</h3>
-                    <p className={`mt-3 line-clamp-3 text-sm leading-6 ${darkMode ? "text-white/55" : "text-black/55"}`}>{item.summary}</p>
-                    <p className="mt-4 text-xs font-bold">Read original source</p>
+                    {item.summary ? <p className="mt-3 text-sm opacity-60">{item.summary}</p> : null}
+                    <p className="mt-4 text-sm font-bold">Read article</p>
                   </div>
                 </a>
               ))}

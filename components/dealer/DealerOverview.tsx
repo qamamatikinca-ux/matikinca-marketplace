@@ -14,6 +14,7 @@ import type {
   DealerWorkspaceState,
 } from "@/lib/dealer/types";
 import { dealerFetch, relativeAge } from "@/lib/dealer/client";
+import DealerDailyPriorities from "./DealerDailyPriorities";
 import DealerStatusComposer from "./DealerStatusComposer";
 import { EmptyState, Surface } from "./ui";
 
@@ -326,6 +327,7 @@ export default function DealerOverview(props: any) {
         </div>
       </section>
 
+      <DealerDailyPriorities summary={summary} inventory={inventory} context={context} setSection={setSection}/>
       <div className="grid gap-3 xl:grid-cols-[1.15fr_.85fr]">
         <Surface
           darkMode={darkMode}

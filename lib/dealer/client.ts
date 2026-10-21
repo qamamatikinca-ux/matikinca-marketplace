@@ -11,6 +11,7 @@ export async function dealerFetch<T>(path: string, init?: RequestInit): Promise<
       ...(init?.headers || {}),
     },
     cache: "no-store",
+    signal: init?.signal || AbortSignal.timeout(20000),
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {

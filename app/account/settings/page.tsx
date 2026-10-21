@@ -187,7 +187,7 @@ export default function AccountSettingsPage() {
       setPushState(next);
       if (next === "enabled") setMessage("Push notifications are enabled on this device.");
       else if (next === "blocked") setMessage("Push notifications are blocked in this browser's notification settings.");
-      else if (next === "unconfigured") setMessage("Push notifications need the VAPID keys from PUSH-NOTIFICATIONS-SETUP.txt before they can be enabled.");
+      else if (next === "unconfigured") setMessage("Push notifications are temporarily unavailable. Please try again later.");
       else if (next === "unsupported") setMessage("This browser does not support web push notifications.");
     } catch (error) {
       setMessage(friendlyError(error, "Push notifications could not be enabled."));
@@ -283,7 +283,7 @@ export default function AccountSettingsPage() {
   const tabClass = (view: typeof settingsView) => `shrink-0 rounded-xl px-4 py-3 text-xs font-semibold transition ${settingsView === view ? "bg-[#f6b800] text-black shadow-sm" : (darkMode ? "text-white/55 hover:bg-white/[.05]" : "text-black/55 hover:bg-black/[.04]")}`;
 
   return (
-    <main className={`min-h-screen ${page}`}>
+    <main data-loadlink-settings="20261021" data-theme={darkMode ? "dark" : "light"} className={`min-h-screen ${page}`}>
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <section className="mx-auto max-w-6xl px-4 py-7 sm:px-5 md:px-8 md:py-10">
@@ -293,16 +293,17 @@ export default function AccountSettingsPage() {
         </div>
 
 
-        <nav aria-label="Settings categories" className={`mt-5 flex max-w-3xl gap-1 overflow-x-auto rounded-2xl border p-1.5 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-white"}`}>
+        <div className="ll-settings-shell"><nav aria-label="Settings categories" className={`mt-5 flex max-w-3xl gap-1 overflow-x-auto rounded-2xl border p-1.5 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-white"}`}>
           {([
             ["profile", "Profile"], ["work", "Work"], ["notifications", "Notifications"],
             ["messages", "Messages"], ["security", "Security"], ["billing", "Billing"],
             ...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team", "Team"]] : []),
           ] as Array<[typeof settingsView, string]>).map(([view, label]) => (
-            <button key={view} type="button" aria-current={settingsView === view ? "page" : undefined} onClick={() => setSettingsView(view)} className={tabClass(view)}>{label}</button>
+            <button key={view} type="button" aria-current={settingsView === view ? "page" : undefined} onClick={() => {setSettingsView(view); window.history.replaceState(null,"",`#${view === "messages" ? "message-privacy" : view}`);}} className={tabClass(view)}>{label}</button>
           ))}
         </nav>
 
+        <div className="ll-settings-content"><div className="ll-settings-account"><strong>{form.full_name || "Your LoadLink account"}</strong><span>{user?.email}</span><button type="button" onClick={()=>window.dispatchEvent(new Event("loadlink:open-cookie-preferences"))}>Cookie preferences</button></div>
         {dirty && settingsView === "profile" ? <p className={`mt-4 text-sm font-medium ${muted}`}>You have unsaved profile changes.</p> : null}
         {message ? <div role="status" className={`mt-5 max-w-3xl rounded-xl border p-3 text-sm font-medium ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-white"}`}>{message}</div> : null}
 
@@ -397,7 +398,7 @@ export default function AccountSettingsPage() {
               <Toggle label="Show notification previews" description="Show sender and message text in supported notifications." checked={form.message_notification_previews} busy={preferenceSaving === "message_notification_previews"} onChange={(value) => void savePreference("message_notification_previews", value)} darkMode={darkMode} />
             </div>
             <div className={`mt-3 flex items-center justify-between gap-4 rounded-xl border px-4 py-3 ${darkMode ? "border-white/10 bg-white/[.02]" : "border-black/10 bg-black/[.015]"}`}>
-              <span className="min-w-0"><strong className="block text-sm font-bold">Push notifications</strong><span className={`mt-1 block text-xs font-semibold ${muted}`}>{pushState === "enabled" ? "Enabled on this device." : pushState === "blocked" ? "Blocked in browser settings." : pushState === "unconfigured" ? "Server setup required once." : pushState === "unsupported" ? "Not supported by this browser." : "Receive new messages when LoadLink is closed."}</span></span>
+              <span className="min-w-0"><strong className="block text-sm font-bold">Push notifications</strong><span className={`mt-1 block text-xs font-semibold ${muted}`}>{pushState === "enabled" ? "Enabled on this device." : pushState === "blocked" ? "Blocked in browser settings." : pushState === "unconfigured" ? "Temporarily unavailable." : pushState === "unsupported" ? "Not supported by this browser." : "Receive new messages when LoadLink is closed."}</span></span>
               <button type="button" onClick={() => void enablePush()} disabled={pushBusy || pushState === "enabled" || pushState === "unsupported"} className={`h-9 shrink-0 rounded-xl px-3 text-[10px] font-semibold ${pushState === "enabled" ? (darkMode ? "bg-white/10 text-white/55" : "bg-black/5 text-black/55") : "bg-[#f6b800] text-black"} disabled:opacity-60`}>{pushBusy ? "Enabling…" : pushState === "enabled" ? "Enabled" : "Enable"}</button>
             </div>
           </section>
@@ -410,6 +411,7 @@ export default function AccountSettingsPage() {
             <section className={`border p-5 md:p-7 ${surface}`}><h2 className="text-xl font-bold">Account access</h2><p className={`mt-2 text-sm ${muted}`}>Sign out or request account deletion.</p><div className="mt-5 flex flex-wrap gap-3"><button type="button" onClick={() => void signOut()} className="h-11 rounded-xl border border-current/20 px-5 text-xs font-semibold">Sign out</button><button type="button" onClick={requestDeletion} className="h-11 rounded-xl border border-red-500 px-5 text-xs font-semibold text-red-500">Request deletion</button></div></section>
           </div>
         ) : null}
+        </div></div>
       </section>
     </main>
   );

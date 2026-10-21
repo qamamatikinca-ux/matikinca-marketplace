@@ -36,13 +36,14 @@ const EMPTY_PROFILE: AccountProfile = {
   subscription_plan: "standard",
 };
 
-let snapshot: AccountSnapshot = {
+const SERVER_SNAPSHOT: AccountSnapshot = {
   ready: !isSupabaseConfigured,
   user: null,
   profile: EMPTY_PROFILE,
   dealer: null,
   driverProfile: null,
 };
+let snapshot: AccountSnapshot = SERVER_SNAPSHOT;
 let started = false;
 let loadSequence = 0;
 const listeners = new Set<() => void>();
@@ -131,6 +132,6 @@ export function useLoadLinkAccount() {
       return () => listeners.delete(listener);
     },
     () => snapshot,
-    () => snapshot,
+    () => SERVER_SNAPSHOT,
   );
 }

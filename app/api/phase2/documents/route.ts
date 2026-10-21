@@ -3,9 +3,10 @@ import { NextResponse } from "next/server";
 import { bearer, publicSupabase } from "@/lib/phase2/supabase";
 import { serverRateLimit } from "@/lib/serverRateLimit";
 
-const TYPES = new Set(["identity", "drivers_licence", "prdp", "cv", "driving_certificate"]);
+const TYPES = new Set(["identity", "drivers_licence", "prdp", "cv", "driving_certificate", "work_authorisation"]);
 const LABELS: Record<string, string> = {
   identity: "ID or passport",
+  work_authorisation: "Work authorisation document",
   drivers_licence: "Driver’s licence",
   prdp: "PrDP",
   cv: "CV",
@@ -63,14 +64,32 @@ export async function POST(request: Request) {
     const { data: userData, error: userErrorResult } = await client.auth.getUser(token);
     if (userErrorResult || !userData.user) return NextResponse.json({ error: "Your sign-in session expired. Sign in again and retry." }, { status: 401 });
 
-    const form = await request.formData();
-    const type = String(form.get("documentType") ?? "");
+    const json = request.headers.get("content-type")?.includes("application/json") ? await request.json() : null;
+    const form = json ? null : await request.formData();
+    const type = String(json?.documentType ?? form?.get("documentType") ?? "");
     label = LABELS[type] || "Document";
-    const file = form.get("file");
     if (!TYPES.has(type)) return NextResponse.json({ error: "Unsupported document type." }, { status: 400 });
+    let file = form?.get("file");
+    let uploadedPath = "";
+    if (json) {
+      const filename = String(json.filename || "document").slice(0,180);
+      if (json.action === "prepare") {
+        if (!Number.isSafeInteger(json.size) || json.size < 1 || json.size > MAX_BYTES || !["application/pdf","image/jpeg","image/png"].includes(json.mime)) throw new DocumentValidationError("Choose a PDF, JPG or PNG up to 8 MB.");
+        const safeName = filename.replace(/[^a-zA-Z0-9._-]+/g,"-").slice(-90) || "document";
+        const path = `${userData.user.id}/${type}/${crypto.randomUUID()}-${safeName}`;
+        const {data,error} = await client.storage.from("loadlink-driver-documents").createSignedUploadUrl(path, {upsert:false});
+        if(error) throw error;
+        return NextResponse.json({path:data.path,signedUrl:data.signedUrl}, {headers:{"Cache-Control":"private, no-store"}});
+      }
+      uploadedPath = String(json.path || "");
+      const prefix = `${userData.user.id}/${type}/`;
+      if (json.action !== "finalize" || !uploadedPath.startsWith(prefix) || !/^[0-9a-f-]{36}-[a-zA-Z0-9._-]+$/.test(uploadedPath.slice(prefix.length))) throw new DocumentValidationError("Invalid document upload. Choose the file again.");
+      const {data,error} = await client.storage.from("loadlink-driver-documents").download(uploadedPath);
+      if(error || !data) throw new DocumentValidationError("The upload did not finish. Choose the file and retry.");
+      file = new File([data],filename,{type:data.type});
+    }
     if (!(file instanceof File)) return NextResponse.json({ error: `Choose a ${label.toLowerCase()} file.` }, { status: 400 });
-    if (file.size < 1) return NextResponse.json({ error: `${label} is empty. Choose the original file and retry.` }, { status: 400 });
-    if (file.size > MAX_BYTES) return NextResponse.json({ error: `${label} is too large. Maximum file size is 8 MB.` }, { status: 400 });
+    if (file.size < 1 || file.size > MAX_BYTES) return NextResponse.json({ error: `${label} must be between 1 byte and 8 MB.` }, { status: 400 });
 
     const bytes = new Uint8Array(await file.arrayBuffer());
     const inspected = inspect(bytes);
@@ -83,8 +102,8 @@ export async function POST(request: Request) {
 
     const baseName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(-90);
     const safeName = baseName || `${type}.${inspected.extension}`;
-    const path = `${userData.user.id}/${type}/${crypto.randomUUID()}-${safeName}`;
-    const { error: uploadError } = await client.storage.from("loadlink-driver-documents")
+    const path = uploadedPath || `${userData.user.id}/${type}/${crypto.randomUUID()}-${safeName}`;
+    const { error: uploadError } = uploadedPath ? {error:null} : await client.storage.from("loadlink-driver-documents")
       .upload(path, bytes, { contentType: inspected.mime, cacheControl: "3600", upsert: false });
     if (uploadError) throw uploadError;
 
@@ -98,14 +117,14 @@ export async function POST(request: Request) {
     });
 
     if (recordError) {
-      await client.storage.from("loadlink-driver-documents").remove([path]);
+      if (!uploadedPath) await client.storage.from("loadlink-driver-documents").remove([path]);
       throw recordError;
     }
     if (recorded?.previousStoragePath && recorded.previousStoragePath !== path) {
       await client.storage.from("loadlink-driver-documents").remove([recorded.previousStoragePath]);
     }
 
-    return NextResponse.json({ ok: true, document: recorded?.document });
+    return NextResponse.json({ ok: true, document: recorded?.document }, {headers:{"Cache-Control":"private, no-store"}});
   } catch (error) {
     console.error("[LoadLink driver document upload]", error);
     return NextResponse.json({ error: userError(error, label) }, { status: 400 });

@@ -94,6 +94,7 @@ function applyMessageUiHooks() {
 
 function applyImageReliability(root: ParentNode = document) {
   root.querySelectorAll<HTMLImageElement>("img").forEach((image) => {
+    if (image.dataset.loadlinkManagedImage === "true") return;
     image.decoding = "async";
     image.draggable = false;
     if (image.closest("[data-loadlink-call-active],[data-loadlink-dealer-update-rail],.loadlink-chat-header")) {

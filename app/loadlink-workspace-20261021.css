@@ -1,0 +1,172 @@
+/* LoadLink workspace: scoped components, shared spacing, clear controls. */
+.ll-workspace-page,[data-loadlink-settings],[data-loadlink-support],[data-loadlink-dealer-control-centre="20261021"]{--ll-surface:#fff;--ll-bg:#f7f5ef;--ll-text:#191b18;--ll-muted:#61665f;--ll-border:#e3e5dd;--ll-soft:#f3f4ee;--ll-gold:#f6b800;--ll-gold-ink:#805d00}
+.ll-workspace-page[data-theme="dark"],[data-loadlink-settings][data-theme="dark"],[data-loadlink-support][data-theme="dark"],[data-loadlink-dealer-control-centre="20261021"][data-theme="dark"]{--ll-surface:#111412;--ll-bg:#090b0a;--ll-text:#f4f5f0;--ll-muted:#a9b0a8;--ll-border:#2b302c;--ll-soft:#1a1e1b;--ll-gold-ink:#f6c94c}
+.ll-workspace-page{background:var(--ll-bg);color:var(--ll-text)}
+.ll-eyebrow{font-size:11px!important;letter-spacing:.13em;font-weight:700!important;text-transform:uppercase;color:var(--ll-gold-ink,#b88900);margin:0 0 8px!important}
+.ll-section-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 24px;border-bottom:1px solid var(--ll-border)}
+.ll-section-heading h2{font-size:20px!important;font-weight:700!important;letter-spacing:-.025em!important;margin:0!important}
+.ll-section-heading>span{font-size:12px;color:var(--ll-muted)}
+.ll-gold-button,.ll-secondary-button{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:10px 20px;border-radius:12px!important;font-size:14px!important;font-weight:650!important;line-height:1.4!important;border:1px solid var(--ll-border);text-decoration:none!important;text-transform:none!important;letter-spacing:0!important}
+.ll-gold-button{background:#f6b800!important;color:#14150e!important;border-color:#f6b800!important}
+.ll-secondary-button{background:var(--ll-surface);color:var(--ll-text)}
+:where(.ll-workspace-page,[data-loadlink-settings],[data-loadlink-support],[data-loadlink-dealer-control-centre="20261021"]) :is(button,a,input,textarea,select,summary):focus-visible{outline:2px solid #d5a000;outline-offset:3px}
+/* Consent is a calm, readable panel with equally accessible choices. */
+html body aside[data-loadlink-cookie-panel]{width:min(760px,calc(100% - 32px))!important;max-width:760px!important;inset:auto 16px max(16px,env(safe-area-inset-bottom))!important;padding:22px!important;border-radius:22px!important;border:1px solid #dedfd6!important;background:#fffefa!important;color:#1b1d17!important;box-shadow:0 10px 50px #0002!important;backdrop-filter:blur(18px)}
+html body aside[data-loadlink-cookie-panel][data-theme="dark"]{background:#151815!important;color:#f3f5ec!important;border-color:#343b31!important;box-shadow:0 10px 50px #0007!important}
+[data-loadlink-cookie-panel] .ll-cookie-layout{display:grid;gap:18px}
+html body [data-loadlink-cookie-panel] h2{margin:0!important;font-size:18px!important;line-height:1.35!important;letter-spacing:-.02em!important;font-weight:700!important}
+html body [data-loadlink-cookie-panel] .ll-cookie-copy{margin:7px 0 0!important;font-size:13px!important;line-height:1.7!important;font-weight:400!important;color:inherit!important;opacity:.76;max-width:620px}
+.ll-cookie-copy a{text-decoration:underline;text-underline-offset:3px}
+.ll-cookie-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-left:48px}
+html body [data-loadlink-cookie-panel] .ll-cookie-actions button{min-height:46px!important;padding:11px 16px!important;border:1px solid #91968a88!important;border-radius:12px!important;font-size:13px!important;line-height:1.4!important;font-weight:650!important;letter-spacing:0!important;text-transform:none!important;color:inherit!important;background:transparent!important}
+html body [data-loadlink-cookie-panel] .ll-cookie-actions .ll-cookie-accept{background:#f6b800!important;border-color:#f6b800!important;color:#16170e!important}
+/* Public driver profiles. */
+html body [data-loadlink-phase2-home] article[data-loadlink-driver-card]{display:flex!important;flex-direction:column!important;gap:0!important;padding:22px!important;border-radius:22px!important;min-width:0;box-shadow:none!important}
+.ll-driver-heading{display:flex;align-items:center;gap:13px;min-width:0}
+html body [data-loadlink-driver-card] .ll-driver-heading>div:first-child{width:56px!important;height:56px!important;min-width:56px;font-size:20px!important;border:1px solid #d4a00e77!important;background:#f6b80015!important;color:#a47a00!important}
+.ll-driver-name{min-width:0;flex:1}
+html body [data-loadlink-driver-card] h3{font-size:19px!important;line-height:1.3!important;letter-spacing:-.025em!important;font-weight:700!important;margin:0!important;overflow-wrap:anywhere}
+html body [data-loadlink-driver-card] .ll-driver-name p{margin:4px 0 0!important;font-size:13px!important;line-height:1.5!important;color:inherit!important;opacity:.65}
+html body [data-loadlink-driver-card] .ll-driver-heading>span{border:1px solid #a78b333d!important;border-radius:99px!important;background:#f6b80012!important;padding:5px 9px!important;font-size:10px!important;line-height:1.3!important;font-weight:650!important;letter-spacing:0!important;text-transform:none!important;color:#9b7300!important;flex-shrink:0}
+html[data-loadlink-theme="dark"] body [data-loadlink-driver-card] .ll-driver-heading>span{color:#f2cc60!important}
+.ll-driver-rating{font-size:12px;line-height:1.5;opacity:.6;margin:16px 0}
+.ll-driver-facts{display:grid;grid-template-columns:1fr 1fr;gap:16px 20px;border-top:1px solid #80808026;border-bottom:1px solid #80808026;margin:0!important;padding:17px 0!important}
+.ll-driver-facts div{min-width:0}
+html body [data-loadlink-driver-card] dt{font-size:11px!important;line-height:1.4!important;opacity:.55;font-weight:500!important;margin-bottom:4px}
+html body [data-loadlink-driver-card] dd{font-size:13px!important;line-height:1.5!important;font-weight:600!important;margin:0!important;overflow-wrap:anywhere}
+html body [data-loadlink-driver-card]>p{font-size:13px!important;line-height:1.65!important;min-height:0!important;margin:15px 0 20px!important;opacity:.7;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ll-driver-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto}
+html body [data-loadlink-driver-card] .ll-driver-actions button{width:100%!important;margin:0!important;min-height:46px!important;padding:10px 8px!important;font-size:13px!important;font-weight:650!important;line-height:1.4!important;text-transform:none!important;letter-spacing:0!important;border-radius:12px!important;border:1px solid #80808044!important}
+html body [data-loadlink-driver-card] .ll-driver-actions button:first-child{background:#f6b800!important;border-color:#f6b800!important;color:#111!important}
+/* Help Centre. */
+.ll-help-container{max-width:1160px;margin:0 auto;padding:48px 24px 88px}
+.ll-help-hero{max-width:760px;margin:0 auto 36px;text-align:center}
+html body .ll-help-hero h1{font-size:clamp(34px,5vw,52px)!important;font-weight:750!important;letter-spacing:-.045em!important;line-height:1.1!important;margin:12px 0 14px!important}
+.ll-help-hero>p:not(.ll-eyebrow){font-size:15px;line-height:1.7;color:var(--ll-muted)}
+.ll-help-search{display:flex;align-items:center;gap:14px;margin:26px 0 0;border:1px solid var(--ll-border);background:var(--ll-surface);box-shadow:0 4px 20px #00000004;border-radius:16px;padding:0 18px;min-height:60px}
+html body .ll-help-search input{width:100%!important;min-width:0!important;border:0!important;outline:0!important;background:transparent!important;color:var(--ll-text)!important;font-size:16px!important;font-weight:400!important;box-shadow:none!important;padding:16px 0!important}
+.ll-help-search button{padding:10px;flex-shrink:0}
+.ll-help-layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:24px;align-items:start}
+.ll-help-topics{display:grid;gap:7px}
+.ll-help-topics button{position:relative;text-align:left;border:1px solid transparent;border-radius:14px!important;padding:16px 34px 16px 16px!important;min-height:72px;color:var(--ll-text)!important;background:transparent!important;white-space:normal!important}
+.ll-help-topics button[aria-pressed="true"]{border-color:#c49b3355;background:#f6b80012!important}
+.ll-help-topics strong{display:block;font-size:14px;font-weight:650;line-height:1.4}
+.ll-help-topics span{display:block;font-size:12px;font-weight:400;color:var(--ll-muted);line-height:1.55;margin-top:5px}
+.ll-help-topics svg{position:absolute;right:12px;top:20px;opacity:.5}
+.ll-help-answers{border:1px solid var(--ll-border);background:var(--ll-surface);border-radius:20px;overflow:hidden}
+.ll-help-answers details{border-bottom:1px solid var(--ll-border)}
+.ll-help-answers details:last-child{border:0}
+.ll-help-answers summary{display:flex;align-items:center;justify-content:space-between;gap:20px;cursor:pointer;list-style:none;padding:21px 24px;font-size:15px;font-weight:600;line-height:1.6}
+.ll-help-answers summary::-webkit-details-marker{display:none}
+.ll-help-answers summary svg{flex-shrink:0;opacity:.5;transition:transform .15s}
+.ll-help-answers details[open] summary svg{transform:rotate(45deg)}
+.ll-help-answer{padding:0 24px 23px}
+.ll-help-answer p,.ll-help-empty p{font-size:14px!important;line-height:1.85!important;color:var(--ll-muted);margin:0}
+.ll-help-answer a,.ll-help-contact a{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:650;color:var(--ll-gold-ink);margin-top:16px}
+.ll-help-empty{padding:28px}
+.ll-help-empty button{margin-top:20px}
+.ll-help-contact{display:flex;justify-content:space-between;align-items:center;gap:26px;margin-top:32px;padding:28px;border:1px solid var(--ll-border);border-radius:20px;background:var(--ll-surface)}
+.ll-help-contact h2{font-size:22px!important;letter-spacing:-.03em!important;margin:0 0 8px!important}
+.ll-help-contact p{font-size:14px;line-height:1.7;color:var(--ll-muted);max-width:300px}
+.ll-help-contact>div:last-child{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.ll-help-contact a{margin:0 0 0 8px}
+html body .ll-linkbot-panel{background:#fffefa!important;border-radius:24px!important;box-shadow:0 20px 80px #0004!important}
+.ll-linkbot-panel header{padding:20px!important}
+.ll-linkbot-panel header p:last-child{font-size:12px!important;line-height:1.6;opacity:.7}
+.ll-linkbot-panel header h2{font-size:23px!important}
+.ll-bot-action{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid #8884;color:#9b7100;font-weight:700}
+html[data-loadlink-theme="dark"] .ll-bot-action{color:#f6ce65}
+/* Main settings retain every existing form and security control. */
+[data-loadlink-settings]>section{max-width:1200px!important}
+.ll-settings-shell{display:grid;grid-template-columns:230px minmax(0,1fr);gap:32px;align-items:start;margin-top:28px}
+html body [data-loadlink-settings] .ll-settings-shell>nav{display:flex;flex-direction:column;gap:5px;position:sticky;top:90px;padding:10px!important;margin:0!important;max-width:none!important;border:1px solid var(--ll-border)!important;background:var(--ll-surface)!important;border-radius:18px!important;overflow:visible}
+html body [data-loadlink-settings] .ll-settings-shell>nav button{display:block;text-align:left;min-height:46px;padding:12px 16px!important;border-radius:11px!important;font-size:14px!important;line-height:1.4!important;letter-spacing:0!important;font-weight:550!important;text-transform:none!important}
+html body [data-loadlink-settings] .ll-settings-shell>nav button[aria-current]{font-weight:700!important;background:#f6b800!important;color:#17170c!important}
+.ll-settings-content{min-width:0}
+.ll-settings-content>section,.ll-settings-content>div{max-width:none!important}
+.ll-settings-account{position:relative;background:var(--ll-surface);border:1px solid var(--ll-border);border-radius:18px;padding:20px 160px 20px 22px;margin-bottom:20px}
+.ll-settings-account strong{display:block;font-size:16px;font-weight:650;overflow-wrap:anywhere}
+.ll-settings-account>span{display:block;font-size:13px;color:var(--ll-muted);margin-top:5px;overflow-wrap:anywhere}
+.ll-settings-account button{position:absolute;right:18px;top:23px;font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:3px;min-height:36px}
+[data-loadlink-settings] .ll-settings-content :is(h2){font-size:21px!important;letter-spacing:-.025em!important;font-weight:700!important}
+[data-loadlink-settings] .ll-settings-content section{border-radius:20px!important;border-color:var(--ll-border)!important;background:var(--ll-surface)!important;box-shadow:none!important}
+[data-loadlink-settings] .ll-settings-content input,[data-loadlink-settings] .ll-settings-content select{font-size:15px!important;min-height:48px}
+/* Customer support inbox. */
+html body [data-loadlink-support] h1{font-weight:750!important;letter-spacing:-.035em!important}
+.ll-support-list-heading{padding:20px;border-bottom:1px solid var(--ll-border)}
+.ll-support-list-heading h2{font-size:16px;font-weight:700;margin-bottom:15px}
+.ll-support-list-heading h2 span{color:var(--ll-muted);font-weight:400}
+.ll-support-list-heading input{font-size:13px!important;min-height:44px;width:100%;padding:10px 12px;background:var(--ll-soft);color:var(--ll-text);border:1px solid var(--ll-border);border-radius:10px!important}
+.ll-support-list-heading>div{display:flex;gap:5px;margin-top:12px}
+.ll-support-list-heading>div button{padding:8px 12px;font-size:12px;border-radius:8px!important;min-height:36px}
+.ll-support-list-heading button[aria-pressed="true"]{background:#f6b800!important;color:#16170e!important}
+.ll-support-inbox>section{border-radius:20px!important;border-color:var(--ll-border)!important;background:var(--ll-surface)!important;box-shadow:none!important}
+.ll-support-thread>div:nth-child(2){max-height:58dvh;overflow-y:auto;overscroll-behavior:contain}
+.ll-support-thread>form{background:var(--ll-surface);border-radius:0 0 20px 20px}
+.ll-support-thread textarea{font-size:15px!important;background:var(--ll-soft)!important;border-color:var(--ll-border)!important;line-height:1.6!important}
+/* Dealership tools: clearer navigation and a prioritised daily desk. */
+.ll-dealer-navigation .ll-dealer-tool-search{display:block;margin:2px 4px 18px}
+.ll-dealer-tool-search input{width:100%;min-height:42px;border:1px solid var(--ll-border);border-radius:10px!important;background:var(--ll-soft);color:var(--ll-text);padding:10px 12px;font-size:12px!important}
+.ll-dealer-nav-group{margin-top:18px}
+.ll-dealer-nav-group>p{font-size:10px!important;font-weight:650;letter-spacing:.1em;text-transform:uppercase;color:var(--ll-muted);padding:0 13px;margin-bottom:6px}
+.ll-dealer-nav-group button{min-height:43px!important;border-radius:10px!important;font-size:13px!important}
+.ll-dealer-refresh{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:16px;font-size:12px;color:var(--ll-muted);line-height:1.6}
+.ll-dealer-refresh button{padding:8px 13px;border:1px solid var(--ll-border);border-radius:10px;font-weight:650;color:var(--ll-text);flex-shrink:0;min-height:38px}
+.ll-dealer-priorities{border:1px solid var(--ll-border);border-radius:20px;background:var(--ll-surface);overflow:hidden}
+.ll-priority-grid{display:grid;grid-template-columns:1fr 1fr}
+.ll-priority-grid>button{display:flex;gap:15px;text-align:left;padding:22px;border-bottom:1px solid var(--ll-border);min-height:134px;color:var(--ll-text);transition:background .15s}
+.ll-priority-grid>button:hover{background:var(--ll-soft)}
+.ll-priority-grid>button:nth-child(odd){border-right:1px solid var(--ll-border)}
+.ll-priority-number{display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border:1px solid #c3910033;background:#f6b8000d;color:var(--ll-gold-ink);border-radius:10px;font-size:12px;font-weight:700}
+.ll-priority-grid strong{display:block;font-size:14px;line-height:1.6;font-weight:650}
+.ll-priority-grid button>span:last-child>span{display:block;margin-top:5px;font-size:12px;line-height:1.7;color:var(--ll-muted);font-weight:400}
+.ll-priority-grid b{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--ll-gold-ink);margin-top:12px}
+.ll-priority-footnote,.ll-priority-empty{font-size:11px!important;line-height:1.8!important;color:var(--ll-muted);padding:14px 22px;margin:0!important}
+.ll-priority-empty{font-size:14px!important;padding:24px}
+html body [data-loadlink-dealer-control-centre="20261021"] [data-loadlink-dealer-home] h1{font-size:30px!important;font-weight:700!important;letter-spacing:-.035em!important}
+html body [data-loadlink-dealer-control-centre="20261021"] [data-loadlink-dealer-home] section{box-shadow:none!important}
+/* Calling: identity above a familiar, fixed control dock. */
+html body .ll-call-active-overlay .ll-call-sheet.ll-call-modern{display:flex!important;flex-direction:column!important;width:100%!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;padding:max(14px,env(safe-area-inset-top)) 20px max(20px,env(safe-area-inset-bottom))!important;background:#111612!important;color:#f5f6f0!important;overflow:auto!important}
+.ll-call-modern-header{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;max-width:580px;margin:0 auto}
+.ll-call-modern-header>span{font-size:12px;letter-spacing:.04em;color:#b6bfb2}
+.ll-call-modern-header button{width:44px;height:44px;display:grid;place-items:center;border-radius:50%;border:1px solid #52614b55;background:#26302255!important;color:#fff!important}
+html body .ll-call-modern .ll-call-modern-identity{display:flex!important;flex-direction:column!important;justify-content:center!important;align-items:center!important;flex:1!important;min-height:230px;padding:30px 0!important;gap:0!important;text-align:center}
+html body .ll-call-modern [data-loadlink-call-avatar]{width:112px!important;height:112px!important;border:2px solid #b5943566!important;box-shadow:0 0 0 9px #a9923920!important;background:#243020!important}
+html body .ll-call-modern .ll-call-modern-identity h2{margin-top:28px!important;font-size:clamp(26px,6vw,34px)!important;line-height:1.2!important;font-weight:650!important;max-width:100%;overflow-wrap:anywhere;letter-spacing:-.035em!important}
+html body .ll-call-modern .ll-call-status{font-size:15px!important;font-weight:400!important;margin-top:12px!important;color:#b8c2b1!important}
+html body .ll-call-modern .ll-call-timer{font-size:22px!important;font-weight:500!important;margin-top:14px!important;color:#efcc65!important;font-variant-numeric:tabular-nums}
+.ll-call-modern-notice{font-size:13px;line-height:1.7;color:#ffcfca;margin-top:16px;max-width:340px}
+.ll-call-modern-dock{max-width:540px;width:100%;margin:24px auto 0;background:#283026!important;border:1px solid #9fa78b25;border-radius:32px;padding:17px 16px 22px}
+html body .ll-call-modern .ll-call-allowance{font-size:11px!important;color:#b8c0ae!important;text-align:center;margin:0 0 18px!important;font-weight:400!important}
+.ll-call-modern-controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+html body .ll-call-modern .ll-call-control,html body .ll-call-modern .ll-call-modern-end{position:relative;display:flex!important;flex-direction:column;gap:9px;align-items:center;justify-content:center;width:100%!important;max-width:96px;height:80px!important;border:0!important;border-radius:22px!important;background:#ffffff0f!important;color:#f2f4ea!important;font-size:11px!important;font-weight:550!important;margin:0 auto!important;box-shadow:none!important}
+html body .ll-call-modern .ll-call-control[aria-pressed="true"]{background:#f6b800!important;color:#171b10!important}
+html body .ll-call-modern .ll-call-modern-end{background:#cf3c35!important;color:#fff!important}
+.ll-call-modern-end>span:first-child{transform:rotate(135deg)}
+.ll-call-muted-slash{position:absolute;width:28px;height:2px;transform:rotate(45deg);background:currentColor;top:26px;left:calc(50% - 14px)}
+[data-loadlink-publisher-news] h2{font-size:clamp(26px,4vw,36px)!important;letter-spacing:-.035em!important;font-weight:700!important}
+[data-loadlink-publisher-news] article,[data-loadlink-publisher-news] a{border-radius:20px!important}
+[data-loadlink-publisher-news] h3{font-size:19px!important;line-height:1.4!important;font-weight:650!important}
+@media(max-width:760px){
+ .ll-help-container{padding:32px 16px 80px}.ll-help-hero{text-align:left;margin-bottom:24px}.ll-help-layout{display:block}.ll-help-topics{display:flex;overflow-x:auto;gap:7px;margin-bottom:20px;padding-bottom:6px;scroll-snap-type:x proximity}.ll-help-topics button{min-width:160px;padding:13px 30px 13px 13px!important;min-height:58px;border-color:var(--ll-border)}.ll-help-topics span{display:none}.ll-help-topics strong{font-size:12px}.ll-help-topics svg{top:17px}.ll-help-answers summary{padding:19px 20px;font-size:14px}.ll-help-answer{padding:0 20px 21px}.ll-section-heading{padding:20px}.ll-section-heading>span{font-size:11px}.ll-help-contact{padding:23px;display:block}.ll-help-contact>div:last-child{margin-top:20px;display:grid;grid-template-columns:1fr 1fr}.ll-help-contact a{grid-column:1/-1;margin:8px 0 0;justify-content:center}
+ .ll-settings-shell{display:block;margin-top:20px}html body [data-loadlink-settings] .ll-settings-shell>nav{flex-direction:row;position:static;overflow-x:auto;border-radius:14px!important;padding:5px!important;margin-bottom:22px!important}html body [data-loadlink-settings] .ll-settings-shell>nav button{min-height:43px;flex-shrink:0;padding:11px 14px!important;font-size:13px!important}.ll-settings-account{padding:19px}.ll-settings-account button{position:static;margin-top:10px}
+ .ll-support-inbox>section:first-child{max-height:360px;overflow:auto}.ll-support-thread>div:nth-child(2){max-height:55dvh}.ll-priority-grid{grid-template-columns:1fr}.ll-priority-grid>button:nth-child(odd){border-right:0}.ll-priority-grid>button{padding:19px;min-height:120px}.ll-dealer-priorities .ll-section-heading{display:block}.ll-dealer-priorities .ll-section-heading>span{display:block;margin-top:8px}
+ html body aside[data-loadlink-cookie-panel]{width:calc(100% - 24px)!important;inset:auto 12px max(12px,env(safe-area-inset-bottom))!important;padding:18px!important;border-radius:20px!important}.ll-cookie-actions{padding-left:0}.ll-cookie-layout>div:first-child>span{display:none!important}.ll-cookie-layout>div:first-child{gap:0!important}html body [data-loadlink-cookie-panel] .ll-cookie-copy{font-size:12px!important;line-height:1.7!important}html body [data-loadlink-cookie-panel] .ll-cookie-actions button{font-size:12px!important;padding:10px!important}
+ html body [data-loadlink-phase2-home] article[data-loadlink-driver-card]{padding:18px!important}.ll-driver-heading{gap:10px}.ll-driver-heading>div:first-child{width:48px!important;height:48px!important;min-width:48px!important}html body [data-loadlink-driver-card] h3{font-size:18px!important}.ll-driver-heading>span{align-self:flex-start}
+}
+@media(min-width:800px){html body .ll-call-active-overlay .ll-call-sheet.ll-call-modern{max-width:580px!important;height:min(820px,94dvh)!important;max-height:94dvh!important;margin:auto!important;border:1px solid #343e2f!important;border-radius:30px!important;padding:22px!important}.ll-call-active-overlay:has(.ll-call-modern){display:flex!important;align-items:center!important;padding:16px!important;background:#070a08e8!important}}
+@media(max-height:580px){html body .ll-call-modern .ll-call-modern-identity{min-height:150px!important;padding:12px 0!important}html body .ll-call-modern [data-loadlink-call-avatar]{width:64px!important;height:64px!important}html body .ll-call-modern .ll-call-modern-identity h2{margin-top:16px!important;font-size:24px!important}.ll-call-modern-dock{margin-top:10px;padding:12px}.ll-call-modern-controls{max-width:420px;margin:auto}html body .ll-call-modern .ll-call-control,html body .ll-call-modern .ll-call-modern-end{height:68px!important}.ll-call-modern-header{height:38px}}
+@media(prefers-reduced-motion:reduce){.ll-help-answers summary svg,.ll-priority-grid>button{transition:none}}
+
+html body [data-loadlink-linkbot][data-theme="dark"] .ll-linkbot-panel{background:#121512!important;color:#f6f7f1!important}
+
+html body [data-loadlink-phase2-home] .ll-driver-hero h2{font-size:clamp(34px,5vw,52px)!important;line-height:1.08!important;letter-spacing:-.04em!important;font-weight:750!important}
+html body [data-loadlink-phase2-home] .ll-driver-hero p{font-size:14px!important;line-height:1.8!important;font-weight:450!important;max-width:600px}
+html body [data-loadlink-phase2-home] .ll-driver-hero a{font-size:13px!important;font-weight:650!important;letter-spacing:0!important;text-transform:none!important;min-height:46px!important;border-radius:12px!important}
+/* Keep wide stock tables and pipeline rails inside their mobile columns. */
+html body [data-loadlink-dealer-control-centre="20261021"] .grid,
+html body [data-loadlink-dealer-control-centre="20261021"] .grid>*{min-width:0!important}
+html body [data-loadlink-dealer-control-centre="20261021"] .no-scrollbar{max-width:100%}
+
+html body [data-loadlink-call-active="20261021"] .ll-call-modern .ll-call-modern-identity [data-loadlink-call-avatar]{border-radius:50%!important}
+html body [data-loadlink-call-active="20261021"] .ll-call-modern .ll-call-modern-identity p.ll-call-status{font-size:15px!important;line-height:1.6!important;font-weight:450!important}

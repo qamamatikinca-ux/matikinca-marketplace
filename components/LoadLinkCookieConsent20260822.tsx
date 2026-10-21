@@ -29,10 +29,10 @@ export default function LoadLinkCookieConsent20260822() {
   const [preferencesMode, setPreferencesMode] = useState(false);
 
   useEffect(() => {
-    setOpen(!readStored());
+    const frame = window.requestAnimationFrame(() => setOpen(!readStored()));
     const showPreferences = () => { setPreferencesMode(true); setOpen(true); };
     window.addEventListener("loadlink:open-cookie-preferences", showPreferences);
-    return () => window.removeEventListener("loadlink:open-cookie-preferences", showPreferences);
+    return () => { window.cancelAnimationFrame(frame); window.removeEventListener("loadlink:open-cookie-preferences", showPreferences); };
   }, []);
 
   function choose(choice: Choice) {
@@ -46,24 +46,24 @@ export default function LoadLinkCookieConsent20260822() {
   return (
     <aside
       data-loadlink-cookie-consent="major-20260826"
-      data-loadlink-toast-surface="true"
+      data-loadlink-cookie-panel="true"
+      data-theme={darkMode ? "dark" : "light"}
       role="dialog"
       aria-modal="false"
       aria-labelledby="loadlink-cookie-title"
       className={`fixed inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-[9998] mx-auto max-w-[720px] border px-4 py-4 shadow-[0_24px_80px_rgba(0,0,0,.20)] backdrop-blur-xl sm:inset-x-5 sm:px-5 ${darkMode ? "border-white/12 bg-[#101010]/88 text-white" : "border-black/10 bg-white/84 text-black"}`}
     >
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
+      <div className="ll-cookie-layout">
         <div className="flex items-start gap-3">
           <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border ${darkMode ? "border-white/12 bg-white/[.05]" : "border-black/10 bg-black/[.025]"}`}><CookieIcon /></span>
           <div>
-            <h2 id="loadlink-cookie-title" className="ll-toast-title text-[13px] font-black tracking-[-.02em]">{preferencesMode ? "Cookie preferences" : "Cookies on LoadLink"}</h2>
-            <p className={`ll-toast-detail mt-1 max-w-xl text-[11px] font-semibold leading-5 ${darkMode ? "text-white/55" : "text-black/55"}`}>Essential cookies keep sign-in and security working. Optional cookies help LoadLink remember preferences and improve the marketplace.</p>
+            <h2 id="loadlink-cookie-title">{preferencesMode ? "Your cookie preferences" : "Your privacy, your choice"}</h2>
+            <p className="ll-cookie-copy">Essential cookies keep your account secure and signed in. Choose whether to allow optional cookies. <Link href="/legal#cookie-policy">Read our cookie policy</Link>.</p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 sm:justify-end">
-          <Link href="/legal#cookie-policy" className={`flex min-h-10 items-center rounded-full border px-4 text-[10px] font-black ${darkMode ? "border-white/14 bg-white/[.035]" : "border-black/12 bg-black/[.02]"}`}>View cookie policy</Link>
-          <button type="button" onClick={() => choose("essential")} className={`min-h-10 rounded-full border px-4 text-[10px] font-black ${darkMode ? "border-white/14 bg-white/[.035]" : "border-black/12 bg-black/[.02]"}`}>Essential only</button>
-          <button type="button" onClick={() => choose("all")} className="min-h-10 rounded-full bg-[#f6b800] px-5 text-[10px] font-black text-black">Allow cookies</button>
+        <div className="ll-cookie-actions">
+          <button type="button" onClick={() => choose("essential")}>Essential only</button>
+          <button type="button" onClick={() => choose("all")} className="ll-cookie-accept">Allow optional cookies</button>
         </div>
       </div>
     </aside>

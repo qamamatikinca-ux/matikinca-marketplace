@@ -1,29 +1,21 @@
 import { NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { serverRateLimit } from "@/lib/serverRateLimit";
-
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
-type NewsItem = { title:string; url:string; source:string; publishedAt:string; image:string; imageCredit:string; summary:string };
-
-const covers = { road:"/images/news/road-freight.jpg", forklift:"/images/news/forklift-loading.jpg", contract:"/images/news/contracts-logistics.jpg", truck:"/images/news/truck-operations.jpg" };
-
-function decodeEntities(value:string){let result=value||"";for(let i=0;i<3;i+=1){result=result.replace(/<!\[CDATA\[|\]\]>/g,"").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&#x2F;/gi,"/").replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(Number(n)));}return result.replace(/<[^>]*>/g," ").replace(/https?:\/\/\S+/g," ").replace(/\s+/g," ").trim();}
-function rawTag(block:string,name:string){return block.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)<\\/${name}>`,"i"))?.[1]||"";}
-function tag(block:string,name:string){return decodeEntities(rawTag(block,name));}
-function coverFor(title:string,index:number){const value=title.toLowerCase();if(/warehouse|forklift|distribution|delivery centre|depot/.test(value))return covers.forklift;if(/contract|tender|construction|project/.test(value))return covers.contract;if(/truck|road|driver|fleet|freight/.test(value))return covers.truck;return [covers.road,covers.truck,covers.forklift,covers.contract][index%4];}
-
+import { articleImage, newsFeeds, parseNewsFeed, type NewsItem } from "@/lib/logisticsNews";
+import seed from "@/data/logistics-news-seed.json";
+export const maxDuration=45;
+async function fetchText(url:string){const response=await fetch(url,{cache:"no-store",redirect:"error",headers:{"User-Agent":"LoadLink News/2.0 (+https://matikinca-marketplace.vercel.app)"},signal:AbortSignal.timeout(15000)});if(!response.ok)throw new Error("Publisher unavailable");const reader=response.body?.getReader();if(!reader)throw new Error("Empty publisher response");const decoder=new TextDecoder();let size=0,text="";while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;if(size>2*1024*1024){await reader.cancel();throw new Error("Publisher response too large");}text+=decoder.decode(part.value,{stream:true});}return text+decoder.decode();}
+const getNews=unstable_cache(async()=>{
+  const feeds=await Promise.allSettled(newsFeeds.map(async feed=>parseNewsFeed(await fetchText(feed.url),feed)));
+  const candidates=feeds.flatMap((result,index)=>(result.status==="fulfilled" && result.value.length ? result.value : seed.filter(item=>item.source===newsFeeds[index].source && Date.parse(item.publishedAt)>Date.now()-3*86400000)).slice(0,4)).sort((a,b)=>Date.parse(b.publishedAt)-Date.parse(a.publishedAt));
+  const unique=[...new Map(candidates.map(item=>[item.url,item])).values()];
+  const enriched=await Promise.allSettled(unique.slice(0,12).map(async item=>{if(!item.image)item.image=articleImage(await fetchText(item.url),item.url);return item;}));
+  const items:NewsItem[]=enriched.flatMap(result=>result.status==="fulfilled"&&result.value.image?[result.value]:[]).slice(0,8);
+  if(!items.length)throw new Error("No publisher headlines available");
+  return {items,updatedAt:new Date().toISOString(),partial:feeds.some(result=>result.status==="rejected" || !result.value.length)};
+},["loadlink-publisher-news-v3"],{revalidate:86400,tags:["logistics-news"]});
 export async function GET(request:Request){
-  const limited=serverRateLimit(request,"logistics-news",60,60_000);if(limited)return limited;
-  try{
-    const rss="https://news.google.com/rss/search?q=South+Africa+logistics+freight+trucking+ports+rail+when:7d&hl=en-ZA&gl=ZA&ceid=ZA:en";
-    const response=await fetch(rss,{cache:"no-store",headers:{"User-Agent":"LoadLink News/1.0"},signal:AbortSignal.timeout(8000)});
-    if(!response.ok)throw new Error("News feed unavailable");
-    const xml=await response.text();
-    const blocks=xml.match(/<item>[\s\S]*?<\/item>/gi)?.slice(0,12)||[];
-    const items:NewsItem[]=blocks.map((block,index)=>{const fullTitle=tag(block,"title");const source=tag(block,"source")||fullTitle.split(" - ").pop()||"News source";const title=fullTitle.replace(/\s+-\s+[^-]+$/,"").trim();const url=tag(block,"link");const publishedAt=tag(block,"pubDate")||"";return{title,url,source,publishedAt,image:coverFor(title,index),imageCredit:"Related LoadLink logistics cover",summary:`Reporting from ${source} on a current South African transport or logistics development.`};}).filter((item)=>item.title&&item.url&&item.publishedAt).slice(0,8);
-    return NextResponse.json({items,updatedAt:new Date().toISOString()},{headers:{"Cache-Control":"public, max-age=60, s-maxage=300, stale-while-revalidate=900"}});
-  }catch{
-    return NextResponse.json({items:[],updatedAt:new Date().toISOString(),unavailable:true},{status:200,headers:{"Cache-Control":"public, max-age=30, s-maxage=60, stale-while-revalidate=120"}});
-  }
+  const limited=serverRateLimit(request,"logistics-news",60,60000);if(limited)return limited;
+  try{return NextResponse.json({...await getNews(),refreshHours:24},{headers:{"Cache-Control":"public, max-age=300, s-maxage=3600, stale-while-revalidate=86400"}});}
+  catch{const items=seed.filter(item=>Date.parse(item.publishedAt)>Date.now()-3*86400000);return NextResponse.json({items,updatedAt:items[0]?.publishedAt||null,refreshHours:24,stale:true},{headers:{"Cache-Control":"public, max-age=60, s-maxage=300, stale-while-revalidate=3600"}});}
 }

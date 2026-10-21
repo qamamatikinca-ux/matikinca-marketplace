@@ -6,7 +6,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
-type Message = { from: "bot" | "user"; text: string };
+type Message = { from: "bot" | "user"; text: string; actions?: Array<{label:string;href:string}> };
 const initial = ["Talk to an agent", "View my support cases", "Find something on LoadLink", "Post or manage a listing", "Fix a problem"];
 
 export default function LinkBot() {
@@ -20,13 +20,19 @@ export default function LinkBot() {
   const [busy, setBusy] = useState(false);
   const [handover, setHandover] = useState(false);
   const [includeRecentQuestions,setIncludeRecentQuestions]=useState(false);
+  const [supportDraft,setSupportDraft]=useState("");
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
+  const panelRef=useRef<HTMLElement>(null);
+  useEffect(()=>{if(!open)return;const previous=document.activeElement as HTMLElement|null;const frame=requestAnimationFrame(()=>inputRef.current?.focus());const overflow=document.body.style.overflow;document.body.style.overflow="hidden";return()=>{cancelAnimationFrame(frame);document.body.style.overflow=overflow;previous?.focus();};},[open]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, busy]);
   useEffect(() => {
     const openAgent = () => startAgentHandover();
+    const openHelp = () => setOpen(true);
+    window.addEventListener("loadlink:open-linkbot", openHelp);
     window.addEventListener("loadlink:open-agent-support", openAgent);
-    return () => window.removeEventListener("loadlink:open-agent-support", openAgent);
+    return () => { window.removeEventListener("loadlink:open-agent-support", openAgent); window.removeEventListener("loadlink:open-linkbot", openHelp); };
   }, []);
 
   function startAgentHandover() {
@@ -38,6 +44,7 @@ export default function LinkBot() {
 
   async function sendSupportTicket(text: string) {
     const clean = text.trim();
+    setSupportDraft(clean);
     if (clean.length < 10) {
       setMessages((current) => [...current, { from: "bot", text: "Add a little more detail so support can investigate this properly." }]);
       return;
@@ -83,7 +90,9 @@ export default function LinkBot() {
     setMessages((current) => [...current, { from: "user", text: clean }]);
     setInput("");
 
-    if (/^talk to an agent$/i.test(clean) || /^try support request again$/i.test(clean)) {
+    if (/^try support request again$/i.test(clean)) { await sendSupportTicket(supportDraft); return; }
+    if (/^(ask another question|try again)$/i.test(clean)) { setChoices(initial); inputRef.current?.focus(); return; }
+    if (/^talk to an agent$/i.test(clean)) {
       startAgentHandover();
       return;
     }
@@ -128,7 +137,9 @@ export default function LinkBot() {
         }),
       });
       const data = await response.json();
-      setMessages((current) => [...current, { from: "bot", text: data.answer || "Tell me a little more about what happened." }]);
+      if (!response.ok) throw new Error(data.answer || "Help is temporarily unavailable.");
+      const actions = Array.isArray(data.actions) ? data.actions.filter((item: {href?:string;label?:string})=>typeof item.href === "string" && /^\/(?!\/)[a-z0-9/?=#%&_-]*$/i.test(item.href) && typeof item.label === "string").slice(0,3) : [];
+      setMessages((current) => [...current, { from: "bot", text: data.answer || "Tell me a little more about what happened.", actions }]);
       setChoices(data.followups || ["Ask another question", "Talk to an agent"]);
     } catch {
       setMessages((current) => [...current, { from: "bot", text: "I’m temporarily unavailable. Try again in a moment, or send the issue to LoadLink Support." }]);
@@ -151,24 +162,24 @@ export default function LinkBot() {
     <>
       <button onClick={() => setOpen(true)} className={`fixed bottom-5 right-5 z-[120] rounded-full border px-5 py-3 text-sm font-black shadow-[0_14px_40px_rgba(0,0,0,.18)] backdrop-blur-xl ${darkMode ? "border-white/12 bg-white/[.09] text-white" : "border-black/10 bg-white/75 text-black"}`} aria-label="Open LinkBot">LinkBot</button>
       {open ? (
-        <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/38 p-3 backdrop-blur-sm md:items-center" data-loadlink-linkbot="true">
-          <section className={`flex max-h-[88dvh] w-full max-w-md flex-col overflow-hidden rounded-[28px] border shadow-[0_30px_90px_rgba(0,0,0,.28)] backdrop-blur-3xl ${panel}`} role="dialog" aria-modal="true" aria-label="LoadLink help">
+        <div data-theme={darkMode ? "dark" : "light"} className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/38 p-3 backdrop-blur-sm md:items-center" data-loadlink-linkbot="true">
+          <section ref={panelRef} onKeyDown={event=>{if(event.key==="Escape"){setOpen(false);return;}if(event.key!=="Tab")return;const items=Array.from(panelRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],textarea,input')||[]);const first=items[0],last=items[items.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}} className={`flex max-h-[88dvh] ll-linkbot-panel w-full max-w-md flex-col overflow-hidden rounded-[28px] border shadow-[0_30px_90px_rgba(0,0,0,.28)] backdrop-blur-3xl ${panel}`} role="dialog" aria-modal="true" aria-label="LoadLink help">
             <header className={`flex items-center justify-between border-b p-4 ${softBorder}`}>
-              <div><p className={`text-[10px] font-black uppercase tracking-[.14em] ${darkMode ? "text-white/45" : "text-black/45"}`}>LoadLink help</p><h2 className="mt-1 text-xl font-black">LinkBot</h2><p className={`mt-1 text-[10px] ${darkMode ? "text-white/40" : "text-black/40"}`}>Context-aware help and support handover</p></div>
+              <div><p className={`text-[10px] font-black uppercase tracking-[.14em] ${darkMode ? "text-white/45" : "text-black/45"}`}>LoadLink help</p><h2 className="mt-1 text-xl font-black">LinkBot</h2><p className={`mt-1 text-[10px] ${darkMode ? "text-white/40" : "text-black/40"}`}>Guidance and support from LoadLink</p></div>
               <button onClick={() => setOpen(false)} className={`flex h-10 w-10 items-center justify-center rounded-full border text-xl ${softBorder}`} aria-label="Close LinkBot"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto p-4">
-              <div className="space-y-3">
-                {messages.map((message, index) => <div key={index} className={`max-w-[88%] rounded-2xl border p-3 text-sm leading-6 ${message.from === "bot" ? botBubble : darkMode ? "ml-auto border-white/10 bg-white text-black" : "ml-auto border-black bg-black font-semibold text-white"}`}>{message.text}</div>)}
+              <div className="space-y-3" role="log" aria-label="Support conversation" aria-live="polite">
+                {messages.map((message, index) => <div key={index} className={`max-w-[88%] rounded-2xl border p-3 text-sm leading-6 ${message.from === "bot" ? botBubble : darkMode ? "ml-auto border-white/10 bg-white text-black" : "ml-auto border-black bg-black font-semibold text-white"}`}><p className="whitespace-pre-wrap">{message.text}</p>{message.actions?.map(action=><a key={action.href} href={action.href} className="ll-bot-action">{action.label}<LoadLinkIcon name="chevronRight" size={16}/></a>)}</div>)}
                 {busy ? <div className={`inline-flex rounded-2xl border p-3 text-sm ${botBubble}`}>Working…</div> : null}
                 <div ref={endRef} />
               </div>
-              <div className="mt-4 flex flex-wrap gap-2">{choices.map((choice) => <button key={choice} onClick={() => void ask(choice)} className={`rounded-full border px-3 py-2 text-xs font-bold ${softBorder}`}>{choice}</button>)}</div>
+              <div className="mt-4 flex flex-wrap gap-2">{choices.map((choice) => <button key={choice} disabled={busy} onClick={() => void ask(choice)} className={`rounded-full border px-3 py-2 text-xs font-bold ${softBorder}`}>{choice}</button>)}</div>
             </div>
             {handover ? <label className={`mx-4 mb-2 flex items-center gap-2 text-[11px] ${darkMode ? "text-white/65" : "text-black/65"}`}><input type="checkbox" checked={includeRecentQuestions} onChange={e=>setIncludeRecentQuestions(e.target.checked)} /> Include recent LinkBot questions in this support case</label> : null}
             <form onSubmit={submit} className={`flex gap-2 border-t p-3 pb-[calc(.75rem+env(safe-area-inset-bottom))] ${softBorder}`}>
-              <textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder={handover ? "Describe the issue for LoadLink Support" : "What are you trying to do?"} rows={1} className={`max-h-24 min-w-0 flex-1 resize-none rounded-2xl border px-3 py-3 text-sm outline-none ${darkMode ? "border-white/12 bg-white/[.045] text-white placeholder:text-white/35" : "border-black/10 bg-white/70 text-black placeholder:text-black/35"}`} />
-              <button disabled={busy} className={`${darkMode ? "bg-white text-black" : "bg-black text-white"} rounded-full px-4 font-black disabled:opacity-45`}>Send</button>
+              <textarea ref={inputRef} aria-label={handover ? "Describe your support request" : "Message LinkBot"} maxLength={1600} value={input} onChange={(event) => setInput(event.target.value)} placeholder={handover ? "Describe the issue for LoadLink Support" : "What are you trying to do?"} rows={1} className={`max-h-24 min-w-0 flex-1 resize-none rounded-2xl border px-3 py-3 text-sm outline-none ${darkMode ? "border-white/12 bg-white/[.045] text-white placeholder:text-white/35" : "border-black/10 bg-white/70 text-black placeholder:text-black/35"}`} />
+              <button disabled={busy || !input.trim()} className={`${darkMode ? "bg-white text-black" : "bg-black text-white"} rounded-full px-4 font-black disabled:opacity-45`}>Send</button>
             </form>
           </section>
         </div>

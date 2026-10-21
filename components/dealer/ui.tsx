@@ -4,8 +4,8 @@ import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import type { ReactNode } from "react";
 
-export function Surface({ darkMode, children, className = "" }: { darkMode: boolean; children: ReactNode; className?: string }) {
-  return <section className={`rounded-[16px] border shadow-[0_12px_34px_rgba(0,0,0,.045)] backdrop-blur-xl ${darkMode ? "border-white/[.085] bg-white/[.035] text-white shadow-black/20" : "border-black/[.075] bg-white/72 text-black"} ${className}`}>{children}</section>;
+export function Surface({ darkMode, children, className = "", ...props }: React.HTMLAttributes<HTMLElement> & { darkMode: boolean; children: ReactNode; className?: string }) {
+  return <section {...props} className={`min-w-0 rounded-[16px] border shadow-[0_12px_34px_rgba(0,0,0,.045)] backdrop-blur-xl ${darkMode ? "border-white/[.085] bg-white/[.035] text-white shadow-black/20" : "border-black/[.075] bg-white/72 text-black"} ${className}`}>{children}</section>;
 }
 
 export function SectionHeading({ title, detail, action }: { title: string; detail?: string; action?: ReactNode }) {
@@ -47,5 +47,5 @@ export function StatusDot({ tone = "neutral" }: { tone?: "good" | "warn" | "bad"
 
 export function Modal({ open, onClose, children, darkMode, title }: { open: boolean; onClose: () => void; children: ReactNode; darkMode: boolean; title: string }) {
   if (!open) return null;
-  return <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 p-0 backdrop-blur-[3px] sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label={title} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}><div className={`max-h-[92vh] w-full overflow-y-auto rounded-t-[18px] border p-5 shadow-[0_24px_70px_rgba(0,0,0,.28)] backdrop-blur-2xl sm:max-w-2xl sm:rounded-[16px] ${darkMode ? "border-white/[.09] bg-[#0c0c0c]/94 text-white" : "border-black/[.08] bg-white/94 text-black"}`}><div className="mb-5 flex items-center justify-between gap-4"><h2 className="text-lg font-black tracking-[-.02em]">{title}</h2><button type="button" onClick={onClose} className="h-10 w-10 rounded-[10px] border border-current/10 text-lg font-black transition hover:bg-current/[.05]" aria-label="Close"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button></div>{children}</div></div>;
+  return <div className="fixed inset-0 z-[2147483100] flex items-end justify-center bg-black/55 p-0 backdrop-blur-[3px] sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label={title} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}><div className={`max-h-[92vh] w-full overflow-y-auto rounded-t-[18px] border p-5 shadow-[0_24px_70px_rgba(0,0,0,.28)] backdrop-blur-2xl sm:max-w-2xl sm:rounded-[16px] ${darkMode ? "border-white/[.09] bg-[#0c0c0c]/94 text-white" : "border-black/[.08] bg-white/94 text-black"}`}><div className="mb-5 flex items-center justify-between gap-4"><h2 className="text-lg font-black tracking-[-.02em]">{title}</h2><button type="button" onClick={onClose} className="h-10 w-10 rounded-[10px] border border-current/10 text-lg font-black transition hover:bg-current/[.05]" aria-label="Close"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button></div>{children}</div></div>;
 }

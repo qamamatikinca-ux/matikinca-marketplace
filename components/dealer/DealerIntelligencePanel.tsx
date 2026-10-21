@@ -7,7 +7,7 @@ import { EmptyState, Surface } from "./ui";
 
 const weight = { important: 0, recommended: 1, insight: 2 } as const;
 
-export default function DealerIntelligencePanel({ darkMode, insights, setSection }: { darkMode: boolean; insights: DealerInsight[]; setSection: (section: DealerSection) => void }) {
+export default function DealerIntelligencePanel({ darkMode, insights, setSection, unavailable = false }: { unavailable?: boolean; darkMode: boolean; insights: DealerInsight[]; setSection: (section: DealerSection) => void }) {
   const ordered = [...insights]
     .sort((a, b) => weight[a.severity] - weight[b.severity] || String(b.created_at || "").localeCompare(String(a.created_at || "")))
     .slice(0, 5);
@@ -20,9 +20,9 @@ export default function DealerIntelligencePanel({ darkMode, insights, setSection
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-[15px] font-black tracking-[-.025em]">Dealer briefing</h2>
-            <p className={`mt-1 max-w-2xl text-[10px] font-semibold leading-4 ${muted}`}>Real actions from your stock, leads, enquiries, quotes, showroom activity, verification and billing. LoadLink does not change anything for you.</p>
+            <p className={`mt-1 max-w-2xl text-[10px] font-semibold leading-4 ${muted}`}>Recommendations from your stock, customers, showroom and account activity. Choose an item to review it.</p>
           </div>
-          <span className={`shrink-0 rounded-full border border-current/10 px-2.5 py-1 text-[9px] font-black ${important ? "text-[#b88900]" : muted}`}>{important ? `${important} needs attention` : "No urgent items"}</span>
+          <span className={`shrink-0 rounded-full border border-current/10 px-2.5 py-1 text-[9px] font-black ${important ? "text-[#b88900]" : muted}`}>{unavailable ? "Refresh needed" : important ? `${important} need attention` : "Current briefing"}</span>
         </div>
       </div>
 
@@ -50,7 +50,7 @@ export default function DealerIntelligencePanel({ darkMode, insights, setSection
           })}
         </div>
       ) : (
-        <EmptyState title="Nothing needs attention" detail="New stock, lead, showroom, verification or billing actions will appear here when the live data gives you something useful to do." />
+        <EmptyState title={unavailable ? "Briefing could not refresh" : "No recommendations right now"} detail={unavailable ? "Use Refresh above to try again. Your saved workspace data has been kept." : "Recommendations appear when your current dealership data has a useful next step."} />
       )}
     </Surface>
   );

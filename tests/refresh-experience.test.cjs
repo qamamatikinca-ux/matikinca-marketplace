@@ -97,8 +97,8 @@ function themeEnvironment(stored, deviceDark, blocked = false) {
     getItem(key) { if (blocked) throw Error('Storage disabled'); return key === 'loadlink-theme' ? stored : null; },
     setItem() { if (blocked) throw Error('Storage disabled'); },
   };
-  global.document = { documentElement: root, body: { dataset: {}, style: {} }, querySelector: () => null };
-  global.window = { localStorage, matchMedia: () => ({ matches: deviceDark }), dispatchEvent() {} };
+  global.document = { documentElement: root, body: { dataset: {}, style: {} }, querySelector: () => null, addEventListener() {} };
+  global.window = { setTimeout: () => 1, localStorage, matchMedia: () => ({ matches: deviceDark }), dispatchEvent() {} };
   return { root, localStorage, count: () => writes };
 }
 const theme = load('lib/useLoadLinkTheme.ts');

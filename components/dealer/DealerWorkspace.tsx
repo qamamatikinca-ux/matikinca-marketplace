@@ -46,30 +46,37 @@ export default function DealerWorkspace() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [successText, setSuccessText] = useState({ title: "Done", message: "LoadLink updated your dealership." });
+  const [refreshing,setRefreshing]=useState(false);
+  const [failedAreas,setFailedAreas]=useState<string[]>([]);
+  const [updatedAt,setUpdatedAt]=useState("");
+  const [hasSummary,setHasSummary]=useState(false);
+  const contextRef=useRef<DealerWorkspaceState|null>(null);
   const refreshTimer = useRef<number | null>(null);
   const refreshRunning = useRef(false);
   const refreshAgain = useRef(false);
 
   const refreshCore = useCallback(async () => {
     if (refreshRunning.current) { refreshAgain.current = true; return; }
-    refreshRunning.current = true;
+    refreshRunning.current = true;setRefreshing(true);
     try {
+      const can=(permission:string)=>Boolean(contextRef.current?.permissions.includes(permission as DealerWorkspaceState["permissions"][number]));
       const [summaryData, intelligence, leadData, inventoryData, appointmentData, teamData] = await Promise.allSettled([
         dealerFetch<DealerSummary>("/api/dealer/summary"),
         dealerFetch<{ items: DealerInsight[] }>("/api/dealer/intelligence"),
-        dealerFetch<{ items: DealerLead[] }>("/api/dealer/leads?page=1&page_size=6&scope=mine"),
-        dealerFetch<{ items: DealerInventoryItem[] }>("/api/dealer/inventory?page=1&page_size=60&stock=all&publication=all&moderation=all&sort=newest"),
-        dealerFetch<{ items: DealerAppointment[] }>("/api/dealer/appointments?range=today"),
-        dealerFetch<{ staff: DealerStaffMember[] }>("/api/dealer/team"),
+        can("leads.read") ? dealerFetch<{ items: DealerLead[] }>(`/api/dealer/leads?page=1&page_size=6&scope=${contextRef.current?.role==="sales_agent"?"mine":"all"}`) : Promise.resolve({items:[]}),
+        can("inventory.read") ? dealerFetch<{ items: DealerInventoryItem[] }>("/api/dealer/inventory?page=1&page_size=60&stock=all&publication=all&moderation=all&sort=newest") : Promise.resolve({items:[]}),
+        can("leads.read") ? dealerFetch<{ items: DealerAppointment[] }>("/api/dealer/appointments?range=today") : Promise.resolve({items:[]}),
+        can("team.read") ? dealerFetch<{ staff: DealerStaffMember[] }>("/api/dealer/team") : Promise.resolve({staff:[]}),
       ]);
-      if (summaryData.status === "fulfilled") setSummary(summaryData.value);
+      if (summaryData.status === "fulfilled") {setSummary(summaryData.value);setHasSummary(true);setUpdatedAt(new Date().toISOString());}
+      setFailedAreas([summaryData,intelligence,leadData,inventoryData,appointmentData,teamData].flatMap((result,index)=>result.status==="rejected"?[["Summary","Briefing","Leads","Inventory","Appointments","Team"][index]]:[]));
       if (intelligence.status === "fulfilled") setInsights(intelligence.value.items || []);
       if (leadData.status === "fulfilled") setLeads(leadData.value.items || []);
       if (inventoryData.status === "fulfilled") setInventory(inventoryData.value.items || []);
       if (appointmentData.status === "fulfilled") setAppointments(appointmentData.value.items || []);
       if (teamData.status === "fulfilled") setStaff(teamData.value.staff || []);
     } finally {
-      refreshRunning.current = false;
+      refreshRunning.current = false;setRefreshing(false);
       if (refreshAgain.current) { refreshAgain.current = false; void refreshCore(); }
     }
   }, []);
@@ -97,7 +104,7 @@ export default function DealerWorkspace() {
         await dealerFetch("/api/dealer/context", { method: "POST", body: JSON.stringify({ action: "create_profile", name: inferredName || "My dealership", location: inferredLocation }) });
         data = await dealerFetch<{ context: DealerWorkspaceState | null; profile: DealerProfile | null }>("/api/dealer/context");
       }
-      setContext(data.context); setProfile(data.profile);
+      contextRef.current=data.context;setContext(data.context); setProfile(data.profile);
       if (data.context?.dealership_id) await refreshCore();
     } catch (e) { setError(e instanceof Error ? e.message : "Dealer could not be opened."); }
     finally { setLoading(false); }
@@ -120,7 +127,7 @@ export default function DealerWorkspace() {
     };
   }, [context?.dealership_id, queueRefresh]);
 
-  const validSection = useMemo(() => section || "overview", [section]);
+  const validSection = useMemo<DealerSection>(() => ["overview","inventory","leads","customers","messages","analytics","marketing","team","showroom","verification","billing","reviews","activity","settings","support"].includes(section) ? section : "overview", [section]);
   function navigate(next: DealerSection) { setSection(next); window.history.replaceState({}, "", `/dealer?section=${next}`); }
   function openSuccess(title: string, message: string) { setSuccessText({ title, message }); setSuccess(true); window.setTimeout(() => setSuccess(false), 1800); }
   function addVehicle() {
@@ -133,7 +140,9 @@ export default function DealerWorkspace() {
   if (!context || !profile) return <main className={`min-h-screen ${darkMode ? "bg-black text-white" : "bg-[#f4f0e7] text-black"}`}><div className="mx-auto flex min-h-screen max-w-lg items-center justify-center px-4"><Surface darkMode={darkMode} className="w-full p-8 text-center"><div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-current/10 border-t-[#f6b800]" /><div className="mt-4 text-sm font-black">Preparing Dealer workspace</div></Surface></div></main>;
 
   return <><SubmissionSuccess open={success} title={successText.title} message={successText.message} /><DealerShell darkMode={darkMode} toggleTheme={toggleTheme} profile={profile} context={context} section={validSection} setSection={navigate} onAddVehicle={addVehicle}>
-    {validSection === "overview" ? <div className="grid gap-3 sm:gap-4"><DealerOverview darkMode={darkMode} context={context} summary={summary} leads={leads} appointments={appointments} insights={insights} inventory={inventory} setSection={navigate} onRefresh={refreshCore} /><DealerIntelligencePanel darkMode={darkMode} insights={insights} setSection={navigate} /></div> : null}
+    <div className="ll-dealer-refresh" role="status"><span>{failedAreas.length ? `Could not refresh: ${failedAreas.join(", ")}. Previous data remains visible where available.` : updatedAt ? `Summary updated ${new Date(updatedAt).toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})}` : "Loading workspace data"}</span><button type="button" disabled={refreshing} onClick={()=>void refreshCore()}>{refreshing?"Refreshing…":"Refresh"}</button></div>
+    {validSection === "overview" && !hasSummary ? <Surface darkMode={darkMode} className="p-6"><h1 className="text-xl font-bold">Your overview is unavailable</h1><p className="mt-2 text-sm opacity-60">Refresh to retry. Your other dealership tools remain available from the menu.</p></Surface>:null}
+    {validSection === "overview" && hasSummary ? <div className="grid gap-3 sm:gap-4"><DealerOverview darkMode={darkMode} context={context} summary={summary} leads={leads} appointments={appointments} insights={insights} inventory={inventory} setSection={navigate} onRefresh={refreshCore} /><DealerIntelligencePanel darkMode={darkMode} insights={insights} setSection={navigate} unavailable={failedAreas.includes("Briefing")} /></div> : null}
     {validSection === "inventory" ? <DealerInventory darkMode={darkMode} context={context} onAddVehicle={addVehicle} /> : null}
     {validSection === "leads" ? <DealerLeads darkMode={darkMode} context={context} inventory={inventory} staff={staff} /> : null}
     {validSection === "customers" ? <DealerCustomers darkMode={darkMode} /> : null}

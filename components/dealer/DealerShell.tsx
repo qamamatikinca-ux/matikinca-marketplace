@@ -19,6 +19,7 @@ const sectionPermission: Partial<Record<DealerSection,string>> = {inventory:"inv
 function statusText(c:DealerWorkspaceState){if(c.account_status==="blocked")return"Account blocked";if(c.account_status==="suspended")return"Account suspended";if(c.subscription_status==="past_due")return"Payment attention required";if(c.subscription_status==="expired")return"Dealer access expired";if(c.verification_status==="changes_required")return"Verification action required";if(c.verification_status!=="approved")return"Dealer setup in progress";return c.showroom_status==="live"?"Showroom live":"Showroom not public"}
 
 export default function DealerShell({darkMode,toggleTheme,profile,context,section,setSection,onAddVehicle,children}:{darkMode:boolean;toggleTheme:()=>void;profile:DealerProfile;context:DealerWorkspaceState;section:DealerSection;setSection:(s:DealerSection)=>void;onAddVehicle:()=>void;children:ReactNode}){
+  const [toolQuery,setToolQuery]=useState("");
   const [moreOpen,setMoreOpen]=useState(false);
   const [accountOpen,setAccountOpen]=useState(false);
   const account=useLoadLinkAccount();
@@ -40,7 +41,7 @@ export default function DealerShell({darkMode,toggleTheme,profile,context,sectio
     window.location.assign("/");
   }
 
-  return <main className={`min-h-screen ${darkMode?"bg-black text-white":"bg-[#f4f0e7] text-black"}`} data-loadlink-dealer-control-centre="v2714-dashboard">
+  return <main className={`min-h-screen ${darkMode?"bg-black text-white":"bg-[#f4f0e7] text-black"}`} data-loadlink-dealer-control-centre="20261021" data-theme={darkMode?"dark":"light"}>
     <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
     <div className="mx-auto max-w-[1500px] px-3 pb-28 pt-4 sm:px-5 lg:grid lg:grid-cols-[238px_minmax(0,1fr)] lg:gap-5 lg:pb-10 lg:pt-5">
       <aside className={`hidden h-[calc(100vh-102px)] self-start overflow-y-auto rounded-[26px] border lg:sticky lg:top-[92px] lg:flex lg:flex-col ${surface}`}>
@@ -50,7 +51,7 @@ export default function DealerShell({darkMode,toggleTheme,profile,context,sectio
             <div className="min-w-0"><div className="truncate text-sm font-black">{profile.name}</div><div className="mt-1 text-[9px] font-semibold opacity-42">{statusText(context)}</div></div>
           </div>
         </div>
-        <nav className="flex-1 p-2.5">{all.map(i=><Nav key={i.id} item={i} active={section===i.id} onClick={()=>go(i.id)}/>)}</nav>
+        <nav className="ll-dealer-navigation flex-1 p-2.5" aria-label="Dealership tools"><label className="ll-dealer-tool-search"><span className="sr-only">Find a dealership tool</span><input type="search" value={toolQuery} onChange={event=>setToolQuery(event.target.value)} placeholder="Find a tool…"/></label>{[{name:"Workspace",ids:["overview","inventory","leads","messages"]},{name:"Sales & reach",ids:["customers","analytics","marketing","reviews"]},{name:"Business",ids:["team","showroom","verification","billing","activity","settings","support"]}].map(group=>{const items=all.filter(item=>group.ids.includes(item.id)&&item.label.toLowerCase().includes(toolQuery.toLowerCase()));return items.length?<div className="ll-dealer-nav-group" key={group.name}><p>{group.name}</p>{items.map(i=><Nav key={i.id} item={i} active={section===i.id} onClick={()=>go(i.id)}/>)}</div>:null;})}</nav>
         <div className="m-3 rounded-[18px] border border-[#f6b800]/20 bg-[#f6b800]/[.045] p-3.5">
           <div className="text-[10px] font-black text-[#c79300]">Dealer workspace</div>
           <p className={`mt-1.5 text-[9px] font-semibold leading-4 ${muted}`}>Stock, leads, messages, analytics and dealership controls stay in one place.</p>
@@ -59,13 +60,13 @@ export default function DealerShell({darkMode,toggleTheme,profile,context,sectio
 
       <div className="min-w-0">
         <div className="relative mb-4 flex items-center justify-end gap-2" data-loadlink-dealer-topbar="true">
-          <button type="button" onClick={()=>go("team")} className={`hidden h-10 items-center gap-2 rounded-full border px-4 text-[10px] font-black sm:flex ${darkMode?"border-[#f6b800]/55 bg-[#f6b800]/[.04] text-[#ffd259]":"border-[#c08d00]/45 bg-white text-[#8a6500]"}`}><span className="text-base leading-none">＋</span> Invite member</button>
+          <button type="button" onClick={()=>go("team")} className={`hidden h-10 items-center gap-2 rounded-full border px-4 text-[10px] font-black sm:flex ${darkMode?"border-[#f6b800]/55 bg-[#f6b800]/[.04] text-[#ffd259]":"border-[#c08d00]/45 bg-white text-[#8a6500]"}`}><LoadLinkIcon name="plus" size={16}/> Invite member</button>
           <Link href="/notifications" aria-label="Notifications" className={`relative flex h-10 w-10 items-center justify-center rounded-full border ${darkMode?"border-white/10 bg-white/[.035]":"border-black/10 bg-white"}`}><BellIcon/><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#f6b800]"/></Link>
           <button type="button" onClick={()=>go("settings")} aria-label="Dealership settings" className={`flex h-10 w-10 items-center justify-center rounded-full border ${darkMode?"border-white/10 bg-white/[.035]":"border-black/10 bg-white"}`}><Icon name="settings"/></button>
           <button type="button" onClick={()=>setAccountOpen(value=>!value)} className={`flex h-11 min-w-0 max-w-[260px] items-center gap-2 rounded-[14px] border px-2.5 text-left ${darkMode?"border-white/10 bg-white/[.035]":"border-black/10 bg-white shadow-sm"}`} aria-expanded={accountOpen} aria-label="Dealership account menu">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#f6b800]/50 bg-black text-[9px] font-black text-[#f6b800]">{account.profile.avatar_url?<LoadLinkImage src={account.profile.avatar_url} alt="" className="h-full w-full object-cover"/>:initials}</span>
             <span className="hidden min-w-0 flex-1 sm:block"><span className="block truncate text-[10px] font-black">{adminName}</span><span className={`mt-0.5 block truncate text-[8px] font-semibold ${muted}`}>{profile.name}</span></span>
-            <span className="hidden text-xs opacity-35 sm:block">⌄</span>
+            <LoadLinkIcon name="chevronDown" size={15}/>
           </button>
 
           {accountOpen?<><button type="button" aria-label="Close account menu" className="fixed inset-0 z-[88] bg-transparent" onClick={()=>setAccountOpen(false)}/><section className={`absolute right-0 top-12 z-[90] w-[min(92vw,330px)] overflow-hidden rounded-[24px] border p-2 shadow-[0_24px_70px_rgba(0,0,0,.32)] backdrop-blur-xl ${darkMode?"border-white/10 bg-[#101010]/98":"border-black/10 bg-white/98"}`}>

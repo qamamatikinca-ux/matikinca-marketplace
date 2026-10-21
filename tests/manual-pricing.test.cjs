@@ -13,8 +13,8 @@ function loadTs(relative, mocks = {}) {
   loaded._compile(compiled, source); return loaded.exports;
 }
 const pricing = loadTs('../lib/manualPricing.ts');
-const daily = { code: 'manual_listing_credit', unit_price_cents: 1500, duration_days: 1, currency: 'ZAR' };
-test('daily credit is exactly R15 ZAR for one active day', () => {
+const daily = { code: 'manual_listing_credit', unit_price_cents: 1400, duration_days: 1, currency: 'ZAR' };
+test('daily credit is exactly R14 ZAR for one active day', () => {
   assert.equal(pricing.isManualDailyProduct(daily), true);
   for (const product of [null, {}, { ...daily, duration_days: 10 }, { ...daily, unit_price_cents: 150 }, { ...daily, currency: 'USD' }, { ...daily, code: 'other' }]) assert.equal(pricing.isManualDailyProduct(product), false);
 });
