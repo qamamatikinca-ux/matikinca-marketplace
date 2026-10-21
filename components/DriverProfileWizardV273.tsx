@@ -164,7 +164,7 @@ export default function DriverProfileWizardV273() {
       if (form.citizenship_status === "foreign_national") {
         const today = new Date().toLocaleDateString("en-CA", {timeZone:"Africa/Johannesburg"});
         if (!form.nationality.trim()) return "Add your nationality.";
-        if (!form.passport_expiry || form.passport_expiry < today) return "Add a valid passport expiry date.";
+        if (form.passport_expiry && form.passport_expiry < today) return "Use a current ID or passport, or correct the passport expiry date.";
         if (!form.work_authorisation_type) return "Select your work authorisation type.";
         if (form.work_authorisation_type !== "permanent_residence" && (!form.work_authorisation_expiry || form.work_authorisation_expiry < today)) return "Add a valid work authorisation expiry date.";
       }
@@ -344,10 +344,10 @@ export default function DriverProfileWizardV273() {
             <Field label="Citizenship"><select className={input} value={form.citizenship_status} onChange={event=>field("citizenship_status",event.target.value)}><option value="">Select citizenship status</option><option value="south_african">South African citizen</option><option value="foreign_national">Foreign national</option></select></Field>
             {form.citizenship_status === "foreign_national" ? <>
               <Field label="Nationality"><input className={input} value={form.nationality} maxLength={100} autoComplete="country-name" onChange={event=>field("nationality",event.target.value)} placeholder="Country of nationality"/></Field>
-              <Field label="Passport expiry"><input className={input} type="date" value={form.passport_expiry} onChange={event=>field("passport_expiry",event.target.value)}/></Field>
+              <Field label="Passport expiry (if applicable)"><input className={input} type="date" value={form.passport_expiry} onChange={event=>field("passport_expiry",event.target.value)}/></Field>
               <Field label="Work authorisation"><select className={input} value={form.work_authorisation_type} onChange={event=>field("work_authorisation_type",event.target.value)}><option value="">Select document type</option><option value="work_visa">Work visa or permit</option><option value="permanent_residence">Permanent residence</option><option value="other_authorisation">Other documented work authorisation</option></select></Field>
               {form.work_authorisation_type !== "permanent_residence" ? <Field label="Work authorisation expiry"><input className={input} type="date" value={form.work_authorisation_expiry} onChange={event=>field("work_authorisation_expiry",event.target.value)}/></Field> : null}
-              <p className={`sm:col-span-2 text-sm leading-6 ${muted}`}>Add the documents that apply to your circumstances. Your passport and work authorisation are private and will be reviewed with your application.</p>
+              <p className={`sm:col-span-2 text-sm leading-6 ${muted}`}>Add the documents that apply to your circumstances. Your identity and work authorisation documents are private and will be reviewed with your application.</p>
             </> : null}
             <Field label="Full name"><input className={input} value={form.full_name} onChange={(event) => field("full_name", event.target.value)} autoComplete="name" /></Field>
             <Field label="Professional headline"><input className={input} value={form.headline} onChange={(event) => field("headline", event.target.value)} placeholder="Code 14 long-distance driver" /></Field>
@@ -383,7 +383,7 @@ export default function DriverProfileWizardV273() {
         {step === 4 ? <>
           <StepTitle title="Essential documents" copy="Upload only the documents needed to confirm your identity and driving credentials." muted={muted} />
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <DocumentUpload type="identity" label={form.citizenship_status === "foreign_national" ? "Passport" : LABELS.identity} required fileName={documentMap.identity?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "identity"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("identity", file)} />
+            <DocumentUpload type="identity" label={LABELS.identity} required fileName={documentMap.identity?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "identity"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("identity", file)} />
             <DocumentUpload type="drivers_licence" label={LABELS.drivers_licence} required fileName={documentMap.drivers_licence?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "drivers_licence"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("drivers_licence", file)} />
             {form.prdp_required ? <DocumentUpload type="prdp" label={LABELS.prdp} required fileName={documentMap.prdp?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "prdp"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("prdp", file)} /> : null}
             {form.citizenship_status === "foreign_national" ? <DocumentUpload type="work_authorisation" label={LABELS.work_authorisation} required fileName={documentMap.work_authorisation?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "work_authorisation"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={file=>void upload("work_authorisation",file)}/> : null}
@@ -397,7 +397,7 @@ export default function DriverProfileWizardV273() {
           <StepTitle title="Review your profile" copy="Check each section before sending it to LoadLink." muted={muted} />
           <div className="mt-5 divide-y divide-current/10 overflow-hidden rounded-[18px] border border-current/10">
             <ReviewRow label="Personal" value={`${form.full_name} · ${form.city}, ${form.province}`} onEdit={() => setStep(1)} />
-            <ReviewRow label="Citizenship" value={form.citizenship_status === "foreign_national" ? `Foreign national · ${form.nationality} · Passport expires ${form.passport_expiry}` : "South African citizen"} onEdit={()=>setStep(1)}/>
+            <ReviewRow label="Citizenship" value={form.citizenship_status === "foreign_national" ? `Foreign national · ${form.nationality}${form.passport_expiry ? ` · Passport expires ${form.passport_expiry}` : ""}` : "South African citizen"} onEdit={()=>setStep(1)}/>
             {form.citizenship_status === "foreign_national" ? <ReviewRow label="Work evidence" value={`${form.work_authorisation_type.replaceAll("_"," ")} · ${form.work_authorisation_expiry || "No expiry (permanent residence)"} · ${documentMap.work_authorisation ? "Document added" : "Document missing"}`} onEdit={()=>setStep(1)}/> : null}
             <ReviewRow label="Contact" value={`${form.phone} · ${form.email}`} onEdit={() => setStep(1)} />
             <ReviewRow label="Licence" value={`${form.licence_code} · ${form.years_experience || 0} years experience`} onEdit={() => setStep(2)} />

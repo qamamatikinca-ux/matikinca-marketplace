@@ -22,6 +22,8 @@ begin
  (d.id,auth.uid(),'work_authorisation',auth.uid()::text||'/work_authorisation/qa.pdf','qa.pdf','application/pdf',100,repeat('c',64));
  result:=public.loadlink_save_and_submit_my_driver_profile(p);
  if result->>'status'<>'pending' then raise exception 'FAIL valid application did not submit'; end if;
+ result:=public.loadlink_save_and_submit_my_driver_profile(p || jsonb_build_object('passport_expiry',''));
+ if result->>'status'<>'pending' then raise exception 'FAIL alternative identity document could not be submitted'; end if;
  begin
   perform public.loadlink_save_and_submit_my_driver_profile(p||jsonb_build_object('work_authorisation_expiry',(current_date-1)::text));
   raise exception 'FAIL expired work authorisation passed';
@@ -61,5 +63,5 @@ begin
  if public_row ?| array['nationality','passport_expiry','work_authorisation_type','work_authorisation_expiry','storage_path','phone','email'] then raise exception 'FAIL private fields leaked'; end if;
 end $$;
 reset role;
-select jsonb_build_object('checks',8,'result','PASS: persistence, document requirement, valid submission, expired submission rejection, applicant cannot approve, object existence, all approval paths, public privacy') as verification;
+select jsonb_build_object('checks',9,'result','PASS: persistence, alternative identity documents, document requirement, valid submission, expired submission rejection, applicant cannot approve, object existence, all approval paths, public privacy') as verification;
 rollback;
