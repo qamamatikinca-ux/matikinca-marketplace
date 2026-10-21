@@ -20,7 +20,6 @@ import {
   loadLinkSitePages,
   placeholderForScope,
   routeForScope,
-  scopeLabel,
   searchScopes,
 } from "@/lib/loadlinkSearch";
 
@@ -52,7 +51,6 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
 
   useEffect(() => {
     let active = true;
-    setSearchReady(false);
 
     Promise.allSettled([
       fetch(`/api/job-listings?t=${Date.now()}`, { cache: "no-store" }).then((response) => response.json()),
@@ -198,6 +196,9 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                   <input
                     ref={searchInputRef}
                     id="loadlink-marketplace-search"
+                    type="search"
+                    inputMode="text"
+                    enterKeyHint="search"
                     data-loadlink-home-search-input
                     value={query}
                     onFocus={() => setShowSuggestions(Boolean(query.trim()))}

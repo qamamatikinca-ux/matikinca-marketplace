@@ -23,10 +23,34 @@ function proxiedImage(url: string) {
 export default function LogisticsNews({ darkMode }: { darkMode: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeIndex, setActiveIndex] = useState(0);
   const alive = useRef(true);
+  const railRef = useRef<HTMLDivElement>(null);
 
-  const refresh = useCallback(async (initial = false) => {
-    if (initial) setLoading(true);
+  function updateActiveArticle() {
+    const rail = railRef.current;
+    if (!rail || !items.length) return;
+    const centre = rail.getBoundingClientRect().left + rail.clientWidth / 2;
+    let nearest = 0;
+    let distance = Infinity;
+    Array.from(rail.children).forEach((card, index) => {
+      const rect = card.getBoundingClientRect();
+      const next = Math.abs(rect.left + rect.width / 2 - centre);
+      if (next < distance) { nearest = index; distance = next; }
+    });
+    setActiveIndex(nearest);
+  }
+
+  function showArticle(index: number) {
+    const rail = railRef.current;
+    const card = rail?.children.item(index);
+    if (!rail || !card) return;
+    const rect = card.getBoundingClientRect();
+    const left = rail.scrollLeft + rect.left - rail.getBoundingClientRect().left - (rail.clientWidth - rect.width) / 2;
+    rail.scrollTo({ left, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }
+
+  const refresh = useCallback(async () => {
     try {
       const response = await fetch("/api/logistics-news");
       if (!response.ok) throw new Error("News request failed");
@@ -41,16 +65,17 @@ export default function LogisticsNews({ darkMode }: { darkMode: boolean }) {
 
   useEffect(() => {
     alive.current = true;
-    void refresh(true);
+    const initialFrame = window.requestAnimationFrame(() => void refresh());
 
-    const timer = window.setInterval(() => void refresh(false), 60 * 60 * 1000);
-    const onFocus = () => void refresh(false);
-    const onVisibility = () => { if (document.visibilityState === "visible") void refresh(false); };
+    const timer = window.setInterval(() => void refresh(), 60 * 60 * 1000);
+    const onFocus = () => void refresh();
+    const onVisibility = () => { if (document.visibilityState === "visible") void refresh(); };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       alive.current = false;
+      window.cancelAnimationFrame(initialFrame);
       window.clearInterval(timer);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
@@ -67,7 +92,7 @@ export default function LogisticsNews({ darkMode }: { darkMode: boolean }) {
           <span className="hidden text-xs font-bold opacity-45 md:block">Publisher headlines · checked daily</span>
         </div>
 
-        <div className="no-scrollbar mt-7 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3">
+        <div ref={railRef} data-loadlink-no-swipe-dots="true" onScroll={updateActiveArticle} className="no-scrollbar mt-7 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3">
           {loading && items.length === 0
             ? [1, 2, 3].map((number) => (
                 <div key={number} className="h-80 min-w-[82vw] animate-pulse bg-black/10 md:min-w-[340px]" />
@@ -110,6 +135,19 @@ export default function LogisticsNews({ darkMode }: { darkMode: boolean }) {
                 </a>
               ))}
         </div>
+
+        {items.length > 1 ? (
+          <div className="mt-2 flex flex-wrap justify-center gap-1" role="group" aria-label="News articles">
+            {items.map((item, index) => (
+              <button key={item.url} type="button" onClick={() => showArticle(index)}
+                aria-label={`Show article ${index + 1} of ${items.length}`}
+                aria-current={index === Math.min(activeIndex, items.length - 1) ? "true" : "false"}
+                className="flex min-h-11 min-w-8 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b88900]">
+                <span aria-hidden="true" className={`h-2 rounded-full transition-[width,background-color] ${index === Math.min(activeIndex, items.length - 1) ? "w-6 bg-[#f6b800]" : darkMode ? "w-2 bg-white/25" : "w-2 bg-black/20"}`} />
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         {!loading && items.length === 0 ? (
           <div className={`mt-7 border p-6 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>

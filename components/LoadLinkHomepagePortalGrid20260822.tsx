@@ -64,6 +64,8 @@ export default function LoadLinkHomepagePortalGrid20260822({ darkMode }: { darkM
             >
               <Image
                 fill
+                data-loadlink-managed-image="true"
+                draggable={false}
                 sizes="(max-width: 767px) 100vw, 50vw"
                 fetchPriority={portal.title === "Jobs" ? "high" : "auto"}
                 src={src}
@@ -74,6 +76,7 @@ export default function LoadLinkHomepagePortalGrid20260822({ darkMode }: { darkM
                   const image = event.currentTarget;
                   if (!image.dataset.fallbackApplied) {
                     image.dataset.fallbackApplied = "true";
+                    image.removeAttribute("srcset");
                     image.src = portal.images[0];
                   } else image.style.opacity = "0";
                 }}
