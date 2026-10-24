@@ -68,5 +68,11 @@ function errorStatus(error: unknown, message: string) {
 
 export function apiError(error: unknown) {
   const message = errorText(error);
-  return Response.json({ error: message }, { status: errorStatus(error, message) });
+  const status = errorStatus(error, message);
+  // Database diagnostics can include schema and customer data. Keep unexpected
+  // server failures out of browser responses and shared caches.
+  return Response.json(
+    { error: status >= 500 ? "LoadLink could not complete that request. Please try again shortly." : message },
+    { status, headers: { "Cache-Control": "private, no-store", Vary: "Authorization" } },
+  );
 }

@@ -1,3 +1,4 @@
+import { isManualDailyProduct } from "@/lib/manualPricing";
 import { supabase } from "@/lib/supabaseClient";
 import { packageLimits, safePositiveInteger } from "@/lib/core";
 
@@ -97,7 +98,7 @@ export async function getManualListingProduct(): Promise<ManualListingProduct> {
   const unitPrice = Number(value.unit_price_cents);
   const durationDays = Number(value.duration_days);
   const maxQuantity = Number(value.max_quantity || 100);
-  if (value.code !== "manual_listing_credit" || unitPrice !== 1400 || ![1, 10].includes(durationDays) || String(value.currency).toUpperCase() !== "ZAR") {
+  if (!isManualDailyProduct(value)) {
     throw new Error("Manual listing pricing is not configured correctly.");
   }
   return {

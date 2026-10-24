@@ -9,6 +9,8 @@ import {
   type LoadLinkIntelligenceState,
 } from "@/lib/loadlinkIntelligence";
 
+import { MANUAL_DAILY_PRICE_CENTS } from "@/lib/manualPricing";
+
 export type BusinessPlanId = "pro" | "dealer";
 export type LoadLinkPackageId = "manual" | BusinessPlanId;
 
@@ -18,10 +20,10 @@ const plans = [
   {
     id: "manual" as const,
     name: "Manual",
-    price: "R15",
+    price: `R${MANUAL_DAILY_PRICE_CENTS / 100}`,
     billing: "per vehicle / active day",
     description: "For occasional vehicle advertising without a monthly subscription.",
-    features: ["Up to 5 active vehicle listings at once", "Up to 5 photos per listing", "Standard marketplace placement", "50 messages per day"],
+    features: ["Up to 5 vehicle listings per month", "Up to 2 photos per listing", "Standard marketplace placement", "50 messages per day"],
   },
   {
     id: "pro" as const,
@@ -29,7 +31,7 @@ const plans = [
     price: "R399",
     billing: "/month",
     description: "For owners and operators who advertise vehicles regularly.",
-    features: ["Unlimited vehicle listings", "Up to 15 photos per listing", "Listing analytics", "Unlimited messages", "Higher search visibility", "Priority support"],
+    features: ["Up to 10 vehicle listings per month", "Up to 10 photos per listing", "Listing analytics", "Unlimited messages", "Higher search visibility", "Priority support"],
   },
   {
     id: "dealer" as const,
@@ -37,7 +39,7 @@ const plans = [
     price: "R2 999",
     billing: "/month",
     description: "For dealerships that need a public showroom, sales workspace and team tools.",
-    features: ["Everything in Pro", "Public dealership showroom", "Dealer Status", "Lead and customer workspace", "Quotes and follow-ups", "Team roles", "Dealer analytics", "Inventory and sales tools"],
+    features: ["Unlimited vehicle listings", "Up to 30 photos per listing", "Public dealership showroom", "Dealer Status", "Lead and customer workspace", "Quotes and follow-ups", "Team roles", "Dealer analytics", "Inventory and sales tools"],
   },
 ];
 

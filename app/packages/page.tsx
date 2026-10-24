@@ -20,7 +20,7 @@ import {
 } from "@/lib/loadlinkIntelligence";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
-import { isManualDailyProduct, MANUAL_DAILY_UNAVAILABLE } from "@/lib/manualPricing";
+import { isManualDailyProduct, MANUAL_DAILY_PRICE_CENTS, MANUAL_DAILY_UNAVAILABLE } from "@/lib/manualPricing";
 
 type SubscriptionPlan = "pro" | "dealer";
 type BusyAction = SubscriptionPlan | "manual" | "manage" | "verify" | "";
@@ -30,7 +30,7 @@ const paymentStates = new Set(["approved_for_payment", "payment_pending", "payme
 const manualFallback: ManualListingProduct = {
   code: "manual_listing_credit",
   name: "Daily vehicle listing credit",
-  unit_price_cents: 1500,
+  unit_price_cents: MANUAL_DAILY_PRICE_CENTS,
   currency: "ZAR",
   duration_days: 1,
   max_quantity: 100,
@@ -43,7 +43,7 @@ const planDetails = {
     billing: "/ month",
     eyebrow: "Regular",
     description: "For individual owners and operators who advertise vehicles regularly.",
-    features: ["Unlimited vehicle listings", "Up to 15 photos per listing", "Listing analytics", "Unlimited messages", "Higher search visibility", "Priority support"],
+    features: ["Up to 10 vehicle listings per month", "Up to 10 photos per listing", "Listing analytics", "Unlimited messages", "Higher search visibility", "Priority support"],
   },
   dealer: {
     name: "Dealer",
@@ -51,7 +51,7 @@ const planDetails = {
     billing: "/ month",
     eyebrow: "Dealership",
     description: "For dealerships that need a public showroom, inventory tools and a sales workspace.",
-    features: ["Everything in Pro", "Public dealership showroom", "Dealer Status updates", "Lead and customer workspace", "Team roles", "Dealer analytics"],
+    features: ["Unlimited vehicle listings", "Up to 30 photos per listing", "Public dealership showroom", "Dealer Status updates", "Lead and customer workspace", "Team roles", "Dealer analytics"],
   },
 } as const;
 
@@ -378,12 +378,12 @@ export default function PackagesPage() {
                 <span className="text-[42px] font-black leading-none tracking-[-.06em]">{money(manualProduct.unit_price_cents).replace(",00", "")}</span>
                 <span className={`text-xs font-extrabold ${muted}`}>per vehicle / active day</span>
               </div>
-              <p className={`mt-4 min-h-[60px] text-xs font-semibold leading-5 ${muted}`}>Vehicle advertising costs R15 for each active day. Paused listings do not use new daily credits.</p>
+              <p className={`mt-4 min-h-[60px] text-xs font-semibold leading-5 ${muted}`}>Vehicle advertising costs {money(manualProduct.unit_price_cents)} for each active day. Paused listings do not use new daily credits.</p>
             </div>
 
             <div className="my-5 h-px bg-current/10" />
             <ul className="grid gap-3">
-              {["Up to 5 active Manual vehicle listings", "Up to 5 photos per listing", "Standard marketplace placement", "50 messages per day"].map((feature) => (
+              {["Up to 5 vehicle listings per month", "Up to 2 photos per listing", "Standard marketplace placement", "50 messages per day"].map((feature) => (
                 <li key={feature} className="flex gap-3 text-[12px] font-semibold leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]" /><span>{feature}</span></li>
               ))}
             </ul>

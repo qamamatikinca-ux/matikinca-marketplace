@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { NextRequest } from "next/server";
 
-import { isManualDailyProduct, MANUAL_DAILY_UNAVAILABLE } from "@/lib/manualPricing";
+import { isManualDailyProduct, MANUAL_DAILY_PRICE_CENTS, MANUAL_DAILY_UNAVAILABLE } from "@/lib/manualPricing";
 
 function clients(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -78,12 +78,12 @@ export async function POST(request: NextRequest) {
       const sameQuantity = Number(metadata.quantity) === quantity;
       const authorizationUrl = String(metadata.authorization_url || "");
       const created = new Date(row.created_at || 0).getTime();
-      if (Number(row.amount_cents) === quantity * 1400 && String(row.currency).toUpperCase() === "ZAR" && Number(metadata.duration_days) === 1 && Number(metadata.unit_price_cents) === 1400 && sameQuantity && authorizationUrl && Number.isFinite(created) && Date.now() - created < 30 * 60 * 1000) {
+      if (Number(row.amount_cents) === quantity * MANUAL_DAILY_PRICE_CENTS && String(row.currency).toUpperCase() === "ZAR" && Number(metadata.duration_days) === 1 && Number(metadata.unit_price_cents) === MANUAL_DAILY_PRICE_CENTS && sameQuantity && authorizationUrl && Number.isFinite(created) && Date.now() - created < 30 * 60 * 1000) {
         return Response.json({
           authorization_url: authorizationUrl,
           reference: row.reference,
           quantity,
-          unit_price_cents: Number(metadata.unit_price_cents || 1400),
+          unit_price_cents: Number(metadata.unit_price_cents || MANUAL_DAILY_PRICE_CENTS),
           duration_days: Number(metadata.duration_days || 1),
           amount_cents: Number(row.amount_cents),
           currency: String(row.currency || "ZAR").toUpperCase(),
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     const durationDays = Number(order.data?.duration_days || 0);
     const currency = String(order.data?.currency || "").toUpperCase();
 
-    if (!paymentId || !reference || amount !== quantity * unitPrice || unitPrice !== 1400 || durationDays !== 1 || currency !== "ZAR") {
+    if (!paymentId || !reference || amount !== quantity * unitPrice || unitPrice !== MANUAL_DAILY_PRICE_CENTS || durationDays !== 1 || currency !== "ZAR") {
       throw new Error("LoadLink stopped this checkout because the Manual listing total did not reconcile.");
     }
 
