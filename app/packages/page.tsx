@@ -400,7 +400,7 @@ export default function PackagesPage() {
               {!loading && !manualDailyReady ? <p className={`mb-3 text-xs leading-5 ${muted}`} role="status">{MANUAL_DAILY_UNAVAILABLE}</p> : null}
               {!manualOpen ? (
                 <button type="button" onClick={() => setManualOpen(true)} disabled={manualDisabled} className={`h-12 w-full rounded-xl text-sm font-black transition active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-45 ${darkMode ? "border border-white/15" : "border border-black/15"}`}>
-                  {manualCovered ? `Included with ${titleCasePlan(activePlan)}` : pendingPlan ? "Request already in review" : !manualDailyReady ? "Payments temporarily unavailable" : "Buy daily credits"}
+                  {loading ? "Checking daily pricing…" : manualCovered ? `Included with ${titleCasePlan(activePlan)}` : pendingPlan ? "Request already in review" : !manualDailyReady ? "Payments temporarily unavailable" : "Buy daily credits"}
                 </button>
               ) : (
                 <div className={`rounded-2xl border p-4 ${softSurface}`}>

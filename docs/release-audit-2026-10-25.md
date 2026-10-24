@@ -15,6 +15,11 @@ Status: targeted fixes verified; full release sign-off remains open.
 | Dealer API could return internal server diagnostics | Sanitize server-error responses and prevent caching. |
 | Tests required generated assets and were absent from the release workflow | Add npm test/pretest and regression/security checks to existing PR workflow. |
 
+| Support sign-in link used an ignored return parameter | Use the login route’s `next` parameter so users return to their support cases. |
+| Support and draft-toast refs were mutated during render | Synchronize refs after commit; show a loading message while a selected case loads. |
+
+| Daily credit button announced unavailable payments during initial loading | Show a checking-pricing state until the catalog request completes. |
+
 ## Verification performed
 
 - Clean production build and TypeScript compilation passed after clearing a corrupt local build cache.
