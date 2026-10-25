@@ -12,13 +12,15 @@ import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import { supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
-type Status = "not_started" | "phone_verified" | "pending" | "verified" | "rejected";
+type Status = "not_started" | "phone_verified" | "pending" | "verified" | "rejected" | "under_review" | "more_information_required";
 
 const STATUS_COPY: Record<Status, { title: string; step: number }> = {
   not_started: { title: "Not started", step: 0 },
   phone_verified: { title: "Phone verified", step: 1 },
   pending: { title: "Pending review", step: 2 },
   verified: { title: "Verified", step: 3 },
+  under_review: { title: "Under review", step: 2 },
+  more_information_required: { title: "More information required", step: 2 },
   rejected: { title: "Update required", step: 2 },
 };
 
@@ -26,6 +28,8 @@ export default function VerificationStatusPage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [status, setStatus] = useState<Status>("not_started");
   const [reason, setReason] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [retry, setRetry] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,11 +37,15 @@ export default function VerificationStatusPage() {
     let active = true;
 
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
+      try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
       if (!active) return;
       if (!user) { setLoading(false); return; }
-      const { data } = await supabase.from("verification_requests").select("status,rejection_reason").eq("user_id", user.id).maybeSingle();
+      const { data, error: queryError } = await supabase.from("verification_requests").select("status,rejection_reason").eq("user_id", user.id).maybeSingle();
+      if (queryError) throw queryError;
       if (!active) return;
+      setLoadError("");
       setStatus((data?.status || "not_started") as Status);
       setReason(data?.rejection_reason || "");
       setLoading(false);
@@ -48,6 +56,7 @@ export default function VerificationStatusPage() {
           setReason(next.rejection_reason || "");
         }).subscribe();
       }
+      } catch { if (active) { setLoadError("Your verification status could not refresh. Any previously loaded status is still shown."); setLoading(false); } }
     }
 
     void load();
@@ -57,9 +66,9 @@ export default function VerificationStatusPage() {
       window.clearInterval(timer);
       if (channel) void supabase.removeChannel(channel);
     };
-  }, []);
+  }, [retry]);
 
-  const copy = useMemo(() => STATUS_COPY[status], [status]);
+  const copy = useMemo(() => STATUS_COPY[status] || { title: "Status unavailable", step: 0 }, [status]);
   const page = darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black";
   const card = darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white";
   const muted = darkMode ? "text-white/52" : "text-black/52";
@@ -71,13 +80,14 @@ export default function VerificationStatusPage() {
 
       <section className="mx-auto max-w-3xl px-4 py-7 sm:px-5 md:py-10">
         <h1 className="text-3xl font-black tracking-[-.04em] sm:text-4xl">Verification status</h1>
+        {loadError ? <div role="alert" className="mt-4 rounded-xl border border-current/20 p-4 text-sm">{loadError}<button type="button" onClick={() => setRetry(value => value + 1)} className="ml-3 font-bold underline">Retry</button></div> : null}
 
         <section className={`mt-5 overflow-hidden rounded-[26px] border shadow-[0_16px_45px_rgba(0,0,0,.07)] ${card}`}>
           <div className="p-5 sm:p-7">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <h2 className="text-3xl font-black tracking-[-.04em] sm:text-4xl">{loading ? "Checking…" : copy.title}</h2>
-                {!loading && status === "rejected" && reason ? <p className={`mt-2 max-w-xl text-sm font-semibold leading-6 ${muted}`}>{reason}</p> : null}
+                <h2 className="text-3xl font-black tracking-[-.04em] sm:text-4xl">{loading ? "Checking…" : loadError ? "Status could not refresh" : copy.title}</h2>
+                {!loading && ["rejected", "more_information_required"].includes(status) && reason ? <p className={`mt-2 max-w-xl text-sm font-semibold leading-6 ${muted}`}>{reason}</p> : null}
               </div>
               {!loading ? <StatusMark status={status} /> : <div className="h-10 w-10 shrink-0 animate-spin rounded-full border-2 border-current/10 border-t-[#f6b800]" />}
             </div>

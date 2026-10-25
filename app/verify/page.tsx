@@ -43,22 +43,34 @@ export default function VerifyPage() {
       setMessage("Verification is temporarily unavailable. Try again shortly.");
       setBusy(false); return;
     }
-    const clean = phone.replace(/\s/g, "");
-    const { error } = await supabase.auth.signInWithOtp({ phone: clean });
-    setBusy(false);
-    if (error) { setMessage("The SMS code could not be sent. Check the number and try again."); return; }
-    setStep("otp");
-    setMessage("Verification code sent by SMS.");
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error("Sign in before verifying your phone.");
+      const clean = phone.replace(/\s/g, "");
+      if (!/^\+[1-9]\d{7,14}$/.test(clean)) throw new Error("Enter a valid phone number with country code.");
+      const { error } = await supabase.auth.updateUser({ phone: clean });
+      if (error) throw new Error("The SMS code could not be sent. Check the number and try again.");
+      setStep("otp"); setMessage("Verification code sent by SMS.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "The code could not be sent. Try again."); }
+    finally { setBusy(false); }
   }
 
   async function verifyOtp() {
     if (busy) return;
     setBusy(true); setMessage("");
-    const { error } = await supabase.auth.verifyOtp({ phone: phone.replace(/\s/g, ""), token, type: "sms" });
-    setBusy(false);
-    if (error) { setMessage("That SMS code was not accepted. Check it and try again."); return; }
-    setStep("documents");
-    setMessage("Cellphone number verified. Complete the identity details below.");
+    try {
+      const { data: { user }, error: beforeError } = await supabase.auth.getUser();
+      if (beforeError || !user) throw new Error("Sign in before verifying your phone.");
+      const clean = phone.replace(/\s/g, "");
+      const { error } = await supabase.auth.verifyOtp({ phone: clean, token, type: "phone_change" });
+      if (error) throw new Error("That SMS code was not accepted. Check it and try again.");
+      const { data: { user: after }, error: afterError } = await supabase.auth.getUser();
+      if (afterError || after?.id !== user.id || after.phone?.replace(/^\+/, "") !== clean.replace(/^\+/, "")) {
+        throw new Error("We could not confirm the phone change. Check your account and retry.");
+      }
+      setStep("documents"); setMessage("Cellphone number verified. Complete the identity details below.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Verification failed. Try again."); }
+    finally { setBusy(false); }
   }
 
   async function upload(file: File, userId: string, label: string) {

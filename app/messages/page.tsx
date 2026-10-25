@@ -1,5 +1,7 @@
 "use client";
 
+import { conversationStarters, type PostContext } from "@/lib/conversationStarters";
+
 import LoadLinkImage from "@/components/LoadLinkImage";
 
 import LoadLinkIcon from "@/components/LoadLinkIcon";
@@ -368,21 +370,6 @@ function postedVehicleSummary(description: string | null | undefined, fallback: 
   return payload ? `${main} · Payload ${payload}` : main;
 }
 
-function starterMessages(conversation: Conversation) {
-  const title = conversation.listing_title || "this listing";
-  if (conversation.role === "owner") {
-    return [
-      `Thanks for your interest in ${title}. Please confirm the exact vehicle or unit you have available, its capacity and your earliest collection or viewing time.`,
-      `Please send your proposed rate for ${title}, whether VAT is included, your availability and the payment terms you require.`,
-      "Before we proceed, please confirm the registration or unit details, route capability, required documents and any loading or site restrictions.",
-    ];
-  }
-  return [
-    `Hi, I’m interested in ${title} on LoadLink. Is it still available? Please confirm the advertised terms, current condition and the earliest viewing or collection time.`,
-    `Please confirm the route or location, rate, VAT position, availability, payment terms and any documents required for ${title}.`,
-    "I may have a suitable vehicle or unit. Please share the cargo or operating requirement, weight or capacity needed, loading time and collection/delivery details.",
-  ];
-}
 
 
 function listingRouteSummary(description: string | null | undefined) {
@@ -428,6 +415,7 @@ export default function MessagesPage() {
 
   const router = useRouter();
   const { darkMode, toggleTheme } = useLoadLinkTheme();
+  const [starterPost, setStarterPost] = useState<(PostContext & { id: string }) | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const chatCalls = useChatCalls(selectedId);
@@ -537,10 +525,16 @@ export default function MessagesPage() {
     [conversations, selectedId],
   );
 
+  function starterMessages(conversation: Conversation) {
+    const post = starterPost?.id === conversation.listing_id ? starterPost : null;
+    return conversationStarters(post, conversation.listing_title, conversation.role === "owner");
+  }
+
   // LOADLINK V2.5.9 QUOTE SOURCE REUSE
   useEffect(() => {
     let cancelled = false;
     setQuoteDefaults(null);
+    setStarterPost(null);
     setQuoteVehicles([]);
     if (!selectedConversation?.listing_id) return;
 
@@ -556,6 +550,7 @@ export default function MessagesPage() {
         if (!listingResult.error && listingResult.data) listingData = listingResult.data;
         if (cancelled || !listingData) return;
 
+        setStarterPost({ ...listingData, id: selectedConversation.listing_id });
         const parsedRate = parseQuoteRate(String(listingData.rate || ""));
         const vehicleNeed = listingVehicleNeed(String(listingData.description || ""), String(listingData.vehicle_group || ""));
         const currentRoute = listingRouteSummary(String(listingData.description || ""));
@@ -643,8 +638,7 @@ export default function MessagesPage() {
     if (!selectedId || draftSeededForThreadRef.current === selectedId) return;
     try {
       const saved = window.localStorage.getItem(`loadlink-message-draft:${selectedId}`) || "";
-      const conversation = conversations.find((item) => item.id === selectedId);
-      const suggested = initialMessageDraftRef.current || (conversation && showStarterSuggestions ? starterMessages(conversation)[0] || "" : "");
+      const suggested = initialMessageDraftRef.current;
       setText(saved || suggested);
       draftSeededForThreadRef.current = selectedId;
       initialMessageDraftRef.current = "";

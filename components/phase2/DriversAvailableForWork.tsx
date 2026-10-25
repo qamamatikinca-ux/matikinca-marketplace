@@ -1,5 +1,6 @@
 "use client";
 
+import DriverContactDialog from "@/components/DriverContactDialog";
 import LoadLinkImage from "@/components/LoadLinkImage";
 import LoadLinkSortControl from "@/components/LoadLinkSortControl";
 
@@ -17,6 +18,7 @@ import { matchesSouthAfricanLocation } from "@/lib/southAfricaLocations";
 type Driver = {
   id: string;
   user_id?: string | null;
+  profile_image_url?: string | null;
   full_name: string;
   headline?: string;
   city: string;
@@ -35,6 +37,7 @@ type SortOption = "recommended" | "experience" | "name" | "location" | "availabl
 const PAGE_SIZE = 7;
 
 export default function DriversAvailableForWork({ darkMode = false, fullPage = false, showHero = true }: { darkMode?: boolean; fullPage?: boolean; showHero?: boolean }) {
+  const [contactTarget, setContactTarget] = useState<Driver | null>(null);
   const [allDrivers, setAllDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
@@ -100,18 +103,6 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
   const drivers = fullPage ? sortedDrivers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : sortedDrivers.slice(0, 4);
   const pageCount = Math.max(1, Math.ceil(sortedDrivers.length / PAGE_SIZE));
 
-  async function contact(id: string) {
-    setNotice(""); let token = "";
-    try { const { data } = await browserSupabase().auth.getSession(); token = data.session?.access_token || ""; }
-    catch (error) { setNotice(error instanceof Error ? error.message : "LoadLink could not connect to your account."); return; }
-    if (!token) { window.location.href = `/login?next=${encodeURIComponent("/drivers")}`; return; }
-    const response = await fetch(`/api/phase2/contact/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-    const result = await response.json();
-    if (!response.ok) { setNotice(result.error ?? "This driver cannot be contacted right now."); return; }
-    if (result.phone) window.location.href = `tel:${String(result.phone).replace(/[^+0-9]/g, "")}`;
-    else if (result.email) window.location.href = `mailto:${result.email}`;
-  }
-
   async function submitReview() {
     if (!reviewTarget?.user_id) return;
     setReviewBusy(true); setNotice("");
@@ -142,21 +133,22 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
           const rating=Number(driver.average_rating||0), count=Number(driver.review_count||0);
           const location = [...new Set([driver.city, driver.province].filter(Boolean).map(value => value.trim()))].join(", ");
           return <article className={styles.card} key={driver.id} data-loadlink-driver-card="true">
-            <div className="ll-driver-heading"><div className={styles.avatar} aria-hidden="true">{initials(driver.full_name)}</div><div className="ll-driver-name"><h3>{driver.full_name}</h3><p className={styles.headline}>{driver.headline || "Professional driver"}</p></div><span className={styles.verified}>Approved</span></div>
+            <div className="ll-driver-heading"><div className={styles.avatar} aria-hidden="true">{driver.profile_image_url ? <LoadLinkImage src={driver.profile_image_url} alt="" className="h-full w-full rounded-full object-cover" /> : initials(driver.full_name)}</div><div className="ll-driver-name"><h3>{driver.full_name}</h3><p className={styles.headline}>{driver.headline || "Professional driver"}</p></div><span className={styles.verified}>Approved</span></div>
             <div className="ll-driver-rating">{count ? `${rating.toFixed(1)} / 5 · ${count} review${count===1?"":"s"}` : "New to LoadLink · No reviews yet"}</div>
             <dl className="ll-driver-facts"><div><dt>Based in</dt><dd>{location || "Location on request"}</dd></div><div><dt>Experience</dt><dd>{driver.years_experience} {Number(driver.years_experience) === 1 ? "year" : "years"}</dd></div><div><dt>Licence</dt><dd>{driver.licence_code || "On request"}</dd></div><div><dt>Availability</dt><dd>{driver.availability || "On request"}</dd></div></dl>
             <p className={styles.bio}>{driver.bio || driver.vehicle_types?.slice(0, 3).join(" · ") || "Available for suitable logistics work."}</p>
-            <div className="ll-driver-actions"><button data-marketplace-action type="button" className={styles.contact} onClick={() => void contact(driver.id)}>Contact driver</button>{driver.user_id ? <button type="button" onClick={()=>setReviewTarget(driver)}>Write a review</button>:null}</div>
+            <div className="ll-driver-actions"><button data-marketplace-action type="button" className={styles.contact} onClick={() => setContactTarget(driver)}>Contact driver</button>{driver.user_id ? <button type="button" onClick={()=>setReviewTarget(driver)}>Write a review</button>:null}</div>
           </article>;
         })}</div>}
 
         {fullPage && pageCount > 1 ? <LoadLinkPagination current={page} total={pageCount} onChange={setPage} darkMode={darkMode} label="Driver profile pages" /> : null}
       </div>
 
+      {contactTarget ? <DriverContactDialog id={contactTarget.id} name={contactTarget.full_name} darkMode={darkMode} onClose={() => setContactTarget(null)} /> : null}
       {reviewTarget ? <div className="fixed inset-0 z-[2147483000] flex items-end justify-center bg-black/65 p-3 sm:items-center"><button aria-label="Close review" className="absolute inset-0" onClick={()=>setReviewTarget(null)} /><section className={`relative z-10 w-full max-w-md rounded-[26px] border p-5 shadow-2xl ${darkMode?"border-white/12 bg-[#0b0b0b] text-white":"border-black/10 bg-white text-black"}`}><div className="flex items-start justify-between gap-4"><div><h3 className="text-xl font-black">Review {reviewTarget.full_name}</h3><p className="mt-1 text-xs opacity-50">Your rating appears on this approved LoadLink profile.</p></div><button className="h-9 w-9 rounded-full border border-current/15" onClick={()=>setReviewTarget(null)} aria-label="Close review"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button></div><div className="mt-5 flex gap-2" aria-label="Rating">{[1,2,3,4,5].map(star=><button key={star} type="button" aria-label={`${star} out of 5 stars`} aria-pressed={star<=reviewRating} onClick={()=>setReviewRating(star)} className={`h-10 w-10 rounded-full border text-lg ${star<=reviewRating?"border-[#f6b800] bg-[#f6b800] text-black":"border-current/15"}`}><LoadLinkIcon name="star" size={16} className="inline-block shrink-0 align-middle" /></button>)}</div><textarea maxLength={1200} value={reviewBody} onChange={e=>setReviewBody(e.target.value)} placeholder="Describe your experience (optional)" className={`mt-4 min-h-28 w-full rounded-2xl border p-3 text-sm outline-none ${darkMode?"border-white/12 bg-white/[.04]":"border-black/10 bg-[#fafafa]"}`} /><button type="button" disabled={reviewBusy} onClick={()=>void submitReview()} className="mt-4 h-12 w-full rounded-xl bg-[#f6b800] text-sm font-black text-black disabled:opacity-50">{reviewBusy?"Saving…":"Save review"}</button></section></div> : null}
     </section>
   );
 }
 
 function initials(name: string) { return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0] || "").join("").toUpperCase() || "LL"; }
-function availabilityScore(value: string) { const clean=String(value||"").toLowerCase(); if(clean.includes("immediate")||clean.includes("available now"))return 3;if(clean.includes("available"))return 2;if(clean.includes("notice"))return 1;return 0; }
+function availabilityScore(value: string) { const clean=String(value||"").toLowerCase(); if(/unavailable|not available|not seeking|employed|busy/.test(clean))return 0;if(clean.includes("immediate")||clean.includes("available now"))return 3;if(clean.includes("available"))return 2;if(clean.includes("notice"))return 1;return 0; }

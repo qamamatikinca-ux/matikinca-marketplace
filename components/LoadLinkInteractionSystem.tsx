@@ -5,7 +5,6 @@ import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 import { useEffect, useMemo, useState } from "react";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
-import ListingReportDialog from "@/components/ListingReportDialog";
 
 type DateTarget = {
   input: HTMLInputElement;
@@ -46,10 +45,7 @@ type ListingImageRow = {
   poster_photo?: string | null;
 };
 
-type ReportTarget = {
-  listingId: string;
-  title: string;
-};
+
 
 function isoDate(date: Date) {
   const year = date.getFullYear();
@@ -160,24 +156,7 @@ export default function LoadLinkInteractionSystem() {
   const [suggestionTarget, setSuggestionTarget] = useState<SuggestionTarget | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [shownMonth, setShownMonth] = useState(() => monthStart(new Date()));
-  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
 
-  useEffect(() => {
-    const openReport = (event: MouseEvent) => {
-      const element = selectorTarget(event.target);
-      const button = element?.closest("button");
-      const article = button?.closest<HTMLElement>("article[id^='job-']");
-      if (!button || !article || button.textContent?.trim().toUpperCase() !== "REPORT") return;
-      event.preventDefault();
-      event.stopPropagation();
-      setReportTarget({
-        listingId: article.id.replace(/^job-/, ""),
-        title: article.querySelector("h3")?.textContent?.trim() || "LoadLink listing",
-      });
-    };
-    document.addEventListener("click", openReport, true);
-    return () => document.removeEventListener("click", openReport, true);
-  }, []);
 
   useEffect(() => {
     if (!choiceTarget && !dateTarget) return;
@@ -567,7 +546,6 @@ export default function LoadLinkInteractionSystem() {
         </div>
       ) : null}
 
-      {reportTarget ? <ListingReportDialog listingId={reportTarget.listingId} title={reportTarget.title} darkMode={darkMode} onClose={() => setReportTarget(null)} /> : null}
     </>
   );
 }

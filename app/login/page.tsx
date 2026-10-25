@@ -38,7 +38,7 @@ export default function LoginPage() {
 
   const getNextPath = useCallback(() => {
     if (typeof window === "undefined") return "/";
-    return safeNextPath(new URLSearchParams(window.location.search).get("next"), "/");
+    return safeNextPath(new URLSearchParams(window.location.search).get("next") || new URLSearchParams(window.location.search).get("returnTo"), "/");
   }, []);
 
   async function finishSignIn() {
