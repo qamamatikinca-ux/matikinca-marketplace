@@ -1,10 +1,10 @@
-import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { bearer, publicSupabase } from "@/lib/phase2/supabase";
 import { serverRateLimit } from "@/lib/serverRateLimit";
 
-const TYPES = new Set(["identity", "drivers_licence", "prdp", "cv", "driving_certificate", "work_authorisation"]);
+const TYPES = new Set(["portrait", "identity", "drivers_licence", "prdp", "cv", "driving_certificate", "work_authorisation"]);
 const LABELS: Record<string, string> = {
+  portrait: "Profile photo",
   identity: "ID or passport",
   work_authorisation: "Work authorisation document",
   drivers_licence: "Driver’s licence",
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
 
     const bytes = new Uint8Array(await file.arrayBuffer());
     const inspected = inspect(bytes);
-    const sha256 = createHash("sha256").update(bytes).digest("hex");
+    if (type === "portrait" && inspected.mime === "application/pdf") throw new DocumentValidationError("Choose a JPG or PNG portrait of yourself.");
 
     const { data: profile, error: profileError } = await client
       .from("driver_profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
@@ -107,21 +107,12 @@ export async function POST(request: Request) {
       .upload(path, bytes, { contentType: inspected.mime, cacheControl: "3600", upsert: false });
     if (uploadError) throw uploadError;
 
-    const { data: recorded, error: recordError } = await client.rpc("loadlink_replace_my_driver_document", {
-      p_document_type: type,
-      p_storage_path: path,
-      p_original_filename: file.name.slice(0, 180),
-      p_mime_type: inspected.mime,
-      p_size_bytes: file.size,
-      p_sha256: sha256,
+    const { data: recorded, error: recordError } = await client.functions.invoke("loadlink-driver-evidence", {
+      body: { documentType: type, path, filename: file.name.slice(0, 180) },
     });
-
-    if (recordError) {
-      if (!uploadedPath) await client.storage.from("loadlink-driver-documents").remove([path]);
-      throw recordError;
-    }
-    if (recorded?.previousStoragePath && recorded.previousStoragePath !== path) {
-      await client.storage.from("loadlink-driver-documents").remove([recorded.previousStoragePath]);
+    if (recordError || !recorded?.document) {
+      // Do not delete on ambiguous completion: the trusted processor may have registered it.
+      throw new DocumentValidationError("Secure document processing could not finish. Please retry the same upload shortly.");
     }
 
     return NextResponse.json({ ok: true, document: recorded?.document }, {headers:{"Cache-Control":"private, no-store"}});

@@ -53,6 +53,7 @@ const EMPTY: FormState = {
 
 const LABELS: Record<string, string> = {
   work_authorisation: "Work authorisation document",
+  portrait: "Your profile photo",
   identity: "ID or passport",
   drivers_licence: "Driver’s licence",
   prdp: "PrDP",
@@ -181,6 +182,7 @@ export default function DriverProfileWizardV273() {
     if (current === 3 && form.prdp_required && !form.prdp_expiry) return "Add your PrDP expiry date.";
     if (current === 4) {
       if (form.citizenship_status === "foreign_national" && !documentMap.work_authorisation) return "Upload evidence of your work authorisation before continuing.";
+      if (!documentMap.portrait) return "Upload a clear profile photo of yourself before continuing.";
       if (!documentMap.identity) return "Upload your ID or passport before continuing.";
       if (!documentMap.drivers_licence) return "Upload your driver’s licence before continuing.";
       if (form.prdp_required && !documentMap.prdp) return "Upload your PrDP before continuing.";
@@ -227,6 +229,7 @@ export default function DriverProfileWizardV273() {
     setMessage("");
     const label = LABELS[type] || "Document";
     const mime = file.type.toLowerCase().split(";")[0];
+    if (type === "portrait" && !["image/jpeg", "image/png"].includes(mime)) { setMessageType("error"); setMessage("Choose a clear JPG or PNG portrait of yourself."); return; }
     if (!ACCEPTED_DOCUMENT_TYPES.has(mime)) {
       setMessageType("error"); setMessage(`${label}: choose a PDF, JPG or PNG file.`); return;
     }
@@ -383,6 +386,7 @@ export default function DriverProfileWizardV273() {
         {step === 4 ? <>
           <StepTitle title="Essential documents" copy="Upload only the documents needed to confirm your identity and driving credentials." muted={muted} />
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2"><p className={`mb-3 text-sm leading-6 ${muted}`}>Add a clear, recent portrait of yourself. Your profile photo is shown on your approved driver profile; identity documents stay private. <a href="/legal#verification-security" target="_blank" rel="noopener noreferrer" className="underline">How LoadLink uses verification information to protect users</a>.</p><DocumentUpload type="portrait" label={LABELS.portrait} required fileName={documentMap.portrait?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "portrait"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("portrait", file)} /></div>
             <DocumentUpload type="identity" label={LABELS.identity} required fileName={documentMap.identity?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "identity"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("identity", file)} />
             <DocumentUpload type="drivers_licence" label={LABELS.drivers_licence} required fileName={documentMap.drivers_licence?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "drivers_licence"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("drivers_licence", file)} />
             {form.prdp_required ? <DocumentUpload type="prdp" label={LABELS.prdp} required fileName={documentMap.prdp?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "prdp"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("prdp", file)} /> : null}

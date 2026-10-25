@@ -106,6 +106,14 @@ export default function LegalPage() {
             </p>
           </div>
 
+          <PolicySection id="verification-security" title="Verification information and user security">
+            <p>Driver applicants must provide a clear portrait of themselves alongside identity and driving documents. The portrait is intended for the public driver profile after approval. Identity documents and the original verification uploads remain in restricted storage; they are not attached to public posts or shared with people contacting a driver.</p>
+            <p>Authorised verification staff can inspect short-lived document links and compare the portrait with the identity document. Approval records are tied to the submitted evidence. Replacing identity evidence requires a fresh review. This document review does not guarantee a person’s conduct or the accuracy of every statement in a post.</p>
+            <p>LoadLink stores submitted profile information, document records, review decisions and relevant security records to assess applications and investigate misuse. Use the Help Centre to request corrections or ask about access, retention or deletion. Records needed for an active dispute, security investigation or other applicable obligation may need to be retained while that matter is resolved.</p>
+            <p>A portrait upload is not a live biometric check. If an automated live identity service is introduced, its camera permissions, identity comparison, provider and retention information must be explained before capture. Uncertain results must be reviewed rather than displayed as a successful match.</p>
+            <Link href="/help" className="font-semibold underline">Contact LoadLink about verification or security</Link>
+          </PolicySection>
+
           <PolicySection number="1" title="What LoadLink Is">
             <p>
               LoadLink is a digital marketplace and technology platform that helps users discover, advertise and communicate about logistics-related opportunities, vehicles, equipment, services, drivers, dealerships, mobile units, jobs and contracts.

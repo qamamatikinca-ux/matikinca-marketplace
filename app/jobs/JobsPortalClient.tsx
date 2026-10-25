@@ -827,7 +827,7 @@ function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onRe
       <div role="button" tabIndex={0} onClick={onOpenGallery} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" ")onOpenGallery()}} className="group relative block w-full cursor-pointer overflow-hidden bg-black text-left">
         <div className="aspect-[4/3] w-full overflow-hidden md:aspect-[16/9]"><LoadLinkImage src={coverPhoto} alt={job.title} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" /></div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/45" />
-        <span className="absolute right-3 bottom-3 rounded-full bg-black/75 px-3 py-1.5 text-xs font-black text-white">{photoCount} photos</span>
+        <span className="absolute right-3 bottom-3 rounded-full bg-black/75 px-3 py-1.5 text-xs font-black text-white">{photoCount} photo{photoCount === 1 ? "" : "s"}</span>
         {job.sponsored ? <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.15em] text-black">Promoted</span> : null}
         <button type="button" onClick={(e)=>{e.stopPropagation();onToggleLiked()}} className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full border border-white/25 ${isLiked?"bg-[#f6b800] text-black":"bg-black/65 text-white"}`} aria-label="Save listing"><SaveIcon filled={isLiked}/></button>
       </div>
