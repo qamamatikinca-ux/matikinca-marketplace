@@ -1,4 +1,5 @@
 "use client";
+import { isAuthenticatedUser } from "@/lib/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -34,7 +35,7 @@ export default function DriverMessagesPage() {
       try {
         const client = browserSupabase();
         const { data: { user }, error } = await client.auth.getUser();
-        if (error || !user) { router.replace(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`); return; }
+        if (error || !isAuthenticatedUser(user)) { router.replace(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`); return; }
         if (!active) return;
         setUserId(user.id);
         const params = new URLSearchParams(window.location.search);

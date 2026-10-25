@@ -45,6 +45,12 @@ do $$ declare t uuid; m uuid; m2 uuid; begin
  m2:=public.loadlink_send_driver_message(t,'Synthetic message','cc000000-0000-4000-8000-000000000001');
  if m<>m2 then raise exception 'Duplicate delivery'; end if;
  if (select count(*) from public.driver_thread_messages where thread_id=t)<>1 then raise exception 'Wrong message count'; end if;
+ perform set_config('request.jwt.claims','{"sub":"aa000000-0000-4000-8000-000000000002","role":"authenticated","is_anonymous":true}',true);
+ if (select count(*) from public.driver_message_threads where id=t)<>0 then raise exception 'Anonymous session can read a thread'; end if;
+ begin
+  perform public.loadlink_send_driver_message(t,'Anonymous message','cc000000-0000-4000-8000-000000000004');
+  raise exception 'Anonymous send unexpectedly succeeded';
+ exception when invalid_authorization_specification then null; end;
  perform set_config('request.jwt.claims','{"sub":"aa000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
  if (select count(*) from public.driver_message_threads where id=t)<>0 then raise exception 'Stranger can read thread'; end if;
  if (select count(*) from public.driver_thread_messages where thread_id=t)<>0 then raise exception 'Stranger can read messages'; end if;
@@ -73,3 +79,6 @@ do $$ begin
 end $$;
 reset role;
 select 'driver security and messaging assertions passed' as result;
+
+delete from auth.users where id='aa000000-0000-4000-8000-000000000002';
+do $$ begin if exists(select 1 from public.driver_message_threads where enquirer_user_id='aa000000-0000-4000-8000-000000000002') then raise exception 'Account closure left driver conversations'; end if; end $$;

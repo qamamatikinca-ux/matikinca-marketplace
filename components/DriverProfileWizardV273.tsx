@@ -438,7 +438,7 @@ function ReviewRow({ label, value, onEdit }: { label: string; value: string; onE
   return <div className="flex items-start gap-3 px-4 py-4"><span className="w-20 shrink-0 text-[9px] font-black uppercase opacity-40">{label}</span><span className="min-w-0 flex-1 break-words text-xs font-bold">{value}</span><button type="button" onClick={onEdit} className="shrink-0 text-[9px] font-black text-[#b88600] underline underline-offset-3">Edit</button></div>;
 }
 
-function DocumentUpload({ label, required = false, fileName, busy, uploading, progress, processing, darkMode, onFile }: { type: string; label: string; required?: boolean; fileName?: string; busy: boolean; uploading: boolean; progress: number; processing: boolean; darkMode: boolean; onFile: (file: File | null) => void }) {
+function DocumentUpload({ type, label, required = false, fileName, busy, uploading, progress, processing, darkMode, onFile }: { type: string; label: string; required?: boolean; fileName?: string; busy: boolean; uploading: boolean; progress: number; processing: boolean; darkMode: boolean; onFile: (file: File | null) => void }) {
   function change(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] || null;
     event.target.value = "";
@@ -446,8 +446,8 @@ function DocumentUpload({ label, required = false, fileName, busy, uploading, pr
   }
   return <label className={`relative flex min-h-32 cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border p-4 transition hover:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.035]" : "border-black/10 bg-[#faf9f5]"}`}>
     <span><strong className="block text-sm font-black">{label}</strong><span className={`mt-1 block text-[9px] font-black uppercase tracking-[.1em] ${required ? "text-[#b88600]" : "opacity-40"}`}>{required ? "Required" : "Optional"}</span></span>
-    <span className="mt-4"><span className="block truncate text-xs font-semibold opacity-55">{uploading ? (processing ? "Verifying and attaching…" : `Uploading ${progress}%`) : fileName || "Choose PDF, JPG or PNG"}</span>{fileName && !uploading ? <span className="mt-1 block text-[9px] font-black text-[#b88600]">Tap to replace</span> : null}</span>
-    <input disabled={busy} type="file" accept="application/pdf,image/jpeg,image/png" onChange={change} className="hidden" />
+    <span className="mt-4"><span className="block truncate text-xs font-semibold opacity-55">{uploading ? (processing ? "Verifying and attaching…" : `Uploading ${progress}%`) : fileName || (type === "portrait" ? "Choose a JPG or PNG portrait" : "Choose PDF, JPG or PNG")}</span>{fileName && !uploading ? <span className="mt-1 block text-[9px] font-black text-[#b88600]">Tap to replace</span> : null}</span>
+    <input disabled={busy} type="file" accept={type === "portrait" ? "image/jpeg,image/png" : "application/pdf,image/jpeg,image/png"} onChange={change} className="hidden" />
     {uploading ? <span className="absolute inset-x-0 bottom-0 h-1 overflow-hidden bg-current/10"><span className="block h-full bg-[#f6b800] transition-[width] duration-150" style={{ width: `${progress}%` }} /></span> : null}
   </label>;
 }
