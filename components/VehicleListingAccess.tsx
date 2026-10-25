@@ -1,5 +1,7 @@
 "use client";
 
+import { MANUAL_DAILY_PRICE_CENTS } from "@/lib/manualPricing";
+
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { isAuthenticatedUser, loginHref } from "@/lib/auth";
@@ -69,20 +71,20 @@ export default function VehicleListingAccess({
           {loading ? <div className={`mt-6 h-40 animate-pulse rounded-2xl border ${darkMode ? "border-white/10 bg-white/[.03]" : "border-black/10 bg-black/[.03]"}`} /> : (
             <div className="mt-6 grid gap-3 lg:grid-cols-3">
               <article className={`rounded-[22px] border p-5 ${surface}`}>
-                <div className="flex items-start justify-between gap-3"><div><h3 className="text-xl font-black">Manual listing</h3><p className={`mt-1 text-xs font-semibold ${muted}`}>One vehicle, only for the days you need.</p></div><strong className="text-xl">R15/day</strong></div>
-                <p className={`mt-5 text-xs leading-5 ${muted}`}>R15 per vehicle for each active day. Check current payment availability on the packages page.</p>
+                <div className="flex items-start justify-between gap-3"><div><h3 className="text-xl font-black">Manual listing</h3><p className={`mt-1 text-xs font-semibold ${muted}`}>One vehicle, only for the days you need.</p></div><strong className="text-xl">R{MANUAL_DAILY_PRICE_CENTS / 100}/day</strong></div>
+                <p className={`mt-5 text-xs leading-5 ${muted}`}>R{MANUAL_DAILY_PRICE_CENTS / 100} per vehicle for each active day. Check current payment availability on the packages page.</p>
                 <Link href="/packages#manual-package" className="mt-5 flex min-h-12 items-center justify-center rounded-xl bg-[#f6b800] px-4 text-sm font-black text-black">View Manual pricing</Link>
               </article>
 
               <article className={`rounded-[22px] border p-5 ${surface}`}>
                 <div className="flex items-start justify-between gap-3"><div><h3 className="text-xl font-black">Pro</h3><p className={`mt-1 text-xs font-semibold ${muted}`}>Regular vehicle listings, analytics and stronger visibility.</p></div><strong className="text-xl">R399/mo</strong></div>
-                <ul className={`mt-5 space-y-2 text-xs font-semibold leading-5 ${muted}`}><li>15 photos per listing</li><li>Unlimited vehicle listings and messages</li><li>Listing analytics and featured visibility</li></ul>
+                <ul className={`mt-5 space-y-2 text-xs font-semibold leading-5 ${muted}`}><li>10 photos per listing</li><li>10 vehicle listings per month; unlimited messages</li><li>Listing analytics and featured visibility</li></ul>
                 <button type="button" disabled={Boolean(busy) || !schemaReady} onClick={() => void requestPlan("pro")} className="mt-5 h-12 w-full rounded-xl bg-[#f6b800] px-4 text-sm font-black text-black disabled:opacity-45">{busy === "pro" ? "Creating request…" : "Request Pro"}</button>
               </article>
 
               <article className={`rounded-[22px] border p-5 ${darkMode ? "border-[#f6b800]/50 bg-[#10100d]" : "border-[#f6b800]/55 bg-[#fffaf0]"}`}>
                 <div className="flex items-start justify-between gap-3"><div><h3 className="text-xl font-black">Dealer</h3><p className={`mt-1 text-xs font-semibold ${muted}`}>Your public showroom, inventory, leads and staff tools.</p></div><strong className="text-xl">R2,999/mo</strong></div>
-                <ul className={`mt-5 space-y-2 text-xs font-semibold leading-5 ${muted}`}><li>Everything in Pro</li><li>Public dealership showroom</li><li>Leads, followers, updates and staff access</li></ul>
+                <ul className={`mt-5 space-y-2 text-xs font-semibold leading-5 ${muted}`}><li>Unlimited vehicle listings; 30 photos per listing</li><li>Public dealership showroom</li><li>Leads, followers, updates and staff access</li></ul>
                 <button type="button" disabled={Boolean(busy) || !schemaReady} onClick={() => void requestPlan("dealer")} className="mt-5 h-12 w-full rounded-xl bg-[#f6b800] px-4 text-sm font-black text-black disabled:opacity-45">{busy === "dealer" ? "Creating request…" : "Request Dealer"}</button>
                 <Link href="/dealership/loadlink-commercial-centurion" className={`mt-2 flex h-11 items-center justify-center rounded-xl border text-xs font-black ${darkMode ? "border-white/15" : "border-black/10"}`}>View dealership example</Link>
               </article>

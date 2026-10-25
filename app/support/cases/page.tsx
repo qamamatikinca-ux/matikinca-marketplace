@@ -13,7 +13,8 @@ export default function SupportCasesPage(){
  const [cases,setCases]=useState<Case[]>([]);const [selected,setSelected]=useState("");
  const [thread,setThread]=useState<Thread|null>(null);
  const [drafts,setDrafts]=useState<Record<string,string>>({});const body=drafts[selected]||"";const setBody=(value:string)=>setDrafts(current=>({...current,[selected]:value}));
- const [query,setQuery]=useState("");const [filter,setFilter]=useState("all");const threadRequest=useRef(0);const selectedRef=useRef(selected);selectedRef.current=selected;
+ const [query,setQuery]=useState("");const [filter,setFilter]=useState("all");const threadRequest=useRef(0);const selectedRef=useRef(selected);
+ useEffect(()=>{selectedRef.current=selected;},[selected]);
  const visibleCases=useMemo(()=>cases.filter(row=>(filter==="all" || (filter==="open" ? !["closed","resolved"].includes(row.status) : ["closed","resolved"].includes(row.status))) && `${row.case_number} ${row.subject}`.toLowerCase().includes(query.toLowerCase())),[cases,filter,query]);const [loading,setLoading]=useState(true);const [sending,setSending]=useState(false);const [notice,setNotice]=useState("");
  const loadCases=useCallback(async()=>{
   const r=await supabase.rpc("loadlink_support_my_cases",{p_limit:40});
@@ -56,7 +57,7 @@ export default function SupportCasesPage(){
      <p className={"mt-2 max-w-2xl text-sm leading-6 "+muted}>Keep every update and reply together, from your first question to resolution.</p>
    </div>
    {notice?<p role="status" className="mt-4 rounded-xl border border-[#f6b800]/35 p-3 text-sm">{notice}</p>:null}
-   {!ready||loading?<p className="mt-8 text-sm">Loading your cases…</p>:!uid?<div className={"mt-8 rounded-2xl border p-7 "+surface}><p>Sign in to view conversations linked to your account.</p><Link href="/login?returnTo=%2Fsupport%2Fcases" className="mt-4 inline-flex rounded-xl bg-[#f6b800] px-5 py-3 text-xs font-black text-black">Sign in</Link></div>:
+   {!ready||loading?<p className="mt-8 text-sm">Loading your cases…</p>:!uid?<div className={"mt-8 rounded-2xl border p-7 "+surface}><p>Sign in to view conversations linked to your account.</p><Link href="/login?next=%2Fsupport%2Fcases" className="mt-4 inline-flex rounded-xl bg-[#f6b800] px-5 py-3 text-xs font-black text-black">Sign in</Link></div>:
    <div className="ll-support-inbox mt-7 grid gap-4 md:grid-cols-[minmax(235px,0.7fr)_minmax(0,1.4fr)]">
     <section className={"overflow-hidden rounded-2xl border "+surface}>
      <div className="ll-support-list-heading"><h2>Your cases <span>({cases.length})</span></h2><label><span className="sr-only">Find a support case</span><input type="search" placeholder="Search subject or case number" value={query} onChange={event=>setQuery(event.target.value)}/></label><div role="group" aria-label="Filter cases">{["all","open","closed"].map(value=><button key={value} aria-pressed={filter===value} onClick={()=>setFilter(value)}>{value==="all"?"All cases":value==="open"?"Open":"Resolved"}</button>)}</div></div>
@@ -65,7 +66,7 @@ export default function SupportCasesPage(){
       <p className="mt-2 text-sm font-bold">{row.subject}</p><small className={"mt-2 block "+muted}>{time(row.updated_at)}</small></button>):<p className={"p-6 text-sm "+muted}>{cases.length ? "No cases match this search." : "Your support cases will appear here. Visit the Help Centre to contact the LoadLink team."}</p>}
     </section>
     <section className={"ll-support-thread min-h-96 rounded-2xl border "+surface}>
-     {!thread||thread.id!==selected?<p className={"p-8 text-sm "+muted}>Choose a case to view its conversation.</p>:<>
+     {!thread||thread.id!==selected?<p className={"p-8 text-sm "+muted}>{selected ? "Loading this conversation…" : "Choose a case to view its conversation."}</p>:<>
       <div className="border-b border-current/10 p-5"><p className="text-xs font-black text-[#b98a00]">{thread.case_number}</p><h2 className="mt-2 text-xl font-black">{thread.subject}</h2><p className={"mt-2 text-xs capitalize "+muted}>{thread.status.replaceAll("_"," ")} · Opened {time(thread.created_at)}</p></div>
       <div className="space-y-4 p-5">
        <div className="rounded-xl border border-current/10 p-4"><p className={"text-[10px] font-black uppercase tracking-wider "+muted}>Original request</p><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6">{thread.description}</p></div>

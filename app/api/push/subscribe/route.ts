@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { isTrustedPushEndpoint } from "@/lib/pushEndpoint";
+import { isAuthenticatedUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -20,12 +22,12 @@ export async function POST(request: NextRequest) {
     if (!bearer) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
     const { auth, admin } = clients();
     const { data: { user }, error: userError } = await auth.auth.getUser(bearer);
-    if (userError || !user) return NextResponse.json({ error: "Your session expired. Sign in again." }, { status: 401 });
+    if (userError || !isAuthenticatedUser(user)) return NextResponse.json({ error: "Your session expired. Sign in again." }, { status: 401 });
     const body = await request.json();
     const endpoint = String(body?.endpoint || "").trim();
     const p256dh = String(body?.keys?.p256dh || "").trim();
     const authKey = String(body?.keys?.auth || "").trim();
-    if (!endpoint || !p256dh || !authKey || endpoint.length > 3000) return NextResponse.json({ error: "Invalid push subscription." }, { status: 400 });
+    if (!isTrustedPushEndpoint(endpoint) || !/^[A-Za-z0-9_-]{87}=?$/.test(p256dh) || !/^[A-Za-z0-9_-]{22}={0,2}$/.test(authKey)) return NextResponse.json({ error: "Invalid push subscription." }, { status: 400 });
     const { error } = await admin.from("loadlink_push_subscriptions").upsert({
       user_id: user.id,
       endpoint,

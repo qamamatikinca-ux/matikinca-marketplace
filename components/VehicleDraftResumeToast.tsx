@@ -8,7 +8,7 @@ import LoadLinkActionToast from "@/components/LoadLinkActionToast";
 export default function VehicleDraftResumeToast() {
   const pathname = usePathname(), router = useRouter();
   const pathnameRef = useRef(pathname);
-  pathnameRef.current = pathname;
+  useEffect(() => { pathnameRef.current = pathname; }, [pathname]);
   const sessionKeyRef = useRef("");
   const [draft, setDraft] = useState<VehicleDraft | null>(null);
   const [userId, setUserId] = useState("");

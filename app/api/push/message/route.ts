@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
 import { serverRateLimit } from "@/lib/serverRateLimit";
 import { isAuthenticatedUser } from "@/lib/auth";
+import { isTrustedPushEndpoint } from "@/lib/pushEndpoint";
 
 export const runtime = "nodejs";
 
@@ -70,8 +71,9 @@ export async function POST(request: NextRequest) {
     webpush.setVapidDetails(subject, publicKey, privateKey);
     let delivered = 0;
     for (const subscription of subscriptions) {
+      if (!isTrustedPushEndpoint(subscription.endpoint)) continue;
       try {
-        await webpush.sendNotification({ endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } }, payload, { TTL: 60 * 60 });
+        await webpush.sendNotification({ endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } }, payload, { TTL: 60 * 60, timeout: 10_000 });
         delivered += 1;
       } catch (error) {
         const statusCode = Number((error as { statusCode?: unknown })?.statusCode || 0);

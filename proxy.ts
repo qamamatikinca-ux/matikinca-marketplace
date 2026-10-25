@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (request.nextUrl.pathname !== "/jobs") return NextResponse.next();
   if (request.nextUrl.searchParams.has("portal")) return NextResponse.next();
 
