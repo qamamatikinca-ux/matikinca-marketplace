@@ -11,6 +11,7 @@ import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+import { isAuthenticatedUser } from "@/lib/auth";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 type Step = "phone" | "otp" | "documents" | "done";
@@ -32,7 +33,11 @@ export default function VerifyPage() {
 
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) setMessage("Sign in before starting account verification.");
+      if (!isAuthenticatedUser(data.user)) setMessage("Sign in before starting account verification.");
+      else if (data.user.phone_confirmed_at && data.user.phone) {
+        setPhone(`+${data.user.phone.replace(/^\+/, "")}`);
+        setStep("documents");
+      }
     });
   }, []);
 
@@ -83,33 +88,35 @@ export default function VerifyPage() {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (busy) return;
     if (!idFile || !selfie) { setMessage("Add your identity document and a clear selfie."); return; }
     setBusy(true); setMessage("");
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Sign in required");
+      if (!isAuthenticatedUser(user)) throw new Error("Sign in required");
       const [idPath, selfiePath, companyPath] = await Promise.all([
         upload(idFile, user.id, "identity"),
         upload(selfie, user.id, "selfie"),
         company ? upload(company, user.id, "company") : Promise.resolve(null),
       ]);
-      const { error } = await supabase.from("verification_requests").upsert({
-        user_id: user.id,
-        full_name: fullName.trim(),
-        phone: phone.replace(/\s/g, ""),
-        id_type: idType,
-        id_number_last4: last4,
-        id_document_path: idPath,
-        selfie_path: selfiePath,
-        company_document_path: companyPath,
-        status: "pending",
-      }, { onConflict: "user_id" });
+      const { error } = await supabase.rpc("loadlink_submit_my_verification", {
+        p_full_name: fullName.trim(),
+        p_id_type: idType,
+        p_last4: last4,
+        p_id_path: idPath,
+        p_selfie_path: selfiePath,
+        p_company_path: companyPath,
+      });
       if (error) throw error;
       setStep("done");
       setSubmissionSuccess(true);
       window.setTimeout(() => setSubmissionSuccess(false), 2100);
-    } catch {
-      setMessage("Your verification could not be submitted. Check the files and try again.");
+    } catch (error) {
+      const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
+      setMessage(code === "55000" ? "Your application is already under review or verified. Open Check status to see its progress."
+        : code === "54000" ? "Too many submissions. Please wait an hour before trying again."
+        : code === "22023" ? "Check your legal name, four document digits and verified phone number."
+        : "Your verification could not be submitted. Check the files and try again.");
     } finally { setBusy(false); }
   }
 
@@ -138,6 +145,8 @@ export default function VerifyPage() {
                 return <div key={String(label)} className="min-w-0 text-center"><div className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full border text-xs font-black ${active ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/12 text-white/35" : "border-black/12 text-black/35"}`}>{number}</div><p className={`mt-2 truncate text-[10px] font-black uppercase tracking-[.08em] ${active ? "opacity-80" : "opacity-35"}`}>{label}</p></div>;
               })}
             </div>
+
+            <p className={`mt-5 text-xs leading-5 ${muted}`}>Identity documents and selfies are reviewed privately by authorised LoadLink staff. This upload is not a live biometric scan. Read <Link href="/legal#verification-security" className="font-semibold underline underline-offset-4">how LoadLink protects verification evidence and users</Link>.</p>
 
             {step === "phone" ? <div className="mt-6"><label className="block text-sm font-black">South African cellphone number<input className={input} value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" autoComplete="tel" /></label><button disabled={busy} onClick={() => void sendOtp()} className="mt-5 h-13 w-full rounded-2xl bg-black font-black text-[#f6b800] disabled:opacity-50 dark:bg-[#f6b800] dark:text-black">{busy ? "Sending…" : "Send verification code"}</button></div> : null}
 
