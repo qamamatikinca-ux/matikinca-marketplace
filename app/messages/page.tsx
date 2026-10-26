@@ -841,6 +841,7 @@ export default function MessagesPage() {
         if (result.error) throw result.error;
         const rows = (result.data || []) as ChatMessage[];
         if (requestSequence !== messageLoadSequenceRef.current) return;
+        if (showLoader) setShowStarterSuggestions(rows.length === 0);
         const signature = rows.map((row) => `${row.id}:${row.created_at}:${row.body}:${row.attachment_id || ""}:${row.edited_at || ""}:${row.deleted_at || ""}:${row.message_kind || ""}:${JSON.stringify(row.structured_payload || {})}`).join("|");
         const changed = signature !== messageSignatureRef.current;
         if (changed) {
@@ -1676,6 +1677,7 @@ ${message}` : message)}
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-2xl font-bold tracking-[-.025em]">Inbox</h2>
+                <Link href="/messages/drivers" className="mt-1 inline-block text-xs font-semibold underline underline-offset-4">Driver messages</Link>
               </div>
               <span className="rounded-full bg-black px-3 py-1.5 text-xs font-black text-[#f6b800]">
                 {conversations.reduce(
@@ -2019,7 +2021,7 @@ ${message}` : message)}
                     <span className={`shrink-0 text-[9px] font-semibold uppercase tracking-[.12em] ${darkMode ? "text-white/40" : "text-black/40"}`}>Suggested</span>
                     <div className="no-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto">
                       {starterMessages(selectedConversation).map((suggestion) => (
-                        <button key={suggestion} type="button" onClick={() => { updateTyping(suggestion); setShowStarterSuggestions(false); }} className={`shrink-0 rounded-full border px-3 py-2 text-[10px] font-semibold ${darkMode ? "border-white/12 bg-white/[.04] text-white/80" : "border-black/10 bg-white text-black/75"}`}>{suggestion.length > 58 ? `${suggestion.slice(0, 58)}…` : suggestion}</button>
+                        <button key={suggestion} type="button" aria-label={suggestion} title={suggestion} onClick={() => { updateTyping(suggestion); setShowStarterSuggestions(false); }} className={`shrink-0 rounded-full border px-3 py-2 text-[10px] font-semibold ${darkMode ? "border-white/12 bg-white/[.04] text-white/80" : "border-black/10 bg-white text-black/75"}`}>{suggestion.length > 58 ? `${suggestion.slice(0, 58)}…` : suggestion}</button>
                       ))}
                     </div>
                     <button type="button" onClick={() => setShowStarterSuggestions(false)} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm ${darkMode ? "text-white/45" : "text-black/40"}`} aria-label="Hide suggested messages"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
