@@ -5,11 +5,10 @@ import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import HomeLogoLink from "@/components/HomeLogoLink";
-import SiteMenu from "@/components/SiteMenu";
-import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import { supabase } from "@/lib/supabaseClient";
+import { isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 type Status = "not_started" | "phone_verified" | "pending" | "verified" | "rejected" | "under_review" | "more_information_required";
@@ -25,12 +24,14 @@ const STATUS_COPY: Record<Status, { title: string; step: number }> = {
 };
 
 export default function VerificationStatusPage() {
+  const router = useRouter();
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [status, setStatus] = useState<Status>("not_started");
   const [reason, setReason] = useState("");
   const [loadError, setLoadError] = useState("");
   const [retry, setRetry] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [hasLoadedStatus, setHasLoadedStatus] = useState(false);
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -38,16 +39,26 @@ export default function VerificationStatusPage() {
 
     async function load() {
       try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!active) return;
+      if (!isAuthenticatedUser(session?.user)) {
+        setHasLoadedStatus(false);
+        setLoading(true);
+        router.replace(loginHref("/verification-status"));
+        return;
+      }
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError) throw authError;
       if (!active) return;
-      if (!user) { setLoading(false); return; }
+      if (!isAuthenticatedUser(user)) { router.replace(loginHref("/verification-status")); return; }
       const { data, error: queryError } = await supabase.from("verification_requests").select("status,rejection_reason").eq("user_id", user.id).maybeSingle();
       if (queryError) throw queryError;
       if (!active) return;
       setLoadError("");
       setStatus((data?.status || "not_started") as Status);
       setReason(data?.rejection_reason || "");
+      setHasLoadedStatus(true);
       setLoading(false);
       if (!channel) {
         channel = supabase.channel(`verification-${user.id}`).on("postgres_changes", { event: "UPDATE", schema: "public", table: "verification_requests", filter: `user_id=eq.${user.id}` }, (payload) => {
@@ -66,13 +77,13 @@ export default function VerificationStatusPage() {
       window.clearInterval(timer);
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [retry]);
+  }, [retry, router]);
 
   const copy = useMemo(() => STATUS_COPY[status] || { title: "Status unavailable", step: 0 }, [status]);
   const page = darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black";
   const card = darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white";
   const muted = darkMode ? "text-white/52" : "text-black/52";
-  const actionLabel = status === "pending" ? "View submitted details" : status === "rejected" ? "Update verification" : "Start verification";
+  const actionLabel = ["pending", "under_review"].includes(status) ? "View submitted details" : ["rejected", "more_information_required"].includes(status) ? "Update verification" : "Start verification";
 
   return (
     <main className={`min-h-screen ${page}`}>
@@ -86,7 +97,7 @@ export default function VerificationStatusPage() {
           <div className="p-5 sm:p-7">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <h2 className="text-3xl font-black tracking-[-.04em] sm:text-4xl">{loading ? "Checking…" : loadError ? "Status could not refresh" : copy.title}</h2>
+                <h2 className="text-3xl font-black tracking-[-.04em] sm:text-4xl">{loading ? "Checking…" : loadError && !hasLoadedStatus ? "Status could not refresh" : copy.title}</h2>
                 {!loading && ["rejected", "more_information_required"].includes(status) && reason ? <p className={`mt-2 max-w-xl text-sm font-semibold leading-6 ${muted}`}>{reason}</p> : null}
               </div>
               {!loading ? <StatusMark status={status} /> : <div className="h-10 w-10 shrink-0 animate-spin rounded-full border-2 border-current/10 border-t-[#f6b800]" />}
