@@ -384,6 +384,7 @@ export default function DriverProfileWizardV273() {
         </> : null}
 
         {step === 4 ? <>
+          <p className="mb-4 text-sm leading-6"><a href="/verify/live?purpose=driver" target="_blank" rel="noopener noreferrer" className="font-bold underline">Record your guided camera check</a> so staff can compare you with your ID. Your application still requires manual review.</p>
           <StepTitle title="Essential documents" copy="Upload only the documents needed to confirm your identity and driving credentials." muted={muted} />
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2"><p className={`mb-3 text-sm leading-6 ${muted}`}>Add a clear, recent portrait of yourself. Your profile photo is shown on your approved driver profile; identity documents stay private. <a href="/legal#verification-security" target="_blank" rel="noopener noreferrer" className="underline">How LoadLink uses verification information to protect users</a>.</p><DocumentUpload type="portrait" label={LABELS.portrait} required fileName={documentMap.portrait?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "portrait"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("portrait", file)} /></div>

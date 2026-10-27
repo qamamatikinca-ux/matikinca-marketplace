@@ -44,3 +44,6 @@ matikinca-marketplace-google-auth-chat-protected.zip
 
 # Supabase CLI transient local state
 /supabase/.temp/
+
+# Generated from the pinned face-api package during prebuild
+/public/models/identity-v1/
