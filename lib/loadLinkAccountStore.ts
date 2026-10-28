@@ -68,7 +68,9 @@ async function applyUser(user: User | null) {
     subscription_plan: "standard",
   };
 
-  emit({ ready: false, user, profile: fallbackProfile, dealer: null, driverProfile: null });
+  // Refreshing the same account must not blank its portrait or navigation.
+  const previous = snapshot.user?.id === user.id ? snapshot : null;
+  emit(previous ? { ...previous, user } : { ready: true, user, profile: fallbackProfile, dealer: null, driverProfile: null });
 
   const [profileResult, dealerResult, driverProfileResult] = await Promise.all([
     supabase
@@ -89,7 +91,7 @@ async function applyUser(user: User | null) {
   ]);
 
   if (sequence !== loadSequence) return;
-  const profile = profileResult.data as Partial<AccountProfile> | null;
+  const profile = (profileResult.error ? previous?.profile : profileResult.data) as Partial<AccountProfile> | null;
   const dealer = dealerResult.data as DealerState | null;
   const driverProfile = driverProfileResult.data as DriverProfileState | null;
 
@@ -102,8 +104,8 @@ async function applyUser(user: User | null) {
       role: String(profile?.role || "user"),
       subscription_plan: String(profile?.subscription_plan || "standard"),
     },
-    dealer: dealerResult.error ? null : dealer,
-    driverProfile: driverProfileResult.error ? null : driverProfile,
+    dealer: dealerResult.error ? previous?.dealer ?? null : dealer,
+    driverProfile: driverProfileResult.error ? previous?.driverProfile ?? null : driverProfile,
   });
 }
 
@@ -111,17 +113,21 @@ function ensureStarted() {
   if (started || !isSupabaseConfigured || typeof window === "undefined") return;
   started = true;
 
-  void supabase.auth.getUser().then(({ data }) => applyUser(data.user));
-  supabase.auth.onAuthStateChange((_event, session) => void applyUser(session?.user || null));
+  // Leave the auth callback before querying; avoid holding the auth lock.
+  supabase.auth.onAuthStateChange((_event, session) => {
+    const user = session?.user || null;
+    window.setTimeout(() => void applyUser(user), 0);
+  });
 
   const refresh = () => void refreshLoadLinkAccount();
   window.addEventListener("loadlink-profile-updated", refresh);
+  window.addEventListener("loadlink-driver-profile-updated", refresh);
   window.addEventListener("loadlink-account-state-synced", refresh);
 }
 
 export function refreshLoadLinkAccount() {
   if (!isSupabaseConfigured) return Promise.resolve();
-  return supabase.auth.getUser().then(({ data }) => applyUser(data.user));
+  return supabase.auth.getUser().then(({ data, error }) => { if (!error) return applyUser(data.user); });
 }
 
 export function useLoadLinkAccount() {

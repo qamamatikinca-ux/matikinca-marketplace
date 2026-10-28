@@ -137,7 +137,6 @@ export default function VerifyPage() {
           <Link href="/verification-status" className={`hidden h-11 shrink-0 items-center rounded-xl border px-4 text-xs font-semibold sm:flex ${darkMode ? "border-white/12" : "border-black/12"}`}>Check status</Link>
         </div>
 
-        <p className="mb-5 text-sm leading-6">Drivers, vehicle posters and anyone seeking optional identity review can <Link href="/verify/live" className="font-bold underline">record a guided camera check with head movements</Link>.</p>
 
         <section className={`overflow-hidden rounded-[26px] border shadow-[0_16px_45px_rgba(0,0,0,.07)] ${surface}`}>
           <div className="p-5 sm:p-7">

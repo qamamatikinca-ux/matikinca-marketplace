@@ -295,3 +295,18 @@ html[data-loadlink-theme] body [data-loadlink-notification-filter="true"] {
 /* Apply the exact same View Jobs sort shell to the advanced sort dialog trigger. */
 html[data-loadlink-theme] body button[data-loadlink-shared-sort="view-jobs"] > strong { max-width: 190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:900; color:inherit; }
 html[data-loadlink-theme] body button[data-loadlink-shared-sort="view-jobs"] > svg { flex-shrink:0; }
+
+/* Policy copy and its surfaces must use one palette, including before hydration. */
+html[data-loadlink-theme] [data-loadlink-policy] :is(section, header, div, a, span) {
+  border-color: var(--loadlink-border);
+}
+html[data-loadlink-theme="dark"] [data-loadlink-policy] :is(.bg-white, [class*="bg-[#fff"]) {
+  background-color: #151515 !important;
+}
+html[data-loadlink-theme="dark"] [data-loadlink-policy] :is([class*="text-black/"], h1, h2, li, p) {
+  color: #e8e8e8 !important;
+}
+html[data-loadlink-theme="dark"] [data-loadlink-policy] a { color: #f6b800; }
+html[data-loadlink-hydrating="true"] *, html[data-loadlink-hydrating="true"] *::before, html[data-loadlink-hydrating="true"] *::after {
+  transition: none !important;
+}

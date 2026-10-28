@@ -29,7 +29,7 @@ export default function AuthStatusButton({ darkMode, className = "" }: { darkMod
       >
         <span className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-black">
           {account.profile.avatar_url ? (
-            <LoadLinkImage src={account.profile.avatar_url} alt="" className="h-full w-full object-cover" />
+            <LoadLinkImage src={account.profile.avatar_url} alt="Profile photo" loading="eager" className="h-full w-full object-cover" />
           ) : (
             <LoadLinkGearIcon />
           )}

@@ -5,37 +5,15 @@ import LoadLinkImage from "@/components/LoadLinkImage";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
 import Link from "next/link";
-import HomeLogoLink from "@/components/HomeLogoLink";
-import SiteMenu from "@/components/SiteMenu";
-import AuthStatusButton from "@/components/AuthStatusButton";
-import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import RequireAuthLink from "@/components/RequireAuthLink";
 import DriversAvailableForWork from "@/components/phase2/DriversAvailableForWork";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
-import { useEffect, useState } from "react";
-import { browserSupabase } from "@/lib/phase2/supabase";
+import { useLoadLinkAccount } from "@/lib/loadLinkAccountStore";
 
 export default function DriverPortalPage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const page = darkMode ? "bg-black text-white" : "bg-[#fffaf0] text-black";
-  const [profileState, setProfileState] = useState<"checking" | "new" | "existing">("checking");
-  useEffect(() => {
-    let active = true;
-    async function check() {
-      try {
-        const sb = browserSupabase();
-        const { data: { user } } = await sb.auth.getUser();
-        if (!user) { if (active) setProfileState("new"); return; }
-        const { data, error } = await sb.from("driver_profiles").select("id,status").eq("user_id",user.id).limit(1).maybeSingle();
-        if (error) throw error;
-        if (active) setProfileState(data?.id ? "existing" : "new");
-      } catch { if (active) setProfileState("new"); }
-    }
-    void check();
-    const refresh=()=>void check();
-    window.addEventListener("loadlink-driver-profile-updated",refresh);
-    return () => { active=false; window.removeEventListener("loadlink-driver-profile-updated",refresh); };
-  }, []);
+  const account = useLoadLinkAccount();
 
   return (
     <main className={`min-h-screen ${page}`}>
@@ -59,7 +37,7 @@ export default function DriverPortalPage() {
 
           <div className="mx-auto mt-6 grid w-full max-w-md gap-3">
             <Link
-              href="/drivers"
+              href="#available-drivers"
               data-loadlink-hero-pill="true"
               data-variant="primary"
               className="flex min-h-14 items-center justify-center rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[.1em] text-black shadow-[0_12px_32px_rgba(0,0,0,.28)] transition active:scale-[.99]"
@@ -72,13 +50,13 @@ export default function DriverPortalPage() {
               data-variant="secondary"
               className="flex min-h-14 items-center justify-center rounded-full border border-white/55 bg-black/80 px-6 text-sm font-black uppercase tracking-[.1em] text-white shadow-[0_12px_32px_rgba(0,0,0,.24)] backdrop-blur transition active:scale-[.99]"
             >
-              {profileState === "existing" ? "Update driver profile" : profileState === "checking" ? "Driver profile" : "Create driver profile"}
+              {account.driverProfile ? "Update driver profile" : "Driver profile"}
             </RequireAuthLink>
           </div>
         </div>
       </section>
 
-      <DriversAvailableForWork darkMode={darkMode} showHero={false} />
+      <div id="available-drivers" className="scroll-mt-24"><DriversAvailableForWork darkMode={darkMode} showHero={false} fullPage /></div>
     </main>
   );
 }

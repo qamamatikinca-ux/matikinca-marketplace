@@ -24,6 +24,7 @@ export function applyLoadLinkTheme(theme: LoadLinkTheme) {
   if (root.dataset.loadlinkTheme !== theme) root.dataset.loadlinkTheme = theme;
   if (root.classList.contains("dark") !== (theme === "dark")) root.classList.toggle("dark", theme === "dark");
   if (root.style.colorScheme !== theme) root.style.colorScheme = theme;
+  root.style.backgroundColor = theme === "dark" ? "#050505" : "#f4efe3";
   if (document.body) {
     if (document.body.dataset.loadlinkTheme !== theme) document.body.dataset.loadlinkTheme = theme;
     if (document.body.style.colorScheme !== theme) document.body.style.colorScheme = theme;
