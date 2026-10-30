@@ -201,3 +201,92 @@ html body [data-loadlink-driver-card]{border-radius:24px!important;box-shadow:no
 html body [data-loadlink-driver-card] .ll-driver-heading>div:first-child{width:66px!important;height:72px!important;min-width:66px!important;border-radius:18px!important;overflow:hidden!important;border:1px solid #b99b4566!important}
 html body [data-loadlink-driver-card] .ll-driver-heading>div:first-child img{border-radius:0!important;object-fit:cover!important}
 html body [data-loadlink-driver-card] .ll-driver-actions button{border-radius:999px!important;min-height:44px!important;text-transform:none!important;letter-spacing:0!important;font-size:12px!important;font-weight:650!important}
+
+
+/* 2026-10-30: LoadLink account settings — understated business UI, not stacked feature cards.
+   Only applies to account Settings. News and other homepage sections are intentionally untouched. */
+html body main[data-loadlink-settings] {
+  --ll-bg: #f7f7f5;
+  --ll-surface: #ffffff;
+  --ll-soft: #f5f5f3;
+  --ll-border: #e5e5e0;
+  --ll-gold-ink: #6d5900;
+}
+html body main[data-loadlink-settings][data-theme="dark"] {
+  --ll-bg: #070807;
+  --ll-surface: #111211;
+  --ll-soft: #1b1d1b;
+  --ll-border: #30332f;
+  --ll-gold-ink: #e0b83b;
+}
+html body main[data-loadlink-settings] > section { max-width: 1120px !important; }
+html body main[data-loadlink-settings] h1 { font-weight: 760 !important; letter-spacing: -.045em !important; }
+html body main[data-loadlink-settings] .ll-settings-shell[data-overview="true"] { max-width: 720px; }
+html body main[data-loadlink-settings] .ll-settings-person {
+  padding: 18px 3px 20px !important;
+  gap: 13px;
+  border-bottom-color: var(--ll-border);
+}
+html body main[data-loadlink-settings] .ll-settings-photo {
+  width: 52px; height: 52px; background: var(--ll-soft);
+  border-color: var(--ll-border);
+}
+html body main[data-loadlink-settings] .ll-settings-person strong {
+  font-size: 16px; font-weight: 720; letter-spacing: -.015em;
+}
+html body main[data-loadlink-settings] .ll-settings-person span > span {
+  font-size: 12px; line-height: 1.5;
+}
+html body main[data-loadlink-settings] .ll-settings-menu {
+  margin-top: 12px; overflow: hidden; border: 1px solid var(--ll-border);
+  border-radius: 15px; background: var(--ll-surface);
+}
+html body main[data-loadlink-settings] .ll-settings-menu > button {
+  min-height: 72px;
+  padding: 13px 17px !important;
+  gap: 12px; border-radius: 0 !important;
+  border-bottom: 1px solid var(--ll-border);
+  background: var(--ll-surface) !important;
+  transition: background-color .14s ease;
+}
+html body main[data-loadlink-settings] .ll-settings-menu > button:last-child { border-bottom: 0; }
+html body main[data-loadlink-settings] .ll-settings-menu > button:hover,
+html body main[data-loadlink-settings] .ll-settings-menu > button:focus-visible {
+  background: var(--ll-soft) !important;
+}
+html body main[data-loadlink-settings] .ll-settings-menu strong {
+  font-size: 14px; line-height: 1.35; letter-spacing: -.01em; font-weight: 700;
+}
+html body main[data-loadlink-settings] .ll-settings-menu small {
+  margin-top: 3px; font-size: 12px; line-height: 1.35; font-weight: 400;
+}
+html body main[data-loadlink-settings] .ll-settings-row-icon {
+  width: 32px; height: 32px; border-radius: 7px; flex: 0 0 32px;
+  color: var(--ll-text); background: transparent; opacity: .8;
+}
+html body main[data-loadlink-settings] .ll-settings-row-icon svg { width: 19px; height: 19px; }
+html body main[data-loadlink-settings] .ll-settings-content section,
+html body main[data-loadlink-settings] .ll-settings-content form {
+  border-radius: 15px !important; box-shadow: none !important;
+}
+html body main[data-loadlink-settings] .ll-settings-content input,
+html body main[data-loadlink-settings] .ll-settings-content select,
+html body main[data-loadlink-settings] .ll-settings-content textarea {
+  border-radius: 11px !important; font-size: 16px !important;
+}
+html body main[data-loadlink-settings] .ll-settings-content button,
+html body main[data-loadlink-settings] .ll-settings-content a {
+  -webkit-tap-highlight-color: transparent;
+}
+html body main[data-loadlink-settings] .ll-settings-content button:focus-visible,
+html body main[data-loadlink-settings] .ll-settings-content a:focus-visible {
+  outline: 2px solid #d8a100; outline-offset: 2px;
+}
+@media (max-width: 799px) {
+  html body main[data-loadlink-settings] > section { padding-top: 24px; }
+  html body main[data-loadlink-settings] .ll-settings-person { padding-top: 6px !important; }
+  html body main[data-loadlink-settings] .ll-settings-menu > button { min-height: 69px; padding: 11px 13px !important; }
+  html body main[data-loadlink-settings] .ll-settings-content > section,
+  html body main[data-loadlink-settings] .ll-settings-content > div[id] { margin-top: 14px !important; }
+  html body main[data-loadlink-settings] .ll-settings-content :is(form, section) { padding: 19px !important; }
+}

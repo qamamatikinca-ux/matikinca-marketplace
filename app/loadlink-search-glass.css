@@ -256,3 +256,42 @@ div:has(> img[src="/images/loadlink-finance-truck.webp"]) > div[aria-hidden="tru
 }
 
 /* Reference lock: homepage search matches the approved compact white-row layout. */
+
+
+/* Quick-search focus and selected-category contrast: scoped to the homepage search only. */
+html body [data-loadlink-home-search-section] button[aria-pressed] {
+  min-height: 40px !important;
+  padding-inline: 14px !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  white-space: nowrap;
+  box-shadow: none !important;
+  transition: background-color .14s ease, color .14s ease, border-color .14s ease;
+}
+html body [data-loadlink-home-search-section] button[aria-pressed="true"] {
+  background: #f6b800 !important;
+  border-color: #f6b800 !important;
+  color: #171717 !important;
+}
+html body [data-loadlink-home-search-section] button[aria-pressed="false"] {
+  color: inherit !important;
+  background: transparent !important;
+  border-color: currentColor !important;
+  opacity: .75;
+}
+html body [data-loadlink-home-search-section] button[aria-pressed="false"]:hover,
+html body [data-loadlink-home-search-section] button[aria-pressed="false"]:focus-visible {
+  opacity: 1; background: rgba(246,184,0,.10) !important;
+}
+html body [data-loadlink-home-search-section] [data-loadlink-autotrader-search] button {
+  min-height: 44px;
+}
+html body [data-loadlink-home-search-section] [data-loadlink-home-search-suggestions] button {
+  min-height: 46px;
+}
+@media(max-width: 640px) {
+  html body [data-loadlink-home-search-section] button[aria-pressed] {
+    min-height: 40px !important; padding-inline: 13px !important;
+  }
+}
