@@ -101,7 +101,7 @@ export default function NotificationCenter() {
     window.dispatchEvent(new Event("loadlink-notifications-updated"));
   }
 
-  if (authLoading || !signedIn || pathname.startsWith("/login") || pathname.startsWith("/auth") || pathname.startsWith("/messages")) return null;
+  if (authLoading || !signedIn || pathname.startsWith("/login") || pathname.startsWith("/auth") || pathname.startsWith("/messages") || pathname.startsWith("/account/settings")) return null;
 
   const border = darkMode ? "border-white/10" : "border-black/[.08]";
   const muted = darkMode ? "text-white/54" : "text-black/52";
