@@ -1,5 +1,5 @@
 export type DriverIdentityState = {
- emailVerified: boolean; phoneVerified: boolean; accountEmail: string;
+ emailVerified: boolean; phoneVerified: boolean; phoneVerificationAvailable?: boolean | null; accountEmail: string;
  identityReady: boolean; identityMime: string;
  check: null | { id: string; status: string; mode: string; review_feedback?: string };
 };

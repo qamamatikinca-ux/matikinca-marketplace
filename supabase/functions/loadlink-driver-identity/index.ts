@@ -2,6 +2,18 @@ import { createClient } from "npm:@supabase/supabase-js@2.117.3";
 const headers = { "Content-Type": "application/json", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
 const reply = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers });
 const SOURCE = "driver_identity_service_v2";
+let phoneSetting: { enabled: boolean; expires: number } | null = null;
+async function phoneAvailable(url: string) {
+ if (phoneSetting && phoneSetting.expires > Date.now()) return phoneSetting.enabled;
+ try {
+  const response = await fetch(`${url}/auth/v1/settings`, { headers: { apikey: Deno.env.get("SUPABASE_ANON_KEY")! }, signal: AbortSignal.timeout(5000) });
+  if (!response.ok) return null;
+  const settings = await response.json();
+  if (typeof settings.external?.phone !== "boolean") return null;
+  phoneSetting = { enabled: settings.external.phone, expires: Date.now() + 60000 };
+  return phoneSetting.enabled;
+ } catch { return null; }
+}
 Deno.serve(async (request: Request) => {
  if (request.method !== "POST") return reply({ error: "Method not allowed." }, 405);
  try {
@@ -36,10 +48,9 @@ Deno.serve(async (request: Request) => {
    const result = await admin.from("identity_live_checks").select("id,status,review_feedback,client_observations,created_at").eq("user_id", user.id).eq("purpose", "driver").order("created_at", { ascending: false }).limit(20);
    if (result.error) return reply({ error: "Identity review status could not load." }, 503);
    const check = (result.data || []).find(c => current(c) && c.status !== "collecting");
-   return reply({ emailVerified, phoneVerified, accountEmail: user.email || "", identityReady: Boolean(identity && portrait), identityMime: identity?.mime_type || "", check: check ? { id: check.id, status: check.status, mode: check.client_observations.mode, review_feedback: check.review_feedback } : null });
+   return reply({ emailVerified, phoneVerified, phoneVerificationAvailable: await phoneAvailable(url), accountEmail: user.email || "", identityReady: Boolean(identity && portrait), identityMime: identity?.mime_type || "", check: check ? { id: check.id, status: check.status, mode: check.client_observations.mode, review_feedback: check.review_feedback } : null });
   }
   if (!profile || !identity || !portrait) return reply({ error: "Upload your profile photo and ID or passport first." }, 400);
-  if (!emailVerified || !phoneVerified) return reply({ error: "Verify the email address and phone number used on your driver profile first." }, 400);
   if (body.action === "document") {
    const { data, error } = await admin.storage.from("loadlink-driver-documents").download(identity.storage_path);
    if (error || !data) return reply({ error: "Your ID could not be opened. Upload it again." }, 400);
