@@ -85,7 +85,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
         }),
     ];
     requests.forEach((request) => {
-      void request.then(() => { if (active) setSearchReady(true); }).catch(() => undefined);
+      void Promise.resolve(request).then(() => { if (active) setSearchReady(true); }).catch(() => undefined);
     });
     void Promise.allSettled(requests).then(() => { if (active) setSearchReady(true); });
 
