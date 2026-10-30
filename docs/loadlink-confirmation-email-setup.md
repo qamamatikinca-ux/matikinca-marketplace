@@ -2,6 +2,8 @@
 
 The branded email for **Confirm signup** is in `supabase/email-templates/confirm-signup.html`.
 
+The email header uses the **official LoadLink logo image**, not a text imitation: `https://matikinca-marketplace.vercel.app/images/loadlink-logo-dark.png`. The URL is publicly accessible over HTTPS and matches the version used by the website's dark header. Email clients may initially block remote images; the image has readable alt text. Do not use a relative `/images/...` path in email HTML.
+
 **Subject:** Welcome to LoadLink — confirm your email address
 
 ## Activate in hosted Supabase
@@ -17,6 +19,7 @@ The branded email for **Confirm signup** is in `supabase/email-templates/confirm
 ## Important
 
 - The repository HTML file is a **source template**. Hosting it in GitHub does not change Supabase-hosted Auth emails. Step 2 is required for the new email to go live.
+- After any subsequent repository edit (including updating the logo), **paste the latest HTML into Supabase's hosted Confirm sign up editor and save it again**; previously saved hosted templates do not automatically sync. Check the new logo by sending a verification email to an authorised test inbox.
 - The UI requests the initial email as part of Supabase `auth.signUp`; it cannot guarantee instant inbox delivery. SMTP provider performance, verification records, spam filtering, and rate limiting control delivery time.
 - The resend form is guarded by Turnstile and a 60-second client cooldown; the server's own rate limits remain authoritative.
 - **Do not change** `components/LogisticsNews.tsx`, the logistics news API, or the homepage news presentation as part of this email rollout.
