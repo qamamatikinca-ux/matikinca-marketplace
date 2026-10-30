@@ -297,9 +297,69 @@ export default function AccountSettingsPage() {
         {dirty && settingsView === "profile" ? <p className={`mt-4 text-sm font-medium ${muted}`}>You have unsaved profile changes.</p> : null}
         {message ? <div role="status" className={`mt-5 max-w-3xl rounded-xl border p-3 text-sm font-medium ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-white"}`}>{message}</div> : null}
 
-        {settingsView === "overview" ? <div className="ll-settings-overview"><button type="button" className="ll-settings-person" onClick={() => { setSettingsView("profile"); window.history.replaceState(null,"","#profile"); }}><span className="ll-settings-photo">{form.avatar_url ? <LoadLinkImage src={form.avatar_url} alt="Your profile" className="h-full w-full object-cover" /> : initials}</span><span className="min-w-0 flex-1"><strong>{form.full_name || "Your account"}</strong><span>{user?.email}</span></span><LoadLinkIcon name="chevronRight" size={18} /></button><div className="ll-settings-menu">{([
-          ["profile","user","Profile","Photo and contact details"],["work","truck","Work","Driver profile and listings"],["notifications","bell","Notifications","Choose your updates"],["messages","message","Messages","Chat privacy and alerts"],["security","lock","Security and privacy","Password, cookies and account access"],["billing","paperclip","Billing","Your package and payments"],...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team","user","Team","Dealership access"]] : [])
-        ] as Array<[SettingsView, import("@/components/LoadLinkIcon").LoadLinkIconName,string,string]>).map(([view,icon,title,copy]) => <button key={view} type="button" onClick={() => { setSettingsView(view); window.history.replaceState(null,"",`#${view === "messages" ? "message-privacy" : view}`); }}><span className="ll-settings-row-icon"><LoadLinkIcon name={icon} size={19} /></span><span><strong>{title}</strong><small>{copy}</small></span><LoadLinkIcon name="chevronRight" size={17} /></button>)}</div></div> : <button type="button" className="ll-settings-mobile-back" onClick={() => {setSettingsView("overview");window.history.replaceState(null,"",window.location.pathname);}}><LoadLinkIcon name="chevronLeft" size={16} />All settings</button>}
+        {settingsView === "overview" ? (
+          <div className="ll-settings-overview">
+            <button
+              type="button"
+              className="ll-settings-person"
+              onClick={() => { setSettingsView("profile"); window.history.replaceState(null, "", "#profile"); }}
+            >
+              <span className="ll-settings-photo">
+                {form.avatar_url ? <LoadLinkImage src={form.avatar_url} alt="Your profile" className="h-full w-full object-cover" /> : initials}
+              </span>
+              <span className="min-w-0 flex-1">
+                <strong>{form.full_name || "Your account"}</strong>
+                <span>{user?.email}</span>
+              </span>
+              <LoadLinkIcon name="chevronRight" size={18} />
+            </button>
+
+            {([
+              ["Account", [
+                ["profile", "user", "Profile", "Personal details and photo"],
+                ["work", "truck", "Work", "Driver profile and listings"],
+                ["billing", "wallet", "Billing", "Packages and payments"],
+                ...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team", "users", "Team", "Dealership access"]] : []),
+              ]],
+              ["Preferences", [
+                ["notifications", "bell", "Notifications", "Choose which updates you receive"],
+                ["messages", "message", "Messages", "Privacy and message alerts"],
+                ["security", "lock", "Security and privacy", "Password and account access"],
+              ]],
+            ] as Array<[string, Array<[SettingsView, import("@/components/LoadLinkIcon").LoadLinkIconName, string, string]>]>).map(([group, items]) => (
+              <section key={group} className="ll-settings-group" aria-label={group}>
+                <h2 className="ll-settings-group-heading">{group}</h2>
+                <div className="ll-settings-menu">
+                  {items.map(([view, icon, title, copy]) => (
+                    <button
+                      key={view}
+                      type="button"
+                      onClick={() => {
+                        setSettingsView(view);
+                        window.history.replaceState(null, "", `#${view === "messages" ? "message-privacy" : view}`);
+                      }}
+                    >
+                      <span className="ll-settings-row-icon"><LoadLinkIcon name={icon} size={19} /></span>
+                      <span className="ll-settings-row-copy">
+                        <strong>{title}</strong>
+                        <small>{copy}</small>
+                      </span>
+                      <LoadLinkIcon name="chevronRight" size={17} />
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="ll-settings-mobile-back"
+            onClick={() => { setSettingsView("overview"); window.history.replaceState(null, "", window.location.pathname); }}
+          >
+            <LoadLinkIcon name="chevronLeft" size={16} /> All settings
+          </button>
+        )}
 
         {settingsView === "profile" ? (
           <div id="profile" className="mt-6 grid max-w-3xl gap-5">
