@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { bearer, publicSupabase } from "@/lib/phase2/supabase";
+import { identityReadyForSubmission } from "@/lib/driverVerification";
 import { serverRateLimit } from "@/lib/serverRateLimit";
 
 function friendlySubmitError(message: string) {
@@ -46,6 +47,14 @@ export async function POST(request: Request) {
     const payload = envelope.payload && typeof envelope.payload === "object" && !Array.isArray(envelope.payload)
       ? envelope.payload
       : envelope;
+
+    // Read eligibility from the trusted processor, not a browser completion flag.
+    const checked = await client.functions.invoke("loadlink-driver-identity", { body: { action: "status" } });
+    if (checked.error) return NextResponse.json({ error: "Verification status could not be checked. Please retry shortly." }, { status: 503 });
+    if (!identityReadyForSubmission(checked.data)) return NextResponse.json({ error: "Complete your email, phone and identity check in the Verification step before submitting." }, { status: 400 });
+    const { data: stored, error: storedError } = await client.from("driver_profiles").select("phone,email").eq("user_id", userData.user.id).single();
+    const submitted = payload as Record<string, unknown>;
+    if (storedError || submitted.phone !== stored.phone || submitted.email !== stored.email) return NextResponse.json({ error: "Your contact details changed. Save and verify them before submitting." }, { status: 409 });
 
     const { data, error } = await client.rpc("loadlink_save_and_submit_my_driver_profile", {
       p_payload: payload,

@@ -2,12 +2,11 @@
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
-import AuthStatusButton from "@/components/AuthStatusButton";
-import HomeLogoLink from "@/components/HomeLogoLink";
+import { useRouter } from "next/navigation";
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
+import DriverVerificationPanel from "@/components/DriverVerificationPanel";
+import { identityReadyForSubmission, type DriverIdentityState } from "@/lib/driverVerification";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
-import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
-import SiteMenu from "@/components/SiteMenu";
 import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
 import { browserSupabase } from "@/lib/phase2/supabase";
 import { SOUTH_AFRICAN_PROVINCES } from "@/lib/southAfricaLocations";
@@ -61,7 +60,7 @@ const LABELS: Record<string, string> = {
   driving_certificate: "Relevant driving certificate",
 };
 
-const STEP_LABELS = ["Personal", "Driving", "Availability", "Documents", "Review"];
+const STEP_LABELS = ["Personal", "Driving", "Availability", "Verification", "Review"];
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
 const ACCEPTED_DOCUMENT_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 
@@ -73,28 +72,7 @@ function cleanMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-export default function DriverProfileWizardV273() {
-  const { darkMode, toggleTheme } = useLoadLinkTheme();
-  const [form, setForm] = useState<FormState>(EMPTY);
-  const [docs, setDocs] = useState<Doc[]>([]);
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [uploadingType, setUploadingType] = useState("");
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadProcessing, setUploadProcessing] = useState(false);
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState<MessageType>("info");
-  const [submitted, setSubmitted] = useState(false);
-
-  const documentMap = useMemo(() => Object.fromEntries(docs.map((doc) => [doc.document_type, doc])), [docs]);
-  const page = darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black";
-  const surface = darkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white";
-  const muted = darkMode ? "text-white/52" : "text-black/52";
-  const input = `mt-2 h-12 w-full rounded-xl border px-4 text-sm font-semibold outline-none transition focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-[#151515] text-white placeholder:text-white/30" : "border-black/12 bg-[#fbfaf7] text-black placeholder:text-black/35"}`;
-  const textarea = `${input} h-auto min-h-28 py-3`;
-
-  async function authToken() {
+async function authToken() {
     const client = browserSupabase();
     const { data, error } = await client.auth.getSession();
     if (error) return "";
@@ -107,17 +85,43 @@ export default function DriverProfileWizardV273() {
     return session?.access_token || "";
   }
 
-  async function load(showLoader = false) {
-    if (showLoader) setLoading(true);
-    try {
-      const token = await authToken();
+export default function DriverProfileWizardV273() {
+  const { darkMode, toggleTheme } = useLoadLinkTheme();
+  const router = useRouter();
+  const [form, setForm] = useState<FormState>(EMPTY);
+  const [docs, setDocs] = useState<Doc[]>([]);
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [uploadingType, setUploadingType] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadProcessing, setUploadProcessing] = useState(false);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<MessageType>("info");
+  const [submitted, setSubmitted] = useState(false);
+  const [verification, setVerification] = useState<DriverIdentityState | null>(null);
+  const [verificationBusy, setVerificationBusy] = useState(false);
+
+  const documentMap = useMemo(() => Object.fromEntries(docs.map((doc) => [doc.document_type, doc])), [docs]);
+  const page = darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black";
+  const surface = darkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white";
+  const muted = darkMode ? "text-white/52" : "text-black/52";
+  const input = `mt-2 h-12 w-full rounded-xl border px-4 text-sm font-semibold outline-none transition focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-[#151515] text-white placeholder:text-white/30" : "border-black/12 bg-[#fbfaf7] text-black placeholder:text-black/35"}`;
+  const textarea = `${input} h-auto min-h-28 py-3`;
+
+
+  const load = useCallback(() => {
+    return authToken().then(async token => {
       if (!token) {
-        window.location.assign(`/login?next=${encodeURIComponent("/driver-profile")}`);
-        return;
+        router.replace(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+        return null;
       }
       const response = await fetch("/api/phase2/me", { cache: "no-store", headers: { Authorization: `Bearer ${token}` } });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "The profile could not be loaded.");
+      return result;
+    }).then(result => {
+      if (!result) return;
       if (result.profile) {
         setForm({
           ...EMPTY,
@@ -133,18 +137,16 @@ export default function DriverProfileWizardV273() {
           prdp_expiry: String(result.profile.prdp_expiry || result.profile.prdp_expires_at || "").slice(0, 10),
         });
         const status = String(result.profile.status || result.profile.profile_status || "");
-        if (["pending", "submitted"].includes(status)) setSubmitted(true);
+        setSubmitted(["pending", "submitted"].includes(status));
       }
       setDocs(Array.isArray(result.documents) ? result.documents : []);
-    } catch (error) {
+    }).catch(error => {
       setMessageType("error");
       setMessage(cleanMessage(error, "The driver profile could not be loaded."));
-    } finally {
-      setLoading(false);
-    }
-  }
+    }).finally(() => setLoading(false));
+  }, [router]);
 
-  useEffect(() => { void load(true); }, []);
+  useEffect(() => { void load().then(() => { if (new URLSearchParams(window.location.search).get("step") === "verification") setStep(4); }); }, [load]);
 
   function field<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -181,6 +183,7 @@ export default function DriverProfileWizardV273() {
     }
     if (current === 3 && form.prdp_required && !form.prdp_expiry) return "Add your PrDP expiry date.";
     if (current === 4) {
+      if (!identityReadyForSubmission(verification)) return "Complete the phone, email and identity check in Verification before continuing.";
       if (form.citizenship_status === "foreign_national" && !documentMap.work_authorisation) return "Upload evidence of your work authorisation before continuing.";
       if (!documentMap.portrait) return "Upload a clear profile photo of yourself before continuing.";
       if (!documentMap.identity) return "Upload your ID or passport before continuing.";
@@ -207,7 +210,7 @@ export default function DriverProfileWizardV273() {
   }
 
   async function continueStep() {
-    if (busy || uploadingType) return;
+    if (busy || uploadingType || verificationBusy) return;
     setMessage("");
     const validation = validateStep(step);
     if (validation) { setMessageType("error"); setMessage(validation); return; }
@@ -225,7 +228,7 @@ export default function DriverProfileWizardV273() {
   }
 
   async function upload(type: string, file: File | null) {
-    if (!file || busy || uploadingType) return;
+    if (!file || busy || uploadingType || verificationBusy) return;
     setMessage("");
     const label = LABELS[type] || "Document";
     const mime = file.type.toLowerCase().split(";")[0];
@@ -276,7 +279,7 @@ export default function DriverProfileWizardV273() {
       setMessageType("success");
       setMessage(`${label} uploaded successfully.`);
       window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: `loadlink-driver-doc-${type}`, kind: "success", title: `${label} uploaded`, message: "The document is attached to your LoadLink driver profile.", duration: 4800 } }));
-      await load(false);
+      await load();
     } catch (error) {
       setMessageType("error");
       setMessage(`${label}: ${cleanMessage(error, "upload failed.")}`);
@@ -289,7 +292,7 @@ export default function DriverProfileWizardV273() {
   }
 
   async function submit() {
-    if (busy || uploadingType) return;
+    if (busy || uploadingType || verificationBusy) return;
     setMessage("");
     for (const current of [1, 2, 3, 4]) {
       const validation = validateStep(current);
@@ -337,6 +340,7 @@ export default function DriverProfileWizardV273() {
       {form.review_reason ? <div className="mb-4 rounded-[18px] border border-red-500/40 bg-red-500/10 p-4 text-sm font-semibold"><strong className="block font-black">Review feedback</strong><span className="mt-1 block opacity-75">{form.review_reason}</span>{form.missing_document_type ? <button type="button" onClick={() => setStep(4)} className="mt-3 text-xs font-black underline underline-offset-4">Replace {LABELS[form.missing_document_type] || "requested document"}</button> : null}</div> : null}
       {message ? <div role="status" className={`mb-4 rounded-[16px] border p-4 text-xs font-bold leading-5 ${messageType === "error" ? "border-red-500/35 bg-red-500/10" : messageType === "success" ? "border-emerald-500/35 bg-emerald-500/10" : "border-[#f6b800]/30 bg-[#f6b800]/10"}`}>{message}</div> : null}
 
+      <nav aria-label="Driver application steps" className="mb-4 flex gap-2 overflow-x-auto pb-1">{STEP_LABELS.map((label, index) => <button key={label} type="button" disabled={busy || Boolean(uploadingType) || verificationBusy} aria-current={step === index + 1 ? "step" : undefined} onClick={() => { setMessage(""); setStep(index + 1); }} className={`shrink-0 rounded-full border px-3 py-2 text-xs font-bold ${step === index + 1 ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-current/15"}`}>{label}</button>)}</nav>
       <div className="mb-2 flex items-center justify-between text-[10px] font-black"><span>Step {step} of 5</span><span className="opacity-40">{STEP_LABELS[step - 1]}</span></div>
       <div className="mb-4 h-1 overflow-hidden rounded-full bg-current/10"><div className="h-full bg-[#f6b800] transition-[width] duration-200" style={{ width: `${step * 20}%` }} /></div>
 
@@ -384,17 +388,18 @@ export default function DriverProfileWizardV273() {
         </> : null}
 
         {step === 4 ? <>
-          <StepTitle title="Essential documents" copy="Upload only the documents needed to confirm your identity and driving credentials." muted={muted} />
+          <StepTitle title="Driver verification" copy="Add your documents, verify your contact details and complete the identity check here." muted={muted} />
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="sm:col-span-2"><p className={`mb-3 text-sm leading-6 ${muted}`}>Add a clear, recent portrait of yourself. Your profile photo is shown on your approved driver profile; identity documents stay private. <a href="/legal#verification-security" target="_blank" rel="noopener noreferrer" className="underline">How LoadLink uses verification information to protect users</a>.</p><DocumentUpload type="portrait" label={LABELS.portrait} required fileName={documentMap.portrait?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "portrait"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("portrait", file)} /></div>
-            <DocumentUpload type="identity" label={LABELS.identity} required fileName={documentMap.identity?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "identity"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("identity", file)} />
-            <DocumentUpload type="drivers_licence" label={LABELS.drivers_licence} required fileName={documentMap.drivers_licence?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "drivers_licence"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("drivers_licence", file)} />
-            {form.prdp_required ? <DocumentUpload type="prdp" label={LABELS.prdp} required fileName={documentMap.prdp?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "prdp"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("prdp", file)} /> : null}
-            {form.citizenship_status === "foreign_national" ? <DocumentUpload type="work_authorisation" label={LABELS.work_authorisation} required fileName={documentMap.work_authorisation?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "work_authorisation"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={file=>void upload("work_authorisation",file)}/> : null}
-            <DocumentUpload type="cv" label={LABELS.cv} fileName={documentMap.cv?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "cv"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("cv", file)} />
-            <DocumentUpload type="driving_certificate" label={LABELS.driving_certificate} fileName={documentMap.driving_certificate?.original_filename} busy={busy || Boolean(uploadingType)} uploading={uploadingType === "driving_certificate"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("driving_certificate", file)} />
+            <div className="sm:col-span-2"><p className={`mb-3 text-sm leading-6 ${muted}`}>Add a clear, recent portrait of yourself. Your profile photo is shown on your approved driver profile; identity documents stay private. <a href="/legal#verification-security" target="_blank" rel="noopener noreferrer" className="underline">How LoadLink uses verification information to protect users</a>.</p><DocumentUpload type="portrait" label={LABELS.portrait} required fileName={documentMap.portrait?.original_filename} busy={busy || Boolean(uploadingType) || verificationBusy} uploading={uploadingType === "portrait"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("portrait", file)} /></div>
+            <DocumentUpload type="identity" label={LABELS.identity} required fileName={documentMap.identity?.original_filename} busy={busy || Boolean(uploadingType) || verificationBusy} uploading={uploadingType === "identity"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("identity", file)} />
+            <DocumentUpload type="drivers_licence" label={LABELS.drivers_licence} required fileName={documentMap.drivers_licence?.original_filename} busy={busy || Boolean(uploadingType) || verificationBusy} uploading={uploadingType === "drivers_licence"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("drivers_licence", file)} />
+            {form.prdp_required ? <DocumentUpload type="prdp" label={LABELS.prdp} required fileName={documentMap.prdp?.original_filename} busy={busy || Boolean(uploadingType) || verificationBusy} uploading={uploadingType === "prdp"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("prdp", file)} /> : null}
+            {form.citizenship_status === "foreign_national" ? <DocumentUpload type="work_authorisation" label={LABELS.work_authorisation} required fileName={documentMap.work_authorisation?.original_filename} busy={busy || Boolean(uploadingType) || verificationBusy} uploading={uploadingType === "work_authorisation"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={file=>void upload("work_authorisation",file)}/> : null}
+            <DocumentUpload type="cv" label={LABELS.cv} fileName={documentMap.cv?.original_filename} busy={busy || Boolean(uploadingType) || verificationBusy} uploading={uploadingType === "cv"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("cv", file)} />
+            <DocumentUpload type="driving_certificate" label={LABELS.driving_certificate} fileName={documentMap.driving_certificate?.original_filename} busy={busy || Boolean(uploadingType) || verificationBusy} uploading={uploadingType === "driving_certificate"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("driving_certificate", file)} />
           </div>
-          <p className={`mt-4 text-[10px] font-semibold leading-5 ${muted}`}>Accepted: PDF, JPG or PNG. Maximum 8 MB per document. Your driver documents are not published publicly.</p>
+          <p className={`mt-4 text-[10px] font-semibold leading-5 ${muted}`}>Accepted: PDF, JPG or PNG. Maximum 8 MB per document. Use an ID photograph for camera comparison; PDFs need staff review.</p>
+          <DriverVerificationPanel key={`${documentMap.identity?.uploaded_at || ""}:${documentMap.portrait?.uploaded_at || ""}`} phone={form.phone} email={form.email} disabled={busy || Boolean(uploadingType)} onStatus={setVerification} onBusy={setVerificationBusy} onEditContacts={() => setStep(1)} />
         </> : null}
 
         {step === 5 ? <>
@@ -408,14 +413,15 @@ export default function DriverProfileWizardV273() {
             <ReviewRow label="Vehicles" value={form.vehicle_types || "—"} onEdit={() => setStep(2)} />
             <ReviewRow label="Availability" value={form.availability || "—"} onEdit={() => setStep(3)} />
             <ReviewRow label="PrDP" value={form.prdp_required ? `Required${form.prdp_expiry ? ` · expires ${form.prdp_expiry}` : ""}` : "Not marked as required"} onEdit={() => setStep(3)} />
+            <ReviewRow label="Verification" value={identityReadyForSubmission(verification) ? `Phone and email verified · ${verification?.check?.mode === "manual" ? "Staff identity review requested" : "Camera evidence saved"}` : "Verification required"} onEdit={() => setStep(4)} />
             <ReviewRow label="Documents" value={`${documentMap.identity ? "ID added" : "ID missing"} · ${documentMap.drivers_licence ? "Licence added" : "Licence missing"}${form.prdp_required ? ` · ${documentMap.prdp ? "PrDP added" : "PrDP missing"}` : ""}`} onEdit={() => setStep(4)} />
           </div>
           {submitted ? <div className="mt-5 rounded-[16px] border border-[#f6b800]/35 bg-[#f6b800]/10 p-4 text-xs font-bold">Your profile is already with LoadLink for review. You can still correct your saved details if LoadLink requests changes.</div> : null}
         </> : null}
 
         <div className="mt-6 flex gap-2">
-          {step > 1 ? <button type="button" disabled={busy || Boolean(uploadingType)} onClick={() => { setMessage(""); setStep((current) => current - 1); }} className="h-12 rounded-xl border border-current/12 px-5 text-xs font-black disabled:opacity-40">Back</button> : null}
-          {step < 5 ? <button type="button" disabled={busy || Boolean(uploadingType)} onClick={() => void continueStep()} className="h-12 flex-1 rounded-xl bg-[#f6b800] px-5 text-sm font-black text-black disabled:opacity-40">{busy ? "Saving…" : "Continue"}</button> : <button type="button" disabled={busy || Boolean(uploadingType) || submitted} onClick={() => void submit()} className="h-12 flex-1 rounded-xl bg-[#f6b800] px-5 text-sm font-black tracking-[-.02em] text-black disabled:opacity-45">{busy ? "Submitting…" : submitted ? "Review in progress" : "Submit profile for review"}</button>}
+          {step > 1 ? <button type="button" disabled={busy || Boolean(uploadingType) || verificationBusy} onClick={() => { setMessage(""); setStep((current) => current - 1); }} className="h-12 rounded-xl border border-current/12 px-5 text-xs font-black disabled:opacity-40">Back</button> : null}
+          {step < 5 ? <button type="button" disabled={busy || Boolean(uploadingType) || verificationBusy} onClick={() => void continueStep()} className="h-12 flex-1 rounded-xl bg-[#f6b800] px-5 text-sm font-black text-black disabled:opacity-40">{busy ? "Saving…" : "Continue"}</button> : <button type="button" disabled={busy || Boolean(uploadingType) || verificationBusy || submitted} onClick={() => void submit()} className="h-12 flex-1 rounded-xl bg-[#f6b800] px-5 text-sm font-black tracking-[-.02em] text-black disabled:opacity-45">{busy ? "Submitting…" : submitted ? "Review in progress" : "Submit profile for review"}</button>}
         </div>
       </section>
     </div>

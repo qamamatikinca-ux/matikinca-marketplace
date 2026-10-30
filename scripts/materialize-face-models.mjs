@@ -6,5 +6,6 @@ for (const model of ['tiny_face_detector', 'face_landmark_68', 'face_recognition
     await copyFile(`${source}/model/${model}${suffix}`, `public/models/identity-v1/${model}${suffix}`);
   }
 }
+await copyFile(`${source}/dist/face-api.js`, 'public/models/identity-v1/face-api.js');
 await copyFile(`${source}/LICENSE`, 'public/models/identity-v1/LICENSE.txt');
 console.log('Materialized pinned face comparison models (identity-v1).');
