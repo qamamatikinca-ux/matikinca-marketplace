@@ -453,6 +453,16 @@ export default function MessagesPage() {
   );
   const [presenceNow, setPresenceNow] = useState(() => Date.now());
 
+  // The mobile chat settings panel behaves like a separate screen.
+  useEffect(() => {
+    if (!showDetails) return;
+    const onEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") setShowDetails(false);
+    };
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, [showDetails]);
+
   const messageViewportRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const forceScrollRef = useRef(true);
@@ -1884,23 +1894,30 @@ ${message}` : message)}
               ) : null}
 
               {showDetails ? (
-                <div className="pointer-events-none fixed inset-0 z-[95] xl:hidden" aria-hidden={false}>
-                  <section
-                    role="dialog"
-                    aria-modal="false"
-                    aria-label="Conversation details"
-                    style={{ height: "var(--loadlink-message-vh, 100dvh)" }}
-                    className={`pointer-events-auto absolute right-0 top-0 flex w-[min(92vw,420px)] flex-col border-l shadow-[-18px_0_45px_rgba(0,0,0,.18)] ${darkMode ? "border-white/10 bg-[#0b0b0b] text-white" : "border-black/10 bg-white text-black"}`}
-                  >
-                    <div className={`sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between border-b px-4 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
-                      <div><strong className="text-sm font-bold">Conversation info</strong><p className={`mt-0.5 text-[9px] font-medium ${darkMode ? "text-white/45" : "text-black/45"}`}>Details and account actions</p></div>
-                      <button type="button" onClick={() => setShowDetails(false)} className={`flex h-9 w-9 items-center justify-center rounded-full border text-lg ${darkMode ? "border-white/15 text-white" : "border-black/10 text-black"}`} aria-label="Close conversation info"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
+                <section
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Chat settings"
+                  data-loadlink-chat-settings-open="true"
+                  className={`fixed inset-x-0 bottom-0 top-20 z-[900] flex min-h-0 flex-col overflow-hidden xl:hidden ${darkMode ? "bg-[#0c0d0c] text-white" : "bg-[#f8f7f4] text-[#171717]"}`}
+                >
+                  <header className={`flex h-[62px] shrink-0 items-center justify-between gap-3 border-b px-4 ${darkMode ? "border-white/10 bg-[#121312]" : "border-black/10 bg-white"}`}>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <button type="button" onClick={() => setShowDetails(false)} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${darkMode ? "border-white/15" : "border-black/10"}`} aria-label="Back to conversation">
+                        <LoadLinkIcon name="chevronLeft" size={19} />
+                      </button>
+                      <h2 className="truncate text-[17px] font-bold tracking-[-.02em]">Chat settings</h2>
                     </div>
-                    <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-                      <ConversationDetails darkMode={darkMode} conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} reportBusy={reportBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} onReport={reportConversation} onClose={() => setShowDetails(false)} />
+                    <button type="button" autoFocus onClick={() => setShowDetails(false)} className={`flex h-10 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold ${darkMode ? "border-white/15" : "border-black/10"}`} aria-label="Close chat settings">
+                      <LoadLinkIcon name="close" size={16} /> Close
+                    </button>
+                  </header>
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-5 [-webkit-overflow-scrolling:touch]">
+                    <div className="mx-auto w-full max-w-[560px]">
+                      <ConversationDetails darkMode={darkMode} conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} reportBusy={reportBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} onReport={reportConversation} />
                     </div>
-                  </section>
-                </div>
+                  </div>
+                </section>
               ) : null}
 
               <div
@@ -2372,7 +2389,6 @@ function ConversationDetails({
   onToggleArchive,
   onToggleBlock,
   onReport,
-  onClose,
 }: {
   darkMode: boolean;
   conversation: Conversation;
@@ -2383,23 +2399,43 @@ function ConversationDetails({
   onToggleArchive: () => Promise<void>;
   onToggleBlock: () => Promise<void>;
   onReport: () => Promise<void>;
-  onClose?: () => void;
 }) {
   const muted = darkMode ? "text-white/55" : "text-black/55";
   const border = darkMode ? "border-white/12" : "border-black/10";
-  const surface = darkMode ? "bg-white/[.035]" : "bg-black/[.025]";
   const action = `flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-center text-xs font-semibold transition active:scale-[.99] ${border}`;
+  const [pinned, setPinned] = useState(false);
+  useEffect(() => {
+    const sync = () => {
+      try {
+        const stored = JSON.parse(window.localStorage.getItem("loadlink-pinned-conversations-v1") || "[]");
+        setPinned(Array.isArray(stored) && stored.includes(conversation.id));
+      } catch { setPinned(false); }
+    };
+    sync();
+    window.addEventListener("loadlink:pins-changed", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("loadlink:pins-changed", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [conversation.id]);
+
+  function togglePin() {
+    try {
+      const stored: unknown = JSON.parse(window.localStorage.getItem("loadlink-pinned-conversations-v1") || "[]");
+      const ids = new Set<string>(Array.isArray(stored) ? stored.filter((id): id is string => typeof id === "string") : []);
+      if (ids.has(conversation.id)) ids.delete(conversation.id);
+      else ids.add(conversation.id);
+      window.localStorage.setItem("loadlink-pinned-conversations-v1", JSON.stringify([...ids]));
+      setPinned(ids.has(conversation.id));
+      window.dispatchEvent(new Event("loadlink:pins-changed"));
+      window.dispatchEvent(new Event("loadlink-pins-updated"));
+    } catch { /* Storage may be unavailable in private browsing. */ }
+  }
+
 
   return (
     <div className={darkMode ? "text-white" : "text-black"} data-loadlink-conversation-info="true">
-      {onClose ? (
-        <div className={`sticky top-0 z-30 mb-4 flex min-h-12 items-center justify-between gap-3 border-b pb-2 ${border} ${darkMode ? "bg-[#0b0b0b]" : "bg-white"}`}>
-          <strong className="text-sm font-bold">Chat settings</strong>
-          <button type="button" onClick={onClose} aria-label="Exit chat settings" className={`flex min-h-10 items-center justify-center gap-1 rounded-full border px-3 text-xs font-semibold ${border}`}>
-            <LoadLinkIcon name="close" size={17} /> Close
-          </button>
-        </div>
-      ) : null}
 
       <div className="flex items-center gap-3 pb-4">
         <Avatar
@@ -2414,22 +2450,22 @@ function ConversationDetails({
         </div>
       </div>
 
-      <div data-loadlink-pin-slot className="mb-3" />
-
       <div className="grid grid-cols-2 gap-2">
         <Link href={`/listing/${conversation.listing_id}`} className="flex min-h-11 items-center justify-center rounded-xl bg-[#f6b800] px-3 text-center text-xs font-bold text-black">
           View listing
         </Link>
+        <button type="button" aria-pressed={pinned} onClick={togglePin} className={action}>
+          <LoadLinkIcon name="pin" size={17} /> {pinned ? "Unpin chat" : "Pin chat"}
+        </button>
         <button type="button" onClick={() => void onToggleArchive()} disabled={archiveBusy} className={`${action} disabled:opacity-45`}>
           <ArchiveIcon /> {archiveBusy ? "Saving…" : conversation.archived ? "Restore" : "Archive"}
         </button>
+        {conversation.other_phone ? (
+          <a href={`tel:${conversation.other_phone.replace(/\s/g, "")}`} className={action}>
+            <PhoneIcon /> Call contact
+          </a>
+        ) : <div aria-hidden="true" />}
       </div>
-
-      {conversation.other_phone ? (
-        <a href={`tel:${conversation.other_phone.replace(/\s/g, "")}`} className={`${action} mt-2 w-full`}>
-          <PhoneIcon /> Call contact
-        </a>
-      ) : null}
 
       <div className={`mt-5 border-t pt-4 ${border}`}>
         <h4 className="mb-3 text-xs font-bold uppercase tracking-[.08em]">Conversation details</h4>

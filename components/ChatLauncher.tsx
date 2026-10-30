@@ -28,7 +28,7 @@ export default function ChatLauncher() {
   }, [pathname]);
 
   const dealerWorkspace = pathname === "/dealer" || pathname.startsWith("/dealer/") || pathname.startsWith("/dealer-dashboard");
-  if (pathname.startsWith("/messages") || pathname.startsWith("/login") || pathname.startsWith("/list-your-vehicle") || pathname.startsWith("/list-your-truck") || dealerWorkspace || !account.ready || ((pathname === "/contracts" || pathname === "/jobs") && searchVisible)) return null;
+  if (pathname.startsWith("/account/settings") || pathname.startsWith("/messages") || pathname.startsWith("/login") || pathname.startsWith("/list-your-vehicle") || pathname.startsWith("/list-your-truck") || dealerWorkspace || !account.ready || ((pathname === "/contracts" || pathname === "/jobs") && searchVisible)) return null;
 
   const href = signedIn ? "/messages" : loginHref("/messages");
   const launcherTheme = darkMode
