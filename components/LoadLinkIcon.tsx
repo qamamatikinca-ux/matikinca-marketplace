@@ -32,7 +32,10 @@ export type LoadLinkIconName =
   | "truck"
   | "user"
   | "lock"
-  | "volume";
+  | "volume"
+  | "wallet"
+  | "users"
+  | "pin";
 
 type Props = Omit<SVGProps<SVGSVGElement>, "name"> & {
   name: LoadLinkIconName;
@@ -66,6 +69,9 @@ export default function LoadLinkIcon({ name, size = 20, strokeWidth = 1.9, ...pr
     case "close": return <svg {...common}><path d="m6 6 12 12M18 6 6 18" /></svg>;
     case "search": return <svg {...common}><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>;
     case "user": return <svg {...common}><circle cx="12" cy="8" r="3.3" /><path d="M5.5 20c.7-4 3-6 6.5-6s5.8 2 6.5 6" /></svg>;
+    case "users": return <svg {...common}><circle cx="9" cy="8" r="3" /><path d="M2.5 20c.6-3.8 2.9-5.7 6.5-5.7s5.9 1.9 6.5 5.7M16.5 5.5a3 3 0 0 1 0 6M17.5 14.5c2.4.4 3.8 2.2 4 5.5" /></svg>;
+    case "wallet": return <svg {...common}><rect x="3" y="6" width="18" height="14" rx="2.5" /><path d="M3 9V6a2 2 0 0 1 2-2h13M15 12h6v5h-6a2.5 2.5 0 0 1 0-5Z" /></svg>;
+    case "pin": return <svg {...common}><path d="M9 3h6l-1 5 4 4v2h-5v7l-1 1-1-1v-7H6v-2l4-4-1-5Z" /></svg>;
     case "lock": return <svg {...common}><rect x="5" y="10" width="14" height="11" rx="3" /><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" /></svg>;
     case "message": return <svg {...common}><path d="M5 5.5h14v10H9l-4 3v-13Z" /><path d="M8.5 9h7M8.5 12h5" /></svg>;
     case "bell": return <svg {...common}><path d="M6.5 16.5h11l-1.4-2.1V10a4.1 4.1 0 0 0-8.2 0v4.4l-1.4 2.1Z" /><path d="M10 19a2.2 2.2 0 0 0 4 0" /></svg>;
