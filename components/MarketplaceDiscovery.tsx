@@ -19,7 +19,6 @@ import {
   listingToSearchResult,
   loadLinkSitePages,
   placeholderForScope,
-  routeForScope,
   searchScopes,
 } from "@/lib/loadlinkSearch";
 
@@ -52,10 +51,27 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
   useEffect(() => {
     let active = true;
 
-    Promise.allSettled([
-      fetch(`/api/job-listings?t=${Date.now()}`, { cache: "no-store" }).then((response) => response.json()),
-      fetch("/api/phase2/public-drivers?limit=50&offset=0", { cache: "no-store" }).then((response) => response.json()),
-      isSupabaseConfigured
+    // Show each category as soon as its response arrives instead of waiting for
+    // the slowest of three independent data sources.
+    const controller = new AbortController();
+    const requests = [
+      fetch("/api/job-listings", { cache: "no-store", signal: controller.signal })
+        .then((response) => {
+          if (!response.ok) throw new Error("Listings unavailable");
+          return response.json();
+        })
+        .then((data) => {
+          if (active) setLiveListings(((data.rows || []) as ListingSearchRow[]).filter(isCurrentListing));
+        }),
+      fetch("/api/phase2/public-drivers?limit=50&offset=0", { cache: "no-store", signal: controller.signal })
+        .then((response) => {
+          if (!response.ok) throw new Error("Drivers unavailable");
+          return response.json();
+        })
+        .then((data) => {
+          if (active) setLiveDrivers((data.drivers || []) as DriverSearchRow[]);
+        }),
+      (isSupabaseConfigured
         ? supabase
             .from("dealership_profiles")
             .select("id,slug,name,short_bio,business_description,physical_location,province,verification_status,is_public")
@@ -63,23 +79,19 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
             .eq("is_public", true)
             .order("updated_at", { ascending: false })
             .limit(40)
-        : Promise.resolve({ data: [], error: null }),
-    ]).then(([listingResult, driverResult, dealerResult]) => {
-      if (!active) return;
-      if (listingResult.status === "fulfilled") {
-        setLiveListings(((listingResult.value.rows || []) as ListingSearchRow[]).filter(isCurrentListing));
-      }
-      if (driverResult.status === "fulfilled") {
-        setLiveDrivers((driverResult.value.drivers || []) as DriverSearchRow[]);
-      }
-      if (dealerResult.status === "fulfilled" && !dealerResult.value.error) {
-        setLiveDealers((dealerResult.value.data || []) as unknown as DealerSearchRow[]);
-      }
-      setSearchReady(true);
+        : Promise.resolve({ data: [], error: null }))
+        .then((result) => {
+          if (active && !result.error) setLiveDealers((result.data || []) as unknown as DealerSearchRow[]);
+        }),
+    ];
+    requests.forEach((request) => {
+      void request.then(() => { if (active) setSearchReady(true); }).catch(() => undefined);
     });
+    void Promise.allSettled(requests).then(() => { if (active) setSearchReady(true); });
 
     return () => {
       active = false;
+      controller.abort();
     };
   }, []);
 
@@ -134,9 +146,9 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
   }
 
   function chooseScope(value: SearchScope) {
+    // Category selection should be instant. Navigate only when the user submits a search.
     setScope(value);
-    setShowSuggestions(false);
-    router.push(routeForScope(value, query, location));
+    setShowSuggestions(Boolean(query.trim()));
   }
 
   const resultLabel = searchReady
