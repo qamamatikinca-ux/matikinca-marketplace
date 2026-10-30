@@ -5,6 +5,7 @@ import LoadLinkImage from "@/components/LoadLinkImage";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { formatListingRate } from "@/lib/formatCurrency";
+import styles from "./recent-activity.module.css";
 
 type RecentItem = {
   id: string;
@@ -207,27 +208,23 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
       : "Nothing current has been viewed yet. Open a job, contract or vehicle listing and it will appear here.";
 
   return (
-    <section className={`${darkMode ? "bg-black text-white" : "bg-white text-black"} px-4 py-9 sm:px-5 md:py-10`}>
-      <div className="mx-auto max-w-5xl">
-        <h2 className="text-2xl font-bold tracking-[-0.03em] md:text-4xl">Continue where you left off</h2>
+    <section className={styles.root} data-theme={darkMode ? "dark" : "light"} data-loadlink-recent-activity="true">
+      <div className={styles.inner}>
+        <h2 className={styles.title}>Continue where you left off</h2>
 
-        <div data-loadlink-no-swipe-dots="true" className="mt-4 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 no-scrollbar">
+        <div data-loadlink-no-swipe-dots="true" className={styles.tabs} role="tablist" aria-label="Recent activity">
           {([
-            ["posted", "Recently Posted"],
-            ["viewed", "Recently Viewed"],
+            ["posted", "Recently posted"],
+            ["viewed", "Recently viewed"],
             ["liked", "Liked"],
           ] as [ActivityTab, string][]).map(([value, label]) => (
             <button
               key={value}
               type="button"
+              role="tab"
+              aria-selected={tab === value}
+              className={styles.tab}
               onClick={() => setTab(value)}
-              className={`shrink-0 snap-start rounded-xl border px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[.04em] ${
-                tab === value
-                  ? "border-[#f6b800] bg-[#f6b800] text-black"
-                  : darkMode
-                    ? "border-white/15 bg-white/5 text-white/65"
-                    : "border-black/10 bg-black/[0.03] text-black/65"
-              }`}
             >
               {label}
             </button>
@@ -235,44 +232,38 @@ export default function RecentActivityPanel({ darkMode }: { darkMode: boolean })
         </div>
 
         {tab === "posted" && postedLoading ? (
-          <div className="mt-6 flex gap-4 overflow-hidden" aria-label="Loading recently posted listings">
-            {[0, 1, 2].map((item) => (
-              <div key={item} className={`h-64 w-[82vw] max-w-[310px] shrink-0 animate-pulse rounded-[22px] border ${darkMode ? "border-white/10 bg-white/[.04]" : "border-black/10 bg-black/[.04]"}`} />
-            ))}
+          <div className={styles.carousel} aria-label="Loading recently posted listings" role="status">
+            {[0, 1, 2].map((item) => <div key={item} className={styles.skeleton} />)}
           </div>
         ) : items.length ? (
           <div
             data-loadlink-product-slider="true"
             data-loadlink-swipe-dots="true"
-            className="no-scrollbar mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-3 touch-pan-x"
+            className={styles.carousel}
             aria-label={`${tab === "posted" ? "Recently posted" : tab === "viewed" ? "Recently viewed" : "Liked"} listings`}
           >
             {items.map((item) => (
-              <Link
-                key={`${item.href}-${item.id}`}
-                href={item.href}
-                className={`w-[82vw] max-w-[310px] shrink-0 snap-start overflow-hidden rounded-[22px] border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}
-              >
-                <div className="aspect-[4/3] overflow-hidden bg-black/10">
+              <Link key={`${item.href}-${item.id}`} href={item.href} className={styles.card}>
+                <div className={styles.media}>
                   {item.image ? (
                     <LoadLinkImage src={item.image} alt={item.title} className="h-full w-full object-cover" />
                   ) : (
-                    <div className={`flex h-full items-center justify-center text-xs font-black ${darkMode ? "bg-white/[.04] text-white/35" : "bg-black/[.04] text-black/35"}`}>No post photo</div>
+                    <div className={styles.noImage}>No listing photo</div>
                   )}
                 </div>
-                <div className="p-4">
-                  <p className={`text-[10px] font-black uppercase tracking-[0.18em] ${darkMode ? "text-white/45" : "text-black/45"}`}>{item.category}</p>
-                  <h3 className="mt-2 line-clamp-2 text-lg font-black">{item.title}</h3>
-                  <p className={`mt-2 text-xs font-bold ${darkMode ? "text-white/50" : "text-black/50"}`}>{item.meta || item.type}</p>
+                <div className={styles.content}>
+                  <p className={styles.type}>{item.category}</p>
+                  <h3 className={styles.name}>{item.title}</h3>
+                  <p className={styles.meta}>{item.meta || item.type}</p>
                 </div>
               </Link>
             ))}
           </div>
         ) : (
-          <div className={`mt-6 rounded-[22px] border p-8 text-center ${darkMode ? "border-white/10 bg-[#090909] text-white/55" : "border-black/10 bg-[#fafafa] text-black/55"}`}>
-            <p className="text-lg font-black">Nothing here yet</p>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6">{emptyCopy}</p>
-            {tab === "liked" ? <Link href="/jobs" className="mt-5 inline-flex rounded-xl border border-[#f6b800] px-5 py-3 text-xs font-black uppercase tracking-wide text-[#b88900]">Browse listings</Link> : null}
+          <div className={styles.empty}>
+            <strong>Nothing here yet</strong>
+            <p>{emptyCopy}</p>
+            {tab === "liked" ? <Link href="/jobs">Browse listings</Link> : null}
           </div>
         )}
       </div>
