@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import AuthLandingShell from "@/components/AuthLandingShell";
 import PasswordStrengthMeter, { passwordStrength } from "@/components/PasswordStrengthMeter";
 import TurnstileChallenge, { loadLinkTurnstileConfigured } from "@/components/TurnstileChallenge";
@@ -27,8 +27,16 @@ export default function SignUpPage() {
   const [message, setMessage] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaResetKey, setCaptchaResetKey] = useState(0);
+
+  // Respect Supabase's resend throttle and avoid accidental duplicate email requests.
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setTimeout(() => setResendCooldown((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendCooldown]);
 
   async function createAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,7 +68,31 @@ export default function SignUpPage() {
       }
       if (data.session) { router.replace("/complete-profile"); return; }
       setSent(true);
-      setMessage("Verification email sent. Open the email, confirm your address, then LoadLink will bring you back to finish your profile.");
+      setResendCooldown(60);
+      setMessage("Your verification email has been requested. Check your inbox and spam folder, then confirm your address to finish setting up LoadLink.");
+    } catch (error) {
+      setMessage(friendlyAuthError(error, "signup"));
+    } finally {
+      setBusy(false);
+      setCaptchaToken("");
+      setCaptchaResetKey((value) => value + 1);
+    }
+  }
+
+  async function resendConfirmation() {
+    if (busy || resendCooldown > 0 || !captchaToken || !isSupabaseConfigured) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/complete-profile")}`;
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: email.trim().toLowerCase(),
+        options: { emailRedirectTo: redirectTo, captchaToken },
+      });
+      if (error) throw error;
+      setResendCooldown(60);
+      setMessage("Another verification email has been requested. Check your inbox and spam folder.");
     } catch (error) {
       setMessage(friendlyAuthError(error, "signup"));
     } finally {
@@ -98,8 +130,15 @@ export default function SignUpPage() {
       {sent ? (
         <div className={`rounded-[20px] border p-5 backdrop-blur-xl ${darkMode ? "border-emerald-500/25 bg-emerald-500/[.06]" : "border-emerald-600/20 bg-emerald-50/70"}`}>
           <p className="text-lg font-black">Check your email</p>
-          <p className="mt-2 text-sm font-semibold leading-6 opacity-65">We sent a verification link to <strong>{email.trim().toLowerCase()}</strong>. After confirmation you return to LoadLink to complete your profile.</p>
-          <button type="button" onClick={() => setSent(false)} className="mt-4 text-xs font-black underline underline-offset-4">Use a different email</button>
+          <p className="mt-2 text-sm font-semibold leading-6 opacity-65">We requested a verification link for <strong>{email.trim().toLowerCase()}</strong>. Open the email and confirm your address to finish creating your account.</p>
+          <p className="mt-3 text-xs font-semibold leading-5 opacity-60">Nothing in your inbox? Check your spam folder or request another link after the short security cooldown.</p>
+          <div className="mt-4 grid gap-2.5">
+            <TurnstileChallenge onToken={setCaptchaToken} resetKey={captchaResetKey} darkMode={darkMode} />
+            <button type="button" onClick={() => void resendConfirmation()} disabled={busy || resendCooldown > 0 || !captchaToken} className="h-12 rounded-full bg-[#f6b800] px-5 text-sm font-black text-black disabled:opacity-45">
+              {busy ? "Requesting…" : resendCooldown > 0 ? `Resend available in ${resendCooldown}s` : "Resend verification email"}
+            </button>
+            <button type="button" onClick={() => { setSent(false); setMessage(""); setCaptchaToken(""); setCaptchaResetKey((value) => value + 1); }} className="h-10 text-xs font-black underline underline-offset-4">Use a different email</button>
+          </div>
         </div>
       ) : (
         <form onSubmit={createAccount} className="grid gap-3.5">
