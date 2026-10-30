@@ -1897,7 +1897,7 @@ ${message}` : message)}
                       <button type="button" onClick={() => setShowDetails(false)} className={`flex h-9 w-9 items-center justify-center rounded-full border text-lg ${darkMode ? "border-white/15 text-white" : "border-black/10 text-black"}`} aria-label="Close conversation info"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
                     </div>
                     <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-                      <ConversationDetails darkMode={darkMode} conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} reportBusy={reportBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} onReport={reportConversation} />
+                      <ConversationDetails darkMode={darkMode} conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} reportBusy={reportBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} onReport={reportConversation} onClose={() => setShowDetails(false)} />
                     </div>
                   </section>
                 </div>
@@ -2372,6 +2372,7 @@ function ConversationDetails({
   onToggleArchive,
   onToggleBlock,
   onReport,
+  onClose,
 }: {
   darkMode: boolean;
   conversation: Conversation;
@@ -2382,15 +2383,25 @@ function ConversationDetails({
   onToggleArchive: () => Promise<void>;
   onToggleBlock: () => Promise<void>;
   onReport: () => Promise<void>;
+  onClose?: () => void;
 }) {
-  const muted = darkMode ? "text-white/48" : "text-black/45";
-  const faint = darkMode ? "text-white/35" : "text-black/35";
-  const line = darkMode ? "border-white/10" : "border-black/10";
-  const soft = darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-black/[.02]";
+  const muted = darkMode ? "text-white/55" : "text-black/55";
+  const border = darkMode ? "border-white/12" : "border-black/10";
+  const surface = darkMode ? "bg-white/[.035]" : "bg-black/[.025]";
+  const action = `flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-center text-xs font-semibold transition active:scale-[.99] ${border}`;
 
   return (
-    <div className={darkMode ? "text-white" : "text-black"}>
-      <div className="flex items-center gap-3">
+    <div className={darkMode ? "text-white" : "text-black"} data-loadlink-conversation-info="true">
+      {onClose ? (
+        <div className={`sticky top-0 z-30 mb-4 flex min-h-12 items-center justify-between gap-3 border-b pb-2 ${border} ${darkMode ? "bg-[#0b0b0b]" : "bg-white"}`}>
+          <strong className="text-sm font-bold">Chat settings</strong>
+          <button type="button" onClick={onClose} aria-label="Exit chat settings" className={`flex min-h-10 items-center justify-center gap-1 rounded-full border px-3 text-xs font-semibold ${border}`}>
+            <LoadLinkIcon name="close" size={17} /> Close
+          </button>
+        </div>
+      ) : null}
+
+      <div className="flex items-center gap-3 pb-4">
         <Avatar
           name={conversation.other_name}
           photo={conversation.other_photo}
@@ -2399,66 +2410,60 @@ function ConversationDetails({
         />
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-base font-bold">{conversation.other_name}</h3>
-          <p className={`mt-0.5 truncate text-xs font-medium ${muted}`}>{activityText(conversation)}</p>
+          <p className={`mt-1 truncate text-xs font-medium ${muted}`}>{activityText(conversation)}</p>
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <Link
-          href={`/listing/${conversation.listing_id}`}
-          className="flex h-10 items-center justify-center rounded-xl bg-[#f6b800] px-3 text-center text-[10px] font-bold text-black"
-        >
+      <div data-loadlink-pin-slot className="mb-3" />
+
+      <div className="grid grid-cols-2 gap-2">
+        <Link href={`/listing/${conversation.listing_id}`} className="flex min-h-11 items-center justify-center rounded-xl bg-[#f6b800] px-3 text-center text-xs font-bold text-black">
           View listing
         </Link>
-        <button
-          type="button"
-          onClick={() => void onToggleArchive()}
-          disabled={archiveBusy}
-          className={`flex h-10 items-center justify-center gap-1.5 rounded-xl border px-3 text-[10px] font-semibold ${darkMode ? "border-white/15 text-white" : "border-black/12 text-black"} disabled:opacity-45`}
-        >
-          <ArchiveIcon />
-          {archiveBusy ? "Saving…" : conversation.archived ? "Restore" : "Archive"}
-        </button>
-        <button
-          type="button"
-          onClick={() => void onToggleBlock()}
-          disabled={blockBusy || blockState.blocked_by_other}
-          className={`flex h-10 items-center justify-center rounded-xl border px-3 text-[10px] font-semibold ${blockState.blocked_by_me ? "border-red-500/50 text-red-500" : darkMode ? "border-white/15 text-white/80" : "border-black/12 text-black/75"} disabled:opacity-45`}
-        >
-          {blockBusy ? "Saving…" : blockState.blocked_by_me ? "Unblock" : blockState.blocked_by_other ? "Blocked" : "Block"}
-        </button>
-        <button
-          type="button"
-          onClick={() => void onReport()}
-          disabled={reportBusy}
-          className="flex h-10 items-center justify-center rounded-xl border border-red-500/40 px-3 text-[10px] font-semibold text-red-500 disabled:opacity-45"
-        >
-          {reportBusy ? "Sending…" : "Report"}
+        <button type="button" onClick={() => void onToggleArchive()} disabled={archiveBusy} className={`${action} disabled:opacity-45`}>
+          <ArchiveIcon /> {archiveBusy ? "Saving…" : conversation.archived ? "Restore" : "Archive"}
         </button>
       </div>
 
       {conversation.other_phone ? (
-        <a href={`tel:${conversation.other_phone.replace(/\s/g, "")}`} className={`mt-2 flex h-10 items-center justify-center rounded-xl border text-[10px] font-semibold ${darkMode ? "border-white/15 text-white/80" : "border-black/12 text-black/75"}`}>
-          Call contact
+        <a href={`tel:${conversation.other_phone.replace(/\\s/g, "")}`} className={`${action} mt-2 w-full`}>
+          <PhoneIcon /> Call contact
         </a>
       ) : null}
 
-      <div className={`mt-5 rounded-2xl border p-4 ${soft}`}>
-        <p className={`text-[9px] font-semibold uppercase tracking-[.12em] ${faint}`}>Listing</p>
-        <p className="mt-1 text-sm font-semibold leading-5">{conversation.listing_title}</p>
-        <div className={`my-4 border-t ${line}`} />
-        <p className={`text-[9px] font-semibold uppercase tracking-[.12em] ${faint}`}>Response pattern</p>
-        <p className="mt-1 text-sm font-medium leading-5">{replyText(conversation.average_reply_minutes)}</p>
-        <div className={`my-4 border-t ${line}`} />
-        <p className={`text-[9px] font-semibold uppercase tracking-[.12em] ${faint}`}>Privacy</p>
-        <p className="mt-1 text-sm font-semibold">Private conversation</p>
-        <p className={`mt-1 text-xs font-medium leading-5 ${muted}`}>Messages and attachments are visible only to participants in this conversation.</p>
+      <div className={`mt-5 border-t pt-4 ${border}`}>
+        <h4 className="mb-3 text-xs font-bold uppercase tracking-[.08em]">Conversation details</h4>
+        <div className="grid gap-3 text-sm">
+          <div>
+            <p className={`text-[11px] font-semibold ${muted}`}>Related listing</p>
+            <p className="mt-1 break-words font-semibold">{conversation.listing_title}</p>
+          </div>
+          <div className={`border-t pt-3 ${border}`}>
+            <p className={`text-[11px] font-semibold ${muted}`}>Response pattern</p>
+            <p className="mt-1 font-medium">{replyText(conversation.average_reply_minutes)}</p>
+          </div>
+        </div>
       </div>
 
-      <div className={`mt-4 rounded-xl border p-3 ${soft}`}>
-        <p className="text-xs font-semibold">Safety reminder</p>
-        <p className={`mt-1 text-[11px] font-medium leading-5 ${muted}`}>Confirm listing details before paying. Never send passwords, PINs or one-time verification codes.</p>
-      </div>
+      <details className={`group mt-5 rounded-xl border ${border}`}>
+        <summary className={`flex min-h-12 cursor-pointer list-none items-center justify-between px-4 text-sm font-semibold [&::-webkit-details-marker]:hidden`}>
+          Privacy and safety
+          <LoadLinkIcon name="chevronDown" size={17} className="transition-transform group-open:rotate-180" />
+        </summary>
+        <div className={`border-t px-4 pb-4 pt-3 ${border}`}>
+          <p className="text-sm font-semibold">Private conversation</p>
+          <p className={`mt-1 text-xs leading-5 ${muted}`}>Messages and attachments are visible only to participants in this conversation.</p>
+          <p className={`mt-3 text-xs leading-5 ${muted}`}>Confirm listing details before paying. Never share passwords or verification codes.</p>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => void onToggleBlock()} disabled={blockBusy || blockState.blocked_by_other} className={`${action} disabled:opacity-45`}>
+              {blockBusy ? "Saving…" : blockState.blocked_by_me ? "Unblock" : blockState.blocked_by_other ? "Blocked" : "Block"}
+            </button>
+            <button type="button" onClick={() => void onReport()} disabled={reportBusy} className={`${action} border-red-500/40 text-red-500 disabled:opacity-45`}>
+              {reportBusy ? "Sending…" : "Report"}
+            </button>
+          </div>
+        </div>
+      </details>
     </div>
   );
 }
