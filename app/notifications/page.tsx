@@ -1,5 +1,6 @@
 "use client";
 
+import OwnDriverProfileCard from "@/components/OwnDriverProfileCard";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -186,6 +187,7 @@ export default function NotificationsPage() {
           ) : null}
         </header>
 
+        <OwnDriverProfileCard darkMode={darkMode} compact />
         <div className="mt-5 flex items-center gap-2" role="tablist" aria-label="Notification filters">
           {([["all", "All"], ["unread", `Unread${unread ? ` ${unread}` : ""}`]] as [NotificationFilter, string][]).map(([value, label]) => (
             <button key={value} type="button" role="tab" aria-selected={filter === value} onClick={() => setFilter(value)} className={`min-h-9 rounded-xl px-4 text-xs font-black transition ${filter === value ? "bg-[#f6b800] text-black" : darkMode ? "border border-white/10 bg-white/[.025] text-white/60" : "border border-black/8 bg-white/45 text-black/55"}`}>{label}</button>

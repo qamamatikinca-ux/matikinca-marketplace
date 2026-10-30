@@ -1,0 +1,18 @@
+.card { margin: 24px auto; padding: 22px; border: 1px solid #d7d4ca; border-radius: 24px; background: #fff; color: #181818; max-width: 1100px; scroll-margin-top: 100px; }
+.dark { background: #111; color: #f7f7f2; border-color: #30302c; }
+.topline { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 22px; }
+.private { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; opacity: .6; }
+.badge { padding: 7px 11px; border-radius: 999px; color: #8c6400; background: #fff1bd; font-size: 11px; font-weight: 700; }
+.dark .badge { color: #f9cc51; background: #f6b80014; border: 1px solid #f6b80038; }
+.identity { display: flex; gap: 16px; align-items: center; }
+.portrait { display: grid; place-items: center; width: 76px; height: 82px; flex-shrink: 0; overflow: hidden; border: 1px solid #b99b4555; border-radius: 18px; background: #8e8e8e14; }
+.portrait img { height: 100%; width: 100%; object-fit: cover; }
+.identity h2 { font-size: 21px; line-height: 1.3; font-weight: 750; letter-spacing: -.025em; }
+.identity p { margin-top: 5px; font-size: 13px; opacity: .8; }
+.identity span { display: block; margin-top: 5px; font-size: 12px; opacity: .55; }
+.facts { display: grid; grid-template-columns: 1fr 1fr 1.5fr; margin: 22px 0 0; padding: 16px 0; border-top: 1px solid #8883; border-bottom: 1px solid #8883; gap: 16px; }
+.facts dt { font-size: 10px; opacity: .55; margin-bottom: 5px; }.facts dd { font-size: 13px; font-weight: 650; overflow-wrap: anywhere; }
+.vehicles { font-size: 12px; opacity: .7; margin-top: 14px; }
+.bottom { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; margin-top: 18px; }
+.bottom p { max-width: 540px; font-size: 12px; line-height: 1.7; opacity: .6; }.bottom a { display: inline-flex; align-items: center; gap: 12px; background: #f6b800; color: #111; padding: 12px 18px; font-size: 12px; font-weight: 700; border-radius: 999px; }
+@media(max-width:600px){.card{margin:20px 0;padding:18px}.topline{gap:8px}.badge{font-size:10px}.identity h2{font-size:20px}.facts{grid-template-columns:1fr 1fr}.facts>div:last-child{grid-column:1/-1}.bottom a{justify-content:center;width:100%}}

@@ -10,6 +10,7 @@ function load(file, resolve = require) {
 }
 const live = load('lib/liveIdentity.ts');
 const guidance = load('lib/driverCapture.ts', () => live);
+const cameraQuality = load("lib/cameraQuality.ts");
 const review = load('lib/driverFaceReview.ts', () => live);
 const vector = n => new Float32Array(128).fill(n);
 
@@ -78,7 +79,7 @@ async function exerciseCamera(t, missing = false) {
    start() { events.push('record'); this.state = 'recording'; }
    stop() { this.state = 'inactive'; this.ondataavailable?.({ data: new Blob(['test-only-video']) }); this.onstop?.(); events.push('record-stopped'); }
   },
-  document: { hidden: false, createElement() { return { width: 0, height: 0, getContext: () => ({ drawImage() {} }), toBlob: callback => callback(new Blob(['test-only-portrait'], { type: 'image/jpeg' })) }; } },
+  document: { hidden: false, createElement() { return { width: 0, height: 0, getContext: () => ({ drawImage() {}, getImageData() { const data=new Uint8ClampedArray(80*80*4);for(let i=0;i<80*80;i++){const value=(i+Math.floor(i/80))%2?235:40;data.set([value,value,value,255],i*4);}return {data};} }), toDataURL:()=>"data:image/jpeg;base64,dGVzdA==", toBlob: callback => callback(new Blob(['test-only-portrait'], { type: 'image/jpeg' })) }; } },
   Image: class { width = 640; height = 480; async decode() {} },
   performance: { now: () => clock += 180 },
   setTimeout: (callback, delay) => actualTimer(callback, delay === 80 ? 0 : delay),
@@ -93,7 +94,8 @@ async function exerciseCamera(t, missing = false) {
  const component = load('components/DriverCameraCheck.tsx', id => {
   if (id === 'react') return react;
   if (id === 'react/jsx-runtime') return { jsx, jsxs: jsx };
-  if (id === 'next/link') return () => null;
+  if (id === 'next/link' || id.endsWith('/LoadLinkIcon') || id.endsWith('/CameraExample')) return () => null;
+  if (id.endsWith('/cameraQuality')) return cameraQuality;
   if (id.endsWith('/supabaseClient')) return { supabase: {} };
   if (id.endsWith('/driverIdentityClient')) return { driverIdentityRequest: request };
   if (id.endsWith('/faceComparison')) return { loadFaceGuidance: async () => { events.push('models'); return api; }, loadFaceComparison: async () => api };

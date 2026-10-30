@@ -1,6 +1,7 @@
 "use client";
 
 import LoadLinkImage from "@/components/LoadLinkImage";
+import LoadLinkDocumentPreview from "@/components/LoadLinkDocumentPreview";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -119,10 +120,29 @@ export default function TruckFinanceCalculatorPage() {
             <p className={`mt-4 text-[10px] font-semibold leading-5 ${muted}`}>Balloon is capped at 40% in this estimator. A balloon lowers monthly instalments but leaves a final amount due. Finance-provider fees and rules can differ.</p>
           </section>
 
-          <section className={`overflow-hidden rounded-[28px] border shadow-[0_22px_70px_rgba(246,184,0,.10)] ${card}`}>
-            <div className="relative h-44 overflow-hidden border-b border-[#f6b800]/15"><LoadLinkImage src={TRUCK_IMAGE} alt="Commercial truck" className="h-full w-full object-contain p-3" /><div className="pointer-events-none absolute inset-x-12 bottom-4 h-7 rounded-[50%] bg-[#f6b800]/15 blur-2xl" /></div>
-            <div className="p-5 sm:p-6"><p className={`text-[10px] font-black uppercase tracking-[.13em] ${muted}`}>Estimated buying power</p><p className="mt-2 text-[42px] font-black leading-none tracking-[-.06em]">{rand(buyingPower)}</p><div className={`mt-5 divide-y rounded-2xl border ${darkMode ? "divide-white/10 border-white/10" : "divide-black/8 border-black/8"}`}><Result label="Estimated monthly" value={rand(exampleMonthly)} /><Result label="Balloon at end" value={rand(exampleBalloon)} /><Result label="Total instalments" value={rand(instalmentsTotal)} /><Result label="Interest + financed fees" value={rand(estimatedInterestAndFees)} /><Result label="Total repayable" value={rand(totalRepayable)} /></div><a href="#truck-finance-matches" className="mt-5 flex min-h-12 items-center justify-center rounded-xl bg-[#f6b800] px-4 text-sm font-black text-black shadow-[0_10px_26px_rgba(246,184,0,.18)]">See matching trucks</a></div>
-          </section>
+          <div className="min-w-0 space-y-4">
+            <LoadLinkDocumentPreview darkMode={darkMode} documentType="Truck finance estimate" body={`TRUCK FINANCE ESTIMATE
+
+YOUR INPUTS
+Monthly budget: ${rand(monthly)}
+Loan term: ${term} months
+Deposit: ${rand(numeric(deposit))}
+Trade-in: ${rand(numeric(tradeIn))}
+Annual interest: ${annualRate}%
+Balloon: ${balloonRatio * 100}%
+Financed fees: ${rand(financedFees)}
+
+ESTIMATED RESULTS
+Buying power: ${rand(buyingPower)}
+Estimated monthly: ${rand(exampleMonthly)}
+Balloon at end: ${rand(exampleBalloon)}
+Total instalments: ${rand(instalmentsTotal)}
+Interest + financed fees: ${rand(estimatedInterestAndFees)}
+Total repayable: ${rand(totalRepayable)}
+
+These figures are estimates, not finance approval. Confirm fees and final terms with your finance provider.`} />
+            <a href="#truck-finance-matches" className="flex min-h-12 items-center justify-center rounded-full bg-[#f6b800] px-4 text-sm font-bold text-black">See matching trucks</a>
+          </div>
         </div>
 
         <section id="truck-finance-matches" className="scroll-mt-24 pt-10">
@@ -139,5 +159,4 @@ export default function TruckFinanceCalculatorPage() {
 function FinanceField({ label, fieldClass, children }: { label: string; fieldClass: string; children: React.ReactNode }) { return <label className={`block rounded-[17px] border px-4 py-3 ${fieldClass}`}><span className="block text-[10px] font-black uppercase tracking-[.09em] opacity-45">{label}</span>{children}</label>; }
 function MoneyInput({ value, onChange }: { value: string; onChange: (value: string) => void }) { return <div className="mt-2 flex items-center gap-1 text-xl font-black"><span>R</span><input inputMode="decimal" value={value} onFocus={(event)=>event.currentTarget.select()} onChange={(event)=>onChange(event.target.value)} className="min-w-0 flex-1 bg-transparent text-xl font-black outline-none" /></div>; }
 function NumberInput({ value, onChange, suffix }: { value: string; onChange: (value: string) => void; suffix: string }) { return <div className="mt-2 flex items-center gap-1 text-xl font-black"><input inputMode="decimal" value={value} onFocus={(event)=>event.currentTarget.select()} onChange={(event)=>onChange(event.target.value)} className="min-w-0 flex-1 bg-transparent text-xl font-black outline-none" /><span>{suffix}</span></div>; }
-function Result({ label, value }: { label: string; value: string }) { return <div className="flex items-center justify-between gap-4 px-3 py-3 text-xs"><span className="font-semibold opacity-50">{label}</span><strong className="text-right font-black">{value}</strong></div>; }
 function EmptyState({ darkMode, title, text }: { darkMode: boolean; title: string; text: string }) { return <div className={`mt-5 rounded-[24px] border p-8 text-center ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-white/70"}`}><h3 className="text-xl font-black">{title}</h3><p className={`mx-auto mt-2 max-w-md text-sm leading-6 ${darkMode ? "text-white/50" : "text-black/50"}`}>{text}</p></div>; }

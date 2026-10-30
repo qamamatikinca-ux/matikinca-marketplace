@@ -27,3 +27,5 @@
 .terms > p:last-child { margin-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.7; }
 :global(html) :global(body) :global([data-loadlink-document-preview]) .paper:global([data-loadlink-document-paper]) .footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid #e7e7e1; color: #626258 !important; font-size: 10px; line-height: 1.6; }
 @media (max-width: 420px) { :global(html) :global(body) :global([data-loadlink-document-preview]) .paper:global([data-loadlink-document-paper]) { padding: 16px; } .heading h3 { font-size: 20px; } }
+
+.documentBody{margin-top:4px}.bodySection{padding:16px 0;border-top:1px solid #e7e7e1}.bodySection>p:last-child{margin-top:8px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.8}

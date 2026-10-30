@@ -1673,10 +1673,10 @@ ${message}` : message)}
           {!selectedId ? (
             <></>
           ) : null}
-          <div className="min-w-0 border-b border-black/10 p-4 sm:p-5">
+          <div className={`${styles.inboxHeader} min-w-0 border-b border-black/10 p-4 sm:p-5`}>
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-bold tracking-[-.025em]">Inbox</h2>
+                <h2 className="text-2xl font-bold tracking-[-.025em]">Messages</h2>
               </div>
               <span className="rounded-full bg-black px-3 py-1.5 text-xs font-black text-[#f6b800]">
                 {conversations.reduce(
@@ -1692,7 +1692,7 @@ ${message}` : message)}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search messages or listings"
-                className="h-12 w-full min-w-0 rounded-xl border border-black/10 bg-[#f5f3ed] px-4 text-sm font-semibold outline-none transition focus:border-[#f6b800] focus:bg-white"
+                className={`${styles.inboxSearch} h-12 w-full min-w-0 rounded-full border border-current/10 bg-current/[.03] px-4 text-sm font-medium outline-none focus:border-[#f6b800]`}
               />
             </label>
             <div data-loadlink-folder-tabs="v2619-fixed" className="loadlink-folder-tabs mt-3 grid min-w-0 grid-cols-[0.8fr_1.35fr_0.9fr] gap-2" role="tablist" aria-label="Conversation folders">
@@ -1711,7 +1711,7 @@ ${message}` : message)}
                     key={conversation.id}
                     type="button"
                     onClick={() => chooseConversation(conversation)}
-                    className={`flex w-full gap-3 border-b border-black/5 p-4 text-left transition ${
+                    className={`${styles.conversationRow} flex w-full gap-3 border-b border-black/5 p-4 text-left transition ${
                       active ? "bg-[#fff4c7]" : "bg-white hover:bg-[#f8f6f0]"
                     }`}
                   >
@@ -1725,14 +1725,14 @@ ${message}` : message)}
                     />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-start justify-between gap-2">
-                        <strong className="truncate text-sm font-black">
+                        <strong className="truncate text-sm font-semibold">
                           {conversation.other_name}
                         </strong>
                         <span className="shrink-0 text-[10px] font-bold text-black/40">
                           {formatConversationDate(conversation.last_message_at)}
                         </span>
                       </span>
-                      <span className="mt-1 block truncate text-xs font-bold text-[#8a6700]">
+                      <span className="mt-1 block truncate text-xs font-medium opacity-55">
                         {conversation.listing_title}
                       </span>
                       <span className="mt-1 flex items-center justify-between gap-3">

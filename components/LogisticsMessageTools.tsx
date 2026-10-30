@@ -4,6 +4,7 @@ import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import LogisticsDocumentEditor from "@/components/LogisticsDocumentEditor";
 import LoadLinkDocumentPreview from "@/components/LoadLinkDocumentPreview";
 
 type DealStage =
@@ -208,9 +209,9 @@ export default function LogisticsMessageTools({
   const workflowTools = useMemo<WorkflowTool[]>(() => {
     const title = clean(listingTitle) || "this listing";
     return [
-      { id: "trip-brief", label: "Trip brief", summary: "Collection, delivery, cargo and instructions", template: `TRIP BRIEF — ${title}\n\nCollection\nAddress: [address]\nContact: [name + number]\nTime: [date / time]\n\nDelivery\nAddress: [address]\nContact: [name + number]\nTime: [date / time]\n\nCargo\nDescription: [cargo]\nWeight / quantity: [weight or quantity]\n\nVehicle\nType / registration: [vehicle details]\n\nReferences\nCollection: [reference]\nDelivery: [reference]\n\nSpecial instructions\n[PPE, access, temperature, loading/offloading or other instructions]` },
-      { id: "load-checklist", label: "Load checklist", summary: "Review and edit pre-dispatch checks", template: "LOAD CHECKLIST\n\n☐ Vehicle and driver confirmed\n☐ Cargo description and weight confirmed\n☐ Collection contact and reference confirmed\n☐ Delivery contact and reference confirmed\n☐ Load restraints / equipment confirmed\n☐ PPE / induction / site access confirmed\n☐ POD requirements confirmed\n\nNotes: [add anything specific to this load]" },
-      { id: "document-request", label: "Document request", summary: "Choose the documents needed for this load", template: "DOCUMENT REQUEST\n\nPlease send the following documents/details required for this load:\n• [vehicle details / permit / insurance]\n• [invoice details]\n• [POD requirements]\n• [other required document]\n\nDo not send passwords, PINs, OTPs or banking login information." },
+      { id: "trip-brief", label: "Trip brief", summary: "Collection, delivery, cargo and instructions", template: `TRIP BRIEF — ${title}\n\nCollection\nAddress: [address]\nContact: [name + number]\nTime: [date / time]\n\nDelivery\nAddress: [address]\nContact: [name + number]\nTime: [date / time]\n\nCargo\nDescription: [cargo]\nWeight / quantity: [weight or quantity]\n\nVehicle\nType / registration: [vehicle details]\n\nReferences\nCollection: [reference]\nDelivery: [reference]\n\nSpecial instructions: [PPE, access, temperature, loading/offloading or other instructions]` },
+      { id: "load-checklist", label: "Load checklist", summary: "Review and edit pre-dispatch checks", template: "LOAD CHECKLIST\n\n[ ] Vehicle and driver confirmed\n[ ] Cargo description and weight confirmed\n[ ] Collection contact and reference confirmed\n[ ] Delivery contact and reference confirmed\n[ ] Load restraints / equipment confirmed\n[ ] PPE / induction / site access confirmed\n[ ] POD requirements confirmed\n\nNotes: [add anything specific to this load]" },
+      { id: "document-request", label: "Document request", summary: "Choose the documents needed for this load", template: "DOCUMENT REQUEST\n\nLoad / reference: [reference]\nVehicle / permit details: [details]\nInvoice details: [details]\nPOD requirements: [details]\nOther required document: [details]\n\nDo not send passwords, PINs, OTPs or banking login information." },
       { id: "driver-handover", label: "Driver handover", summary: "Driver, vehicle and ETA details", template: "DRIVER HANDOVER\n\nDriver: [name]\nCell: [number]\nVehicle registration: [registration]\nTrailer registration: [registration / N/A]\nCollection ETA: [time]\nDelivery ETA: [time]\nNotes: [site or handover instructions]" },
       { id: "cost-breakdown", label: "Cost breakdown", summary: "Clarify all charges before booking", template: "COST BREAKDOWN REQUEST\n\nBase transport rate: [amount]\nVAT: [included / excluded / N/A]\nTolls: [included / excluded / amount]\nFuel surcharge: [included / excluded / amount]\nWaiting / detention: [free time + rate]\nLoading / offloading: [included / excluded / amount]\nOther charges: [details]\n\nPlease confirm the final total before booking." },
       { id: "payment-terms", label: "Payment terms", summary: "Invoice, POD and payment process", template: "PAYMENT TERMS\n\nPayment period: [e.g. 7 / 14 / 30 days]\nInvoice requirements: [details]\nPOD requirements: [details]\nPayment reference: [reference / process]\nPayment contact: [name / department]\nOther terms: [details]" },
@@ -303,7 +304,7 @@ export default function LogisticsMessageTools({
   function openToolEditor(tool: WorkflowTool) {
     setQuoteOpen(false);
     setEditorTool(tool);
-    setEditorText(tool.template);
+    setEditorText(tool.template.replace(/:[ \t]*\[[^\]\n]*\]/g, ": "));
   }
 
   function useEditedTool() {
@@ -438,14 +439,8 @@ export default function LogisticsMessageTools({
                   <div><h3 className="text-sm font-bold">{editorTool.label}</h3><p className={`mt-1 text-[10px] font-medium leading-4 ${muted}`}>Edit the details comfortably here. Nothing is sent automatically.</p></div>
                   <button type="button" onClick={() => { setEditorTool(null); setEditorText(""); }} className={`h-8 shrink-0 rounded-lg border px-2.5 text-[9px] font-bold ${control}`}>Back</button>
                 </div>
-                <textarea
-                  autoFocus
-                  value={editorText}
-                  onChange={(event) => setEditorText(event.target.value)}
-                  rows={12}
-                  maxLength={4000}
-                  className={`mt-3 min-h-[250px] w-full resize-y rounded-xl border p-3 text-[12px] font-medium leading-5 outline-none focus:border-[#f6b800] ${control}`}
-                />
+                <div className="mt-4"><LogisticsDocumentEditor value={editorText} template={editorTool.template} title={editorTool.label} darkMode={darkMode} onChange={setEditorText} /></div>
+                <div className="mt-4"><LoadLinkDocumentPreview darkMode={darkMode} documentType={editorTool.label} body={editorText} /></div>
                 <div className="mt-3 flex items-center justify-between gap-3">
                   <p className={`text-[9px] font-medium ${muted}`}>When done, LoadLink compacts this into your normal message composer so you can review it once more before sending.</p>
                   <button type="button" disabled={!editorText.trim() || disabled} onClick={useEditedTool} className="h-10 shrink-0 rounded-xl bg-[#f6b800] px-4 text-[10px] font-bold text-black disabled:opacity-40">Use in chat</button>

@@ -68,3 +68,15 @@
   .messageApp :global(.loadlink-chat-header > div:last-child) { gap: 2px; }
   .messageApp :global(.loadlink-chat-header h2) { font-size: 14px; }
 }
+
+/* A calmer inbox with clear conversation hierarchy. */
+.messageApp .inboxHeader{background:transparent!important;padding-top:22px!important}
+.messageApp .inboxSearch{border-radius:999px!important;background:#8585780d!important;color:inherit!important;font-size:14px!important;font-weight:450!important}
+.messageApp .conversationRow{position:relative;padding:18px 20px!important;border-bottom-color:#8d8d8d20!important;box-shadow:none!important;gap:14px!important}
+.messageApp .conversationRow>span>span:first-child strong{font-weight:650!important;font-size:14px!important}
+.messageApp .conversationRow>span>span:nth-child(2){color:inherit!important;font-weight:450!important;opacity:.58!important}
+.messageApp .conversationRow:hover{background:#bba25c10!important}
+.messageApp :global(.loadlink-folder-tabs){gap:4px!important;padding:4px!important;border-radius:999px!important;background:#8585780d!important}
+.messageApp :global(.loadlink-folder-tabs button){border-radius:999px!important;border:0!important;font-size:11px!important;min-height:40px!important;padding:10px 8px!important;font-weight:650!important}
+.messageApp :global(.loadlink-folder-tabs button[aria-selected=false]){background:transparent!important}
+@media(max-width:767px){.messageApp .inboxHeader{padding:20px 16px 16px!important}.messageApp .inboxSearch{font-size:16px!important}.messageApp .conversationRow{padding:17px 16px!important}}

@@ -6,6 +6,7 @@ import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
 import Link from "next/link";
 import RequireAuthLink from "@/components/RequireAuthLink";
+import OwnDriverProfileCard from "@/components/OwnDriverProfileCard";
 import DriversAvailableForWork from "@/components/phase2/DriversAvailableForWork";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { useLoadLinkAccount } from "@/lib/loadLinkAccountStore";
@@ -56,6 +57,7 @@ export default function DriverPortalPage() {
         </div>
       </section>
 
+      <div className="mx-auto max-w-6xl px-5"><OwnDriverProfileCard darkMode={darkMode} /></div>
       <div id="available-drivers" className="scroll-mt-24"><DriversAvailableForWork darkMode={darkMode} showHero={false} fullPage /></div>
     </main>
   );

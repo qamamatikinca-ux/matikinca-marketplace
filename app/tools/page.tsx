@@ -4,6 +4,7 @@
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+import LogisticsDocumentEditor from "@/components/LogisticsDocumentEditor";
 import LoadLinkDocumentPreview from "@/components/LoadLinkDocumentPreview";
 import Link from "next/link";
 
@@ -22,7 +23,7 @@ const TOOLS: Tool[] = [
   { id:"quote", name:"Rate quote", description:"Build a clean transport quote", category:"Money" },
   { id:"trip", name:"Trip brief", description:"Collection, delivery and cargo", category:"Planning", template:"TRIP BRIEF\n\nCollection\nAddress: \nContact: \nTime: \n\nDelivery\nAddress: \nContact: \nTime: \n\nCargo\nDescription: \nWeight / quantity: \n\nVehicle\nType / registration: \n\nSpecial instructions:\n" },
   { id:"checklist", name:"Load checklist", description:"Pre-dispatch checks", category:"Planning", template:"LOAD CHECKLIST\n\n[ ] Vehicle and driver confirmed\n[ ] Cargo and weight confirmed\n[ ] Collection contact confirmed\n[ ] Delivery contact confirmed\n[ ] Load restraints / equipment confirmed\n[ ] PPE / site access confirmed\n[ ] POD requirements confirmed\n\nNotes:\n" },
-  { id:"documents", name:"Document request", description:"Ask for required documents", category:"Planning", template:"DOCUMENT REQUEST\n\nPlease provide the required documents for this load:\n- Vehicle / permit details\n- Invoice details\n- POD requirements\n- Other required document\n\nDo not send passwords, PINs or OTPs." },
+  { id:"documents", name:"Document request", description:"Ask for required documents", category:"Planning", template:"DOCUMENT REQUEST\n\nLoad / reference: \nVehicle / permit details: \nInvoice details: \nPOD requirements: \nOther required document: \n\nDo not send passwords, PINs or OTPs." },
   { id:"handover", name:"Driver handover", description:"Driver, vehicle and ETA", category:"Operations", template:"DRIVER HANDOVER\n\nDriver: \nCell: \nVehicle registration: \nTrailer registration: \nCollection ETA: \nDelivery ETA: \nNotes:\n" },
   { id:"costs", name:"Cost breakdown", description:"Clarify all charges", category:"Money", template:"COST BREAKDOWN\n\nBase transport rate: \nVAT: \nTolls: \nFuel surcharge: \nWaiting / detention: \nLoading / offloading: \nOther charges: \n\nFinal total:\n" },
   { id:"payment", name:"Payment terms", description:"Invoice, POD and payment", category:"Money", template:"PAYMENT TERMS\n\nPayment period: \nInvoice requirements: \nPOD requirements: \nPayment reference: \nPayment contact: \nOther terms:\n" },
@@ -146,7 +147,7 @@ export default function ToolsPage() {
           <button type="button" onClick={()=>setSelected(null)} className="flex h-10 w-10 items-center justify-center rounded-full border border-current/10 text-xl" aria-label="Close"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
         </div>
 
-        {tool.id==="quote" ? <><div className="mx-4 mt-4 grid grid-cols-2 rounded-full border border-current/15 p-1 md:hidden">{(["details", "preview"] as const).map(tab => <button key={tab} type="button" aria-pressed={workspaceTab === tab} onClick={() => setWorkspaceTab(tab)} className={`rounded-full px-4 py-3 text-sm font-bold ${workspaceTab === tab ? "bg-[#f6b800] text-black" : ""}`}>{tab === "details" ? "Details" : "Preview"}</button>)}</div><div className="grid items-start gap-5 p-4 md:grid-cols-[.9fr_1.1fr] md:p-6">
+        <div className="mx-4 mt-4 grid grid-cols-2 rounded-full border border-current/15 p-1 md:hidden">{(["details", "preview"] as const).map(tab => <button key={tab} type="button" aria-pressed={workspaceTab === tab} onClick={() => setWorkspaceTab(tab)} className={`rounded-full px-4 py-3 text-sm font-bold ${workspaceTab === tab ? "bg-[#f6b800] text-black" : ""}`}>{tab === "details" ? "Details" : "Preview"}</button>)}</div>{tool.id==="quote" ? <><div className="grid items-start gap-5 p-4 md:grid-cols-[.9fr_1.1fr] md:p-6">
           <div className={`${workspaceTab === "details" ? "grid" : "hidden"} gap-4 md:grid`}>
             {activePosts.length ? <div className={`rounded-2xl border p-4 ${darkMode?"border-white/10 bg-white/[.02]":"border-black/10 bg-[#faf9f5]"}`}>
               <h3 className="text-sm font-black">Reuse from one of your posts</h3>
@@ -163,8 +164,8 @@ export default function ToolsPage() {
           </div>
           <div className={`${workspaceTab === "preview" ? "grid" : "hidden"} min-w-0 gap-3 md:grid`}><LoadLinkDocumentPreview darkMode={darkMode} documentType="Rate quote" amount={amount} unit={unit} vehicle={vehicle} route={route} availability={availability} vat={vat} terms={terms} /><ToolOutput value={quoteText} showText={false} darkMode={darkMode} onCopy={()=>void copy(quoteText)} onShare={()=>void share(quoteText)}/></div>
         </div></> : <div className="grid gap-5 p-4 md:grid-cols-[1fr_.8fr] md:p-6">
-          <textarea value={text} onChange={(e: ChangeEvent<HTMLTextAreaElement>)=>setText(e.target.value)} className={`min-h-[380px] resize-y rounded-2xl border p-4 font-mono text-sm leading-6 outline-none focus:border-[#f6b800] ${darkMode?"border-white/10 bg-black":"border-black/10 bg-[#faf9f5]"}`}/>
-          <div><ToolOutput value={text} darkMode={darkMode} onCopy={()=>void copy(text)} onShare={()=>void share(text)}/><button type="button" onClick={save} className="mt-3 h-11 w-full rounded-xl border border-current/10 text-xs font-black">Save draft on this device</button></div>
+          <div className={`${workspaceTab === "details" ? "block" : "hidden"} md:block`}><LogisticsDocumentEditor value={text} template={tool.template || ""} title={tool.name} darkMode={darkMode} onChange={setText} /></div>
+          <div className={`${workspaceTab === "preview" ? "block" : "hidden"} md:block min-w-0 space-y-3`}><LoadLinkDocumentPreview darkMode={darkMode} documentType={tool.name} body={text} /><ToolOutput value={text} showText={false} darkMode={darkMode} onCopy={()=>void copy(text)} onShare={()=>void share(text)}/><button type="button" onClick={save} className="mt-3 h-11 w-full rounded-xl border border-current/10 text-xs font-black">Save draft on this device</button></div>
         </div>}
 
         {notice ? <p className={`border-t px-5 py-3 text-xs font-bold md:px-6 ${darkMode?"border-white/10 text-white/55":"border-black/10 text-black/55"}`}>{notice}</p> : null}

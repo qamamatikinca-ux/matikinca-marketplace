@@ -22,6 +22,8 @@ import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { profileRowToMessagePrivacy, writeMessagePrivacy } from "@/lib/messagePrivacy";
 import { enableLoadLinkPush, getLoadLinkPushState, type PushState } from "@/lib/pushNotifications";
 
+type SettingsView = "overview" | "profile" | "work" | "notifications" | "messages" | "security" | "billing" | "team";
+
 type PreferenceKey =
   | "email_notifications"
   | "chat_notifications"
@@ -76,7 +78,7 @@ export default function AccountSettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [preferenceSaving, setPreferenceSaving] = useState<PreferenceKey | null>(null);
   const [hasDriverProfile, setHasDriverProfile] = useState(false);
-  const [settingsView, setSettingsView] = useState<"profile" | "work" | "notifications" | "messages" | "security" | "billing" | "team">("profile");
+  const [settingsView, setSettingsView] = useState<SettingsView>("overview");
   const [pushState, setPushState] = useState<PushState>("disabled");
   const [pushBusy, setPushBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -91,6 +93,7 @@ export default function AccountSettingsPage() {
       else if (hash === "#security") setSettingsView("security");
       else if (hash === "#team") setSettingsView("team");
       else if (hash === "#profile") setSettingsView("profile");
+      else setSettingsView("overview");
     };
     syncHash();
     window.addEventListener("hashchange", syncHash);
@@ -272,7 +275,7 @@ export default function AccountSettingsPage() {
 
   if (loading) return <LoadLinkLoading />;
 
-  const tabClass = (view: typeof settingsView) => `shrink-0 rounded-xl px-4 py-3 text-xs font-semibold transition ${settingsView === view ? "bg-[#f6b800] text-black shadow-sm" : (darkMode ? "text-white/55 hover:bg-white/[.05]" : "text-black/55 hover:bg-black/[.04]")}`;
+  const tabClass = (view: SettingsView) => `shrink-0 rounded-xl px-4 py-3 text-xs font-semibold transition ${settingsView === view ? "bg-[#f6b800] text-black shadow-sm" : (darkMode ? "text-white/55 hover:bg-white/[.05]" : "text-black/55 hover:bg-black/[.04]")}`;
 
   return (
     <main data-loadlink-settings="20261021" data-theme={darkMode ? "dark" : "light"} className={`min-h-screen ${page}`}>
@@ -285,28 +288,24 @@ export default function AccountSettingsPage() {
         </div>
 
 
-        <div className="ll-settings-shell"><label className="ll-settings-mobile">Settings section<select value={settingsView} onChange={event => { const view = event.target.value as typeof settingsView; setSettingsView(view); window.history.replaceState(null, "", `#${view === "messages" ? "message-privacy" : view}`); }} className={input}><option value="profile">Profile</option><option value="work">Work</option><option value="notifications">Notifications</option><option value="messages">Messages</option><option value="security">Security and privacy</option><option value="billing">Billing</option>{form.subscription_plan.toLowerCase().includes("dealer") ? <option value="team">Team</option> : null}</select></label><nav aria-label="Settings categories" className={`mt-5 flex max-w-3xl gap-1 overflow-x-auto rounded-2xl border p-1.5 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-white"}`}>
-          {([
-            ["profile", "Profile"], ["work", "Work"], ["notifications", "Notifications"],
-            ["messages", "Messages"], ["security", "Security"], ["billing", "Billing"],
-            ...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team", "Team"]] : []),
-          ] as Array<[typeof settingsView, string]>).map(([view, label]) => (
-            <button key={view} type="button" aria-current={settingsView === view ? "page" : undefined} onClick={() => {setSettingsView(view); window.history.replaceState(null,"",`#${view === "messages" ? "message-privacy" : view}`);}} className={tabClass(view)}>{label}</button>
-          ))}
-        </nav>
+        <div className="ll-settings-shell" data-overview={settingsView === "overview"}>
+        {settingsView !== "overview" ? <nav aria-label="Settings categories"><button type="button" onClick={() => { setSettingsView("overview"); window.history.replaceState(null, "", window.location.pathname); }} className="flex items-center gap-2 px-4 py-3 text-xs font-bold"><LoadLinkIcon name="chevronLeft" size={16} />All settings</button>{([
+          ["profile","Profile"],["work","Work"],["notifications","Notifications"],["messages","Messages"],["security","Security and privacy"],["billing","Billing"],...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team","Team"]] : [])
+        ] as Array<[SettingsView,string]>).map(([view,label]) => <button key={view} type="button" aria-current={settingsView === view ? "page" : undefined} className={tabClass(view)} onClick={() => { setSettingsView(view); window.history.replaceState(null,"",`#${view === "messages" ? "message-privacy" : view}`); }}>{label}</button>)}</nav> : null}
 
         <div className="ll-settings-content">
         {dirty && settingsView === "profile" ? <p className={`mt-4 text-sm font-medium ${muted}`}>You have unsaved profile changes.</p> : null}
         {message ? <div role="status" className={`mt-5 max-w-3xl rounded-xl border p-3 text-sm font-medium ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-white"}`}>{message}</div> : null}
 
+        {settingsView === "overview" ? <div className="ll-settings-overview"><button type="button" className="ll-settings-person" onClick={() => { setSettingsView("profile"); window.history.replaceState(null,"","#profile"); }}><span className="ll-settings-photo">{form.avatar_url ? <LoadLinkImage src={form.avatar_url} alt="Your profile" className="h-full w-full object-cover" /> : initials}</span><span className="min-w-0 flex-1"><strong>{form.full_name || "Your account"}</strong><span>{user?.email}</span></span><LoadLinkIcon name="chevronRight" size={18} /></button><div className="ll-settings-menu">{([
+          ["profile","user","Profile","Photo and contact details"],["work","truck","Work","Driver profile and listings"],["notifications","bell","Notifications","Choose your updates"],["messages","message","Messages","Chat privacy and alerts"],["security","lock","Security and privacy","Password, cookies and account access"],["billing","paperclip","Billing","Your package and payments"],...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team","user","Team","Dealership access"]] : [])
+        ] as Array<[SettingsView, import("@/components/LoadLinkIcon").LoadLinkIconName,string,string]>).map(([view,icon,title,copy]) => <button key={view} type="button" onClick={() => { setSettingsView(view); window.history.replaceState(null,"",`#${view === "messages" ? "message-privacy" : view}`); }}><span className="ll-settings-row-icon"><LoadLinkIcon name={icon} size={19} /></span><span><strong>{title}</strong><small>{copy}</small></span><LoadLinkIcon name="chevronRight" size={17} /></button>)}</div></div> : <button type="button" className="ll-settings-mobile-back" onClick={() => {setSettingsView("overview");window.history.replaceState(null,"",window.location.pathname);}}><LoadLinkIcon name="chevronLeft" size={16} />All settings</button>}
+
         {settingsView === "profile" ? (
-          <div id="profile" className="mt-6 grid gap-5 lg:grid-cols-[250px_1fr]">
-            <aside className={`ll-settings-profile-summary h-fit border p-4 ${surface}`}>
-              <div className="flex items-center gap-4"><div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-current/15 bg-black text-lg font-bold text-white">{form.avatar_url ? <LoadLinkImage src={form.avatar_url} alt="Profile" className="h-full w-full object-cover" /> : initials}</div><div className="min-w-0"><strong className="block truncate text-sm font-bold">{form.full_name || "Your profile"}</strong><p className={`mt-1 break-all text-xs ${muted}`}>{user?.email}</p><input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={event => void uploadAvatar(event)} className="hidden" /><button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="mt-2 rounded-full border border-current/20 px-3 py-2 text-xs font-semibold disabled:opacity-50">{uploading ? "Uploading…" : "Change photo"}</button></div></div>
-              <details className="group mt-4 border-t border-current/10 pt-3"><summary className="flex cursor-pointer items-center gap-3 text-xs font-semibold">Account details<LoadLinkIcon name="chevronDown" size={16} className="ml-auto shrink-0 transition-transform group-open:rotate-180" /></summary><div className="mt-4"><Info label="Verification" value={form.verification_status.replaceAll("_", " ")} /><Info label="Package" value={form.subscription_plan} /></div><div className="mt-4 flex flex-wrap gap-2"><Link href="/verify" className="rounded-full border border-current/15 px-3 py-2 text-xs font-semibold">Verification</Link><Link href="/account/packages" className="rounded-full border border-current/15 px-3 py-2 text-xs font-semibold">Package</Link>{hasDriverProfile ? <Link href="/driver-profile" className="rounded-full border border-current/15 px-3 py-2 text-xs font-semibold">Driver profile</Link> : null}</div></details>
-            </aside>
+          <div id="profile" className="mt-6 grid max-w-3xl gap-5">
 
             <form onSubmit={saveProfile} className={`border p-5 md:p-7 ${surface}`}>
+              <div className="mb-6 flex items-center gap-4"><div className="ll-settings-photo">{form.avatar_url ? <LoadLinkImage src={form.avatar_url} alt="Your profile" className="h-full w-full object-cover" /> : initials}</div><input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={event => void uploadAvatar(event)} className="hidden" /><button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="rounded-full border border-current/20 px-4 py-2.5 text-xs font-semibold">{uploading ? "Uploading…" : "Change photo"}</button></div>
               <h2 className="text-xl font-bold">Profile details</h2>
               <p className={`mt-2 text-sm ${muted}`}>Keep your name, contact number and location up to date.</p>
               <div className="mt-5 grid gap-4 md:grid-cols-2">

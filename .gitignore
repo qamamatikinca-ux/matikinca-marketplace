@@ -47,3 +47,5 @@ matikinca-marketplace-google-auth-chat-protected.zip
 
 # Generated from the pinned face-api package during prebuild
 /public/models/identity-v1/
+
+/public/models/logo-v1/

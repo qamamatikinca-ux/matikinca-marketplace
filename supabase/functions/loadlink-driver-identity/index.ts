@@ -44,10 +44,16 @@ Deno.serve(async (request: Request) => {
    const meta = check.client_observations;
    return Boolean(identity && portrait && profile && meta?.source === SOURCE && meta.binding?.profile_id === profile.id && meta.binding?.identity_sha256 === identity.sha256 && meta.binding?.portrait_sha256 === portrait.sha256);
   };
+  const notify = async (checkId: string) => {
+   if (!profile) return;
+   const result = await admin.from("user_notifications").insert({ id: checkId, user_id: user.id, type: "driver_verification_submitted", title: "Waiting for verification", message: "Your identity check is with the LoadLink team. Your driver profile stays private until it is approved.", entity_type: "driver_profile", entity_id: profile.id, action_url: "/driver-portal#your-driver-profile", metadata: { identity_check_id: checkId }, is_read: false });
+   if (result.error && result.error.code !== "23505") console.warn("Driver verification notice could not be saved", result.error.code);
+  };
   if (body.action === "status") {
    const result = await admin.from("identity_live_checks").select("id,status,review_feedback,client_observations,created_at").eq("user_id", user.id).eq("purpose", "driver").order("created_at", { ascending: false }).limit(20);
    if (result.error) return reply({ error: "Identity review status could not load." }, 503);
    const check = (result.data || []).find(c => current(c) && c.status !== "collecting");
+   if (check?.status === "pending_review") await notify(check.id);
    return reply({ emailVerified, phoneVerified, phoneVerificationAvailable: await phoneAvailable(url), accountEmail: user.email || "", identityReady: Boolean(identity && portrait), identityMime: identity?.mime_type || "", check: check ? { id: check.id, status: check.status, mode: check.client_observations.mode, review_feedback: check.review_feedback } : null });
   }
   if (!profile || !identity || !portrait) return reply({ error: "Upload your profile photo and ID or passport first." }, 400);
@@ -86,7 +92,7 @@ Deno.serve(async (request: Request) => {
    const result = await admin.from("identity_live_checks").select("*").eq("id", body.id).eq("user_id", user.id).eq("purpose", "driver").maybeSingle();
    const check = result.data;
    if (result.error || !check || !current(check)) return reply({ error: "Your documents changed. Start a new camera check." }, 409);
-   if (check.status === "pending_review") return reply({ ok: true });
+   if (check.status === "pending_review") { await notify(check.id); return reply({ ok: true }); }
    if (check.status !== "collecting" || new Date(check.expires_at).getTime() <= Date.now()) return reply({ error: "The check expired. Please start again." }, 409);
    const capture = body.capture;
    const steps = capture?.steps;
@@ -104,6 +110,7 @@ Deno.serve(async (request: Request) => {
    const safeCapture = { complete: true, steps, duration_ms: capture.duration_ms, camera: capture.camera === "environment" ? "environment" : "user", comparison_distance: Number.isFinite(capture.comparison_distance) ? capture.comparison_distance : null, note: "Browser movement and comparison observations are untrusted. Staff must inspect the original ID, portrait and recording. No automatic verification." };
    const saved = await admin.from("identity_live_checks").update({ status: "pending_review", submitted_at: new Date().toISOString(), portrait_path: prefix + "portrait.jpg", video_path: prefix + `capture.${body.extension}`, client_observations: { ...check.client_observations, capture: safeCapture } }).eq("id", check.id).eq("user_id", user.id).eq("status", "collecting").select("id").single();
    if (saved.error) return reply({ error: "The check changed. Refresh your status before retrying." }, 409);
+   await notify(check.id);
    return reply({ ok: true });
   }
   return reply({ error: "Unknown verification action." }, 400);

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/materialize-truck-model-photos.mjs && node scripts/finalize-login-artwork.mjs && node scripts/materialize-face-models.mjs",
+    "prebuild": "node scripts/materialize-truck-model-photos.mjs && node scripts/finalize-login-artwork.mjs && node scripts/materialize-face-models.mjs && node scripts/materialize-logo-model.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -15,6 +15,7 @@
     "@supabase/supabase-js": "2.117.3",
     "@vladmandic/face-api": "1.7.15",
     "next": "16.4.3",
+    "onnxruntime-web": "1.31.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "web-push": "3.6.7"
