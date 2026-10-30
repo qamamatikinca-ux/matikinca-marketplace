@@ -370,18 +370,18 @@ export default function DriverProfileWizardV273() {
           <StepTitle title="Driving experience" copy="Tell businesses what you can drive and where you have worked." muted={muted} />
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <Field label="Years of experience"><input className={input} type="number" min="0" max="60" value={form.years_experience} onChange={(event) => field("years_experience", Number(event.target.value))} /></Field>
-            <Field label="Licence code"><input className={input} value={form.licence_code} onChange={(event) => field("licence_code", event.target.value)} placeholder="e.g. EC / Code 14" /></Field>
-            <Field label="Vehicle experience"><input className={input} value={form.vehicle_types} onChange={(event) => field("vehicle_types", event.target.value)} placeholder="Truck, tanker, refrigerated truck" /></Field>
-            <Field label="Route experience"><input className={input} value={form.route_experience} onChange={(event) => field("route_experience", event.target.value)} placeholder="Gauteng, Durban, cross-border" /></Field>
-            <Field label="Languages"><input className={input} value={form.languages} onChange={(event) => field("languages", event.target.value)} placeholder="English, isiXhosa" /></Field>
-            <Field label="Previous roles"><input className={input} value={form.previous_roles} onChange={(event) => field("previous_roles", event.target.value)} placeholder="Long-haul driver, fleet driver" /></Field>
+            <Field label="Licence code"><input className={input} type="text" inputMode="text" autoCapitalize="sentences" value={form.licence_code} onChange={(event) => field("licence_code", event.target.value)} placeholder="e.g. EC / Code 14" /></Field>
+            <Field label="Vehicle experience"><input className={input} type="text" inputMode="text" autoCapitalize="sentences" value={form.vehicle_types} onChange={(event) => field("vehicle_types", event.target.value)} placeholder="Truck, tanker, refrigerated truck" /></Field>
+            <Field label="Route experience"><input className={input} type="text" inputMode="text" autoCapitalize="sentences" value={form.route_experience} onChange={(event) => field("route_experience", event.target.value)} placeholder="Gauteng, Durban, cross-border" /></Field>
+            <Field label="Languages"><input className={input} type="text" inputMode="text" autoCapitalize="sentences" value={form.languages} onChange={(event) => field("languages", event.target.value)} placeholder="English, isiXhosa" /></Field>
+            <Field label="Previous roles"><input className={input} type="text" inputMode="text" autoCapitalize="sentences" value={form.previous_roles} onChange={(event) => field("previous_roles", event.target.value)} placeholder="Long-haul driver, fleet driver" /></Field>
           </div>
         </> : null}
 
         {step === 3 ? <>
           <StepTitle title="Availability and PrDP" copy="Add your current availability and the credentials relevant to the work you want." muted={muted} />
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <Field label="Availability"><input className={input} value={form.availability} onChange={(event) => field("availability", event.target.value)} placeholder="Available immediately" /></Field>
+            <Field label="Availability"><input className={input} type="text" inputMode="text" autoCapitalize="sentences" value={form.availability} onChange={(event) => field("availability", event.target.value)} placeholder="Available immediately" /></Field>
             <label className={`mt-2 flex min-h-12 items-center justify-between gap-4 rounded-xl border px-4 ${darkMode ? "border-white/15 bg-[#151515]" : "border-black/12 bg-[#fbfaf7]"}`}><span><strong className="block text-xs font-black">PrDP required for my work</strong><span className={`mt-0.5 block text-[9px] font-semibold ${muted}`}>Turn on if you use a PrDP.</span></span><input type="checkbox" checked={form.prdp_required} onChange={(event) => field("prdp_required", event.target.checked)} className="h-5 w-5 accent-[#f6b800]" /></label>
             {form.prdp_required ? <Field label="PrDP expiry"><input className={input} type="date" value={form.prdp_expiry} onChange={(event) => field("prdp_expiry", event.target.value)} /></Field> : null}
             <Field label="Professional summary" wide><textarea className={textarea} value={form.bio} onChange={(event) => field("bio", event.target.value)} placeholder="Briefly describe your driving experience, reliability and the type of work you are looking for." /></Field>
