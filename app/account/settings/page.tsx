@@ -334,6 +334,7 @@ export default function AccountSettingsPage() {
                     <button
                       key={view}
                       type="button"
+                      data-loadlink-settings-option="true"
                       onClick={() => {
                         setSettingsView(view);
                         window.history.replaceState(null, "", `#${view === "messages" ? "message-privacy" : view}`);
@@ -458,8 +459,8 @@ export default function AccountSettingsPage() {
           <div className="mt-6 grid max-w-3xl gap-4">
             <section className={`border p-5 md:p-7 ${surface}`}><h2 className="text-xl font-bold">Password</h2><p className={`mt-2 text-sm ${muted}`}>{googleOnly ? "Set a LoadLink password while keeping Google sign-in connected." : "Change your password without disconnecting other sign-in methods."}</p><div className="mt-5 grid gap-4 md:grid-cols-2"><div className="grid gap-2"><Field label={googleOnly ? "Set a password" : "New password"}><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" className={input} /></Field>{password ? <PasswordStrengthMeter password={password} darkMode={darkMode} /> : null}</div><Field label="Confirm password"><input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" className={input} /></Field></div><button type="button" onClick={() => void updatePassword()} disabled={saving || !password} className="mt-5 h-11 rounded-xl bg-[#f6b800] px-5 text-xs font-semibold text-black disabled:opacity-40">{googleOnly ? "Set password" : "Update password"}</button></section>
             <MfaSecurityCard darkMode={darkMode} />
-            <section className={`border p-5 md:p-7 ${surface}`}><div className="flex items-center justify-between gap-4"><div><h2 className="text-xl font-bold">Cookies</h2><p className={`mt-2 text-sm ${muted}`}>Choose whether to allow optional cookies.</p></div><button type="button" onClick={() => window.dispatchEvent(new Event("loadlink:open-cookie-preferences"))} className="shrink-0 rounded-full border border-current/20 px-4 py-3 text-xs font-semibold">Manage</button></div></section>
-            <section className={`border p-5 md:p-7 ${surface}`}><h2 className="text-xl font-bold">Account access</h2><p className={`mt-2 text-sm ${muted}`}>Sign out or request account deletion.</p><div className="mt-5 flex flex-wrap gap-3"><button type="button" onClick={() => void signOut()} className="h-11 rounded-xl border border-current/20 px-5 text-xs font-semibold">Sign out</button><button type="button" onClick={requestDeletion} className="h-11 rounded-xl border border-red-500 px-5 text-xs font-semibold text-red-500">Request deletion</button></div></section>
+            <section className={`border p-5 md:p-7 ${surface}`}><div className="flex items-center justify-between gap-4"><div><h2 className="text-xl font-bold">Cookies</h2><p className={`mt-2 text-sm ${muted}`}>Choose whether to allow optional cookies.</p></div><button type="button" onClick={() => window.dispatchEvent(new Event("loadlink:open-cookie-preferences"))} className="ll-settings-neutral-action ll-settings-manage-button">Manage</button></div></section>
+            <section className={`border p-5 md:p-7 ${surface}`}><h2 className="text-xl font-bold">Account access</h2><p className={`mt-2 text-sm ${muted}`}>Sign out or request account deletion.</p><div className="ll-settings-security-actions"><button type="button" onClick={() => void signOut()} className="ll-settings-security-button ll-settings-neutral-action"><LoadLinkIcon name="logout" size={17} />Sign out</button><button type="button" onClick={requestDeletion} className="ll-settings-security-button ll-settings-danger-action"><LoadLinkIcon name="trash" size={17} />Request deletion</button></div></section>
           </div>
         ) : null}
         </div></div>
@@ -470,13 +471,35 @@ export default function AccountSettingsPage() {
 }
 
 function SettingsRoute({ href, title, description, darkMode, onClick }: { href: string; title: string; description: string; darkMode: boolean; onClick?: () => void }) {
-  return <Link href={href} onClick={onClick} className={`flex min-h-16 items-center justify-between gap-3 rounded-xl border px-4 py-3 transition active:scale-[.99] ${darkMode ? "border-white/10 bg-white/[.02] hover:bg-white/[.055]" : "border-black/10 bg-black/[.015] hover:bg-black/[.04]"}`}>
+  return <Link href={href} onClick={onClick} className={`ll-settings-route flex items-center justify-between gap-3 border transition active:scale-[.99] ${darkMode ? "border-white/10 bg-white/[.02] hover:bg-white/[.055]" : "border-black/10 bg-black/[.015] hover:bg-black/[.04]"}`}>
     <span className="min-w-0"><strong className="block text-sm font-bold">{title}</strong><span className={`mt-1 block text-xs font-semibold leading-5 ${darkMode ? "text-white/55" : "text-black/55"}`}>{description}</span></span>
     <span aria-hidden="true" className="shrink-0 text-xl opacity-55">›</span>
   </Link>;
 }
 function Field({ label, children }: { label: string; children: ReactNode }) { return <label className="block text-xs font-semibold uppercase tracking-[.09em]">{label}{children}</label>; }
-function Toggle({ label, description, checked, busy, onChange, darkMode }: { label: string; description?: string; checked: boolean; busy?: boolean; onChange: (value: boolean) => void; darkMode: boolean }) { return <div className={`flex min-h-14 items-center justify-between gap-4 rounded-xl border px-4 py-3 ${darkMode ? "border-white/10 bg-white/[.02]" : "border-black/10 bg-black/[.015]"}`}><span className="min-w-0"><strong className="block text-sm font-semibold normal-case tracking-normal">{label}</strong>{description ? <span className={`mt-1 block text-xs font-semibold leading-5 ${darkMode ? "text-white/45" : "text-black/45"}`}>{description}</span> : null}</span><button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)} disabled={busy} className={`relative h-7 w-12 shrink-0 rounded-full border transition disabled:opacity-55 ${checked ? "border-[#f6b800] bg-[#f6b800]" : darkMode ? "border-white/20 bg-white/10" : "border-black/20 bg-black/10"}`}><span className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} /></button></div>; }
+function Toggle({ label, description, checked, busy, onChange, darkMode }: { label: string; description?: string; checked: boolean; busy?: boolean; onChange: (value: boolean) => void; darkMode: boolean }) {
+  return (
+    <div className={`ll-settings-toggle-row ${darkMode ? "ll-settings-toggle-dark" : "ll-settings-toggle-light"}`}>
+      <span className="ll-settings-toggle-copy">
+        <strong>{label}</strong>
+        {description ? <span>{description}</span> : null}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        aria-busy={Boolean(busy)}
+        disabled={busy}
+        onClick={() => onChange(!checked)}
+        className="ll-settings-switch"
+      >
+        <span className="ll-settings-switch-thumb" aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
 function Info({ label, value }: { label: string; value: string }) { return <div className="mb-4 last:mb-0"><p className="text-[10px] font-semibold uppercase tracking-[.1em] opacity-50">{label}</p><p className="mt-1 break-words text-sm font-semibold capitalize">{value}</p></div>; }
 
 function isMissingSchemaError(message: string) { return /column|schema cache|does not exist|relation/i.test(message); }
