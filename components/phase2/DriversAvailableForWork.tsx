@@ -11,9 +11,6 @@ import { useEffect, useMemo, useState } from "react";
 import { browserSupabase } from "@/lib/phase2/supabase";
 import styles from "./DriversAvailableForWork.module.css";
 import LoadLinkPagination from "@/components/LoadLinkPagination";
-import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
-import { flexibleMatch } from "@/lib/smartSearch";
-import { matchesSouthAfricanLocation } from "@/lib/southAfricaLocations";
 
 type Driver = {
   id: string;
@@ -43,9 +40,6 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
   const [notice, setNotice] = useState("");
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<SortOption>("recommended");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [cityFilter, setCityFilter] = useState("");
-  const [filtersReady, setFiltersReady] = useState(!fullPage);
   const [reviewTarget, setReviewTarget] = useState<Driver | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewBody, setReviewBody] = useState("");
@@ -69,13 +63,6 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
   }, []);
 
   useEffect(() => {
-    if (!fullPage) return;
-    const params = new URLSearchParams(window.location.search);
-    setSearchTerm(params.get("search") || ""); setCityFilter(params.get("city") || ""); setFiltersReady(true);
-  }, [fullPage]);
-
-  useEffect(() => {
-    if (!filtersReady) return;
     let active = true; setLoading(true); setNotice("");
     const params = new URLSearchParams({ limit: fullPage ? "50" : "4", offset: "0" });
     fetch(`/api/phase2/public-drivers?${params.toString()}`, { cache: "no-store" })
@@ -84,21 +71,16 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
       .catch((error) => { if (!active) return; setAllDrivers([]); setNotice(error instanceof Error ? error.message : "Driver profiles could not be loaded."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [filtersReady, fullPage]);
-
-  const filteredDrivers = useMemo(() => allDrivers.filter((driver) => {
-    const searchable = `${driver.full_name || ""} ${driver.headline || ""} ${driver.city || ""} ${driver.province || ""} ${driver.licence_code || ""} ${(driver.vehicle_types || []).join(" ")} ${driver.years_experience || ""} ${driver.availability || ""}`;
-    return (!searchTerm.trim() || flexibleMatch(searchable, searchTerm)) && matchesSouthAfricanLocation(driver.city || driver.province, cityFilter);
-  }), [allDrivers, cityFilter, searchTerm]);
+  }, [fullPage]);
 
   const sortedDrivers = useMemo(() => {
-    const rows = [...filteredDrivers];
+    const rows = [...allDrivers];
     if (sort === "experience") return rows.sort((a, b) => Number(b.years_experience || 0) - Number(a.years_experience || 0));
     if (sort === "name") return rows.sort((a, b) => String(a.full_name || "").localeCompare(String(b.full_name || "")));
     if (sort === "location") return rows.sort((a, b) => `${a.province || ""} ${a.city || ""}`.localeCompare(`${b.province || ""} ${b.city || ""}`));
     if (sort === "available") return rows.sort((a, b) => availabilityScore(b.availability) - availabilityScore(a.availability));
     return rows.sort((a,b) => Number(b.average_rating || 0)-Number(a.average_rating || 0));
-  }, [filteredDrivers, sort]);
+  }, [allDrivers, sort]);
 
   const drivers = fullPage ? sortedDrivers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : sortedDrivers.slice(0, 4);
   const pageCount = Math.max(1, Math.ceil(sortedDrivers.length / PAGE_SIZE));
@@ -125,11 +107,10 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
       {showHero ? <div className={`${styles.hero} ll-driver-hero`}><LoadLinkImage src="/images/driver-profile-hero.jpg" alt="Truck drivers ready for logistics opportunities" className={styles.heroImage} /><div className={styles.heroShade} /><div className={styles.heroContent}><h2 className={styles.title}>Drivers Available for Work</h2><p className={styles.subtitle}>Approved drivers can present their licence details, experience, routes and availability directly to logistics companies and truck owners.</p><div className={styles.actions}><Link data-marketplace-action className={styles.primary} href="/driver-profile">{ownsDriverProfile ? "Manage your profile" : "Create driver profile"}</Link>{fullPage ? <Link className={styles.secondary} href="/account/settings">Profile settings</Link> : null}</div></div></div> : null}
 
       <div className={styles.content}>
-        {fullPage ? <div className={styles.filterBar}><label className={styles.filterField}><span>Search drivers</span><input value={searchTerm} onChange={(event) => { setSearchTerm(event.target.value); setPage(1); }} placeholder="Name, licence, vehicle experience" /></label><label className={styles.filterField}><span>Location</span><SouthAfricaLocationInput value={cityFilter} onChange={(value) => { setCityFilter(value); setPage(1); }} darkMode={darkMode} placeholder="City, town or province" ariaLabel="Filter drivers by South African location" className={styles.locationInput} /></label></div> : null}
-        <div className={styles.resultsHeader}>{!showHero ? <div><h2 className={styles.embeddedHeading}>Approved drivers ready for work</h2></div> : <div><h2 className={styles.resultsTitle}>Available drivers</h2>{(searchTerm || cityFilter) ? <p className={styles.resultsCopy}>Showing matches for {[searchTerm, cityFilter].filter(Boolean).join(" · ")}.</p> : null}</div>}<LoadLinkSortControl darkMode={darkMode} value={sort} onChange={(value) => { setSort(value as SortOption); setPage(1); }} options={[{value:"recommended",label:"Recommended"},{value:"available",label:"Available first"},{value:"experience",label:"Most experience"},{value:"name",label:"Name A–Z"},{value:"location",label:"Location A–Z"}]} /></div>
+        <div className={styles.resultsHeader}>{!showHero ? <div><h2 className={styles.embeddedHeading}>Approved drivers ready for work</h2></div> : <div><h2 className={styles.resultsTitle}>Available drivers</h2></div>}<LoadLinkSortControl darkMode={darkMode} value={sort} onChange={(value) => { setSort(value as SortOption); setPage(1); }} options={[{value:"recommended",label:"Recommended"},{value:"available",label:"Available first"},{value:"experience",label:"Most experience"},{value:"name",label:"Name A–Z"},{value:"location",label:"Location A–Z"}]} /></div>
 
         {notice ? <p role="alert" className={styles.empty}>{notice}</p> : null}
-        {loading ? <div className={styles.empty}>Loading approved drivers…</div> : drivers.length === 0 ? <div className={styles.empty}>No approved driver profiles match this search yet.</div> : <div className={styles.grid}>{drivers.map((driver) => {
+        {loading ? <div className={styles.empty}>Loading approved drivers…</div> : drivers.length === 0 ? <div className={styles.empty}>No approved drivers available yet.</div> : <div className={styles.grid}>{drivers.map((driver) => {
           const rating=Number(driver.average_rating||0), count=Number(driver.review_count||0);
           const location = [...new Set([driver.city, driver.province].filter(Boolean).map(value => value.trim()))].join(", ");
           return <article className={styles.card} key={driver.id} data-loadlink-driver-card="true">
