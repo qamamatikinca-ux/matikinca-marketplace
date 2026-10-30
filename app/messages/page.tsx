@@ -2426,7 +2426,7 @@ function ConversationDetails({
       </div>
 
       {conversation.other_phone ? (
-        <a href={`tel:${conversation.other_phone.replace(/\\s/g, "")}`} className={`${action} mt-2 w-full`}>
+        <a href={`tel:${conversation.other_phone.replace(/\s/g, "")}`} className={`${action} mt-2 w-full`}>
           <PhoneIcon /> Call contact
         </a>
       ) : null}
