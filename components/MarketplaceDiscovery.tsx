@@ -159,6 +159,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
     <>
       <section
         data-loadlink-home-search-section
+        data-theme={darkMode ? "dark" : "light"}
         className={`px-4 py-4 sm:px-5 md:px-12 md:py-6 ${darkMode ? "bg-[#050505] text-white" : "bg-[#fff6dc] text-black"}`}
       >
         <div className="mx-auto max-w-7xl">
@@ -172,6 +173,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                     key={item.value}
                     type="button"
                     onClick={() => chooseScope(item.value)}
+                    data-loadlink-quick-scope="true"
                     aria-pressed={scope === item.value}
                     className={`h-9 shrink-0 rounded-[11px] border px-3 text-[12px] font-semibold transition active:scale-[.98] ${
                       scope === item.value
