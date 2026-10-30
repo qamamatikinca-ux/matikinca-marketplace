@@ -258,31 +258,46 @@ div:has(> img[src="/images/loadlink-finance-truck.webp"]) > div[aria-hidden="tru
 /* Reference lock: homepage search matches the approved compact white-row layout. */
 
 
-/* Quick-search focus and selected-category contrast: scoped to the homepage search only. */
-html body [data-loadlink-home-search-section] button[aria-pressed] {
-  min-height: 40px !important;
-  padding-inline: 14px !important;
+/* Homepage quick links: the pressed tab must always be LoadLink yellow.
+   These selectors only target the category chips, not other homepage buttons. */
+html body [data-loadlink-home-search-section] [aria-label="Search category"] button[data-loadlink-quick-scope="true"] {
+  display: inline-flex !important;
+  min-height: 42px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
   border-radius: 999px !important;
+  padding: 9px 15px !important;
   font-size: 12px !important;
-  font-weight: 650 !important;
-  white-space: nowrap;
+  line-height: 1.25 !important;
+  letter-spacing: 0 !important;
+  font-weight: 680 !important;
+  text-transform: none !important;
+  white-space: nowrap !important;
   box-shadow: none !important;
-  transition: background-color .14s ease, color .14s ease, border-color .14s ease;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease !important;
 }
-html body [data-loadlink-home-search-section] button[aria-pressed="true"] {
+html body [data-loadlink-home-search-section] [aria-label="Search category"] button[data-loadlink-quick-scope="true"][aria-pressed="true"] {
   background: #f6b800 !important;
-  border-color: #f6b800 !important;
-  color: #171717 !important;
+  border: 1px solid #f6b800 !important;
+  color: #111111 !important;
+  opacity: 1 !important;
 }
-html body [data-loadlink-home-search-section] button[aria-pressed="false"] {
-  color: inherit !important;
-  background: transparent !important;
-  border-color: currentColor !important;
-  opacity: .75;
+html body [data-loadlink-home-search-section][data-theme="dark"] [aria-label="Search category"] button[data-loadlink-quick-scope="true"][aria-pressed="false"] {
+  background: #141514 !important;
+  border: 1px solid #444743 !important;
+  color: #f1f2f0 !important;
+  opacity: 1 !important;
 }
-html body [data-loadlink-home-search-section] button[aria-pressed="false"]:hover,
-html body [data-loadlink-home-search-section] button[aria-pressed="false"]:focus-visible {
-  opacity: 1; background: rgba(246,184,0,.10) !important;
+html body [data-loadlink-home-search-section][data-theme="light"] [aria-label="Search category"] button[data-loadlink-quick-scope="true"][aria-pressed="false"] {
+  background: #ffffff !important;
+  border: 1px solid #deded9 !important;
+  color: #333631 !important;
+  opacity: 1 !important;
+}
+html body [data-loadlink-home-search-section] [aria-label="Search category"] button[data-loadlink-quick-scope="true"]:focus-visible {
+  outline: 2px solid #e5a800 !important;
+  outline-offset: 3px !important;
 }
 html body [data-loadlink-home-search-section] [data-loadlink-autotrader-search] button {
   min-height: 44px;
@@ -290,8 +305,9 @@ html body [data-loadlink-home-search-section] [data-loadlink-autotrader-search] 
 html body [data-loadlink-home-search-section] [data-loadlink-home-search-suggestions] button {
   min-height: 46px;
 }
-@media(max-width: 640px) {
-  html body [data-loadlink-home-search-section] button[aria-pressed] {
-    min-height: 40px !important; padding-inline: 13px !important;
+@media(max-width:640px) {
+  html body [data-loadlink-home-search-section] [aria-label="Search category"] button[data-loadlink-quick-scope="true"] {
+    min-height: 40px !important;
+    padding: 8px 14px !important;
   }
 }
