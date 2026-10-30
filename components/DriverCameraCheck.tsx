@@ -3,8 +3,9 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { driverIdentityRequest } from "@/lib/driverIdentityClient";
-import { loadFaceComparison } from "@/lib/faceComparison";
-import { comparisonDistance, type Pose } from "@/lib/liveIdentity";
+import { loadFaceComparison, loadFaceGuidance } from "@/lib/faceComparison";
+import { compareDriverEvidence } from "@/lib/driverFaceReview";
+import { type Pose } from "@/lib/liveIdentity";
 import { checkDriverFrame, updateDriverHold, type Hold } from "@/lib/driverCapture";
 import type { DriverIdentityState } from "@/lib/driverVerification";
 
@@ -31,7 +32,8 @@ const instruction = (pose: Pose) => pose === "centre" ? "Look straight at the ca
 export default function DriverCameraCheck({ state, disabled, onSaved, onBusy }: { state: DriverIdentityState; disabled: boolean; onSaved: () => Promise<void>; onBusy: (value: boolean) => void }) {
  const [camera, setCamera] = useState<"user" | "environment">("user");
  const [consent, setConsent] = useState(false);
- const [stage, setStage] = useState<"idle" | "loading" | "opening" | "capturing" | "review" | "sending">("idle");
+ const [stage, setStage] = useState<"idle" | "loading" | "opening" | "capturing" | "comparing" | "review" | "sending">("idle");
+ const [comparisonNote, setComparisonNote] = useState("");
  const [prompt, setPrompt] = useState(""); const [progress, setProgress] = useState(0);
  const [target, setTarget] = useState<Pose>("centre"); const [error, setError] = useState("");
  const video = useRef<HTMLVideoElement>(null), frame = useRef<HTMLDivElement>(null);
@@ -45,7 +47,7 @@ export default function DriverCameraCheck({ state, disabled, onSaved, onBusy }: 
  const invalidate = useCallback(() => { run.current++; stop(); }, [stop]);
  const cancel = useCallback(() => { invalidate(); evidence.current = null; busy.current = false; onBusy(false); setStage("idle"); }, [invalidate, onBusy]);
  useEffect(() => {
-  const hidden = () => { if (document.hidden && stream.current) { cancel(); setError("Camera stopped. Keep this page open and try again."); } };
+  const hidden = () => { if (document.hidden && busy.current && !evidence.current) { cancel(); setError("Camera check paused. Keep this page open and try again."); } };
   document.addEventListener("visibilitychange", hidden);
   return () => { document.removeEventListener("visibilitychange", hidden); invalidate(); onBusy(false); };
  }, [cancel, invalidate, onBusy]);
@@ -53,35 +55,28 @@ export default function DriverCameraCheck({ state, disabled, onSaved, onBusy }: 
   if (busy.current || disabled || !consent) return;
   busy.current = true; onBusy(true); const currentRun = ++run.current;
   const active = () => run.current === currentRun;
-  setError(""); setStage("loading"); setPrompt("Preparing face detection…"); setProgress(0);
+  setError(""); setComparisonNote(""); setStage("opening"); setPrompt("Allow camera access, then place your face in the oval"); setProgress(0);
   let watchdog: ReturnType<typeof setTimeout> | undefined;
   try {
    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") throw new Error("This browser cannot run the camera check. Use a recent Safari or Chrome and try again.");
-   if (state.identityMime === "application/pdf") throw new Error("Your ID is a PDF. Replace it with a clear JPG or PNG photograph to use the camera check.");
-   const api = await timed(loadFaceComparison(), 22000, "Face detection could not load. Check your connection and try again.");
-   if (!active()) return;
-   setPrompt("Opening your ID photo…");
-   const documentResponse = await driverIdentityRequest({ action: "document" });
-   const idBlob = await documentResponse.blob();
-   if (!["image/jpeg", "image/png"].includes(idBlob.type) || !idBlob.size) throw new Error("Your ID photo could not be opened. Replace it with a clear JPG or PNG and retry.");
-   let idImage: HTMLImageElement;
-   try { idImage = await timed(imageOf(idBlob), 6000, "Your ID photo took too long to open. Please retry."); }
-   catch { throw new Error("Your ID photo could not be decoded. Replace it with a clear JPG or PNG and retry."); }
-   setPrompt("Checking your ID photo…");
-   const idFaces = await timed(api.detectAllFaces(idImage, new api.TinyFaceDetectorOptions({ inputSize: 608, scoreThreshold: .3 })).withFaceLandmarks().withFaceDescriptors().run(), 5000, "Your ID photograph could not be compared. Please upload a clear ID photograph and retry.");
-   if (idFaces.length !== 1) throw new Error("We could not isolate one face on your ID. Use a clearer photograph and try again.");
-   if (!active()) return;
-   const started = await (await driverIdentityRequest({ action: "start", consent })).json();
-   const check: Check = started.check;
-   if (!Array.isArray(check?.challenge) || check.challenge.length !== 5 || check.challenge.some(p => !["centre", "left", "right"].includes(p))) throw new Error("The camera instructions could not load. Please retry.");
-   if (document.hidden) throw new Error("Keep this page open while starting the camera.");
-   setStage("opening"); setPrompt("Allow camera access, then place your face in the oval");
+   if (state.identityMime === "application/pdf") throw new Error("Use a JPG or PNG photograph of your ID for this camera check.");
    const acquired = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: camera }, width: { ideal: 640 }, height: { ideal: 480 } } });
    if (!active()) { acquired.getTracks().forEach(t => t.stop()); return; }
    stream.current = acquired;
    const el = video.current; if (!el) throw new Error("The camera preview is unavailable.");
    el.srcObject = acquired; await timed(el.play(), 5000, "The camera preview did not start. Please retry.");
    if (!active()) return;
+   setPrompt("Preparing face detection…");
+   const api = await timed(loadFaceGuidance(), 25000, "Face detection could not load. Check your connection and try again.");
+   if (!active()) return;
+   // Warm the small movement models before starting the timed challenge.
+   await timed(api.detectAllFaces(el, new api.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: .5 })).withFaceLandmarks(true).run(), 12000, "Face detection could not start on this device. Close other tabs and retry.");
+   if (!active()) return;
+   const started = await (await driverIdentityRequest({ action: "start", consent })).json();
+   if (!active()) return;
+   const check: Check = started.check;
+   if (!Array.isArray(check?.challenge) || check.challenge.length !== 5 || check.challenge.some(p => !["centre", "left", "right"].includes(p))) throw new Error("The camera instructions could not load. Please retry.");
+   if (document.hidden) throw new Error("Keep this page open while starting the camera.");
    const mime = ["video/webm;codecs=vp8", "video/mp4", "video/webm"].find(m => MediaRecorder.isTypeSupported(m));
    if (!mime) throw new Error("Video capture is unavailable in this browser. Please upload a clear ID photograph and retry.");
    const rec = new MediaRecorder(acquired, { mimeType: mime, videoBitsPerSecond: 500000 }); recorder.current = rec;
@@ -91,14 +86,14 @@ export default function DriverCameraCheck({ state, disabled, onSaved, onBusy }: 
    let recordingError = false; rec.onerror = () => { recordingError = true; };
    const cameraStarted = performance.now(); let recordingStarted = 0;
    let hold: Hold | null = null, index = 0, missingSince = 0;
-   let portrait: Blob | null = null, firstDescriptor: Float32Array | null = null, distance: number | null = null;
+   let portrait: Blob | null = null, lastPortrait: Blob | null = null;
    const steps: Array<{ step: Pose; detected: boolean; elapsed_ms: number }> = [];
    setStage("capturing"); frame.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-   watchdog = setTimeout(() => { if (!active()) return; cancel(); setError("The movements did not finish in 25 seconds. Try again in good light and try again."); }, 25000);
+   watchdog = setTimeout(() => { if (!active()) return; cancel(); setError("The movements did not finish in 25 seconds. Try again in good light."); }, 25000);
    while (active() && index < check.challenge.length) {
     if (recordingError || bytes > 5 * 1024 * 1024) throw new Error("The recording could not be completed. Please retry.");
     const pose = check.challenge[index]; setTarget(pose);
-    const faces = await timed(api.detectAllFaces(el, new api.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: .5 })).withFaceLandmarks().run(), 3500, "Face detection stopped responding. Please retry and try again.");
+    const faces = await timed(api.detectAllFaces(el, new api.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: .5 })).withFaceLandmarks(true).run(), 3500, "Face detection stopped responding. Please retry.");
     if (!active()) return;
     const face = faces.length === 1 ? faces[0] : null;
     const quality = checkDriverFrame({ faces: faces.length, box: face?.detection.box, points: face?.landmarks.positions, width: el.videoWidth, height: el.videoHeight }, pose);
@@ -111,16 +106,10 @@ export default function DriverCameraCheck({ state, disabled, onSaved, onBusy }: 
     const next = updateDriverHold(hold, quality === "hold", now); hold = next.hold;
     if (next.reached) {
      if (index === 0 || index === check.challenge.length - 1) {
-      const described = await timed(api.detectAllFaces(el, new api.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: .5 })).withFaceLandmarks().withFaceDescriptors().run(), 3500, "Face comparison did not finish. Please retry.");
-      if (!active()) return;
-      if (described.length !== 1 || checkDriverFrame({ faces: 1, box: described[0].detection.box, points: described[0].landmarks.positions, width: el.videoWidth, height: el.videoHeight }, "centre") !== "hold") { hold = null; continue; }
       if (index === 0) {
-       firstDescriptor = described[0].descriptor;
-       distance = comparisonDistance(idFaces[0].descriptor, firstDescriptor);
-       portrait = await portraitOf(el); rec.start(250); recordingStarted = performance.now();
+       portrait = await portraitOf(el); if (!active()) return; rec.start(250); recordingStarted = performance.now();
       } else {
-       const continuity = firstDescriptor ? comparisonDistance(firstDescriptor, described[0].descriptor) : null;
-       if (continuity === null || continuity > .6) throw new Error("We could not confirm the same face throughout. Please retry and try again.");
+       lastPortrait = await portraitOf(el);
       }
      }
      steps.push({ step: pose, detected: true, elapsed_ms: Math.round(performance.now() - cameraStarted) });
@@ -135,9 +124,40 @@ export default function DriverCameraCheck({ state, disabled, onSaved, onBusy }: 
    if (!active()) return;
    const clip = new Blob(chunks, { type: mime.split(";")[0] });
    if (!portrait || !clip.size || clip.size > 6291456) throw new Error("Your recording could not be saved. Please retry.");
+   setStage("comparing"); setPrompt("Movements captured. Preparing your identity evidence…");
+   let distance: number | null = null;
+   let comparisonActive = true;
+   try {
+    const reviewed = await timed((async () => {
+     const comparison = await loadFaceComparison();
+     const images = { first: portrait!, last: lastPortrait || portrait!, identity: null as Blob | null };
+     return compareDriverEvidence(async source => {
+      if (!active() || !comparisonActive) throw new Error("Cancelled");
+      if (source === "identity") {
+       const response = await driverIdentityRequest({ action: "document" });
+       images.identity = await response.blob();
+       if (!["image/jpeg", "image/png"].includes(images.identity.type) || !images.identity.size) return [];
+      }
+      const image = await imageOf(images[source]!);
+      // Bound phone photos before inference; never run a 600px ID model before the camera.
+      const canvas = document.createElement("canvas");
+      const scale = Math.min(1, 960 / Math.max(image.width, image.height));
+      canvas.width = Math.max(1, Math.round(image.width * scale)); canvas.height = Math.max(1, Math.round(image.height * scale));
+      const ctx = canvas.getContext("2d"); if (!ctx) return [];
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const faces = await comparison.detectAllFaces(canvas, new comparison.TinyFaceDetectorOptions({ inputSize: source === "identity" ? 320 : 224, scoreThreshold: .35 })).withFaceLandmarks(true).withFaceDescriptors().run();
+      return faces.map(face => face.descriptor);
+     });
+    })(), 18000, "Comparison needs staff review");
+    distance = reviewed.distance;
+   } catch (comparisonError) {
+    if (comparisonError instanceof Error && comparisonError.message.includes("same face throughout")) throw comparisonError;
+   } finally { comparisonActive = false; }
+   if (!active()) return;
+   if (distance === null || distance > .6) setComparisonNote("Your ID needs staff comparison. Your completed recording can still be submitted for review.");
    evidence.current = { uploads: started.uploads, check, portrait, clip, extension: mime.includes("mp4") ? "mp4" : "webm", observations: { complete: true, steps, duration_ms: duration, comparison_distance: distance, camera } };
    setStage("review");
-  } catch (e) { stop(); if (active()) { setError(e instanceof Error && e.name === "NotAllowedError" ? "Camera access was denied. Allow it in browser settings and try again." : e instanceof Error ? e.message : "The camera check failed. Please retry."); setStage("idle"); } }
+  } catch (e) { if (active()) { stop(); setError(e instanceof Error && e.name === "NotAllowedError" ? "Camera access was denied. Allow it in browser settings and try again." : e instanceof Error ? e.message : "The camera check failed. Please retry."); setStage("idle"); } }
   finally { clearTimeout(watchdog); if (active()) { busy.current = false; onBusy(false); } }
  }
  async function saveCapture() {
@@ -157,7 +177,7 @@ export default function DriverCameraCheck({ state, disabled, onSaved, onBusy }: 
   } catch (e) { setError(e instanceof Error ? e.message : "The check could not be saved."); setStage("review"); }
   finally { busy.current = false; onBusy(false); }
  }
- const working = ["loading", "opening", "capturing", "sending"].includes(stage);
+ const working = ["loading", "opening", "capturing", "comparing", "sending"].includes(stage);
  const saved = state.check && ["pending_review", "manual_match"].includes(state.check.status);
  const btn = "rounded-full bg-[#f6b800] px-5 py-3 text-sm font-bold text-black disabled:opacity-40";
  return <div className="mt-5 border-t border-current/15 pt-5">
@@ -172,7 +192,7 @@ export default function DriverCameraCheck({ state, disabled, onSaved, onBusy }: 
 
    </> : null}
   </>}
-  {stage === "loading" ? <div className="mt-4 rounded-2xl border border-current/15 p-4"><p role="status" aria-live="polite" className="text-sm font-bold">{prompt}</p><button type="button" onClick={cancel} className="mt-3 rounded-full border border-current/20 px-5 py-2 text-sm">Cancel</button></div> : null}
+  {stage === "loading" || stage === "comparing" ? <div className="mt-4 rounded-2xl border border-current/15 p-4"><p role="status" aria-live="polite" className="text-sm font-bold">{prompt}</p><button type="button" onClick={cancel} className="mt-3 rounded-full border border-current/20 px-5 py-2 text-sm">Cancel</button></div> : null}
   <div ref={frame} className={stage === "opening" || stage === "capturing" ? "mt-4 overflow-hidden rounded-2xl bg-black text-white" : "hidden"}>
    <div className="relative mx-auto h-[min(60vh,480px)] min-h-72 max-w-sm overflow-hidden">
     <video ref={video} autoPlay muted playsInline aria-label="Live face preview" className={`absolute inset-0 h-full w-full object-contain ${camera === "user" ? "-scale-x-100" : ""}`} />
@@ -182,7 +202,7 @@ export default function DriverCameraCheck({ state, disabled, onSaved, onBusy }: 
    </div>
    <div className="flex items-center justify-between gap-3 px-4 pb-4"><span className="text-xs text-white/70">Keep your face in view</span><button type="button" onClick={cancel} className="rounded-full border border-white/30 px-5 py-2 text-sm font-bold">Cancel</button></div>
   </div>
-  {stage === "review" || stage === "sending" ? <div className="mt-4 space-y-3"><p className="text-sm font-bold">All five movements captured. Save this check to your driver application.</p><div className="flex flex-wrap gap-3"><button type="button" disabled={working} className={btn} onClick={() => void saveCapture()}>{stage === "sending" ? "Saving…" : "Save camera check"}</button><button type="button" disabled={working} onClick={cancel} className="rounded-full border border-current/20 px-5 py-3 text-sm">Discard and retry</button></div></div> : null}
+  {stage === "review" || stage === "sending" ? <div className="mt-4 space-y-3"><p className="text-sm font-bold">All five movements captured. Save this check to your driver application.</p>{comparisonNote ? <p className="text-sm leading-6 opacity-70">{comparisonNote}</p> : null}<div className="flex flex-wrap gap-3"><button type="button" disabled={working} className={btn} onClick={() => void saveCapture()}>{stage === "sending" ? "Saving…" : "Save camera check"}</button><button type="button" disabled={working} onClick={cancel} className="rounded-full border border-current/20 px-5 py-3 text-sm">Discard and retry</button></div></div> : null}
   {error ? <p role="alert" className="mt-4 text-sm leading-6">{error}</p> : null}
  </div>;
 }

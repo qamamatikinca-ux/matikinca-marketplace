@@ -55,7 +55,7 @@ export default function AccountSettingsGlassFix() {
 
   useEffect(() => {
     const active = pathname === "/account/settings";
-    document.documentElement.classList.toggle("loadlink-settings-glass", active);
+    document.documentElement.classList.remove("loadlink-settings-glass");
     if (!active) return;
 
     ensureStyles();

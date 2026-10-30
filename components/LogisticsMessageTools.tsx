@@ -405,36 +405,32 @@ export default function LogisticsMessageTools({
               <button type="button" onClick={closePanel} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-xl ${control}`} aria-label="Close logistics actions"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
             </div>
 
-            <div className="mt-5">
-              <p className="loadlink-ui-label mb-2">Deal stage</p>
-              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">{STAGES.map((item) => <button key={item} type="button" onClick={() => selectStage(item)} className={`shrink-0 rounded-full border px-3 py-2 text-[10px] font-bold ${stage === item ? "border-[#f6b800] bg-[#f6b800] text-black" : control}`}>{item}</button>)}</div>
-            </div>
+            <label className="mt-5 block text-xs font-semibold">Deal stage<select value={stage} onChange={event => selectStage(event.target.value as DealStage)} className={`mt-2 h-12 w-full rounded-xl border px-4 text-sm ${control}`}>{STAGES.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
 
-            <div className="mt-6">
+            {!quoteOpen && !editorTool ? <div className="mt-6">
               <div>
                 <h3 className="text-2xl font-black tracking-[-.035em]">Tools</h3>
                 <p className={`mt-1 text-xs font-semibold leading-5 ${muted}`}>Choose a tool, complete the details, then place the result back into this conversation.</p>
               </div>
 
               <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <button type="button" disabled={disabled} onClick={() => { setEditorTool(null); setEditorText(""); setQuoteOpen((current) => !current); }} className={`group min-h-[150px] rounded-[24px] border p-4 text-left transition disabled:opacity-40 ${quoteOpen ? "border-[#f6b800] bg-[#f6b800] text-black" : control}`}>
+                <button type="button" disabled={disabled} onClick={() => { setEditorTool(null); setEditorText(""); setQuoteOpen((current) => !current); }} className={`group min-h-[128px] rounded-2xl border p-4 text-left transition disabled:opacity-40 ${quoteOpen ? "border-[#f6b800] bg-[#f6b800] text-black" : control}`}>
                   <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${quoteOpen ? "bg-black text-[#f6b800]" : "bg-black text-[#f6b800]"}`}><ToolGlyph type="quote" /></span>
-                  <span className="mt-5 block text-base font-black tracking-[-.02em]">Rate quote</span>
+                  <span className="mt-3 block text-base font-black tracking-[-.02em]">Rate quote</span>
                   <span className={`mt-1 block text-xs font-semibold leading-5 ${quoteOpen ? "text-black/60" : muted}`}>Build a clean transport quote</span>
                 </button>
                 {workflowTools.map((tool) => {
-                  const active = editorTool?.id === tool.id;
                   const glyph = tool.id === "trip-brief" ? "trip" : tool.id === "incident-update" ? "incident" : tool.id.includes("document") || tool.id.includes("pod") ? "documents" : tool.id.includes("checklist") || tool.id.includes("collection") || tool.id.includes("delivery") ? "planning" : "operations";
                   return (
-                    <button key={tool.id} type="button" disabled={disabled} onClick={() => openToolEditor(tool)} className={`group min-h-[150px] rounded-[24px] border p-4 text-left transition disabled:opacity-40 ${active ? "border-[#f6b800] bg-[#f6b800] text-black" : control}`}>
+                    <button key={tool.id} type="button" disabled={disabled} onClick={() => openToolEditor(tool)} className={`group min-h-[128px] rounded-2xl border p-4 text-left transition disabled:opacity-40 ${control}`}>
                       <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-black text-[#f6b800]"><ToolGlyph type={glyph} /></span>
-                      <span className="mt-5 block text-base font-black tracking-[-.02em]">{tool.label}</span>
-                      <span className={`mt-1 block text-xs font-semibold leading-5 ${active ? "text-black/60" : muted}`}>{tool.summary}</span>
+                      <span className="mt-3 block text-base font-black tracking-[-.02em]">{tool.label}</span>
+                      <span className={`mt-1 block text-xs font-semibold leading-5 ${muted}`}>{tool.summary}</span>
                     </button>
                   );
                 })}
               </div>
-            </div>
+            </div> : <button type="button" onClick={() => { setQuoteOpen(false); setEditorTool(null); }} className="mt-5 rounded-full border border-current/20 px-4 py-2.5 text-xs font-bold">All tools</button>}
 
             {editorTool ? (
               <div className={`mt-4 rounded-2xl border p-4 ${control}`}>
@@ -491,7 +487,7 @@ export default function LogisticsMessageTools({
                                 type="button"
                                 disabled={!available}
                                 onClick={() => toggleReuseField(field.id)}
-                                className={`rounded-full border px-3 py-2 text-[9px] font-bold transition disabled:cursor-not-allowed disabled:opacity-30 ${active ? "border-[#f6b800] bg-[#f6b800] text-black" : control}`}
+                                className={`rounded-full border px-3 py-2 text-[9px] font-bold transition disabled:cursor-not-allowed disabled:opacity-30 ${control}`}
                               >
                                 {field.label}
                               </button>
@@ -510,7 +506,7 @@ export default function LogisticsMessageTools({
                 <label className="text-[10px] font-semibold">Availability<input value={availability} onChange={(event) => setAvailability(event.target.value)} placeholder="Monday, Gauteng" className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-[#f6b800] ${control}`} /></label>
                 <label className="text-[10px] font-semibold">VAT<select value={vat} onChange={(event) => setVat(event.target.value as StructuredQuote["vat"])} className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-[#f6b800] ${control}`}><option value="included">Included</option><option value="excluded">Excluded</option><option value="not_applicable">Not applicable</option></select></label>
                 <label className="text-[10px] font-semibold sm:col-span-2">Terms<input value={terms} onChange={(event) => setTerms(event.target.value)} placeholder="Payment within 7 days of signed POD" className={`mt-1 h-11 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-[#f6b800] ${control}`} /></label>
-                <div className="sm:col-span-2"><LoadLinkDocumentPreview darkMode={darkMode} documentType="Rate quote" amount={amount} unit={unit} vehicle={vehicle} route={route} availability={availability} vat={vat} terms={terms} compact /></div>
+                <details className="group sm:col-span-2"><summary className="flex cursor-pointer list-none items-center justify-between rounded-full border border-current/20 px-4 py-3 text-xs font-bold">Preview quote<LoadLinkIcon name="chevronDown" size={16} className="transition-transform group-open:rotate-180" /></summary><div className="mt-3"><LoadLinkDocumentPreview darkMode={darkMode} documentType="Rate quote" amount={amount} unit={unit} vehicle={vehicle} route={route} availability={availability} vat={vat} terms={terms} compact /></div></details>
                 <button type="button" disabled={!amount.trim() || disabled || quoteBusy} onClick={() => void submitQuote()} className="h-11 rounded-xl bg-[#f6b800] text-[10px] font-bold uppercase tracking-wide text-black disabled:opacity-40 sm:col-span-2">{quoteBusy ? "Sending quote…" : "Send structured quote"}</button>
               </div>
             ) : null}

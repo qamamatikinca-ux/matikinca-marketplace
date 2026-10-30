@@ -3,10 +3,10 @@
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
 import { useRouter } from "next/navigation";
-import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import SharedDocumentUpload from "@/components/DocumentUpload";
 import DriverVerificationPanel from "@/components/DriverVerificationPanel";
 import { identityReadyForSubmission, type DriverIdentityState } from "@/lib/driverVerification";
-import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
 import { browserSupabase } from "@/lib/phase2/supabase";
@@ -445,17 +445,6 @@ function ReviewRow({ label, value, onEdit }: { label: string; value: string; onE
   return <div className="flex items-center gap-4 px-4 py-4"><div className="min-w-0 flex-1"><span className="block text-[10px] font-bold uppercase tracking-[.08em] opacity-55">{label}</span><span className="mt-1 block break-words text-sm font-semibold leading-6">{value}</span></div><button type="button" onClick={onEdit} aria-label={`Edit ${label.toLowerCase()}`} className="shrink-0 rounded-full border border-current/20 px-3 py-2 text-xs font-bold">Edit</button></div>;
 }
 
-function DocumentUpload({ type, label, required = false, fileName, busy, uploading, progress, processing, darkMode, onFile }: { type: string; label: string; required?: boolean; fileName?: string; busy: boolean; uploading: boolean; progress: number; processing: boolean; darkMode: boolean; onFile: (file: File | null) => void }) {
-  function change(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0] || null;
-    event.target.value = "";
-    onFile(file);
-  }
-  return <label className={`relative flex min-h-24 cursor-pointer items-center gap-3 overflow-hidden rounded-2xl border p-4 transition focus-within:border-[#f6b800] hover:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.035]" : "border-black/10 bg-[#faf9f5]"}`}>
-    <span aria-hidden="true" className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${fileName ? "bg-[#f6b800] text-black" : "border border-current/20 opacity-50"}`}><LoadLinkIcon name={fileName ? "check" : "paperclip"} size={17} /></span>
-    <span className="min-w-0 flex-1"><strong className="block text-sm font-bold">{label}</strong><span className="mt-1 block truncate text-xs leading-5 opacity-65">{uploading ? (processing ? "Attaching file…" : `Uploading ${progress}%`) : fileName || (type === "portrait" ? "Choose JPG or PNG" : "Choose PDF, JPG or PNG")}</span></span>
-    <span className="shrink-0 text-right"><span className={`block text-[9px] font-bold uppercase tracking-wide ${fileName ? "text-[#b88600]" : "opacity-50"}`}>{fileName ? "Added" : required ? "Required" : "Optional"}</span><span className="mt-1 block text-xs font-semibold">{uploading ? "Uploading" : fileName ? "Replace" : "Add"}</span></span>
-    <input disabled={busy} type="file" aria-label={label} accept={type === "portrait" ? "image/jpeg,image/png" : "application/pdf,image/jpeg,image/png"} onChange={change} className="sr-only" />
-    {uploading ? <span className="absolute inset-x-0 bottom-0 h-1 overflow-hidden bg-current/10"><span className="block h-full bg-[#f6b800] transition-[width] duration-150" style={{ width: `${progress}%` }} /></span> : null}
-  </label>;
+function DocumentUpload({ type, label, required = false, fileName, busy, uploading, progress, processing, onFile }: { type: string; label: string; required?: boolean; fileName?: string; busy: boolean; uploading: boolean; progress: number; processing: boolean; darkMode: boolean; onFile: (file: File | null) => void }) {
+  return <SharedDocumentUpload label={label} required={required} fileName={fileName} disabled={busy} accept={type === "portrait" ? "image/jpeg,image/png" : "application/pdf,image/jpeg,image/png"} hint={type === "portrait" ? "Choose JPG or PNG" : "Choose PDF, JPG or PNG"} status={uploading ? processing ? "Attaching file…" : `Uploading ${progress}%` : undefined} progress={uploading ? progress : undefined} onFile={onFile} />;
 }

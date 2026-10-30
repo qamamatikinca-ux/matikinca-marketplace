@@ -1677,7 +1677,6 @@ ${message}` : message)}
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-2xl font-bold tracking-[-.025em]">Inbox</h2>
-                <Link href="/messages/drivers" className="mt-1 inline-block text-xs font-semibold underline underline-offset-4">Driver messages</Link>
               </div>
               <span className="rounded-full bg-black px-3 py-1.5 text-xs font-black text-[#f6b800]">
                 {conversations.reduce(

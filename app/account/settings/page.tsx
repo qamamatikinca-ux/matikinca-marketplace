@@ -1,5 +1,6 @@
 "use client";
 
+import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkImage from "@/components/LoadLinkImage";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
@@ -8,10 +9,6 @@ import Link from "next/link";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
-import HomeLogoLink from "@/components/HomeLogoLink";
-import AuthStatusButton from "@/components/AuthStatusButton";
-import SiteMenu from "@/components/SiteMenu";
-import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import MfaSecurityCard from "@/components/MfaSecurityCard";
 import PasswordStrengthMeter from "@/components/PasswordStrengthMeter";
@@ -266,11 +263,6 @@ export default function AccountSettingsPage() {
   }
 
   const initials = useMemo(() => form.full_name.trim().split(/\s+/).slice(0, 2).map((part) => part[0] || "").join("").toUpperCase() || "LL", [form.full_name]);
-  const completion = useMemo(() => {
-    const fields = [form.full_name, form.city, form.province, form.phone, form.job_title, form.bio, form.avatar_url];
-    const complete = fields.filter((value) => String(value || "").trim()).length;
-    return Math.round((complete / fields.length) * 100);
-  }, [form]);
   const googleOnly = Boolean(user?.identities?.some((identity) => identity.provider === "google")) && !user?.identities?.some((identity) => identity.provider === "email");
   const page = darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black";
   const surface = darkMode ? "rounded-[24px] border-white/10 bg-[#0b0b0b]" : "rounded-[24px] border-black/10 bg-white";
@@ -289,11 +281,11 @@ export default function AccountSettingsPage() {
       <section className="mx-auto max-w-6xl px-4 py-7 sm:px-5 md:px-8 md:py-10">
         <div className="max-w-3xl">
           <h1 className="text-3xl font-black tracking-[-.035em] md:text-4xl">Settings</h1>
-          <p className={`mt-1.5 text-sm font-semibold leading-6 ${muted}`}>Manage your profile, work, notifications, privacy and billing.</p>
+          <p className={`mt-1.5 text-sm font-semibold leading-6 ${muted}`}>Your account and preferences.</p>
         </div>
 
 
-        <div className="ll-settings-shell"><nav aria-label="Settings categories" className={`mt-5 flex max-w-3xl gap-1 overflow-x-auto rounded-2xl border p-1.5 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-white"}`}>
+        <div className="ll-settings-shell"><label className="ll-settings-mobile">Settings section<select value={settingsView} onChange={event => { const view = event.target.value as typeof settingsView; setSettingsView(view); window.history.replaceState(null, "", `#${view === "messages" ? "message-privacy" : view}`); }} className={input}><option value="profile">Profile</option><option value="work">Work</option><option value="notifications">Notifications</option><option value="messages">Messages</option><option value="security">Security and privacy</option><option value="billing">Billing</option>{form.subscription_plan.toLowerCase().includes("dealer") ? <option value="team">Team</option> : null}</select></label><nav aria-label="Settings categories" className={`mt-5 flex max-w-3xl gap-1 overflow-x-auto rounded-2xl border p-1.5 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-white"}`}>
           {([
             ["profile", "Profile"], ["work", "Work"], ["notifications", "Notifications"],
             ["messages", "Messages"], ["security", "Security"], ["billing", "Billing"],
@@ -303,34 +295,33 @@ export default function AccountSettingsPage() {
           ))}
         </nav>
 
-        <div className="ll-settings-content"><div className="ll-settings-account"><strong>{form.full_name || "Your LoadLink account"}</strong><span>{user?.email}</span><button type="button" onClick={()=>window.dispatchEvent(new Event("loadlink:open-cookie-preferences"))}>Cookie preferences</button></div>
+        <div className="ll-settings-content">
         {dirty && settingsView === "profile" ? <p className={`mt-4 text-sm font-medium ${muted}`}>You have unsaved profile changes.</p> : null}
         {message ? <div role="status" className={`mt-5 max-w-3xl rounded-xl border p-3 text-sm font-medium ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-white"}`}>{message}</div> : null}
 
         {settingsView === "profile" ? (
           <div id="profile" className="mt-6 grid gap-5 lg:grid-cols-[250px_1fr]">
-            <aside className={`h-fit border p-5 ${surface}`}>
-              <div className="mx-auto flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-current/15 bg-black text-xl font-bold text-white">{form.avatar_url ? <LoadLinkImage src={form.avatar_url} alt="Profile" className="h-full w-full object-cover" /> : initials}</div>
-              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void uploadAvatar(event)} className="hidden" />
-              <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="mt-4 h-10 w-full rounded-xl bg-black px-4 text-xs font-black text-white disabled:opacity-50">{uploading ? "Uploading…" : "Change photo"}</button>
-              <div className={`mt-4 rounded-xl border p-3 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-black/[.02]"}`}><p className="text-[10px] font-semibold uppercase tracking-[.1em] opacity-50">Profile complete</p><p className="mt-1 text-xl font-bold">{completion}%</p></div>
-              <div className={`mt-4 border-t pt-4 ${darkMode ? "border-white/10" : "border-black/10"}`}><Info label="Email" value={user?.email || "Not available"} /><Info label="Verification" value={form.verification_status.replaceAll("_", " ")} /><Info label="Package" value={form.subscription_plan} /></div>
-              <div className="mt-4 grid gap-2"><Link href="/verify" className={`flex h-10 items-center justify-center rounded-xl border px-3 text-center text-xs font-black ${darkMode ? "border-white/12" : "border-black/10"}`}>Verification</Link><Link href="/account/packages" className={`flex h-10 items-center justify-center rounded-xl border px-3 text-center text-xs font-black ${darkMode ? "border-white/12" : "border-black/10"}`}>Package</Link>{hasDriverProfile ? <Link href="/driver-profile" className={`flex h-10 items-center justify-center rounded-xl border px-3 text-center text-xs font-black ${darkMode ? "border-white/12" : "border-black/10"}`}>Driver profile</Link> : null}</div>
+            <aside className={`ll-settings-profile-summary h-fit border p-4 ${surface}`}>
+              <div className="flex items-center gap-4"><div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-current/15 bg-black text-lg font-bold text-white">{form.avatar_url ? <LoadLinkImage src={form.avatar_url} alt="Profile" className="h-full w-full object-cover" /> : initials}</div><div className="min-w-0"><strong className="block truncate text-sm font-bold">{form.full_name || "Your profile"}</strong><p className={`mt-1 break-all text-xs ${muted}`}>{user?.email}</p><input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={event => void uploadAvatar(event)} className="hidden" /><button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="mt-2 rounded-full border border-current/20 px-3 py-2 text-xs font-semibold disabled:opacity-50">{uploading ? "Uploading…" : "Change photo"}</button></div></div>
+              <details className="group mt-4 border-t border-current/10 pt-3"><summary className="flex cursor-pointer items-center gap-3 text-xs font-semibold">Account details<LoadLinkIcon name="chevronDown" size={16} className="ml-auto shrink-0 transition-transform group-open:rotate-180" /></summary><div className="mt-4"><Info label="Verification" value={form.verification_status.replaceAll("_", " ")} /><Info label="Package" value={form.subscription_plan} /></div><div className="mt-4 flex flex-wrap gap-2"><Link href="/verify" className="rounded-full border border-current/15 px-3 py-2 text-xs font-semibold">Verification</Link><Link href="/account/packages" className="rounded-full border border-current/15 px-3 py-2 text-xs font-semibold">Package</Link>{hasDriverProfile ? <Link href="/driver-profile" className="rounded-full border border-current/15 px-3 py-2 text-xs font-semibold">Driver profile</Link> : null}</div></details>
             </aside>
 
             <form onSubmit={saveProfile} className={`border p-5 md:p-7 ${surface}`}>
-              <h2 className="text-xl font-bold">Professional information</h2>
-              <p className={`mt-2 text-sm ${muted}`}>Details other LoadLink users need when dealing with you.</p>
+              <h2 className="text-xl font-bold">Profile details</h2>
+              <p className={`mt-2 text-sm ${muted}`}>Keep your name, contact number and location up to date.</p>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <Field label="Full name"><input required value={form.full_name} onChange={(event) => field("full_name", event.target.value)} className={input} /></Field>
-                <Field label="Job title or role"><input value={form.job_title} onChange={(event) => field("job_title", event.target.value)} placeholder="Owner, driver, fleet manager" className={input} /></Field>
-                <Field label="Company name"><input value={form.company_name} onChange={(event) => field("company_name", event.target.value)} className={input} /></Field>
                 <Field label="City or town"><SouthAfricaLocationInput value={form.city} onChange={(value, selected) => { field("city", value); if (selected?.province) field("province", selected.province); }} darkMode={darkMode} allowAllSouthAfrica={false} className={input} /></Field>
                 <Field label="Province"><select value={form.province} onChange={(event) => field("province", event.target.value)} className={input}><option value="">Select province</option>{SOUTH_AFRICAN_PROVINCES.map((province) => <option key={province}>{province}</option>)}</select></Field>
                 <Field label="Cellphone number"><input value={form.phone} onChange={(event) => field("phone", event.target.value)} inputMode="tel" placeholder="0821234567" className={input} /></Field>
+              </div>
+
+              <details className="group mt-5 border-t border-current/10 pt-4"><summary className="flex cursor-pointer items-center gap-3 text-sm font-semibold">Work details and WhatsApp<LoadLinkIcon name="chevronDown" size={16} className="ml-auto shrink-0 transition-transform group-open:rotate-180" /></summary><div className="mt-4 grid gap-4 md:grid-cols-2">
+                <Field label="Job title or role"><input value={form.job_title} onChange={(event) => field("job_title", event.target.value)} placeholder="Owner, driver, fleet manager" className={input} /></Field>
+                <Field label="Company name"><input value={form.company_name} onChange={(event) => field("company_name", event.target.value)} className={input} /></Field>
                 <Field label="WhatsApp number"><input value={form.whatsapp_number} onChange={(event) => field("whatsapp_number", event.target.value)} inputMode="tel" placeholder="0821234567" className={input} /></Field>
                 <div className="md:col-span-2"><Field label="Professional summary"><textarea value={form.bio} onChange={(event) => field("bio", event.target.value)} maxLength={500} className={textarea} /></Field></div>
-              </div>
+              </div></details>
 
               <button type="submit" disabled={saving || !dirty} className="mt-6 h-11 rounded-xl bg-[#f6b800] px-5 text-xs font-semibold text-black disabled:opacity-40">{saving ? "Saving…" : dirty ? "Save changes" : "Saved"}</button>
             </form>
@@ -383,7 +374,7 @@ export default function AccountSettingsPage() {
         {settingsView === "team" && form.subscription_plan.toLowerCase().includes("dealer") ? (
           <section id="team" className={`mt-6 max-w-3xl border p-5 md:p-7 ${surface}`}>
             <h2 className="text-xl font-bold">Dealership team access</h2>
-            <p className={`mt-2 text-sm leading-6 ${muted}`}>Manage your dealership's authorised staff through the existing Dealer workspace.</p>
+            <p className={`mt-2 text-sm leading-6 ${muted}`}>Manage your dealership’s authorised staff through the existing Dealer workspace.</p>
             <div className="mt-5"><SettingsRoute href="/dealer" title="Manage dealership and team" description="Open team access, permissions and inventory tools." darkMode={darkMode} /></div>
           </section>
         ) : null}
@@ -408,6 +399,7 @@ export default function AccountSettingsPage() {
           <div className="mt-6 grid max-w-3xl gap-4">
             <section className={`border p-5 md:p-7 ${surface}`}><h2 className="text-xl font-bold">Password</h2><p className={`mt-2 text-sm ${muted}`}>{googleOnly ? "Set a LoadLink password while keeping Google sign-in connected." : "Change your password without disconnecting other sign-in methods."}</p><div className="mt-5 grid gap-4 md:grid-cols-2"><div className="grid gap-2"><Field label={googleOnly ? "Set a password" : "New password"}><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" className={input} /></Field>{password ? <PasswordStrengthMeter password={password} darkMode={darkMode} /> : null}</div><Field label="Confirm password"><input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" className={input} /></Field></div><button type="button" onClick={() => void updatePassword()} disabled={saving || !password} className="mt-5 h-11 rounded-xl bg-[#f6b800] px-5 text-xs font-semibold text-black disabled:opacity-40">{googleOnly ? "Set password" : "Update password"}</button></section>
             <MfaSecurityCard darkMode={darkMode} />
+            <section className={`border p-5 md:p-7 ${surface}`}><div className="flex items-center justify-between gap-4"><div><h2 className="text-xl font-bold">Cookies</h2><p className={`mt-2 text-sm ${muted}`}>Choose whether to allow optional cookies.</p></div><button type="button" onClick={() => window.dispatchEvent(new Event("loadlink:open-cookie-preferences"))} className="shrink-0 rounded-full border border-current/20 px-4 py-3 text-xs font-semibold">Manage</button></div></section>
             <section className={`border p-5 md:p-7 ${surface}`}><h2 className="text-xl font-bold">Account access</h2><p className={`mt-2 text-sm ${muted}`}>Sign out or request account deletion.</p><div className="mt-5 flex flex-wrap gap-3"><button type="button" onClick={() => void signOut()} className="h-11 rounded-xl border border-current/20 px-5 text-xs font-semibold">Sign out</button><button type="button" onClick={requestDeletion} className="h-11 rounded-xl border border-red-500 px-5 text-xs font-semibold text-red-500">Request deletion</button></div></section>
           </div>
         ) : null}

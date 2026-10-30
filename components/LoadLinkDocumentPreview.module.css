@@ -1,0 +1,29 @@
+/* Keep the document's ink and paper together in either website theme. */
+:global(html) :global(body) :global([data-loadlink-document-preview]) .paper:global([data-loadlink-document-paper]) {
+ background: #fff !important;
+ color: #171717 !important;
+ border: 1px solid #deded8 !important;
+ border-radius: 16px !important;
+ padding: 20px;
+ color-scheme: light;
+ box-shadow: none !important;
+}
+:global(html) :global(body) :global([data-loadlink-document-preview]) .paper:global([data-loadlink-document-paper]) :is(header, footer, div) { background-color: transparent; }
+:global(html) :global(body) :global([data-loadlink-document-preview]) .paper:global([data-loadlink-document-paper]) :is(p, h3, strong, span) { color: #171717 !important; opacity: 1 !important; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 18px; border-bottom: 1px solid #deded8; }
+.logo { width: 138px !important; height: auto !important; max-height: 44px; object-fit: contain; filter: none !important; }
+.businessLogo { max-width: 100px; max-height: 44px; object-fit: contain; }
+.heading { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 14px; padding: 20px 0; }
+.heading h3 { margin: 5px 0 0; font-size: 22px; line-height: 1.25; font-weight: 800; overflow-wrap: anywhere; }
+.reference { flex-shrink: 0; font-size: 11px; line-height: 1.6; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+.field { min-width: 0; padding: 12px 0; border-top: 1px solid #e7e7e1; }
+.field > p:last-child { margin-top: 5px; font-size: 13px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+:global(html) :global(body) :global([data-loadlink-document-preview]) .paper:global([data-loadlink-document-paper]) .label { color: #626258 !important; font-size: 10px !important; line-height: 1.5; letter-spacing: .06em; font-weight: 700; text-transform: uppercase; }
+:global(html) :global(body) :global([data-loadlink-document-preview]) .paper:global([data-loadlink-document-paper]) .note { color: #626258 !important; font-size: 11px; line-height: 1.6; }
+:global(html) :global(body) :global([data-loadlink-document-preview]) .paper:global([data-loadlink-document-paper]) .amount { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding: 16px; background: #fff6d5 !important; border: 1px solid #e8ca65; border-radius: 12px; }
+.amount strong { font-size: 25px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+.terms { margin-top: 20px; }
+.terms > p:last-child { margin-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.7; }
+:global(html) :global(body) :global([data-loadlink-document-preview]) .paper:global([data-loadlink-document-paper]) .footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid #e7e7e1; color: #626258 !important; font-size: 10px; line-height: 1.6; }
+@media (max-width: 420px) { :global(html) :global(body) :global([data-loadlink-document-preview]) .paper:global([data-loadlink-document-paper]) { padding: 16px; } .heading h3 { font-size: 20px; } }

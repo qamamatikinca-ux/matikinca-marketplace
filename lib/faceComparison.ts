@@ -3,7 +3,8 @@
 type FaceApi = typeof import("@vladmandic/face-api");
 type BrowserApi = FaceApi & { tf: { ready(): Promise<void>; setBackend(name: string): Promise<boolean> } };
 let loading: Promise<FaceApi> | null = null;
-export function loadFaceComparison() {
+let recognition: Promise<void> | null = null;
+export function loadFaceGuidance() {
  loading ??= (async () => {
   let api = (window as Window & { faceapi?: BrowserApi }).faceapi;
   if (!api) {
@@ -22,10 +23,15 @@ export function loadFaceComparison() {
   catch { await api.tf.setBackend("cpu"); await api.tf.ready(); }
   await Promise.all([
    api.nets.tinyFaceDetector.loadFromUri("/models/identity-v1"),
-   api.nets.faceLandmark68Net.loadFromUri("/models/identity-v1"),
-   api.nets.faceRecognitionNet.loadFromUri("/models/identity-v1"),
+   api.nets.faceLandmark68TinyNet.loadFromUri("/models/identity-v1"),
   ]);
   return api as FaceApi;
  })().catch(error => { loading = null; throw error; });
  return loading;
+}
+export async function loadFaceComparison() {
+ const api = await loadFaceGuidance();
+ recognition ??= api.nets.faceRecognitionNet.loadFromUri("/models/identity-v1").then(() => undefined).catch(error => { recognition = null; throw error; });
+ await recognition;
+ return api;
 }

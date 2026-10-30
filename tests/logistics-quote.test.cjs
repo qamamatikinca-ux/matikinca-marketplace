@@ -1,0 +1,6 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const ts=require('typescript');
+const m={exports:{}};new Function('module','exports',ts.transpileModule(fs.readFileSync('lib/logisticsQuote.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m,m.exports);
+const {parsePostedRate}=m.exports;
+test('quoted rates retain their kilometre, ton, day or trip unit',()=>{assert.deepEqual(parsePostedRate('R18/km'),{amount:'18',unit:'km'});assert.deepEqual(parsePostedRate('ZAR 650 per tonne'),{amount:'650',unit:'ton'});assert.deepEqual(parsePostedRate('R2500/day'),{amount:'2500',unit:'day'});assert.deepEqual(parsePostedRate('R8,500/trip'),{amount:'8500',unit:'total'});});
+test('formatted amounts retain cents and thousands',()=>{assert.deepEqual(parsePostedRate('R8 500.50'),{amount:'8500.50',unit:'total'});assert.deepEqual(parsePostedRate('R8500,50'),{amount:'8500.50',unit:'total'});});
+test('ranges, negotiable amounts and unknown units are not silently reused',()=>{for(const value of ['R8500-9500','Negotiable','R5/load/km','R18/km incl VAT','R0',null])assert.equal(parsePostedRate(value),null);});

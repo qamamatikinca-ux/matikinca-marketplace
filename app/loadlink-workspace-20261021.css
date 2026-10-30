@@ -17,7 +17,7 @@ html body aside[data-loadlink-cookie-panel][data-theme="dark"]{background:#15181
 html body [data-loadlink-cookie-panel] h2{margin:0!important;font-size:18px!important;line-height:1.35!important;letter-spacing:-.02em!important;font-weight:700!important}
 html body [data-loadlink-cookie-panel] .ll-cookie-copy{margin:7px 0 0!important;font-size:13px!important;line-height:1.7!important;font-weight:400!important;color:inherit!important;opacity:.76;max-width:620px}
 .ll-cookie-copy a{text-decoration:underline;text-underline-offset:3px}
-.ll-cookie-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-left:48px}
+.ll-cookie-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 html body [data-loadlink-cookie-panel] .ll-cookie-actions button{min-height:46px!important;padding:11px 16px!important;border:1px solid #91968a88!important;border-radius:12px!important;font-size:13px!important;line-height:1.4!important;font-weight:650!important;letter-spacing:0!important;text-transform:none!important;color:inherit!important;background:transparent!important}
 html body [data-loadlink-cookie-panel] .ll-cookie-actions .ll-cookie-accept{background:#f6b800!important;border-color:#f6b800!important;color:#16170e!important}
 /* Public driver profiles. */
@@ -170,3 +170,17 @@ html body [data-loadlink-dealer-control-centre="20261021"] .no-scrollbar{max-wid
 
 html body [data-loadlink-call-active="20261021"] .ll-call-modern .ll-call-modern-identity [data-loadlink-call-avatar]{border-radius:50%!important}
 html body [data-loadlink-call-active="20261021"] .ll-call-modern .ll-call-modern-identity p.ll-call-status{font-size:15px!important;line-height:1.6!important;font-weight:450!important}
+
+/* Shared document rows and a quieter account form. */
+html body .ll-document-upload{background:color-mix(in srgb,currentColor 3%,transparent);border-color:color-mix(in srgb,currentColor 14%,transparent);color:inherit;box-shadow:none}
+html body .ll-document-upload:focus-within,html body .ll-document-upload:hover{border-color:#c99400}
+.ll-settings-mobile{display:none}
+html body [data-loadlink-settings] .ll-settings-shell{margin-top:20px}
+html body [data-loadlink-settings] .ll-settings-profile-summary{background:var(--ll-surface);border-color:var(--ll-border);box-shadow:none}
+html body [data-loadlink-settings] .ll-settings-content>div:first-child{margin-top:0}
+html body [data-loadlink-settings] summary{list-style:none}
+@media(max-width:799px){
+ .ll-settings-mobile{display:block;margin-bottom:20px;font-size:12px;font-weight:600}
+ html body [data-loadlink-settings] .ll-settings-shell>nav{display:none!important}
+ html body [data-loadlink-settings] .ll-settings-content>div[id="profile"]{margin-top:0!important}
+}

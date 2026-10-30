@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import LoadLinkIcon from "@/components/LoadLinkIcon";
 import { useEffect, useState } from "react";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
@@ -55,21 +56,17 @@ export default function LoadLinkCookieConsent20260822() {
     >
       <div className="ll-cookie-layout">
         <div className="flex items-start gap-3">
-          <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border ${darkMode ? "border-white/12 bg-white/[.05]" : "border-black/10 bg-black/[.025]"}`}><CookieIcon /></span>
           <div>
-            <h2 id="loadlink-cookie-title">{preferencesMode ? "Your cookie preferences" : "Your privacy, your choice"}</h2>
-            <p className="ll-cookie-copy">Essential cookies keep your account secure and signed in. Choose whether to allow optional cookies. <Link href="/legal#cookie-policy">Read our cookie policy</Link>.</p>
+            <h2 id="loadlink-cookie-title" className="pr-9">Cookies on LoadLink</h2>
+            <p className="ll-cookie-copy">Essential cookies keep you signed in. Optional cookies are your choice. <Link href="/legal#cookie-policy">Cookie policy</Link>.</p>
           </div>
         </div>
+        {preferencesMode ? <button type="button" aria-label="Close cookie settings" onClick={() => setOpen(false)} className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-current/15"><LoadLinkIcon name="close" size={16} /></button> : null}
         <div className="ll-cookie-actions">
           <button type="button" onClick={() => choose("essential")}>Essential only</button>
-          <button type="button" onClick={() => choose("all")} className="ll-cookie-accept">Allow optional cookies</button>
+          <button type="button" onClick={() => choose("all")} className="ll-cookie-accept">Allow optional</button>
         </div>
       </div>
     </aside>
   );
-}
-
-function CookieIcon() {
-  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 12.4A8.2 8.2 0 1 1 11.6 4a4.4 4.4 0 0 0 5.6 5.6A4.4 4.4 0 0 0 20 12.4Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><circle cx="8" cy="10" r="1" fill="currentColor"/><circle cx="10.5" cy="15" r="1" fill="currentColor"/></svg>;
 }
