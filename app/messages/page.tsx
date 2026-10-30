@@ -453,6 +453,16 @@ export default function MessagesPage() {
   );
   const [presenceNow, setPresenceNow] = useState(() => Date.now());
 
+  // The mobile chat settings panel behaves like a separate screen.
+  useEffect(() => {
+    if (!showDetails) return;
+    const onEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") setShowDetails(false);
+    };
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, [showDetails]);
+
   const messageViewportRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const forceScrollRef = useRef(true);
