@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { driverIdentityRequest } from "@/lib/driverIdentityClient";
@@ -22,7 +21,7 @@ export default function DriverVerificationPanel({ phone, email, disabled, onStat
     if (!state?.accountEmail || state.accountEmail.toLowerCase() !== email.trim().toLowerCase()) throw new Error("Use your signed-in account’s email address on your driver profile.");
     const result = await supabase.auth.resend({ type: "signup", email: state.accountEmail, options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=%2Fdriver-profile` } });
     if (result.error) throw new Error("The confirmation email could not be sent. Please retry shortly or contact support.");
-    setMessage("Check your email for the confirmation link, then return here and refresh verification.");
+    setMessage("Check your email for the confirmation link, then return to your driver profile.");
    } else {
     const number = normalizeDriverPhone(phone);
     if (!/^\+[1-9]\d{7,14}$/.test(number)) throw new Error("Add a valid phone number with country code in Personal information.");
@@ -45,13 +44,12 @@ export default function DriverVerificationPanel({ phone, email, disabled, onStat
  return <section className="mt-5 rounded-2xl border border-current/15 p-4" aria-label="Driver verification">
   <h3 className="text-lg font-black">Verify your contact details</h3>
   {state ? <>
-   <div className="mt-4 space-y-4 text-sm">
+   <div className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
     <div><strong>Email · {state.emailVerified ? "Verified" : "Needs verification"}</strong><p className="mt-1 break-words opacity-70">{email}</p>{!state.emailVerified ? state.accountEmail.toLowerCase() !== email.trim().toLowerCase() ? <p className="mt-2">Use your account email: <strong className="break-all">{state.accountEmail}</strong>. <button type="button" className="underline" disabled={disabled || busy} onClick={onEditContacts}>Edit contact details</button></p> : <button type="button" className={`${btn} mt-2`} disabled={disabled || busy} onClick={() => void contactAction("email")}>Send confirmation email</button> : null}</div>
-    <div><strong>Phone · {state.phoneVerified ? "Verified" : "Needs verification"}</strong><p className="mt-1 opacity-70">{phone}</p>{!state.phoneVerified && state.phoneVerificationAvailable === false ? <p className="mt-2 leading-6">SMS verification is currently unavailable. You can finish your ID check and save your details. <Link href="/help" className="underline">Contact support</Link> before submitting.</p> : !state.phoneVerified ? <div className="mt-2 space-y-3">{sent ? <><label className="block">SMS code<input value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0,6))} inputMode="numeric" autoComplete="one-time-code" maxLength={6} className="mt-2 block w-full rounded-xl border border-current/20 bg-transparent p-3 text-lg tracking-widest" /></label><button type="button" disabled={disabled || busy || otp.length !== 6} className={btn} onClick={() => void contactAction("confirm")}>Confirm code</button><button type="button" className="ml-3 text-sm underline" disabled={disabled || busy} onClick={() => { setSent(false); setOtp(""); }}>Change number or retry</button></> : <button type="button" disabled={disabled || busy} className={btn} onClick={() => void contactAction("send")}>Send SMS code</button>}</div> : null}</div>
+    <div><strong>Phone · {state.phoneVerified ? "Verified" : "Needs verification"}</strong><p className="mt-1 opacity-70">{phone}</p>{!state.phoneVerified && state.phoneVerificationAvailable === false ? <p className="mt-2 leading-6">Phone verification is temporarily unavailable. You can still complete your ID check and save your details.</p> : !state.phoneVerified ? <div className="mt-2 space-y-3">{sent ? <><label className="block">SMS code<input value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0,6))} inputMode="numeric" autoComplete="one-time-code" maxLength={6} className="mt-2 block w-full rounded-xl border border-current/20 bg-transparent p-3 text-lg tracking-widest" /></label><button type="button" disabled={disabled || busy || otp.length !== 6} className={btn} onClick={() => void contactAction("confirm")}>Confirm code</button><button type="button" className="ml-3 text-sm underline" disabled={disabled || busy} onClick={() => { setSent(false); setOtp(""); }}>Change number or retry</button></> : <button type="button" disabled={disabled || busy} className={btn} onClick={() => void contactAction("send")}>Send SMS code</button>}</div> : null}</div>
    </div>
    <DriverCameraCheck state={state} disabled={disabled || busy} onSaved={refresh} onBusy={onBusy} />
   </> : <p className="mt-3 text-sm">Loading verification status…</p>}
-  <button type="button" disabled={busy || disabled} onClick={() => void refresh()} className="mt-4 text-sm underline">Refresh verification status</button>
   {message ? <p role="status" className="mt-3 text-sm leading-6">{message}</p> : null}
  </section>;
 }

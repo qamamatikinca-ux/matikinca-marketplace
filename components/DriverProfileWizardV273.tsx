@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import DriverVerificationPanel from "@/components/DriverVerificationPanel";
 import { identityReadyForSubmission, type DriverIdentityState } from "@/lib/driverVerification";
+import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
 import { browserSupabase } from "@/lib/phase2/supabase";
@@ -388,9 +389,9 @@ export default function DriverProfileWizardV273() {
         </> : null}
 
         {step === 4 ? <>
-          <StepTitle title="Driver verification" copy="Add your documents, verify your contact details and complete the identity check here." muted={muted} />
+          <StepTitle title="Driver verification" copy="Add your files, then complete the contact and identity checks." muted={muted} />
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="sm:col-span-2"><p className={`mb-3 text-sm leading-6 ${muted}`}>Add a clear, recent portrait of yourself. Your profile photo is shown on your approved driver profile; identity documents stay private. <a href="/legal#verification-security" target="_blank" rel="noopener noreferrer" className="underline">How LoadLink uses verification information to protect users</a>.</p><DocumentUpload type="portrait" label={LABELS.portrait} required fileName={documentMap.portrait?.original_filename} busy={busy || Boolean(uploadingType) || verificationBusy} uploading={uploadingType === "portrait"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("portrait", file)} /></div>
+            <div className="sm:col-span-2"><p className={`mb-3 text-sm leading-6 ${muted}`}>Your profile photo is shown after approval. Identity and licence documents stay private.</p><DocumentUpload type="portrait" label={LABELS.portrait} required fileName={documentMap.portrait?.original_filename} busy={busy || Boolean(uploadingType) || verificationBusy} uploading={uploadingType === "portrait"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("portrait", file)} /></div>
             <DocumentUpload type="identity" label={LABELS.identity} required fileName={documentMap.identity?.original_filename} busy={busy || Boolean(uploadingType) || verificationBusy} uploading={uploadingType === "identity"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("identity", file)} />
             <DocumentUpload type="drivers_licence" label={LABELS.drivers_licence} required fileName={documentMap.drivers_licence?.original_filename} busy={busy || Boolean(uploadingType) || verificationBusy} uploading={uploadingType === "drivers_licence"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("drivers_licence", file)} />
             {form.prdp_required ? <DocumentUpload type="prdp" label={LABELS.prdp} required fileName={documentMap.prdp?.original_filename} busy={busy || Boolean(uploadingType) || verificationBusy} uploading={uploadingType === "prdp"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("prdp", file)} /> : null}
@@ -398,7 +399,7 @@ export default function DriverProfileWizardV273() {
             <DocumentUpload type="cv" label={LABELS.cv} fileName={documentMap.cv?.original_filename} busy={busy || Boolean(uploadingType) || verificationBusy} uploading={uploadingType === "cv"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("cv", file)} />
             <DocumentUpload type="driving_certificate" label={LABELS.driving_certificate} fileName={documentMap.driving_certificate?.original_filename} busy={busy || Boolean(uploadingType) || verificationBusy} uploading={uploadingType === "driving_certificate"} progress={uploadProgress} processing={uploadProcessing} darkMode={darkMode} onFile={(file) => void upload("driving_certificate", file)} />
           </div>
-          <p className={`mt-4 text-[10px] font-semibold leading-5 ${muted}`}>Accepted: PDF, JPG or PNG. Maximum 8 MB per document. Use an ID photograph for camera comparison; PDFs need staff review.</p>
+          <p className={`mt-4 text-[10px] font-semibold leading-5 ${muted}`}>Accepted: PDF, JPG or PNG. Maximum 8 MB per document. Use a clear ID photograph for the camera check.</p>
           <DriverVerificationPanel key={`${documentMap.identity?.uploaded_at || ""}:${documentMap.portrait?.uploaded_at || ""}`} phone={form.phone} email={form.email} disabled={busy || Boolean(uploadingType)} onStatus={setVerification} onBusy={setVerificationBusy} onEditContacts={() => setStep(1)} />
         </> : null}
 
@@ -420,8 +421,8 @@ export default function DriverProfileWizardV273() {
         </> : null}
 
         <div className="mt-6 flex gap-2">
-          {step > 1 ? <button type="button" disabled={busy || Boolean(uploadingType) || verificationBusy} onClick={() => { setMessage(""); setStep((current) => current - 1); }} className="h-12 rounded-xl border border-current/12 px-5 text-xs font-black disabled:opacity-40">Back</button> : null}
-          {step < 5 ? <button type="button" disabled={busy || Boolean(uploadingType) || verificationBusy} onClick={() => void continueStep()} className="h-12 flex-1 rounded-xl bg-[#f6b800] px-5 text-sm font-black text-black disabled:opacity-40">{busy ? "Saving…" : "Continue"}</button> : <button type="button" disabled={busy || Boolean(uploadingType) || verificationBusy || submitted} onClick={() => void submit()} className="h-12 flex-1 rounded-xl bg-[#f6b800] px-5 text-sm font-black tracking-[-.02em] text-black disabled:opacity-45">{busy ? "Submitting…" : submitted ? "Review in progress" : "Submit profile for review"}</button>}
+          {step > 1 ? <button type="button" disabled={busy || Boolean(uploadingType) || verificationBusy} onClick={() => { setMessage(""); setStep((current) => current - 1); }} className="h-12 rounded-full border border-current/12 px-5 text-xs font-black disabled:opacity-40">Back</button> : null}
+          {step < 5 ? <button type="button" disabled={busy || Boolean(uploadingType) || verificationBusy} onClick={() => void continueStep()} className="h-12 flex-1 rounded-full bg-[#f6b800] px-5 text-sm font-black text-black disabled:opacity-40">{busy ? "Saving…" : "Continue"}</button> : <button type="button" disabled={busy || Boolean(uploadingType) || verificationBusy || submitted} onClick={() => void submit()} className="h-12 flex-1 rounded-full bg-[#f6b800] px-5 text-sm font-black tracking-[-.02em] text-black disabled:opacity-45">{busy ? "Submitting…" : submitted ? "Review in progress" : "Submit profile for review"}</button>}
         </div>
       </section>
     </div>
@@ -441,7 +442,7 @@ function Field({ label, children, wide = false }: { label: string; children: Rea
 }
 
 function ReviewRow({ label, value, onEdit }: { label: string; value: string; onEdit: () => void }) {
-  return <div className="flex items-start gap-3 px-4 py-4"><span className="w-20 shrink-0 text-[9px] font-black uppercase opacity-40">{label}</span><span className="min-w-0 flex-1 break-words text-xs font-bold">{value}</span><button type="button" onClick={onEdit} className="shrink-0 text-[9px] font-black text-[#b88600] underline underline-offset-3">Edit</button></div>;
+  return <div className="flex items-center gap-4 px-4 py-4"><div className="min-w-0 flex-1"><span className="block text-[10px] font-bold uppercase tracking-[.08em] opacity-55">{label}</span><span className="mt-1 block break-words text-sm font-semibold leading-6">{value}</span></div><button type="button" onClick={onEdit} aria-label={`Edit ${label.toLowerCase()}`} className="shrink-0 rounded-full border border-current/20 px-3 py-2 text-xs font-bold">Edit</button></div>;
 }
 
 function DocumentUpload({ type, label, required = false, fileName, busy, uploading, progress, processing, darkMode, onFile }: { type: string; label: string; required?: boolean; fileName?: string; busy: boolean; uploading: boolean; progress: number; processing: boolean; darkMode: boolean; onFile: (file: File | null) => void }) {
@@ -450,10 +451,11 @@ function DocumentUpload({ type, label, required = false, fileName, busy, uploadi
     event.target.value = "";
     onFile(file);
   }
-  return <label className={`relative flex min-h-32 cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border p-4 transition hover:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.035]" : "border-black/10 bg-[#faf9f5]"}`}>
-    <span><strong className="block text-sm font-black">{label}</strong><span className={`mt-1 block text-[9px] font-black uppercase tracking-[.1em] ${required ? "text-[#b88600]" : "opacity-40"}`}>{required ? "Required" : "Optional"}</span></span>
-    <span className="mt-4"><span className="block truncate text-xs font-semibold opacity-55">{uploading ? (processing ? "Verifying and attaching…" : `Uploading ${progress}%`) : fileName || (type === "portrait" ? "Choose a JPG or PNG portrait" : "Choose PDF, JPG or PNG")}</span>{fileName && !uploading ? <span className="mt-1 block text-[9px] font-black text-[#b88600]">Tap to replace</span> : null}</span>
-    <input disabled={busy} type="file" accept={type === "portrait" ? "image/jpeg,image/png" : "application/pdf,image/jpeg,image/png"} onChange={change} className="hidden" />
+  return <label className={`relative flex min-h-24 cursor-pointer items-center gap-3 overflow-hidden rounded-2xl border p-4 transition focus-within:border-[#f6b800] hover:border-[#f6b800] ${darkMode ? "border-white/12 bg-white/[.035]" : "border-black/10 bg-[#faf9f5]"}`}>
+    <span aria-hidden="true" className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${fileName ? "bg-[#f6b800] text-black" : "border border-current/20 opacity-50"}`}><LoadLinkIcon name={fileName ? "check" : "paperclip"} size={17} /></span>
+    <span className="min-w-0 flex-1"><strong className="block text-sm font-bold">{label}</strong><span className="mt-1 block truncate text-xs leading-5 opacity-65">{uploading ? (processing ? "Attaching file…" : `Uploading ${progress}%`) : fileName || (type === "portrait" ? "Choose JPG or PNG" : "Choose PDF, JPG or PNG")}</span></span>
+    <span className="shrink-0 text-right"><span className={`block text-[9px] font-bold uppercase tracking-wide ${fileName ? "text-[#b88600]" : "opacity-50"}`}>{fileName ? "Added" : required ? "Required" : "Optional"}</span><span className="mt-1 block text-xs font-semibold">{uploading ? "Uploading" : fileName ? "Replace" : "Add"}</span></span>
+    <input disabled={busy} type="file" aria-label={label} accept={type === "portrait" ? "image/jpeg,image/png" : "application/pdf,image/jpeg,image/png"} onChange={change} className="sr-only" />
     {uploading ? <span className="absolute inset-x-0 bottom-0 h-1 overflow-hidden bg-current/10"><span className="block h-full bg-[#f6b800] transition-[width] duration-150" style={{ width: `${progress}%` }} /></span> : null}
   </label>;
 }

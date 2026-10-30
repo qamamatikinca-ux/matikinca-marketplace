@@ -54,7 +54,9 @@ Deno.serve(async (request: Request) => {
   if (body.action === "document") {
    const { data, error } = await admin.storage.from("loadlink-driver-documents").download(identity.storage_path);
    if (error || !data) return reply({ error: "Your ID could not be opened. Upload it again." }, 400);
-   return new Response(data, { headers: { ...headers, "Content-Type": identity.mime_type, "Content-Disposition": "inline" } });
+   // functions-js decodes image/* responses as text. Send binary explicitly so
+   // the SDK preserves the original ID bytes, then restore its MIME at the proxy.
+   return new Response(data, { headers: { ...headers, "Content-Type": "application/octet-stream", "X-Identity-Mime": identity.mime_type, "Content-Disposition": "inline" } });
   }
   if (body.action === "start" || body.action === "manual") {
    if (body.consent !== true) return reply({ error: "Agree to the private identity review before continuing." }, 400);

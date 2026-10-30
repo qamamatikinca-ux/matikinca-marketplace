@@ -1,0 +1,16 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const Module=require('node:module');const ts=require('typescript');const {FunctionsClient}=require('@supabase/functions-js');
+function load(file,overrides){const filename=path.resolve(file);const m=new Module(filename,module);m.filename=filename;m.paths=module.paths;m.require=name=>name in overrides?overrides[name]:require(name);m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);return m.exports;}
+function transfer(mime){
+ const bytes=mime==='image/jpeg'?Buffer.from([255,216,255,224,128,254,0,255,217]):Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/Zk0AAAAASUVORK5CYII=','base64');
+ let endpoint,downloads=0;
+ const docs=[{document_type:'identity',mime_type:mime,validation_status:'validated',storage_path:'owner/identity/id',sha256:'id'},{document_type:'portrait',mime_type:'image/jpeg',validation_status:'validated',storage_path:'owner/portrait/photo',sha256:'photo'}];
+ const sb={auth:{getUser:async()=>({data:{user:{id:'owner',email:'user@example.test'}}})},from:table=>{const q={select(){return q},eq(){return q},maybeSingle:async()=>({data:table==='driver_profiles'?{id:'profile',user_id:'owner'}:null}),then:resolve=>Promise.resolve({data:docs}).then(resolve)};return q},storage:{from:()=>({download:async()=>{downloads++;return{data:new Blob([bytes],{type:mime})}}})}};
+ const previous=global.Deno;
+ global.Deno={env:{get:()=>''},serve:fn=>endpoint=fn};
+ try{load('supabase/functions/loadlink-driver-identity/index.ts',{'npm:@supabase/supabase-js@2.117.3':{createClient:()=>sb}})}finally{global.Deno=previous}
+ const functions=new FunctionsClient('https://fixture.test/functions',{headers:{Authorization:'Bearer fixture'},customFetch:async(url,options)=>{const previous=global.Deno;global.Deno={env:{get:()=>''}};try{return await endpoint(new Request(url,options))}finally{global.Deno=previous}}});
+ const route=load('app/api/phase2/identity/route.ts',{'@/lib/phase2/supabase':{bearer:r=>r.headers.has('authorization')?'fixture':null,publicSupabase:()=>({functions})},'@/lib/serverRateLimit':{serverRateLimit:()=>null}});
+ return{bytes,route,downloads:()=>downloads};
+}
+for(const mime of ['image/jpeg','image/png'])test(`${mime} survives the Edge function, actual SDK decoder and website proxy byte-for-byte`,async()=>{const h=transfer(mime);const response=await h.route.POST(new Request('https://loadlink.test/api/phase2/identity',{method:'POST',headers:{Authorization:'Bearer fixture'},body:JSON.stringify({action:'document'})}));assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),mime);assert.equal(response.headers.get('cache-control'),'private, no-store');assert.deepEqual(Buffer.from(await response.arrayBuffer()),h.bytes);assert.equal(h.downloads(),1);});
+test('unauthenticated image requests stop before any evidence download',async()=>{const h=transfer('image/jpeg');const response=await h.route.POST(new Request('https://loadlink.test/api/phase2/identity',{method:'POST',body:JSON.stringify({action:'document'})}));assert.equal(response.status,401);assert.equal(h.downloads(),0);});
