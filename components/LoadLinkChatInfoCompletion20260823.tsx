@@ -36,7 +36,12 @@ function mountPin(panel: HTMLElement) {
     writePins(pins); render();
     window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { kind: "success", title: pins.has(thread) ? "Chat pinned" : "Chat unpinned", message: pins.has(thread) ? "This conversation is pinned on this device." : "This conversation is no longer pinned.", duration: 2600 } }));
   });
-  render(); content.prepend(button);
+  render();
+  // Keep the pinned-chat action next to the conversation identity and actions.
+  // Prepending it above the panel header used to push the close control off-screen on mobile.
+  const slot = content.querySelector<HTMLElement>('[data-loadlink-pin-slot]');
+  if (slot) slot.appendChild(button);
+  else content.prepend(button);
 }
 
 export default function LoadLinkChatInfoCompletion20260823() {
