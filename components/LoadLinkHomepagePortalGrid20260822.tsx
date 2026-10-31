@@ -47,8 +47,8 @@ export default function LoadLinkHomepagePortalGrid20260822({ darkMode }: { darkM
   }, []);
 
   return (
-    <section data-loadlink-home-portals="approved-geometry-gold-actions" className="px-0 pb-8 pt-2 sm:px-4 md:px-6 md:pb-12">
-      <div className="mx-auto grid w-full max-w-[1440px] auto-rows-fr gap-px bg-black/10 md:grid-cols-2">
+    <section data-loadlink-home-portals="approved-geometry-gold-actions" className="w-full overflow-x-clip px-0 pb-8 pt-0 sm:px-4 md:px-6 md:pb-12">
+      <div className="mx-auto grid w-full max-w-[1440px] auto-rows-fr gap-0 bg-[#050505] md:grid-cols-2">
         {portals.map((portal) => {
           const src = portal.images[imageIndex % portal.images.length];
           const slug = portal.title.toLowerCase().replaceAll(" ", "-");
@@ -60,7 +60,7 @@ export default function LoadLinkHomepagePortalGrid20260822({ darkMode }: { darkM
               aria-label={`Open ${portal.title}`}
               data-loadlink-home-portal-card={slug}
               data-loadlink-scroll-top="true"
-              className={`group relative block h-full min-h-[300px] overflow-hidden rounded-none transition active:scale-[.998] sm:min-h-[340px] md:min-h-[390px] lg:min-h-[430px] ${darkMode ? "bg-[#090909]" : "bg-white"}`}
+              className={`group relative isolate block h-full w-full min-w-0 min-h-[300px] overflow-hidden border-0 rounded-none outline-offset-[-3px] transition active:scale-[.998] sm:min-h-[340px] md:min-h-[390px] lg:min-h-[430px] ${darkMode ? "bg-[#090909]" : "bg-[#141414]"}`}
             >
               <Image
                 fill
