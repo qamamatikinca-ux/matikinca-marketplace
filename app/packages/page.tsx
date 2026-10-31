@@ -61,7 +61,7 @@ const planDetails = {
 function titleCasePlan(plan?: string | null) {
   if (plan === "dealer") return "Dealer";
   if (plan === "pro") return "Pro";
-  if (plan === "manual") return "Manual";
+  if (plan === "manual") return "Standard";
   return "plan";
 }
 
@@ -178,7 +178,7 @@ export default function PackagesPage() {
         if (result.payment_type === "manual_listing_credit") {
           const quantity = Number(result.result?.quantity || 0);
           await refreshManualBalance();
-          setNotice(quantity > 0 ? `Payment confirmed. ${quantity} Manual listing ${quantity === 1 ? "credit is" : "credits are"} ready to use.` : "Payment confirmed. Your Manual listing credits are ready to use.");
+          setNotice(quantity > 0 ? `Payment confirmed. ${quantity} Standard listing ${quantity === 1 ? "credit is" : "credits are"} ready to use.` : "Payment confirmed. Your Standard listing credits are ready to use.");
         } else {
           await refreshAccount();
           setNotice("Payment confirmed. Your LoadLink plan is active.");
@@ -295,7 +295,7 @@ export default function PackagesPage() {
         return;
       }
       if (fresh.plan_request_state === "under_review") {
-        setNotice(`Your ${titleCasePlan(fresh.plan_request_plan)} request is already under review. Finish that request before choosing Manual.`);
+        setNotice(`Your ${titleCasePlan(fresh.plan_request_plan)} request is already under review. Finish that request before choosing Standard.`);
         return;
       }
       if ((fresh.plan === "pro" || fresh.plan === "dealer") && entitledStates.has(String(fresh.plan_state))) {
@@ -316,11 +316,11 @@ export default function PackagesPage() {
         payment.amount_cents !== expectedTotal ||
         payment.currency !== "ZAR"
       ) {
-        throw new Error("LoadLink stopped checkout because the Manual listing total did not reconcile.");
+        throw new Error("LoadLink stopped checkout because the Standard listing total did not reconcile.");
       }
       window.location.assign(payment.authorization_url);
     } catch (error) {
-      setNotice(loadLinkHumanError(error, "LoadLink could not start Manual payment right now."));
+      setNotice(loadLinkHumanError(error, "LoadLink could not start Standard payment right now."));
     } finally {
       setBusy("");
     }
@@ -411,10 +411,10 @@ export default function PackagesPage() {
               <p className={`text-[10px] font-black uppercase tracking-[.14em] ${muted}`}>Occasional</p>
               <h2 className="mt-2 text-[30px] font-black tracking-[-.05em]">Standard</h2>
               <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <span className="text-[42px] font-black leading-none tracking-[-.06em]">{money(manualProduct.unit_price_cents).replace(",00", "")}</span>
+                <span className="text-[42px] font-black leading-none tracking-[-.06em]">{manualDailyReady ? money(manualProduct.unit_price_cents).replace(",00", "") : loading ? "Checking…" : "Unavailable"}</span>
                 <span className={`text-xs font-extrabold ${muted}`}>per vehicle / active day</span>
               </div>
-              <p className={`mt-4 min-h-[60px] text-xs font-semibold leading-5 ${muted}`}>Vehicle advertising costs {money(manualProduct.unit_price_cents)} for each active day. Paused listings do not use new daily credits.</p>
+              <p className={`mt-4 min-h-[60px] text-xs font-semibold leading-5 ${muted}`}>{manualDailyReady ? `Vehicle advertising costs ${money(manualProduct.unit_price_cents)} for each active day. Paused listings do not use new daily credits.` : "Daily vehicle advertising is available when live pricing is confirmed."}</p>
             </div>
 
             <div className="my-5 h-px bg-current/10" />
