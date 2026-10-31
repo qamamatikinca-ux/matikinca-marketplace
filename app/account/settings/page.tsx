@@ -276,7 +276,6 @@ export default function AccountSettingsPage() {
 
   if (loading) return <LoadLinkLoading />;
 
-  const tabClass = (view: SettingsView) => `shrink-0 rounded-xl px-4 py-3 text-xs font-semibold transition ${settingsView === view ? "bg-[#f6b800] text-black shadow-sm" : (darkMode ? "text-white/55 hover:bg-white/[.05]" : "text-black/55 hover:bg-black/[.04]")}`;
 
   return (
     <main data-loadlink-settings="20261021" data-theme={darkMode ? "dark" : "light"} className={`min-h-screen ${page}`}>
@@ -290,9 +289,7 @@ export default function AccountSettingsPage() {
 
 
         <div className="ll-settings-shell" data-overview={settingsView === "overview"}>
-        {settingsView !== "overview" ? <nav aria-label="Settings categories"><button type="button" onClick={() => { setSettingsView("overview"); window.history.replaceState(null, "", window.location.pathname); }} className="flex items-center gap-2 px-4 py-3 text-xs font-bold"><LoadLinkIcon name="chevronLeft" size={16} />All settings</button>{([
-          ["profile","Profile"],["work","Work"],["notifications","Notifications"],["messages","Messages"],["security","Security and privacy"],["billing","Billing"],...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team","Team"]] : [])
-        ] as Array<[SettingsView,string]>).map(([view,label]) => <button key={view} type="button" aria-current={settingsView === view ? "page" : undefined} className={tabClass(view)} onClick={() => { setSettingsView(view); window.history.replaceState(null,"",`#${view === "messages" ? "message-privacy" : view}`); }}>{label}</button>)}</nav> : null}
+
 
         <div className="ll-settings-content">
         {dirty && settingsView === "profile" ? <p className={`mt-4 text-sm font-medium ${muted}`}>You have unsaved profile changes.</p> : null}
