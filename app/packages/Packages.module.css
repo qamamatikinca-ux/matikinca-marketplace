@@ -1,0 +1,33 @@
+.page { overflow-x: clip; }
+.container { --ll-plan-text:#181918; --ll-plan-soft:#f0efec; --ll-plan-border:#dfdfdb; }
+.page[data-theme="dark"] .container { --ll-plan-text:#f7f7f5; --ll-plan-soft:#1c1e1c; --ll-plan-border:#333633; }
+.container > header { max-width: 760px; }
+.container > header h1 {
+  font-size: clamp(30px,6vw,44px) !important;
+  line-height: 1.13 !important;
+  letter-spacing: -.042em !important;
+  font-weight: 750 !important;
+}
+.container > header p { font-weight: 480 !important; }
+.planGrid { align-items: stretch; gap: 13px !important; }
+.planCard {
+  padding: 20px !important;
+  border-radius: 15px !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+.planCard h2 { font-size: 27px !important; font-weight: 730 !important; letter-spacing: -.03em !important; }
+.planCard p { font-weight: 470 !important; }
+.planCard > div > ul { font-size: 12px; }
+.planCard button {
+  border-radius: 11px !important;
+  box-shadow: none !important;
+  font-size: 12px !important;
+  font-weight: 675 !important;
+}
+.pricingNotice {
+  max-width: 760px; margin: 18px 0 0; padding: 13px 15px;
+  border: 1px solid #a87c0038; border-radius: 12px;
+  background: #f6b80013; color: inherit; font-size: 12px; line-height: 1.55;
+}
+@media(max-width:740px) { .planCard { padding: 19px !important; } .planGrid { gap: 12px !important; } }

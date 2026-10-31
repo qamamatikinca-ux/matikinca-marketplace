@@ -166,7 +166,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
           <LoadLinkDealerUpdateRail20260822 darkMode={darkMode} onAvailabilityChange={setHasDealerUpdates} />
 
           {!hasDealerUpdates ? (
-            <div className="no-scrollbar overflow-x-auto py-1" aria-label="Search category">
+            <div className="ll-loadlink-search-segments no-scrollbar overflow-x-auto py-1" aria-label="Search category">
               <div className="flex min-w-max items-center gap-1.5">
                 {visibleScopes.map((item) => (
                   <button
@@ -175,7 +175,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                     onClick={() => chooseScope(item.value)}
                     data-loadlink-quick-scope="true"
                     aria-pressed={scope === item.value}
-                    className={`h-9 shrink-0 rounded-[11px] border px-3 text-[12px] font-semibold transition active:scale-[.98] ${
+                    className={`ll-loadlink-search-segment h-10 shrink-0 rounded-full border px-4 text-[12px] font-semibold transition active:scale-[.98] ${
                       scope === item.value
                         ? "border-[#f6b800] bg-[#f6b800] text-black"
                         : darkMode

@@ -79,6 +79,7 @@ export default function AccountSettingsPage() {
   const [preferenceSaving, setPreferenceSaving] = useState<PreferenceKey | null>(null);
   const [hasDriverProfile, setHasDriverProfile] = useState(false);
   const [settingsView, setSettingsView] = useState<SettingsView>("overview");
+  const [settingsGroup, setSettingsGroup] = useState<"account" | "preferences" | "security">("account");
   const [pushState, setPushState] = useState<PushState>("disabled");
   const [pushBusy, setPushBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -275,7 +276,6 @@ export default function AccountSettingsPage() {
 
   if (loading) return <LoadLinkLoading />;
 
-  const tabClass = (view: SettingsView) => `shrink-0 rounded-xl px-4 py-3 text-xs font-semibold transition ${settingsView === view ? "bg-[#f6b800] text-black shadow-sm" : (darkMode ? "text-white/55 hover:bg-white/[.05]" : "text-black/55 hover:bg-black/[.04]")}`;
 
   return (
     <main data-loadlink-settings="20261021" data-theme={darkMode ? "dark" : "light"} className={`min-h-screen ${page}`}>
@@ -289,9 +289,7 @@ export default function AccountSettingsPage() {
 
 
         <div className="ll-settings-shell" data-overview={settingsView === "overview"}>
-        {settingsView !== "overview" ? <nav aria-label="Settings categories"><button type="button" onClick={() => { setSettingsView("overview"); window.history.replaceState(null, "", window.location.pathname); }} className="flex items-center gap-2 px-4 py-3 text-xs font-bold"><LoadLinkIcon name="chevronLeft" size={16} />All settings</button>{([
-          ["profile","Profile"],["work","Work"],["notifications","Notifications"],["messages","Messages"],["security","Security and privacy"],["billing","Billing"],...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team","Team"]] : [])
-        ] as Array<[SettingsView,string]>).map(([view,label]) => <button key={view} type="button" aria-current={settingsView === view ? "page" : undefined} className={tabClass(view)} onClick={() => { setSettingsView(view); window.history.replaceState(null,"",`#${view === "messages" ? "message-privacy" : view}`); }}>{label}</button>)}</nav> : null}
+
 
         <div className="ll-settings-content">
         {dirty && settingsView === "profile" ? <p className={`mt-4 text-sm font-medium ${muted}`}>You have unsaved profile changes.</p> : null}
@@ -314,43 +312,55 @@ export default function AccountSettingsPage() {
               <LoadLinkIcon name="chevronRight" size={18} />
             </button>
 
-            {([
-              ["Account", [
-                ["profile", "user", "Profile", "Personal details and photo"],
-                ["work", "truck", "Work", "Driver profile and listings"],
-                ["billing", "wallet", "Billing", "Packages and payments"],
-                ...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team", "users", "Team", "Dealership access"]] : []),
-              ]],
-              ["Preferences", [
-                ["notifications", "bell", "Notifications", "Choose which updates you receive"],
-                ["messages", "message", "Messages", "Privacy and message alerts"],
-                ["security", "lock", "Security and privacy", "Password and account access"],
-              ]],
-            ] as Array<[string, Array<[SettingsView, import("@/components/LoadLinkIcon").LoadLinkIconName, string, string]>]>).map(([group, items]) => (
-              <section key={group} className="ll-settings-group" aria-label={group}>
-                <h2 className="ll-settings-group-heading">{group}</h2>
-                <div className="ll-settings-menu">
-                  {items.map(([view, icon, title, copy]) => (
-                    <button
-                      key={view}
-                      type="button"
-                      data-loadlink-settings-option="true"
-                      onClick={() => {
-                        setSettingsView(view);
-                        window.history.replaceState(null, "", `#${view === "messages" ? "message-privacy" : view}`);
-                      }}
-                    >
-                      <span className="ll-settings-row-icon"><LoadLinkIcon name={icon} size={19} /></span>
-                      <span className="ll-settings-row-copy">
-                        <strong>{title}</strong>
-                        <small>{copy}</small>
-                      </span>
-                      <LoadLinkIcon name="chevronRight" size={17} />
-                    </button>
-                  ))}
-                </div>
-              </section>
-            ))}
+            <nav className="ll-settings-segments" aria-label="Settings sections">
+              {([
+                ["account", "Account"],
+                ["preferences", "Preferences"],
+                ["security", "Security"],
+              ] as const).map(([group, label]) => (
+                <button
+                  key={group}
+                  type="button"
+                  aria-pressed={settingsGroup === group}
+                  onClick={() => setSettingsGroup(group)}
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
+            <div className="ll-settings-menu" aria-label={settingsGroup === "account" ? "Account settings" : settingsGroup === "preferences" ? "Preference settings" : "Security settings"}>
+              {([
+                ["account", [
+                  ["profile", "user", "Profile", "Personal details and photo"],
+                  ["work", "truck", "Work", "Driver profile and listings"],
+                  ["billing", "wallet", "Billing", "Plan and payments"],
+                  ...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team", "users", "Team", "Dealership access"]] : []),
+                ]],
+                ["preferences", [
+                  ["notifications", "bell", "Notifications", "Alerts and updates"],
+                  ["messages", "message", "Messages", "Chat privacy and alerts"],
+                ]],
+                ["security", [
+                  ["security", "lock", "Security and privacy", "Password and account access"],
+                ]],
+              ] as Array<[typeof settingsGroup, Array<[SettingsView, import("@/components/LoadLinkIcon").LoadLinkIconName, string, string]>]>)
+                .find(([group]) => group === settingsGroup)?.[1]
+                .map(([view, icon, title, copy]) => (
+                  <button
+                    key={view}
+                    type="button"
+                    data-loadlink-settings-option="true"
+                    onClick={() => {
+                      setSettingsView(view);
+                      window.history.replaceState(null, "", `#${view === "messages" ? "message-privacy" : view}`);
+                    }}
+                  >
+                    <span className="ll-settings-row-icon"><LoadLinkIcon name={icon} size={19} /></span>
+                    <span className="ll-settings-row-copy"><strong>{title}</strong><small>{copy}</small></span>
+                    <LoadLinkIcon name="chevronRight" size={17} />
+                  </button>
+                ))}
+            </div>
           </div>
         ) : (
           <button
@@ -422,11 +432,11 @@ export default function AccountSettingsPage() {
         {settingsView === "billing" ? (
           <section id="billing" className={`mt-6 max-w-3xl border p-5 md:p-7 ${surface}`}>
             <h2 className="text-xl font-bold">Billing and subscriptions</h2>
-            <p className={`mt-2 text-sm leading-6 ${muted}`}>Check account entitlements, invoices and active package tools.</p>
-            <div className={`mt-5 rounded-xl border p-4 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-black/[.015]"}`}><Info label="Current package" value={form.subscription_plan} /></div>
+            <p className={`mt-2 text-sm leading-6 ${muted}`}>Find your current plan, compare packages and view real billing records.</p>
             <div className="mt-4 grid gap-2">
-              <SettingsRoute href="/account/packages" title="Package and payment history" description="See your plan, charges and account access." darkMode={darkMode} />
-              <SettingsRoute href="/packages/manage" title="Manage subscription" description="Open the existing package-management tools." darkMode={darkMode} />
+              <SettingsRoute href="/packages/manage" title="Plan overview" description="Check your current plan, period and listing permissions." darkMode={darkMode} />
+              <SettingsRoute href="/packages" title="Compare packages" description="See available Standard, Pro and Dealer options." darkMode={darkMode} />
+              <SettingsRoute href="/account/packages" title="Billing history" description="See your recorded payments and their status." darkMode={darkMode} />
             </div>
           </section>
         ) : null}
