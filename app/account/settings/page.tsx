@@ -432,11 +432,11 @@ export default function AccountSettingsPage() {
         {settingsView === "billing" ? (
           <section id="billing" className={`mt-6 max-w-3xl border p-5 md:p-7 ${surface}`}>
             <h2 className="text-xl font-bold">Billing and subscriptions</h2>
-            <p className={`mt-2 text-sm leading-6 ${muted}`}>Check account entitlements, invoices and active package tools.</p>
-            <div className={`mt-5 rounded-xl border p-4 ${darkMode ? "border-white/10 bg-white/[.025]" : "border-black/10 bg-black/[.015]"}`}><Info label="Current package" value={form.subscription_plan} /></div>
+            <p className={`mt-2 text-sm leading-6 ${muted}`}>Find your current plan, compare packages and view real billing records.</p>
             <div className="mt-4 grid gap-2">
-              <SettingsRoute href="/account/packages" title="Package and payment history" description="See your plan, charges and account access." darkMode={darkMode} />
-              <SettingsRoute href="/packages/manage" title="Manage subscription" description="Open the existing package-management tools." darkMode={darkMode} />
+              <SettingsRoute href="/packages/manage" title="Plan overview" description="Check your current plan, period and listing permissions." darkMode={darkMode} />
+              <SettingsRoute href="/packages" title="Compare packages" description="See available Standard, Pro and Dealer options." darkMode={darkMode} />
+              <SettingsRoute href="/account/packages" title="Billing history" description="See your recorded payments and their status." darkMode={darkMode} />
             </div>
           </section>
         ) : null}
