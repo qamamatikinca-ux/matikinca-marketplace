@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+import PlanNavigation from "@/components/PlanNavigation";
+import { supabase } from "@/lib/supabaseClient";
+import styles from "./Packages.module.css";
 import {
   getManualCreditBalance,
   getManualListingProduct,
@@ -74,6 +77,9 @@ export default function PackagesPage() {
   const [manualDailyReady, setManualDailyReady] = useState(false);
   const [manualQuantity, setManualQuantity] = useState(1);
   const [manualOpen, setManualOpen] = useState(false);
+  const [prices, setPrices] = useState<Partial<Record<SubscriptionPlan, number>>>({});
+  const [pricesLoading, setPricesLoading] = useState(true);
+  const [pricesError, setPricesError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<BusyAction>("");
   const [notice, setNotice] = useState("");
@@ -123,6 +129,30 @@ export default function PackagesPage() {
       mounted = false;
       window.removeEventListener("loadlink-account-state-changed", sync);
     };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    void supabase.from("subscription_plans")
+      .select("code,price_cents,currency,billing_interval")
+      .eq("is_active", true)
+      .in("code", ["pro", "dealer"])
+      .then(({ data, error }) => {
+        if (!mounted) return;
+        const next: Partial<Record<SubscriptionPlan, number>> = {};
+        if (!error) {
+          for (const row of data || []) {
+            if ((row.code === "pro" || row.code === "dealer") &&
+                row.currency === "ZAR" && row.billing_interval === "month" &&
+                typeof row.price_cents === "number" && row.price_cents >= 0)
+              next[row.code] = row.price_cents;
+          }
+        }
+        setPrices(next);
+        setPricesError(Boolean(error) || next.pro === undefined || next.dealer === undefined);
+        setPricesLoading(false);
+      });
+    return () => { mounted = false; };
   }, []);
 
   useEffect(() => {
@@ -309,6 +339,7 @@ export default function PackagesPage() {
   function subscriptionDisabled(plan: SubscriptionPlan) {
     if (Boolean(busy)) return true;
     if (activePlan === "dealer" && plan === "pro") return true;
+    if (prices[plan] === undefined && activePlan !== plan && paymentPlan !== plan) return true;
     if (Boolean(pendingPlan)) return true;
     return false;
   }
@@ -319,19 +350,23 @@ export default function PackagesPage() {
 
   return (
     <main
-      data-loadlink-packages-page="final-revision-20260822"
-      className={darkMode ? "min-h-screen overflow-x-hidden bg-black text-white" : "min-h-screen overflow-x-hidden bg-[#f4efe3] text-black"}
+      data-loadlink-packages-page="20261031"
+      data-theme={darkMode ? "dark" : "light"}
+      className={`${styles.page} ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}
     >
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
-      <div className="mx-auto w-full max-w-6xl px-4 pb-[calc(48px+env(safe-area-inset-bottom))] pt-7 sm:px-6 md:pt-10">
+      <div className={`${styles.container} mx-auto w-full max-w-6xl px-4 pb-[calc(48px+env(safe-area-inset-bottom))] pt-7 sm:px-6 md:pt-10`}>
         <header className="max-w-3xl">
-          <p className={`text-[11px] font-black uppercase tracking-[.15em] ${muted}`}>LoadLink packages</p>
-          <h1 className="mt-3 text-[38px] font-black leading-[.98] tracking-[-.055em] sm:text-[52px] md:text-[62px]">Pick the plan that fits how you work.</h1>
+          <p className={`text-[11px] font-black uppercase tracking-[.15em] ${muted}`}>Packages</p>
+          <h1 className="mt-3 text-[38px] font-black leading-[.98] tracking-[-.055em] sm:text-[52px] md:text-[62px]">Choose how you use LoadLink.</h1>
           <p className={`mt-4 max-w-2xl text-[14px] font-semibold leading-6 sm:text-[15px] ${muted}`}>
-            Pay as you go for occasional vehicle listings, advertise regularly with Pro, or run a dealership workspace with Dealer.
+            Compare Standard, Pro and Dealer. Current prices are checked against LoadLink’s billing catalog.
           </p>
+          <PlanNavigation active="packages" />
         </header>
+
+        {pricesError ? <p role="status" className={styles.pricingNotice}>Some subscription prices could not be confirmed. New requests are paused until pricing is available.</p> : null}
 
         {loading ? (
           <section className={`mt-7 rounded-[24px] border p-5 ${softSurface}`} aria-label="Loading plan status">
@@ -369,11 +404,11 @@ export default function PackagesPage() {
 
         {notice ? <div className={`mt-4 rounded-2xl border px-4 py-3 text-[12px] font-bold leading-5 ${softSurface}`} role="status" aria-live="polite">{notice}</div> : null}
 
-        <section className="mt-8 grid gap-4 lg:grid-cols-3" aria-label="LoadLink plans">
-          <article className={`flex min-w-0 flex-col rounded-[26px] border p-5 sm:p-6 ${surface}`}>
+        <section className={`${styles.planGrid} mt-8 grid gap-4 lg:grid-cols-3`} aria-label="LoadLink plans">
+          <article className={`${styles.planCard} flex min-w-0 flex-col rounded-[18px] border p-5 sm:p-6 ${surface}`}>
             <div>
               <p className={`text-[10px] font-black uppercase tracking-[.14em] ${muted}`}>Occasional</p>
-              <h2 className="mt-2 text-[30px] font-black tracking-[-.05em]">Manual</h2>
+              <h2 className="mt-2 text-[30px] font-black tracking-[-.05em]">Standard</h2>
               <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 <span className="text-[42px] font-black leading-none tracking-[-.06em]">{money(manualProduct.unit_price_cents).replace(",00", "")}</span>
                 <span className={`text-xs font-extrabold ${muted}`}>per vehicle / active day</span>
@@ -435,10 +470,10 @@ export default function PackagesPage() {
             const details = planDetails[plan];
             const isPro = plan === "pro";
             return (
-              <article id={`${plan}-package`} key={plan} className={`relative flex min-w-0 flex-col rounded-[26px] border p-5 sm:p-6 ${isPro ? "border-[#f6b800]" : surface}`}>
+              <article id={`${plan}-package`} key={plan} className={`${styles.planCard} relative flex min-w-0 flex-col rounded-[18px] border p-5 sm:p-6 ${isPro ? "border-[#f6b800]" : surface}`}>
                 {isPro ? <span className="absolute right-5 top-5 rounded-full bg-[#f6b800] px-2.5 py-1 text-[9px] font-black uppercase tracking-[.1em] text-black">Recommended</span> : null}
                 <div className="pr-20"><p className={`text-[10px] font-black uppercase tracking-[.14em] ${muted}`}>{details.eyebrow}</p><h2 className="mt-2 text-[30px] font-black tracking-[-.05em]">{details.name}</h2></div>
-                <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1"><span className="text-[42px] font-black leading-none tracking-[-.06em]">{details.price}</span><span className={`text-xs font-extrabold ${muted}`}>{details.billing}</span></div>
+                <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1"><span className="text-[42px] font-black leading-none tracking-[-.06em]">{prices[plan] !== undefined ? money(prices[plan]!).replace(",00", "") : pricesLoading ? "Checking…" : "Unavailable"}</span><span className={`text-xs font-extrabold ${muted}`}>{details.billing}</span></div>
                 <p className={`mt-4 min-h-[60px] text-xs font-semibold leading-5 ${muted}`}>{details.description}</p>
                 <div className="my-5 h-px bg-current/10" />
                 <ul className="grid gap-3">{details.features.map((feature) => <li key={feature} className="flex gap-3 text-[12px] font-semibold leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]" /><span>{feature}</span></li>)}</ul>
@@ -449,12 +484,7 @@ export default function PackagesPage() {
           })}
         </section>
 
-        <section className={`mt-6 rounded-[24px] border p-5 sm:p-6 ${softSurface}`}>
-          <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
-            <div><h2 className="text-lg font-black tracking-[-.035em]">Not sure which one fits?</h2><p className={`mt-1 text-xs font-semibold leading-5 ${muted}`}>Manual is pay-as-you-go. Pro is for regular owner-operators. Dealer is for a dealership, staff and a public showroom.</p></div>
-            <button type="button" onClick={() => window.location.assign("/help")} className={`h-11 rounded-xl border px-4 text-xs font-black ${darkMode ? "border-white/15" : "border-black/15"}`}>Ask LoadLink support</button>
-          </div>
-        </section>
+
       </div>
     </main>
   );
