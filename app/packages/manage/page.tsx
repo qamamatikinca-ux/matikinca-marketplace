@@ -7,6 +7,7 @@ import PlanNavigation from "@/components/PlanNavigation";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { getLoadLinkIntelligence, getPaystackManagementLink, type LoadLinkIntelligenceState } from "@/lib/loadlinkIntelligence";
 import { getVehicleListingAccess, type PackageAccess } from "@/lib/packageAccess";
+import { supabase } from "@/lib/supabaseClient";
 import styles from "../PlanWorkspace.module.css";
 
 const activeStates = new Set(["active", "trial", "trialing", "grace_period", "cancelled"]);
@@ -36,6 +37,7 @@ export default function ManagePackagePage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [state, setState] = useState<LoadLinkIntelligenceState | null>(null);
   const [access, setAccess] = useState<PackageAccess | null>(null);
+  const [standardRules, setStandardRules] = useState<{ photos: number; dailyMessages: number | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -47,6 +49,8 @@ export default function ManagePackagePage() {
       const live = await getLoadLinkIntelligence();
       setState(live);
       if (live.authenticated) {
+        const rules = await supabase.from("marketplace_plan_rules").select("listing_image_limit,daily_message_limit").eq("plan_code", "standard").maybeSingle();
+        setStandardRules(!rules.error && rules.data ? { photos: rules.data.listing_image_limit, dailyMessages: rules.data.daily_message_limit } : null);
         try {
           const permissions = await getVehicleListingAccess();
           setAccess(permissions);
@@ -57,10 +61,12 @@ export default function ManagePackagePage() {
         }
       } else {
         setAccess(null);
+        setStandardRules(null);
       }
     } catch {
       setState(null);
       setAccess(null);
+      setStandardRules(null);
       setNotice("Unable to load your current plan. Check your connection and try again.");
     } finally {
       setLoading(false);
@@ -89,12 +95,13 @@ export default function ManagePackagePage() {
   const active = hasSubscription && activeStates.has(String(state?.plan_state)) && Boolean(access?.allowed && access.source === "subscription");
   const status = hasSubscription ? statusText(state?.plan_state) : access?.source === "manual_credit" && access.allowed ? "Daily listing access" : "Standard access";
   const allowancesKnown = Boolean(access?.schemaReady);
-  const photoCount = allowancesKnown ? String(access?.photoLimit ?? 0) : "Unavailable";
+  const photoCount = allowancesKnown ? access?.allowed ? String(access.photoLimit) : standardRules ? `${standardRules.photos} when activated` : "Not active" : "Unavailable";
   const limit = allowancesKnown
     ? access?.activeListingLimit === null ? "Unlimited" : String(access?.activeListingLimit ?? 0)
     : "Unavailable";
+  const effectiveMessageLimit = access?.dailyMessageLimit === 0 && !access?.allowed ? standardRules?.dailyMessages : access?.dailyMessageLimit;
   const messageLimit = allowancesKnown
-    ? access?.dailyMessageLimit === null ? "Unlimited" : String(access?.dailyMessageLimit ?? 0) + " / day"
+    ? effectiveMessageLimit === null ? "Unlimited" : typeof effectiveMessageLimit === "number" ? String(effectiveMessageLimit) + " / day" : "Unavailable"
     : "Unavailable";
   const paid = Boolean(hasSubscription && active);
 
