@@ -142,10 +142,11 @@ export default function PackagesPage() {
         const next: Partial<Record<SubscriptionPlan, number>> = {};
         if (!error) {
           for (const row of data || []) {
-            if ((row.code === "pro" || row.code === "dealer") &&
+            const code = String(row.code);
+            if ((code === "pro" || code === "dealer") &&
                 row.currency === "ZAR" && row.billing_interval === "month" &&
                 typeof row.price_cents === "number" && row.price_cents >= 0)
-              next[row.code] = row.price_cents;
+              next[code] = row.price_cents;
           }
         }
         setPrices(next);
