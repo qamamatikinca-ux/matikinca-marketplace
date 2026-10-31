@@ -79,6 +79,7 @@ export default function AccountSettingsPage() {
   const [preferenceSaving, setPreferenceSaving] = useState<PreferenceKey | null>(null);
   const [hasDriverProfile, setHasDriverProfile] = useState(false);
   const [settingsView, setSettingsView] = useState<SettingsView>("overview");
+  const [settingsGroup, setSettingsGroup] = useState<"account" | "preferences" | "security">("account");
   const [pushState, setPushState] = useState<PushState>("disabled");
   const [pushBusy, setPushBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -314,43 +315,55 @@ export default function AccountSettingsPage() {
               <LoadLinkIcon name="chevronRight" size={18} />
             </button>
 
-            {([
-              ["Account", [
-                ["profile", "user", "Profile", "Personal details and photo"],
-                ["work", "truck", "Work", "Driver profile and listings"],
-                ["billing", "wallet", "Billing", "Packages and payments"],
-                ...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team", "users", "Team", "Dealership access"]] : []),
-              ]],
-              ["Preferences", [
-                ["notifications", "bell", "Notifications", "Choose which updates you receive"],
-                ["messages", "message", "Messages", "Privacy and message alerts"],
-                ["security", "lock", "Security and privacy", "Password and account access"],
-              ]],
-            ] as Array<[string, Array<[SettingsView, import("@/components/LoadLinkIcon").LoadLinkIconName, string, string]>]>).map(([group, items]) => (
-              <section key={group} className="ll-settings-group" aria-label={group}>
-                <h2 className="ll-settings-group-heading">{group}</h2>
-                <div className="ll-settings-menu">
-                  {items.map(([view, icon, title, copy]) => (
-                    <button
-                      key={view}
-                      type="button"
-                      data-loadlink-settings-option="true"
-                      onClick={() => {
-                        setSettingsView(view);
-                        window.history.replaceState(null, "", `#${view === "messages" ? "message-privacy" : view}`);
-                      }}
-                    >
-                      <span className="ll-settings-row-icon"><LoadLinkIcon name={icon} size={19} /></span>
-                      <span className="ll-settings-row-copy">
-                        <strong>{title}</strong>
-                        <small>{copy}</small>
-                      </span>
-                      <LoadLinkIcon name="chevronRight" size={17} />
-                    </button>
-                  ))}
-                </div>
-              </section>
-            ))}
+            <nav className="ll-settings-segments" aria-label="Settings sections">
+              {([
+                ["account", "Account"],
+                ["preferences", "Preferences"],
+                ["security", "Security"],
+              ] as const).map(([group, label]) => (
+                <button
+                  key={group}
+                  type="button"
+                  aria-pressed={settingsGroup === group}
+                  onClick={() => setSettingsGroup(group)}
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
+            <div className="ll-settings-menu" aria-label={settingsGroup === "account" ? "Account settings" : settingsGroup === "preferences" ? "Preference settings" : "Security settings"}>
+              {([
+                ["account", [
+                  ["profile", "user", "Profile", "Personal details and photo"],
+                  ["work", "truck", "Work", "Driver profile and listings"],
+                  ["billing", "wallet", "Billing", "Plan and payments"],
+                  ...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team", "users", "Team", "Dealership access"]] : []),
+                ]],
+                ["preferences", [
+                  ["notifications", "bell", "Notifications", "Alerts and updates"],
+                  ["messages", "message", "Messages", "Chat privacy and alerts"],
+                ]],
+                ["security", [
+                  ["security", "lock", "Security and privacy", "Password and account access"],
+                ]],
+              ] as Array<[typeof settingsGroup, Array<[SettingsView, import("@/components/LoadLinkIcon").LoadLinkIconName, string, string]>]>)
+                .find(([group]) => group === settingsGroup)?.[1]
+                .map(([view, icon, title, copy]) => (
+                  <button
+                    key={view}
+                    type="button"
+                    data-loadlink-settings-option="true"
+                    onClick={() => {
+                      setSettingsView(view);
+                      window.history.replaceState(null, "", `#${view === "messages" ? "message-privacy" : view}`);
+                    }}
+                  >
+                    <span className="ll-settings-row-icon"><LoadLinkIcon name={icon} size={19} /></span>
+                    <span className="ll-settings-row-copy"><strong>{title}</strong><small>{copy}</small></span>
+                    <LoadLinkIcon name="chevronRight" size={17} />
+                  </button>
+                ))}
+            </div>
           </div>
         ) : (
           <button
