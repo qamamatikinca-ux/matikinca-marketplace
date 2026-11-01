@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+import VehicleSpecificationSheet from "@/components/VehicleSpecificationSheet";
 
 type DealerSnapshot = {
   slug: string;
@@ -64,6 +65,7 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 
 export default function VehicleFullDetails({ description, city, dealershipId, darkMode }: Props) {
   const parsed = useMemo(() => parseVehicleDetails(description), [description]);
+  const hasDetailedSpecifications = parsed.entries.some(([label]) => !["listing type","offer","seller","sale price","rental rate"].includes(label.toLowerCase()));
   const [dealer, setDealer] = useState<DealerSnapshot | null>(null);
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [distance, setDistance] = useState<number | null>(null);
@@ -162,9 +164,11 @@ export default function VehicleFullDetails({ description, city, dealershipId, da
             </button>
           </div>
           {distanceState === "unavailable" ? <p className={`mt-2 text-xs font-semibold ${muted}`}>Distance could not be calculated. Allow approximate location access and try again.</p> : null}
-          <dl className="mt-4 grid gap-2 sm:grid-cols-2">
-            {parsed.entries.map(([label, value]) => <div key={`${label}-${value}`} className={`rounded-xl border px-3.5 py-3 ${tile}`}><dt className={`text-[10px] font-black uppercase tracking-[.09em] ${muted}`}>{label}</dt><dd className="mt-1.5 text-sm font-black leading-5">{value}</dd></div>)}
-          </dl>
+          <div className="mt-3">
+            {hasDetailedSpecifications
+              ? <VehicleSpecificationSheet entries={parsed.entries} darkMode={darkMode} />
+              : <p className={`rounded-xl border p-4 text-sm leading-6 ${tile}`}>The seller has not supplied detailed technical specifications for this listing. Ask for the year, mileage, engine details, carrying capacity and relevant service or registration records before making an offer.</p>}
+          </div>
         </section>
       ) : null}
 
