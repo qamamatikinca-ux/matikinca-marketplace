@@ -27,9 +27,6 @@ function dateText(value: string | null | undefined) {
   if (Number.isNaN(d.getTime())) return null;
   return new Intl.DateTimeFormat("en-ZA", { day: "numeric", month: "short", year: "numeric" }).format(d);
 }
-function Info({ label, value }: { label: string; value: string }) {
-  return <div className={styles.fact}><p className={styles.factLabel}>{label}</p><p className={styles.factValue}>{value}</p></div>;
-}
 function Row({ label, value }: { label: string; value: string }) {
   return <div className={styles.dataRow}><span className={styles.dataLabel}>{label}</span><strong className={styles.dataValue}>{value}</strong></div>;
 }
@@ -104,6 +101,25 @@ export default function ManagePackagePage() {
     ? effectiveMessageLimit === null ? "Unlimited" : typeof effectiveMessageLimit === "number" ? String(effectiveMessageLimit) + " / day" : "Unavailable"
     : "Unavailable";
   const paid = Boolean(hasSubscription && active);
+  const ended = hasSubscription && String(state?.plan_state || "").toLowerCase() === "expired";
+  const accessStatus = !allowancesKnown
+    ? "Not available"
+    : access?.allowed
+      ? "Available"
+      : ended ? "Expired" : "Not activated";
+  const listingLimit = !allowancesKnown
+    ? "Not available"
+    : access?.allowed
+      ? limit
+      : "No active allocation";
+  const imageLimit = !allowancesKnown
+    ? "Not available"
+    : access?.allowed
+      ? String(access.photoLimit)
+      : !hasSubscription && standardRules
+        ? `${standardRules.photos} when activated`
+        : "No active entitlement";
+  const paymentStatus = state?.payment_status ? statusText(state.payment_status) : "Not reported";
 
   return <main className={styles.page} data-theme={darkMode ? "dark" : "light"} data-loadlink-plan-manage="20261031">
     <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
@@ -128,55 +144,93 @@ export default function ManagePackagePage() {
           <div className={styles.buttonRow}><Link href="/login?returnTo=%2Fpackages%2Fmanage" className={styles.primary}>Sign in</Link></div>
         </div></div>
       ) : <>
-        <section className={styles.panel} aria-label="Current plan">
-          <div className={styles.panelBody}>
-            <div className={styles.panelTop}>
+        <section className={styles.panel} aria-label="Current plan and status">
+          <div className={styles.planSummary}>
+            <div className={styles.summaryIdentity}>
               <div>
-                <p className={styles.eyebrow}>Current plan</p>
+                <p className={styles.eyebrow}>Current package</p>
                 <h2 className={styles.planName}>{planName}</h2>
-                <p className={styles.panelCopy}>{hasSubscription ? "Subscription information from your account." : "Standard access. Paid vehicle days and upgrades are optional."}</p>
+                <p className={styles.summaryDetail}>
+                  {ended && periodEnd
+                    ? `Last subscription period ended ${periodEnd}`
+                    : hasSubscription && periodEnd
+                      ? `Current period ends ${periodEnd}`
+                      : hasSubscription
+                        ? "Period end date not provided"
+                        : "Pay as you go for vehicle advertising"}
+                </p>
               </div>
               <span className={`${styles.status} ${paid ? styles.statusActive : ""}`}>{status}</span>
             </div>
-            <div className={styles.buttonRow}>
-              <Link href="/packages" className={styles.primary}>{hasSubscription ? "Compare packages" : "View packages"}</Link>
-              {hasSubscription ? <button type="button" disabled={busy} onClick={() => void manageBilling()} className={styles.secondary}>{busy ? "Opening…" : "Manage subscription"}</button> : null}
-              <button type="button" className={styles.secondary} onClick={() => void refresh()}>Refresh details</button>
+
+            <div className={styles.summaryFacts}>
+              <div className={styles.summaryFact}>
+                <span>Listing access</span>
+                <strong>{accessStatus}</strong>
+              </div>
+              <div className={styles.summaryFact}>
+                <span>Payment</span>
+                <strong>{paymentStatus}</strong>
+              </div>
+              <div className={styles.summaryFact}>
+                <span>{hasSubscription ? (ended ? "Period ended" : "Period ends") : "Package type"}</span>
+                <strong>{hasSubscription ? periodEnd || "Not provided" : "Pay as you go"}</strong>
+              </div>
             </div>
-          </div>
-          <div className={styles.grid}>
-            <Info label="Plan status" value={status} />
-            <Info label={hasSubscription ? String(state?.plan_state) === "cancelled" ? "Access ends" : "Current period ends" : "Billing cycle"} value={hasSubscription ? periodEnd || "Not provided" : "No subscription"} />
-            <Info label="Payment status" value={state.payment_status ? statusText(state.payment_status) : "Not available"} />
-            <Info label="Email" value={state.email || "Not available"} />
+
+            <div className={styles.summaryActions}>
+              <Link href="/packages" className={styles.primary}>
+                {ended ? "Choose a package" : hasSubscription ? "Compare packages" : "View packages"}
+              </Link>
+              {hasSubscription && !ended ? (
+                <button type="button" disabled={busy} onClick={() => void manageBilling()} className={styles.secondary}>
+                  {busy ? "Opening…" : "Manage subscription"}
+                </button>
+              ) : null}
+              <button type="button" disabled={loading} className={styles.textAction} onClick={() => void refresh()}>
+                Refresh
+              </button>
+            </div>
           </div>
         </section>
 
         <div className={styles.sectionGrid}>
-          <section className={styles.panel}>
+          <section className={styles.panel} aria-label="Listing allowances">
             <div className={styles.panelBody}>
-              <h2 className={styles.panelHeading}>Your listing allowances</h2>
-              <p className={styles.panelCopy}>Live access rules for your account.</p>
-              <div style={{ marginTop: 14 }}>
-                <Row label="Vehicle listing access" value={allowancesKnown ? access?.allowed ? "Available" : "Not active" : "Unavailable"} />
-                <Row label="Active listing limit" value={limit} />
-                <Row label="Photos per listing" value={photoCount} />
+              <h2 className={styles.panelHeading}>Listing access</h2>
+              <p className={styles.panelCopy}>What your account can use right now.</p>
+              <div className={styles.detailsList}>
+                <Row label="Active listings" value={listingLimit} />
+                <Row label="Photos per listing" value={imageLimit} />
                 <Row label="Messages" value={messageLimit} />
-                <Row label="Analytics" value={allowancesKnown ? access?.analyticsEnabled ? "Available" : "Not included" : "Unavailable"} />
-                {access?.source === "manual_credit" ? <Row label="Unused daily credits" value={String(access.manualCreditBalance)} /> : null}
+                <Row label="Analytics" value={allowancesKnown ? access?.analyticsEnabled && access.allowed ? "Included" : "Not active" : "Not available"} />
+                {access?.source === "manual_credit" ? <Row label="Daily listing credits" value={String(access.manualCreditBalance)} /> : null}
               </div>
             </div>
           </section>
-          <section className={styles.panel}>
+
+          <section className={styles.panel} aria-label="Billing and account help">
             <div className={styles.panelBody}>
               <h2 className={styles.panelHeading}>Billing and support</h2>
-              <p className={styles.panelCopy}>View recorded transactions and manage your options.</p>
-              <div className={styles.buttonRow}>
-                <Link href="/account/packages" className={styles.secondary}>Billing history</Link>
-                <Link href="/help" className={styles.secondary}>Get support</Link>
-                {state.plan === "dealer" && active ? <Link href="/dealer" className={styles.primary}>Dealership Centre</Link> : null}
+              <p className={styles.panelCopy}>Payments, subscription tools and assistance.</p>
+              <div className={styles.actionLinks}>
+                <Link href="/account/packages" className={styles.actionLink}>
+                  <span>Billing history</span><span aria-hidden="true">›</span>
+                </Link>
+                {hasSubscription && ended ? (
+                  <button type="button" disabled={busy} onClick={() => void manageBilling()} className={styles.actionLink}>
+                    <span>{busy ? "Opening…" : "Previous subscription"}</span><span aria-hidden="true">›</span>
+                  </button>
+                ) : null}
+                {state.plan === "dealer" && active ? (
+                  <Link href="/dealer" className={styles.actionLink}>
+                    <span>Dealership Centre</span><span aria-hidden="true">›</span>
+                  </Link>
+                ) : null}
+                <Link href="/help" className={styles.actionLink}>
+                  <span>Contact support</span><span aria-hidden="true">›</span>
+                </Link>
               </div>
-              {state.payment_reference ? <div style={{ marginTop: 18 }}><Row label="Latest payment reference" value={state.payment_reference} /></div> : null}
             </div>
           </section>
         </div>

@@ -311,3 +311,25 @@ html body [data-loadlink-home-search-section] [data-loadlink-home-search-suggest
     padding: 8px 14px !important;
   }
 }
+
+/* Search category status remains legible on iOS after tapping and during focus.
+   Preserve the original separate pill navigation instead of the joined bar. */
+html body section[data-loadlink-home-search-section] [aria-label="Search category"] > div > button[data-loadlink-quick-scope="true"][aria-pressed="true"],
+html body section[data-loadlink-home-search-section] [aria-label="Search category"] > div > button[data-loadlink-quick-scope="true"][aria-pressed="true"]:is(:hover,:focus,:active) {
+  background: #f6b800 !important;
+  border-color: #f6b800 !important;
+  color: #101010 !important;
+  opacity: 1 !important;
+}
+html body section[data-loadlink-home-search-section][data-theme="dark"] [aria-label="Search category"] > div > button[data-loadlink-quick-scope="true"][aria-pressed="false"],
+html body section[data-loadlink-home-search-section][data-theme="dark"] [aria-label="Search category"] > div > button[data-loadlink-quick-scope="true"][aria-pressed="false"]:is(:hover,:focus,:active) {
+  background: #151615 !important;
+  border-color: #454845 !important;
+  color: #f5f5f3 !important;
+}
+html body section[data-loadlink-home-search-section][data-theme="light"] [aria-label="Search category"] > div > button[data-loadlink-quick-scope="true"][aria-pressed="false"],
+html body section[data-loadlink-home-search-section][data-theme="light"] [aria-label="Search category"] > div > button[data-loadlink-quick-scope="true"][aria-pressed="false"]:is(:hover,:focus,:active) {
+  background: #fff !important;
+  border-color: #dededb !important;
+  color: #2b2d29 !important;
+}

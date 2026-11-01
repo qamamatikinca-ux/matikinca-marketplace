@@ -572,39 +572,6 @@ html body main[data-loadlink-settings] .ll-settings-content > :is(section,div[id
 @media(max-width:390px){
   html body main[data-loadlink-settings] .ll-settings-segments button { padding: 8px 11px !important; font-size: 11px !important; }
 }
-/* Homepage segmented quick navigation: strong active yellow, unlike unrelated controls. */
-html body section[data-loadlink-home-search-section] .ll-loadlink-search-segments {
-  max-width: 100% !important;
-  padding: 5px !important;
-  border: 1px solid rgba(120,120,120,.2) !important;
-  border-radius: 999px !important;
-  background: rgba(120,120,120,.06) !important;
-}
-html body section[data-loadlink-home-search-section] .ll-loadlink-search-segments > div {
-  display: flex !important; align-items: center !important;
-  gap: 6px !important; padding: 0 !important;
-}
-html body section[data-loadlink-home-search-section] button.ll-loadlink-search-segment {
-  flex: 0 0 auto !important;
-  min-height: 41px !important; border-radius: 999px !important;
-  padding: 9px 15px !important;
-  font-size: 12px !important; font-weight: 680 !important;
-  line-height: 1.2 !important; box-shadow: none !important;
-  transition: background-color .16s ease,color .16s ease !important;
-}
-html body section[data-loadlink-home-search-section] button.ll-loadlink-search-segment[aria-pressed="true"] {
-  background: #f6b800 !important;
-  border-color: #f6b800 !important;
-  color: #111 !important; opacity: 1 !important;
-}
-html body section[data-loadlink-home-search-section][data-theme="dark"] button.ll-loadlink-search-segment[aria-pressed="false"] {
-  background: transparent !important; border-color: transparent !important;
-  color: #f3f3f1 !important; opacity: .88 !important;
-}
-html body section[data-loadlink-home-search-section][data-theme="light"] button.ll-loadlink-search-segment[aria-pressed="false"] {
-  background: transparent !important; border-color: transparent !important;
-  color: #353630 !important; opacity: .85 !important;
-}
 html body [data-loadlink-home-portals] [data-loadlink-home-portal-card] {
   border: 0 !important; outline: 0; box-shadow: none !important;
 }
