@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
+import { advertisedSalePrice } from "@/lib/vehicleMarketGuide";
 
 type VehicleRow = { id: string; title?: string | null; city?: string | null; vehicle_group?: string | null; rate?: string | null; description?: string | null; photos?: string[] | null; listing_kind?: string | null; created_at?: string | null };
 type FinanceMatch = VehicleRow & { price: number; monthly: number };
@@ -15,10 +16,15 @@ const TERMS = [12, 24, 36, 48, 60, 72, 84];
 const TRUCK_IMAGE = "/images/loadlink-finance-truck.webp";
 
 function numeric(value: string) { const parsed = Number(String(value).replace(/[^0-9.]/g, "")); return Number.isFinite(parsed) ? Math.max(0, parsed) : 0; }
-function moneyValue(value: string | null | undefined) { const compact = String(value || "").replace(/\s+/g, "").replace(/,/g, ""); const match = compact.match(/(?:R|ZAR)?([0-9]+(?:\.[0-9]+)?)/i); return match ? numeric(match[1]) : 0; }
-function readMeta(description: string | null | undefined, label: string) { return String(description || "").match(new RegExp(`^${label}:\\s*([^\\n]+)`, "im"))?.[1]?.trim() || ""; }
-function isVehicleListing(row: VehicleRow) { const kind = String(row.listing_kind || "").toLowerCase(); return ["vehicle", "asset", "truck_sale", "vehicle_listing"].includes(kind) || /^Listing type:\s*(Truck|Trailer|Mobile Unit)/im.test(String(row.description || "")); }
-function salePrice(row: VehicleRow) { const explicit = readMeta(row.description, "Sale price"); if (explicit) return moneyValue(explicit); const offer = readMeta(row.description, "Offer").toLowerCase(); if (offer.includes("rental only") || offer.includes("application") || offer.includes("poa")) return 0; return moneyValue(row.rate); }
+function isVehicleListing(row: VehicleRow) {
+  const kind = String(row.listing_kind || "").toLowerCase();
+  return ["vehicle", "asset", "truck_sale", "vehicle_listing"].includes(kind)
+    || /^Listing type:\s*(Truck|Bakkie|Van|Trailer|Mobile Unit)/im.test(String(row.description || ""));
+}
+function salePrice(row: VehicleRow) {
+  // Only a seller-entered sale price is a reliable basis for a vehicle loan estimate.
+  return advertisedSalePrice(row) || 0;
+}
 
 function paymentForLoan(principal: number, annualRate: number, months: number, balloonAmount: number) {
   if (principal <= 0 || months <= 0) return 0;
