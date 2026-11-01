@@ -59,6 +59,8 @@ export default function VehicleProductPage() {
   const [viewerId,setViewerId] = useState<string|null>(null);
   const [availabilitySaving,setAvailabilitySaving] = useState(false);
   const [availabilityNotice,setAvailabilityNotice] = useState("");
+  const [liked, setLiked] = useState(false);
+  const [shareNotice, setShareNotice] = useState("");
   useEffect(()=>{let live=true;void supabase.auth.getUser().then(({data})=>{if(live)setViewerId(data.user?.id||null)}).catch(()=>{});return ()=>{live=false}},[]);
   async function confirmAvailability(available:boolean){
     if(!listing || !viewerId || viewerId!==listing.user_id)return;
@@ -113,6 +115,65 @@ export default function VehicleProductPage() {
       });
     return ()=>{active=false;};
   },[viewerId,loading,listing,id]);
+
+  useEffect(() => {
+    if (!listing) return;
+    const href = "/vehicles/" + encodeURIComponent(listing.id);
+    const recentItem = {
+      id: listing.id, title: listing.title || "Commercial vehicle", href,
+      category: "vehicle", type: listing.vehicle_group || "Commercial vehicle",
+      image: listing.photos?.[0] || "", meta: [listing.city, listing.rate].filter(Boolean).join(" · "),
+      savedAt: Date.now(),
+    };
+    try {
+      const raw = JSON.parse(localStorage.getItem("loadlink-recent-viewed-jobs") || "[]");
+      const previous = Array.isArray(raw) ? raw : [];
+      const next = [recentItem, ...previous.filter((item) => item && item.href !== href)].slice(0, 24);
+      localStorage.setItem("loadlink-recent-viewed-jobs", JSON.stringify(next));
+      window.dispatchEvent(new Event("loadlink-recent-viewed-updated"));
+      const favorites = JSON.parse(localStorage.getItem("loadlink-liked-listings") || "[]");
+      setLiked(Array.isArray(favorites) && favorites.some((item) => item?.href === href));
+    } catch { /* Browser storage is optional. */ }
+  }, [listing]);
+
+  function toggleLike() {
+    if (!listing) return;
+    const href = "/vehicles/" + encodeURIComponent(listing.id);
+    try {
+      const raw = JSON.parse(localStorage.getItem("loadlink-liked-listings") || "[]");
+      const previous = Array.isArray(raw) ? raw : [];
+      const current = previous.some((item) => item?.href === href);
+      const next = current
+        ? previous.filter((item) => item?.href !== href)
+        : [{
+          id: listing.id, title: listing.title || "Commercial vehicle", href,
+          category: "vehicle", type: listing.vehicle_group || "Commercial vehicle",
+          image: listing.photos?.[0] || "", meta: [listing.city, listing.rate].filter(Boolean).join(" · "),
+          savedAt: Date.now(),
+        }, ...previous].slice(0, 24);
+      localStorage.setItem("loadlink-liked-listings", JSON.stringify(next));
+      setLiked(!current);
+      window.dispatchEvent(new Event("loadlink-liked-listings-updated"));
+    } catch { setShareNotice("Saved listings are not available in this browser."); }
+  }
+
+  async function shareVehicle() {
+    if (!listing) return;
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: listing.title || "Commercial vehicle on LoadLink", url });
+        setShareNotice("");
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShareNotice("Listing link copied.");
+      }
+    } catch (error) {
+      // Cancelling a native share sheet is not a failure.
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setShareNotice("Could not share the listing. Copy the address from your browser.");
+    }
+  }
 
   const photos = useMemo(() => (listing?.photos || []).filter(Boolean), [listing?.photos]);
   const page = darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black";
@@ -177,6 +238,11 @@ export default function VehicleProductPage() {
                   <div className="shrink-0 md:text-right">
                     <p className="text-3xl font-black tracking-[-.04em]">{formatListingRate(listing.rate)}</p>
                     <p className={`mt-1 text-xs font-semibold ${muted}`}>{listing.stock_status === "reserved" ? "Reserved — check with seller" : "Seller-listed · confirm availability"}</p>
+                    <div className="mt-3 flex items-center gap-2 md:justify-end">
+                      <button type="button" onClick={() => void shareVehicle()} aria-label="Share this vehicle listing" className="flex h-11 w-11 items-center justify-center rounded-full border border-current/15" title="Share"><LoadLinkIcon name="share" size={19} /></button>
+                      <button type="button" onClick={toggleLike} aria-label={liked ? "Remove saved vehicle" : "Save vehicle"} aria-pressed={liked} className={`flex h-11 w-11 items-center justify-center rounded-full border ${liked ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-current/15"}`} title={liked ? "Saved" : "Save"}><LoadLinkIcon name="heart" size={19} fill={liked ? "currentColor" : "none"} /></button>
+                    </div>
+                    {shareNotice ? <p role="status" className={`mt-2 text-xs ${muted}`}>{shareNotice}</p> : null}
                   </div>
                 </div>
 
