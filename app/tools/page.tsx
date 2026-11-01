@@ -4,6 +4,7 @@
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+import VehicleUsefulTools from "@/components/VehicleUsefulTools";
 import LogisticsDocumentEditor from "@/components/LogisticsDocumentEditor";
 import LoadLinkDocumentPreview from "@/components/LoadLinkDocumentPreview";
 import Link from "next/link";
@@ -131,7 +132,7 @@ export default function ToolsPage() {
         </div> : <button type="button" onClick={() => setSelected(null)} className="self-start rounded-full border border-current/20 px-5 py-3 text-sm font-bold">All tools</button>}
       </div>
 
-      {!tool ? <><Link href="/tools/truck-finance" className={`mt-6 flex items-center justify-between gap-4 rounded-2xl border p-4 ${card}`}><span><strong className="block text-sm font-bold">Truck finance calculator</strong><span className={`mt-1 block text-xs leading-5 ${muted}`}>Plan a vehicle budget and explore matching stock.</span></span><LoadLinkIcon name="chevronRight" size={20} /></Link>
+      {!tool ? <><VehicleUsefulTools darkMode={darkMode} />
 
       <div className="mt-7 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
         {visible.map(item=><button key={item.id} type="button" onClick={()=>openTool(item.id)} className={`group min-h-[128px] rounded-2xl border p-4 text-left transition ${selected===item.id?"border-[#f6b800] bg-[#f6b800] text-black":card}`}>
