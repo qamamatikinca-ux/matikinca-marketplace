@@ -1,3 +1,4 @@
+import { normaliseTruckName } from "@/lib/truckCatalogLookup";
 /**
  * Comparison uses advertised asking prices posted on LoadLink.
  * It is not an appraisal, completed-sale report, or loan approval.
@@ -69,8 +70,8 @@ export function comparableAskingPrices(
   year: string,
   excludedId?: string
 ): ComparableResult | null {
-  const make = makeText.trim().toLowerCase();
-  const model = modelText.trim().toLowerCase();
+  const make = normaliseTruckName(makeText);
+  const model = normaliseTruckName(modelText);
   if (make.length < 2 || model.length < 2) return null;
   const requestedYear = year ? Number(year) : null;
   if (requestedYear !== null && (!Number.isInteger(requestedYear) || requestedYear < 1970 || requestedYear > new Date().getFullYear() + 1)) return null;
@@ -78,7 +79,7 @@ export function comparableAskingPrices(
     if (row.id === excludedId || !isCommercialVehicle(row)) return [];
     if (row.stock_status && !["available", "in_stock"].includes(row.stock_status.toLowerCase())) return [];
     const spec = vehicleMatchFields(row);
-    if (spec.make !== make || spec.model !== model) return [];
+    if (normaliseTruckName(spec.make) !== make || normaliseTruckName(spec.model) !== model) return [];
     if (requestedYear !== null && (spec.year === null || Math.abs(spec.year - requestedYear) > 2)) return [];
     const price = advertisedSalePrice(row);
     if (price === null) return [];
