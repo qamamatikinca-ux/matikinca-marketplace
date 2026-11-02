@@ -174,7 +174,7 @@ export default function VehicleFullDetails({ description, city, dealershipId, da
 
       {parsed.narrative ? <section className={`mt-4 rounded-xl border p-4 ${tile}`}><h4 className="text-sm font-black">Seller description</h4><p className={`mt-2 text-sm leading-7 ${darkMode ? "text-white/70" : "text-black/65"}`}>{parsed.narrative}</p></section> : null}
 
-      <section className={`mt-4 rounded-xl border p-4 ${tile}`}>
+      {dealershipId ? <section className={`mt-4 rounded-xl border p-4 ${tile}`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h4 className="text-lg font-black">Reviews</h4>
@@ -193,7 +193,7 @@ export default function VehicleFullDetails({ description, city, dealershipId, da
         </div> : null}
 
         {dealer ? <div className={`mt-4 grid gap-3 border-t pt-4 text-sm font-semibold ${darkMode ? "border-white/10" : "border-black/10"}`}><div><span className={muted}>Dealership</span><strong className="ml-2">{dealer.name}</strong></div>{dealer.physical_location ? <div><span className={muted}>Location</span><strong className="ml-2">{dealer.physical_location}</strong></div> : null}{dealer.trading_hours ? <div><span className={muted}>Opening times</span><strong className="ml-2 whitespace-pre-line">{dealer.trading_hours}</strong></div> : null}</div> : null}
-      </section>
+      </section> : null}
     </div>
   );
 }
