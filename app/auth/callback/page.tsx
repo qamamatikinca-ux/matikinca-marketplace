@@ -32,16 +32,27 @@ export default function AuthCallbackPage() {
       if (!isSupabaseConfigured) { setError("Secure sign-in is temporarily unavailable."); return; }
       const params = new URLSearchParams(window.location.search);
       const next = safeNextPath(params.get("next"), "/");
-      if (params.get("error") || params.get("error_description")) { setError("The sign-in provider did not complete the request. Return to sign in and try again."); return; }
+      if (params.get("error") || params.get("error_description")) {
+        const reason = params.get("error_code") || "";
+        setError(reason === "provider_disabled"
+          ? "Google sign-in is not enabled yet. Use email sign-in while LoadLink configures Google access."
+          : "The sign-in provider did not complete the request. Return to sign in and try again.");
+        return;
+      }
 
       const code = params.get("code");
+      let exchangeErrorMessage = "";
       if (code) {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (exchangeError && !/already|verifier|session/i.test(exchangeError.message)) { setError("The sign-in link expired or could not be verified. Try signing in again."); return; }
+        exchangeErrorMessage = exchangeError?.message || "";
       }
 
       const { data: { user } } = await supabase.auth.getUser();
       if (isAuthenticatedUser(user)) { await complete(next); return; }
+      if (exchangeErrorMessage) {
+        setError("The sign-in session could not be verified. Please start Google sign-in again from LoadLink.");
+        return;
+      }
 
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
         if (!active || !isAuthenticatedUser(session?.user)) return;

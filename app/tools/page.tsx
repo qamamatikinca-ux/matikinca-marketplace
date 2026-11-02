@@ -4,12 +4,12 @@
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
-import VehicleUsefulTools from "@/components/VehicleUsefulTools";
+
 import LogisticsDocumentEditor from "@/components/LogisticsDocumentEditor";
 import LoadLinkDocumentPreview from "@/components/LoadLinkDocumentPreview";
 import Link from "next/link";
 
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { parsePostedRate, rateUnitLabel, type RateUnit } from "@/lib/logisticsQuote";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
@@ -50,6 +50,8 @@ export default function ToolsPage() {
   const [sourceId,setSourceId] = useState("");
   const [reuse,setReuse] = useState<QuoteField[]>([]);
   const [amount,setAmount] = useState("");
+  const [quantity,setQuantity] = useState("");
+  const closeToolRef = useRef<HTMLButtonElement>(null);
   const [unit, setUnit] = useState<RateUnit>("total");
   const [vehicle,setVehicle] = useState("");
   const [route,setRoute] = useState("");
@@ -65,6 +67,22 @@ export default function ToolsPage() {
   const tool = TOOLS.find(item=>item.id===selected) || null;
   const activePosts = useMemo(()=>posts.filter(p=>(p.status||"active")==="active" && (p.moderation_status||"pending")!=="rejected"),[posts]);
   const source = activePosts.find(p=>p.id===sourceId)||null;
+  useEffect(() => {
+    if (!selected) return;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.requestAnimationFrame(() => closeToolRef.current?.focus());
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelected(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus();
+    };
+  }, [selected]);
 
   useEffect(()=>{
     if(!isSupabaseConfigured) return;
@@ -83,7 +101,7 @@ export default function ToolsPage() {
     let stored="";
     try{stored=localStorage.getItem(`loadlink-tool:${id}`)||"";}catch{}
     setText(stored||current?.template||"");
-    window.requestAnimationFrame(()=>document.getElementById("tool-workspace")?.scrollIntoView({behavior:"smooth",block:"start"}));
+    // The selected tool opens as a contained dialog instead of scrolling the whole page.
   }
 
   function choosePost(id:string){
@@ -105,7 +123,33 @@ export default function ToolsPage() {
     setNotice("Selected information added.");
   }
 
-  const quoteText = `LOADLINK RATE QUOTE\n\nRate: ${amount ? `R${amount} ${rateUnitLabel(unit)}` : ""}\nVehicle: ${vehicle}\nRoute: ${route}\nAvailability: ${availability}\nVAT: ${vat ? vat.replaceAll("_"," ") : "Not confirmed"}\nTerms: ${terms}`.trim();
+  // A per-unit rate is not the final payable total until a quantity is supplied.
+  // Keep VAT conditional on the poster's explicit selection; never assume VAT registration.
+  const rate = Number(amount);
+  const units = unit === "total" ? 1 : Number(quantity);
+  const hasBase = amount.trim() !== "" && Number.isFinite(rate) && rate >= 0;
+  const hasQuantity = unit === "total" || (quantity.trim() !== "" && Number.isFinite(units) && units > 0);
+  const subtotal = hasBase && hasQuantity ? Math.round((rate * units + Number.EPSILON) * 100) / 100 : null;
+  const vatValue = subtotal === null || !vat ? null : vat === "included" ? Math.round((subtotal / 1.15 * 0.15) * 100) / 100 : vat === "excluded" ? Math.round(subtotal * 0.15 * 100) / 100 : 0;
+  const finalTotal = subtotal === null ? null : vat === "excluded" && vatValue !== null ? Math.round((subtotal + vatValue) * 100) / 100 : subtotal;
+  const money = (value: number) => new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", minimumFractionDigits: 2 }).format(value);
+  const quoteText = [
+    "LOADLINK RATE QUOTE",
+    "",
+    "Rate: " + (hasBase ? money(rate) + " " + rateUnitLabel(unit) : "Not entered"),
+    ...(unit === "total" ? [] : ["Quantity (" + (unit === "km" ? "km" : unit === "ton" ? "tonnes" : "days") + "): " + (hasQuantity ? String(units) : "Not entered")]),
+    "Vehicle: " + (vehicle.trim() || "Not specified"),
+    "Route: " + (route.trim() || "Not specified"),
+    "Availability: " + (availability.trim() || "Not confirmed"),
+    "VAT: " + (vat ? vat.replaceAll("_", " ") + (vat === "not_applicable" ? "" : " (15%)") : "Not confirmed"),
+    ...(subtotal !== null ? ["", "Amount before VAT adjustments: " + money(subtotal)] : ["", "Total: Enter the rate and quantity to calculate"]),
+    ...(vatValue !== null ? ["VAT component: " + money(vatValue)] : []),
+    ...(finalTotal !== null ? ["Quoted total" + (!vat ? " (VAT unconfirmed)" : "") + ": " + money(finalTotal)] : []),
+    "",
+    "Terms: " + (terms.trim() || "Not specified"),
+    "",
+    "Draft estimate. Confirm route, loads, VAT treatment and commercial terms before sending.",
+  ].join("\n");
 
   async function copy(value:string){
     if(!value.trim()) return;
@@ -132,9 +176,12 @@ export default function ToolsPage() {
         </div> : <button type="button" onClick={() => setSelected(null)} className="self-start rounded-full border border-current/20 px-5 py-3 text-sm font-bold">All tools</button>}
       </div>
 
-      {!tool ? <><VehicleUsefulTools darkMode={darkMode} />
-
-      <div className="mt-7 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+      {!tool ? <>
+      <nav aria-label="Vehicle tools" className="mt-6 grid max-w-2xl grid-cols-2 gap-2.5">
+        <Link href="/tools/truck-finance" className={`flex min-h-14 items-center justify-between gap-2 rounded-xl border px-3.5 py-3 text-xs font-semibold no-underline sm:text-sm ${card}`}>Truck finance <LoadLinkIcon name="chevronRight" size={16} /></Link>
+        <Link href="/tools/vehicle-price-guide" className={`flex min-h-14 items-center justify-between gap-2 rounded-xl border px-3.5 py-3 text-xs font-semibold no-underline sm:text-sm ${card}`}>Vehicle price guide <LoadLinkIcon name="chevronRight" size={16} /></Link>
+      </nav>
+      <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
         {visible.map(item=><button key={item.id} type="button" onClick={()=>openTool(item.id)} className={`group min-h-[128px] rounded-2xl border p-4 text-left transition ${selected===item.id?"border-[#f6b800] bg-[#f6b800] text-black":card}`}>
           <ToolIcon id={item.id} active={selected===item.id}/>
           <h2 className="mt-3 text-base font-black tracking-[-.02em]">{item.name}</h2>
@@ -142,10 +189,12 @@ export default function ToolsPage() {
         </button>)}
       </div></> : null}
 
-      {tool ? <section id="tool-workspace" className={`mt-7 overflow-hidden rounded-[28px] border ${card}`}>
+      {tool ? <div role="presentation" className="fixed inset-0 z-[1100] overflow-y-auto overscroll-contain bg-black/75 p-0 sm:p-5" data-loadlink-tool-dialog="true">
+        <button type="button" onClick={() => setSelected(null)} className="fixed inset-0 z-0 cursor-default" aria-label="Close tool dialog" />
+        <section role="dialog" aria-modal="true" aria-labelledby="loadlink-tool-dialog-title" id="tool-workspace" className={`relative z-10 mx-auto min-h-[100dvh] w-full max-w-5xl overflow-hidden border-0 shadow-[0_20px_80px_rgba(0,0,0,.25)] sm:my-4 sm:min-h-0 sm:rounded-[18px] sm:border ${card}`}>
         <div className={`flex items-start justify-between gap-4 border-b p-5 md:p-6 ${darkMode?"border-white/10":"border-black/10"}`}>
-          <div className="flex items-center gap-3"><ToolIcon id={tool.id}/><div><h2 className="text-2xl font-black tracking-[-.03em]">{tool.name}</h2><p className={`mt-1 text-xs font-semibold ${muted}`}>{tool.description}</p></div></div>
-          <button type="button" onClick={()=>setSelected(null)} className="flex h-10 w-10 items-center justify-center rounded-full border border-current/10 text-xl" aria-label="Close"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
+          <div className="flex items-center gap-3"><ToolIcon id={tool.id}/><div><h2 id="loadlink-tool-dialog-title" className="text-xl font-bold tracking-[-.03em]">{tool.name}</h2><p className={`mt-1 text-xs font-semibold ${muted}`}>{tool.description}</p></div></div>
+          <button ref={closeToolRef} type="button" onClick={()=>setSelected(null)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-current/10 text-xl" aria-label="Close"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
         </div>
 
         <div className="mx-4 mt-4 grid grid-cols-2 rounded-full border border-current/15 p-1 md:hidden">{(["details", "preview"] as const).map(tab => <button key={tab} type="button" aria-pressed={workspaceTab === tab} onClick={() => setWorkspaceTab(tab)} className={`rounded-full px-4 py-3 text-sm font-bold ${workspaceTab === tab ? "bg-[#f6b800] text-black" : ""}`}>{tab === "details" ? "Details" : "Preview"}</button>)}</div>{tool.id==="quote" ? <><div className="grid items-start gap-5 p-4 md:grid-cols-[.9fr_1.1fr] md:p-6">
@@ -157,20 +206,27 @@ export default function ToolsPage() {
               {source ? <><div className="mt-3 grid grid-cols-2 gap-2">{FIELDS.filter(field => (field.id === "rate" && parsePostedRate(source.rate)) || (field.id === "vehicle" && source.vehicle_group) || (field.id === "route" && source.city)).map(field=><label key={field.id} className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-black ${darkMode?"border-white/10":"border-black/10"}`}><input type="checkbox" checked={reuse.includes(field.id)} onChange={()=>setReuse(current=>current.includes(field.id)?current.filter(v=>v!==field.id):[...current,field.id])} className="accent-[#f6b800]"/>{field.label}</label>)}</div><button type="button" onClick={applyPost} className="mt-3 h-11 w-full rounded-full bg-[#f6b800] text-xs font-bold text-black">Use selected information</button></> : null}
             </div> : null}
             <div className="grid grid-cols-2 gap-3"><label className="text-xs font-black">Rate (R)<input value={amount} onChange={(e: ChangeEvent<HTMLInputElement>)=>setAmount(e.target.value.replace(/[^0-9.]/g, ""))} inputMode="decimal" placeholder="e.g. 8500" className={`mt-2 ${input}`}/></label><label className="text-xs font-black">Rate unit<select value={unit} onChange={event => setUnit(event.target.value as RateUnit)} className={`mt-2 ${input}`}><option value="total">Total trip</option><option value="km">Per km</option><option value="ton">Per ton</option><option value="day">Per day</option></select></label></div>
+            {unit !== "total" ? (
+              <label className="text-xs font-semibold">Quantity ({unit === "km" ? "km" : unit === "ton" ? "tonnes" : "days"})
+                <input type="text" inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="Enter the quantity for this quote" className={`mt-2 ${input}`} />
+              </label>
+            ) : null}
+            {finalTotal !== null ? <p className="text-sm font-semibold" aria-live="polite">Estimated quote total: <strong>{money(finalTotal)}</strong>{!vat ? " · VAT not confirmed" : null}</p> : null}
             <label className="text-xs font-black">Vehicle<input value={vehicle} onChange={(e: ChangeEvent<HTMLInputElement>)=>setVehicle(e.target.value)} placeholder="e.g. 34-ton side tipper" className={`mt-2 ${input}`}/></label>
             <label className="text-xs font-black">Route<input value={route} onChange={(e: ChangeEvent<HTMLInputElement>)=>setRoute(e.target.value)} placeholder="Collection → delivery" className={`mt-2 ${input}`}/></label>
             <label className="text-xs font-black">Availability<input value={availability} onChange={(e: ChangeEvent<HTMLInputElement>)=>setAvailability(e.target.value)} placeholder="Date / time" className={`mt-2 ${input}`}/></label>
             <label className="text-xs font-black">VAT<select value={vat} onChange={(e: ChangeEvent<HTMLSelectElement>)=>setVat(e.target.value as typeof vat)} className={`mt-2 ${input}`}><option value="">Select VAT status</option><option value="included">Included</option><option value="excluded">Excluded</option><option value="not_applicable">Not applicable</option></select></label>
             <label className="text-xs font-black">Terms<textarea value={terms} onChange={(e: ChangeEvent<HTMLTextAreaElement>)=>setTerms(e.target.value)} rows={3} className={`mt-2 min-h-24 py-3 ${input}`}/></label>
           </div>
-          <div className={`${workspaceTab === "preview" ? "grid" : "hidden"} min-w-0 gap-3 md:grid`}><LoadLinkDocumentPreview darkMode={darkMode} documentType="Rate quote" amount={amount} unit={unit} vehicle={vehicle} route={route} availability={availability} vat={vat} terms={terms} /><ToolOutput value={quoteText} showText={false} darkMode={darkMode} onCopy={()=>void copy(quoteText)} onShare={()=>void share(quoteText)}/></div>
+          <div className={`${workspaceTab === "preview" ? "grid" : "hidden"} min-w-0 gap-3 md:grid`}><LoadLinkDocumentPreview darkMode={darkMode} documentType="Rate quote" body={quoteText} /><ToolOutput value={quoteText} showText={false} darkMode={darkMode} onCopy={()=>void copy(quoteText)} onShare={()=>void share(quoteText)}/></div>
         </div></> : <div className="grid gap-5 p-4 md:grid-cols-[1fr_.8fr] md:p-6">
           <div className={`${workspaceTab === "details" ? "block" : "hidden"} md:block`}><LogisticsDocumentEditor value={text} template={tool.template || ""} title={tool.name} darkMode={darkMode} onChange={setText} /></div>
           <div className={`${workspaceTab === "preview" ? "block" : "hidden"} md:block min-w-0 space-y-3`}><LoadLinkDocumentPreview darkMode={darkMode} documentType={tool.name} body={text} /><ToolOutput value={text} showText={false} darkMode={darkMode} onCopy={()=>void copy(text)} onShare={()=>void share(text)}/><button type="button" onClick={save} className="mt-3 h-11 w-full rounded-xl border border-current/10 text-xs font-black">Save draft on this device</button></div>
         </div>}
 
-        {notice ? <p className={`border-t px-5 py-3 text-xs font-bold md:px-6 ${darkMode?"border-white/10 text-white/55":"border-black/10 text-black/55"}`}>{notice}</p> : null}
-      </section> : null}
+        {notice ? <p role="status" className={`border-t px-5 py-3 text-xs font-bold md:px-6 ${darkMode?"border-white/10 text-white/55":"border-black/10 text-black/55"}`}>{notice}</p> : null}
+        </section>
+      </div> : null}
     </section>
   </main>
 }

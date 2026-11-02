@@ -8,6 +8,7 @@ import PasswordStrengthMeter, { passwordStrength } from "@/components/PasswordSt
 import TurnstileChallenge, { loadLinkTurnstileConfigured } from "@/components/TurnstileChallenge";
 import { friendlyAuthError, strongPasswordIssue } from "@/lib/authSecurity";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+import { beginLoadLinkGoogleSignIn } from "@/lib/googleSignIn";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 function duplicateEmailSignal(error: unknown) {
@@ -106,11 +107,11 @@ export default function SignUpPage() {
     if (!isSupabaseConfigured || busy) return;
     setBusy(true);
     setMessage("");
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/complete-profile")}`;
-    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
-    if (error) {
+    try {
+      await beginLoadLinkGoogleSignIn("/complete-profile");
+    } catch {
       setBusy(false);
-      setMessage("Google sign-in could not start. Try again.");
+      setMessage("Google sign-up could not start. You can create an account with email, or retry Google.");
     }
   }
 
