@@ -53,6 +53,20 @@ function HomeExperience() {
         </LoadLinkBoundary>
       </section>
 
+      <section id="our-mission" aria-labelledby="loadlink-mission-heading" className={`border-t px-5 py-14 md:px-12 md:py-20 ${darkMode ? "border-white/10 bg-[#0d0e0d] text-white" : "border-black/10 bg-[#f7f6f1] text-[#141715]"}`}>
+        <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-[220px_minmax(0,1fr)] md:gap-12">
+          <div>
+            <p className={`text-[11px] font-bold uppercase tracking-[.14em] ${darkMode ? "text-[#f6b800]" : "text-[#926c00]"}`}>LoadLink</p>
+            <h2 id="loadlink-mission-heading" className="mt-2 text-3xl font-bold tracking-[-.04em] md:text-4xl">Our mission</h2>
+          </div>
+          <div className="max-w-2xl">
+            <p className="text-xl font-semibold leading-[1.55] tracking-[-.02em] md:text-2xl">Make it easier for the right people, vehicles and opportunities to find each other.</p>
+            <p className={`mt-4 max-w-xl text-sm leading-7 ${darkMode ? "text-white/65" : "text-black/65"}`}>LoadLink connects South African transporters, professional drivers, dealerships and businesses in one place, with clear listings and direct communication.</p>
+            <p className="mt-5 text-sm font-bold">Logistics Made Easier.</p>
+          </div>
+        </div>
+      </section>
+
       <LoadLinkSiteFooter20260822 darkMode={darkMode} />
     </main>
   );
