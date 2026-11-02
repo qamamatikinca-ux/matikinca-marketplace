@@ -283,8 +283,8 @@ export default function AccountSettingsPage() {
 
       <section className="mx-auto max-w-6xl px-4 py-7 sm:px-5 md:px-8 md:py-10">
         <div className="max-w-3xl">
-          <h1 className="text-[31px] font-bold tracking-[-.035em] md:text-[38px]">Settings</h1>
-          <p className={`mt-1 text-sm leading-6 ${muted}`}>Manage your details, notifications and account security.</p>
+          <h1 className="text-3xl font-semibold tracking-[-.035em] md:text-4xl">Settings</h1>
+          <p className={`mt-1.5 text-sm font-semibold leading-6 ${muted}`}>Manage your account, work and privacy.</p>
         </div>
 
 
@@ -313,24 +313,33 @@ export default function AccountSettingsPage() {
             </button>
 
             {([
-              ["Account", [
-                ["profile", "user", "Profile", "Personal details and photo"],
-                ["work", "truck", "Work", "Driver profile and listings"],
-                ["billing", "wallet", "Billing", "Plan and payments"],
-                ...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team", "users", "Team", "Dealership access"]] : []),
-              ]],
-              ["Preferences", [
-                ["notifications", "bell", "Notifications", "Alerts and updates"],
-                ["messages", "message", "Messages", "Chat privacy and alerts"],
-              ]],
-              ["Security", [
-                ["security", "lock", "Security and privacy", "Password and account access"],
-              ]],
-            ] as Array<[string, Array<[SettingsView, import("@/components/LoadLinkIcon").LoadLinkIconName, string, string]>]>).map(([group, items]) => (
-              <section className="ll-settings-group" key={group} aria-label={group}>
-                <h2 className="ll-settings-group-heading">{group}</h2>
+              {
+                heading: "Account",
+                rows: [
+                  ["profile", "user", "Profile", "Personal information and profile picture"],
+                  ["work", "truck", "Work", "Driver details and your listings"],
+                  ["billing", "wallet", "Plan and billing", "Your package, payments and access"],
+                  ...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team", "users", "Dealership", "Team and business access"]] : []),
+                ],
+              },
+              {
+                heading: "Preferences",
+                rows: [
+                  ["notifications", "bell", "Notifications", "Email, chat and listing alerts"],
+                  ["messages", "message", "Messages", "Privacy and message preferences"],
+                ],
+              },
+              {
+                heading: "Privacy & security",
+                rows: [
+                  ["security", "lock", "Security and privacy", "Password, cookies and account access"],
+                ],
+              },
+            ] as Array<{ heading: string; rows: Array<[SettingsView, import("@/components/LoadLinkIcon").LoadLinkIconName, string, string]> }>).map((group) => (
+              <section key={group.heading} className="ll-settings-group" aria-label={group.heading}>
+                <h2 className="ll-settings-group-heading">{group.heading}</h2>
                 <div className="ll-settings-menu">
-                  {items.map(([view, icon, title, copy]) => (
+                  {group.rows.map(([view, icon, title, copy]) => (
                     <button
                       key={view}
                       type="button"
@@ -340,9 +349,9 @@ export default function AccountSettingsPage() {
                         window.history.replaceState(null, "", `#${view === "messages" ? "message-privacy" : view}`);
                       }}
                     >
-                      <span className="ll-settings-row-icon"><LoadLinkIcon name={icon} size={18} /></span>
+                      <span className="ll-settings-row-icon"><LoadLinkIcon name={icon} size={19} /></span>
                       <span className="ll-settings-row-copy"><strong>{title}</strong><small>{copy}</small></span>
-                      <LoadLinkIcon name="chevronRight" size={17} />
+                      <LoadLinkIcon name="chevronRight" size={16} />
                     </button>
                   ))}
                 </div>
