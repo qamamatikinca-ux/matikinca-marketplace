@@ -149,7 +149,7 @@ export default function ToolsPage() {
     "Terms: " + (terms.trim() || "Not specified"),
     "",
     "Draft estimate. Confirm route, loads, VAT treatment and commercial terms before sending.",
-  ].join("\\n");
+  ].join("\n");
 
   async function copy(value:string){
     if(!value.trim()) return;
