@@ -7,7 +7,6 @@ import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import LoadLinkSiteFooter20260822 from "@/components/LoadLinkSiteFooter20260822";
 import LoadLinkHomepagePortalGrid20260822 from "@/components/LoadLinkHomepagePortalGrid20260822";
-import VehicleUsefulTools from "@/components/VehicleUsefulTools";
 import Link from "next/link";
 import { lazy, Suspense } from "react";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
@@ -45,19 +44,6 @@ function HomeExperience() {
           <RecentActivityPanel darkMode={darkMode} />
         </Suspense>
       </LoadLinkBoundary>
-
-      <section className={`px-4 pb-10 pt-4 md:px-6 md:pb-14 ${darkMode ? "bg-[#050505] text-white" : "bg-[#fff6dc] text-black"}`} aria-label="LoadLink useful tools">
-        <div className="mx-auto max-w-6xl"><VehicleUsefulTools darkMode={darkMode} /></div>
-      </section>
-
-      <section className={`px-5 py-14 transition-colors duration-300 md:px-12 md:py-16 ${darkMode ? "bg-[#050505] text-white" : "bg-[#fff6dc] text-black"}`}>
-        <div className="mx-auto max-w-5xl text-center">
-          <h2 className="text-4xl font-black leading-tight tracking-[-.045em] md:text-6xl">Building a smarter way to connect logistics opportunities.</h2>
-          <p className={`mx-auto mt-6 max-w-3xl text-base font-semibold leading-8 md:text-lg ${darkMode ? "text-white/60" : "text-black/60"}`}>
-            LoadLink brings verified logistics opportunities, commercial vehicles, professional drivers and direct business communication into one South African marketplace. Find the right work, equipment and industry partners without unnecessary friction.
-          </p>
-        </div>
-      </section>
 
       <section id="industry-insights" className="scroll-mt-24">
         <LoadLinkBoundary name="logistics news">

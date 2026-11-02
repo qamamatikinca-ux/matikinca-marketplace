@@ -1,7 +1,6 @@
 "use client";
 
 import LoadLinkImage from "@/components/LoadLinkImage";
-import LoadLinkDocumentPreview from "@/components/LoadLinkDocumentPreview";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -13,7 +12,6 @@ type VehicleRow = { id: string; title?: string | null; city?: string | null; veh
 type FinanceMatch = VehicleRow & { price: number; monthly: number };
 
 const TERMS = [12, 24, 36, 48, 60, 72, 84];
-const TRUCK_IMAGE = "/images/loadlink-finance-truck.webp";
 
 function numeric(value: string) { const parsed = Number(String(value).replace(/[^0-9.]/g, "")); return Number.isFinite(parsed) ? Math.max(0, parsed) : 0; }
 function isVehicleListing(row: VehicleRow) {
@@ -93,13 +91,6 @@ export default function TruckFinanceCalculatorPage() {
   const selectedMonthly = selectedPrice > 0
     ? paymentForLoan(selectedPrincipal, annualRate, term, selectedPrice * balloonRatio)
     : 0;
-  const examplePrincipal = Math.max(0, buyingPower - upfront + financedFees);
-  const exampleBalloon = buyingPower * balloonRatio;
-  const exampleMonthly = paymentForLoan(examplePrincipal, annualRate, term, exampleBalloon);
-  const instalmentsTotal = exampleMonthly * term;
-  const totalRepayable = instalmentsTotal + exampleBalloon;
-  const estimatedInterestAndFees = Math.max(0, totalRepayable - examplePrincipal);
-
   const matches = useMemo<FinanceMatch[]>(() => rows.map((row) => {
     const price = salePrice(row); if (!price) return null;
     const principal = Math.max(0, price - upfront + financedFees);
@@ -107,90 +98,173 @@ export default function TruckFinanceCalculatorPage() {
     const estimatedMonthly = paymentForLoan(principal, annualRate, term, balloon);
     if (monthly <= 0 || price > buyingPower + 1 || estimatedMonthly > monthly + 1) return null;
     return { ...row, price, monthly: estimatedMonthly } as FinanceMatch;
-  }).filter((row): row is FinanceMatch => Boolean(row)).sort((a, b) => Math.abs(buyingPower - b.price) - Math.abs(buyingPower - a.price)).slice(0, 8), [annualRate, balloonRatio, buyingPower, financedFees, monthly, rows, term, upfront]);
+  }).filter((row): row is FinanceMatch => Boolean(row)).sort((a, b) => Math.abs(buyingPower - a.price) - Math.abs(buyingPower - b.price)).slice(0, 4), [annualRate, balloonRatio, buyingPower, financedFees, monthly, rows, term, upfront]);
 
-  const page = darkMode ? "bg-black text-white" : "bg-[#f5efe1] text-black";
-  const card = darkMode ? "border-white/12 bg-[#141614]" : "border-black/10 bg-white";
-  const muted = darkMode ? "text-white/52" : "text-black/52";
-  const field = darkMode ? "border-white/15 bg-[#1a1c19] text-white" : "border-black/10 bg-[#f9f9f6] text-black";
+
+  const page = darkMode ? "bg-[#080908] text-[#f7f7f5]" : "bg-[#f7f6f2] text-[#171817]";
+  const card = darkMode ? "border-[#363a35] bg-[#141614]" : "border-[#e0e2dc] bg-white";
+  const muted = darkMode ? "text-[#a9ada8]" : "text-[#626761]";
+  const field = darkMode ? "border-[#3b3e39] bg-[#1c1e1b] text-white" : "border-[#e2e4de] bg-[#fafaf8] text-[#151615]";
 
   return (
-    <main className={`min-h-screen ${page}`} data-loadlink-finance="20260823-polish">
+    <main className={page + " min-h-screen"} data-loadlink-finance="20261102-minimal">
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
-      <section className="mx-auto max-w-5xl px-4 pb-16 pt-7 sm:px-6 sm:pt-10">
-        <div className="max-w-3xl"><p className="text-[10px] font-black uppercase tracking-[.14em] text-[#b78300]">LoadLink finance tool</p><h1 className="mt-2 text-[38px] font-black tracking-[-.055em] sm:text-[52px]">Truck finance calculator</h1><p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Estimate buying power and monthly repayments using deposit, trade-in, interest, financed fees and an optional balloon. Figures are estimates, not finance approval.</p></div>
 
-        <div className="mt-7 grid items-start gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,.85fr)]">
-          <section className={`rounded-[18px] border p-5 sm:p-7 ${card}`}>
-            <div className="mb-5 flex min-w-0 flex-col gap-4 border-b border-current/10 pb-5 sm:flex-row sm:items-center">
-              <div className="min-w-0 flex-1">
-                <p className={`text-xs font-semibold ${muted}`}>Estimated buying power</p>
-                <p className="mt-1 break-words text-[clamp(29px,6vw,42px)] font-bold leading-tight tracking-[-.045em]" aria-live="polite">{rand(buyingPower)}</p>
-                <p className={`mt-2 text-[11px] leading-5 ${muted}`}>Illustrative at {annualRate}% annual interest over {term} months.</p>
-              </div>
-              <div className="w-full overflow-hidden rounded-xl bg-[#eae7df] sm:w-[175px]">
-                <LoadLinkImage src={TRUCK_IMAGE} alt="Commercial truck" className="aspect-[16/10] w-full object-contain" />
-              </div>
-            </div>
-            {selectedPrice > 0 ? (
-              <div className={`mb-5 rounded-xl border border-[#f6b800]/40 p-4 ${darkMode ? "bg-[#f6b800]/10" : "bg-[#fff6df]"}`}>
-                <p className="text-xs font-semibold">Selected LoadLink vehicle: {selectedRow?.title || "Commercial vehicle"}</p>
-                <p className="mt-1 text-xl font-bold">Estimated {rand(selectedMonthly)} / month</p>
-                <p className={`mt-1 text-[11px] leading-5 ${muted}`}>Based on seller's advertised price of {rand(selectedPrice)} and your inputs, excluding any fees you have not entered.</p>
-                <Link href={"/vehicles/" + encodeURIComponent(selectedId)} className="mt-2 inline-flex text-xs font-bold underline underline-offset-4">View this vehicle</Link>
-              </div>
-            ) : null}
-            <h2 className="mb-4 text-base font-bold">Adjust your budget</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <FinanceField label="Monthly budget" fieldClass={field}><MoneyInput value={monthlyBudget} onChange={setMonthlyBudget} /></FinanceField>
-              <FinanceField label="Loan term" fieldClass={field}><select value={term} onChange={(event) => setTerm(Number(event.target.value))} className="mt-2 w-full bg-transparent text-xl font-black outline-none">{TERMS.map((months) => <option key={months} value={months} className="text-black">{months} months</option>)}</select></FinanceField>
-              <FinanceField label="Deposit" fieldClass={field}><MoneyInput value={deposit} onChange={setDeposit} /></FinanceField>
-              <FinanceField label="Trade-in" fieldClass={field}><MoneyInput value={tradeIn} onChange={setTradeIn} /></FinanceField>
-              <FinanceField label="Interest rate" fieldClass={field}><NumberInput value={interestRate} onChange={setInterestRate} suffix="%" /></FinanceField>
-              <FinanceField label="Balloon" fieldClass={field}><NumberInput value={balloonPercent} onChange={setBalloonPercent} suffix="%" /></FinanceField>
-              <div className="col-span-2"><FinanceField label="Financed fees — optional" fieldClass={field}><MoneyInput value={fees} onChange={setFees} /></FinanceField></div>
-            </div>
-            <p className={`mt-4 text-[10px] font-semibold leading-5 ${muted}`}>This is an illustration, not a finance quote. The interest rate is an assumption you can change, not a lender offer. Balloon is capped at 40% and leaves a final payment. Confirm VAT, insurance, lender fees and approval separately.</p>
-          </section>
+      <div className="mx-auto max-w-4xl px-4 pb-24 pt-7 sm:px-6 sm:pt-10">
+        <header className="mb-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[.1em] text-[#d8a100]">Finance tools</p>
+          <h1 className="mt-2 text-[clamp(28px,6vw,39px)] font-bold leading-[1.15] tracking-[-.035em]">Truck finance calculator</h1>
+          <p className={muted + " mt-2 text-sm leading-6"}>Estimate your budget before buying a commercial vehicle.</p>
+        </header>
 
-          <div className="min-w-0 space-y-4">
-            <LoadLinkDocumentPreview darkMode={darkMode} documentType="Truck finance estimate" body={`TRUCK FINANCE ESTIMATE
-
-YOUR INPUTS
-Monthly budget: ${rand(monthly)}
-Loan term: ${term} months
-Deposit: ${rand(numeric(deposit))}
-Trade-in: ${rand(numeric(tradeIn))}
-Annual interest: ${annualRate}%
-Balloon: ${balloonRatio * 100}%
-Financed fees: ${rand(financedFees)}
-
-ESTIMATED RESULTS
-Buying power: ${rand(buyingPower)}
-Estimated monthly: ${rand(exampleMonthly)}
-Balloon at end: ${rand(exampleBalloon)}
-Total instalments: ${rand(instalmentsTotal)}
-Interest + financed fees: ${rand(estimatedInterestAndFees)}
-Total repayable: ${rand(totalRepayable)}
-
-These figures are estimates, not finance approval. Confirm fees and final terms with your finance provider.`} />
-            <a href="#truck-finance-matches" className="flex min-h-12 items-center justify-center rounded-xl bg-[#f6b800] px-4 text-sm font-bold text-black">See matching vehicles</a>
-            <Link href="/tools/vehicle-price-guide" className={`flex min-h-11 items-center justify-center rounded-xl border px-4 text-xs font-semibold ${darkMode ? "border-white/15" : "border-black/15"}`}>Compare advertised prices</Link>
+        <section className={card + " overflow-hidden rounded-2xl border"} aria-label="Finance estimate">
+          <div className="border-b border-current/10 px-5 py-5 sm:px-6">
+            <p className={muted + " text-xs font-medium"}>Estimated buying power</p>
+            <p className="mt-1 break-words text-[clamp(30px,7vw,42px)] font-bold leading-tight tracking-[-.035em]" aria-live="polite">{rand(buyingPower)}</p>
+            <p className={muted + " mt-2 text-xs leading-5"}>
+              Based on {rand(monthly)} per month over {term} months at {annualRate}% interest.
+            </p>
           </div>
-        </div>
 
-        <section id="truck-finance-matches" className="scroll-mt-24 pt-10">
-          <div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-3xl font-black tracking-[-.04em]">Trucks within your estimate</h2><p className={`mt-2 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Matches use advertised prices and your calculator inputs. Confirm the listing and lender terms before making a decision.</p></div><Link href="/list-your-vehicle#vehicle-marketplace-vehicles" className="rounded-full border border-[#f6b800]/55 px-4 py-2 text-xs font-black">Browse all trucks</Link></div>
-          {loading ? <div className="mt-5 grid gap-4 sm:grid-cols-2">{[0,1].map((item)=><div key={item} className={`h-64 animate-pulse rounded-[24px] border ${card}`} />)}</div> : monthly <= 0 ? <EmptyState darkMode={darkMode} title="Enter a monthly budget" text="LoadLink will calculate a buying range and show matching vehicle listings." /> : matches.length ? <div className="mt-5 grid gap-4 sm:grid-cols-2">{matches.map((row)=><Link key={row.id} href={`/listing/${row.id}`} className={`overflow-hidden rounded-[24px] border ${card}`}><div className="aspect-[16/10] overflow-hidden bg-black/[.04]"><LoadLinkImage src={row.photos?.[0] || TRUCK_IMAGE} alt={row.title || "Commercial truck"} className="h-full w-full object-cover" /></div><div className="p-5"><p className={`text-[10px] font-black uppercase tracking-[.12em] ${muted}`}>{row.city || "South Africa"}</p><h3 className="mt-2 text-xl font-black tracking-[-.03em]">{row.title || "Commercial truck"}</h3><p className="mt-3 text-2xl font-black">{rand(row.price)}</p><p className={`mt-1 text-xs font-bold ${muted}`}>Estimated {rand(row.monthly)} / month</p><span className="mt-4 inline-flex rounded-full border border-[#f6b800]/50 px-3 py-2 text-[10px] font-black">View listing</span></div></Link>)}</div> : <EmptyState darkMode={darkMode} title="No current matches" text="Try a higher monthly budget, a larger deposit, a longer term or browse all vehicle listings." />}
+          <div className="px-5 py-5 sm:px-6">
+            <h2 className="text-base font-bold">Your figures</h2>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <FinanceField label="Monthly budget" fieldClass={field}>
+                <MoneyInput value={monthlyBudget} onChange={setMonthlyBudget} />
+              </FinanceField>
+              <FinanceField label="Loan term" fieldClass={field}>
+                <select
+                  value={term}
+                  onChange={(event) => setTerm(Number(event.target.value))}
+                  className="mt-1 w-full min-w-0 bg-transparent py-1 text-base font-semibold outline-none"
+                >
+                  {TERMS.map((months) => (
+                    <option key={months} value={months} className="text-black">{months} months</option>
+                  ))}
+                </select>
+              </FinanceField>
+              <FinanceField label="Deposit" fieldClass={field}>
+                <MoneyInput value={deposit} onChange={setDeposit} />
+              </FinanceField>
+              <FinanceField label="Interest rate" fieldClass={field}>
+                <NumberInput value={interestRate} onChange={setInterestRate} suffix="%" />
+              </FinanceField>
+            </div>
+
+            <details className={(darkMode ? "border-[#3b3e39]" : "border-[#e2e4de]") + " group mt-4 overflow-hidden rounded-xl border"}>
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 text-xs font-semibold marker:hidden">
+                <span>More options</span>
+                <span className={muted + " text-[11px] font-medium"}>Trade-in, balloon and fees</span>
+              </summary>
+              <div className="grid grid-cols-2 gap-3 border-t border-current/10 p-3 sm:p-4">
+                <FinanceField label="Trade-in" fieldClass={field}>
+                  <MoneyInput value={tradeIn} onChange={setTradeIn} />
+                </FinanceField>
+                <FinanceField label="Balloon" fieldClass={field}>
+                  <NumberInput value={balloonPercent} onChange={setBalloonPercent} suffix="%" />
+                </FinanceField>
+                <div className="col-span-2">
+                  <FinanceField label="Financed fees" fieldClass={field}>
+                    <MoneyInput value={fees} onChange={setFees} />
+                  </FinanceField>
+                </div>
+              </div>
+            </details>
+
+            {balloonRatio > 0 ? (
+              <p className={muted + " mt-3 text-xs leading-5"}>
+                A balloon of up to 40% leaves a final amount due at the end of the loan.
+              </p>
+            ) : null}
+
+            <div className="mt-5">
+              <a href="#truck-finance-matches" className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#f6b800] px-5 text-sm font-semibold text-[#141414] sm:w-auto">
+                Find vehicles in your budget
+              </a>
+            </div>
+            <p className={muted + " mt-3 text-xs leading-5"}>
+              Estimates only, not a finance offer or approval. Final repayments depend on a lender's terms.
+            </p>
+          </div>
         </section>
 
-        <p className={`mt-8 text-[10px] font-semibold leading-5 ${muted}`}>Calculation method: monthly rate = annual interest ÷ 12. With a balloon, the present value of the final balloon is removed from the amortised principal before calculating instalments. At 0% interest, repayment is (principal − balloon) ÷ months.</p>
-      </section>
+        {selectedPrice > 0 ? (
+          <section className={card + " mt-4 rounded-2xl border p-5 sm:p-6"} aria-label="Selected vehicle finance estimate">
+            <p className={muted + " text-xs font-medium"}>Selected LoadLink vehicle</p>
+            <h2 className="mt-1 text-base font-bold">{selectedRow?.title || "Commercial vehicle"}</h2>
+            <p className="mt-2 text-2xl font-bold">{rand(selectedMonthly)} <span className={muted + " text-xs font-medium"}>/ month estimated</span></p>
+            <div className="mt-3 flex flex-wrap items-center gap-4 text-xs">
+              <span className={muted}>Asking price: {rand(selectedPrice)}</span>
+              <Link href={"/vehicles/" + encodeURIComponent(selectedId)} className="font-semibold underline underline-offset-4">View vehicle</Link>
+            </div>
+          </section>
+        ) : null}
+
+        <section id="truck-finance-matches" className="scroll-mt-24 pt-9">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-xl font-bold tracking-[-.025em] sm:text-2xl">Vehicles in your budget</h2>
+            <Link href="/list-your-vehicle#vehicle-marketplace-vehicles" className="text-xs font-semibold underline underline-offset-4">Browse all vehicles</Link>
+          </div>
+          <p className={muted + " mt-2 text-xs leading-5"}>
+            Based on current advertised prices, not pre-approved finance.
+          </p>
+
+          {loading ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2" role="status" aria-label="Loading vehicles">
+              {[0, 1].map((item) => <div key={item} className={card + " h-52 animate-pulse rounded-xl border"} />)}
+            </div>
+          ) : monthly <= 0 ? (
+            <EmptyState darkMode={darkMode} title="Set a monthly budget" text="Enter an amount above to see matching vehicles." />
+          ) : matches.length ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {matches.map((row) => (
+                <Link key={row.id} href={"/vehicles/" + encodeURIComponent(row.id)} className={card + " flex min-w-0 overflow-hidden rounded-xl border no-underline"}>
+                  <div className="h-28 w-28 shrink-0 overflow-hidden bg-black/10 sm:h-32 sm:w-32">
+                    {row.photos?.[0] ? (
+                      <LoadLinkImage src={row.photos[0]} alt={row.title || "Commercial vehicle"} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className={muted + " flex h-full items-center justify-center px-2 text-center text-[11px]"}>Photo unavailable</div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1 p-3 sm:p-4">
+                    <p className={muted + " truncate text-[11px]"}>{row.city || "South Africa"}</p>
+                    <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-5">{row.title || "Commercial vehicle"}</h3>
+                    <p className="mt-2 text-base font-bold">{rand(row.price)}</p>
+                    <p className={muted + " mt-1 text-[11px]"}>{rand(row.monthly)} / month estimated</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <EmptyState darkMode={darkMode} title="No vehicles within this budget" text="You can adjust your budget or browse the vehicle marketplace." />
+          )}
+        </section>
+      </div>
     </main>
   );
 }
 
-function FinanceField({ label, fieldClass, children }: { label: string; fieldClass: string; children: React.ReactNode }) { return <label className={`block rounded-[17px] border px-4 py-3 ${fieldClass}`}><span className="block text-[10px] font-black uppercase tracking-[.09em] opacity-45">{label}</span>{children}</label>; }
-function MoneyInput({ value, onChange }: { value: string; onChange: (value: string) => void }) { return <div className="mt-2 flex items-center gap-1 text-xl font-black"><span>R</span><input inputMode="decimal" value={value} onFocus={(event)=>event.currentTarget.select()} onChange={(event)=>onChange(event.target.value)} className="min-w-0 flex-1 bg-transparent text-xl font-black outline-none" /></div>; }
-function NumberInput({ value, onChange, suffix }: { value: string; onChange: (value: string) => void; suffix: string }) { return <div className="mt-2 flex items-center gap-1 text-xl font-black"><input inputMode="decimal" value={value} onFocus={(event)=>event.currentTarget.select()} onChange={(event)=>onChange(event.target.value)} className="min-w-0 flex-1 bg-transparent text-xl font-black outline-none" /><span>{suffix}</span></div>; }
-function EmptyState({ darkMode, title, text }: { darkMode: boolean; title: string; text: string }) { return <div className={`mt-5 rounded-[24px] border p-8 text-center ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-white/70"}`}><h3 className="text-xl font-black">{title}</h3><p className={`mx-auto mt-2 max-w-md text-sm leading-6 ${darkMode ? "text-white/50" : "text-black/50"}`}>{text}</p></div>; }
+function FinanceField({ label, fieldClass, children }: { label: string; fieldClass: string; children: React.ReactNode }) {
+  return <label className={fieldClass + " block min-w-0 rounded-xl border px-3 py-2.5"}>
+    <span className="block text-[11px] font-medium opacity-70">{label}</span>
+    {children}
+  </label>;
+}
+function MoneyInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return <div className="mt-1 flex min-w-0 items-center gap-1 text-base font-semibold">
+    <span>R</span>
+    <input inputMode="decimal" value={value} onFocus={(event) => event.currentTarget.select()} onChange={(event) => onChange(event.target.value)} placeholder="0" className="w-full min-w-0 bg-transparent py-1 text-base font-semibold outline-none" />
+  </div>;
+}
+function NumberInput({ value, onChange, suffix }: { value: string; onChange: (value: string) => void; suffix: string }) {
+  return <div className="mt-1 flex min-w-0 items-center gap-1 text-base font-semibold">
+    <input inputMode="decimal" value={value} onFocus={(event) => event.currentTarget.select()} onChange={(event) => onChange(event.target.value)} className="w-full min-w-0 bg-transparent py-1 text-base font-semibold outline-none" />
+    <span>{suffix}</span>
+  </div>;
+}
+function EmptyState({ darkMode, title, text }: { darkMode: boolean; title: string; text: string }) {
+  return <div className={(darkMode ? "border-white/12 bg-[#141614] text-white" : "border-black/10 bg-white text-black") + " mt-4 rounded-xl border px-5 py-7"}>
+    <h3 className="text-sm font-semibold">{title}</h3>
+    <p className={(darkMode ? "text-white/55" : "text-black/55") + " mt-1 text-xs leading-5"}>{text}</p>
+  </div>;
+}
