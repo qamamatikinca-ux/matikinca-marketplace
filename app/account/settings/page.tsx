@@ -79,7 +79,7 @@ export default function AccountSettingsPage() {
   const [preferenceSaving, setPreferenceSaving] = useState<PreferenceKey | null>(null);
   const [hasDriverProfile, setHasDriverProfile] = useState(false);
   const [settingsView, setSettingsView] = useState<SettingsView>("overview");
-  const [settingsGroup, setSettingsGroup] = useState<"account" | "preferences" | "security">("account");
+
   const [pushState, setPushState] = useState<PushState>("disabled");
   const [pushBusy, setPushBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -283,8 +283,8 @@ export default function AccountSettingsPage() {
 
       <section className="mx-auto max-w-6xl px-4 py-7 sm:px-5 md:px-8 md:py-10">
         <div className="max-w-3xl">
-          <h1 className="text-3xl font-black tracking-[-.035em] md:text-4xl">Settings</h1>
-          <p className={`mt-1.5 text-sm font-semibold leading-6 ${muted}`}>Your account and preferences.</p>
+          <h1 className="text-[31px] font-bold tracking-[-.035em] md:text-[38px]">Settings</h1>
+          <p className={`mt-1 text-sm leading-6 ${muted}`}>Manage your details, notifications and account security.</p>
         </div>
 
 
@@ -296,7 +296,7 @@ export default function AccountSettingsPage() {
         {message ? <div role="status" className={`mt-5 max-w-3xl rounded-xl border p-3 text-sm font-medium ${darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-white"}`}>{message}</div> : null}
 
         {settingsView === "overview" ? (
-          <div className="ll-settings-overview">
+          <div className="ll-settings-overview ll-settings-modern">
             <button
               type="button"
               className="ll-settings-person"
@@ -312,55 +312,42 @@ export default function AccountSettingsPage() {
               <LoadLinkIcon name="chevronRight" size={18} />
             </button>
 
-            <nav className="ll-settings-segments" aria-label="Settings sections">
-              {([
-                ["account", "Account"],
-                ["preferences", "Preferences"],
-                ["security", "Security"],
-              ] as const).map(([group, label]) => (
-                <button
-                  key={group}
-                  type="button"
-                  aria-pressed={settingsGroup === group}
-                  onClick={() => setSettingsGroup(group)}
-                >
-                  {label}
-                </button>
-              ))}
-            </nav>
-            <div className="ll-settings-menu" aria-label={settingsGroup === "account" ? "Account settings" : settingsGroup === "preferences" ? "Preference settings" : "Security settings"}>
-              {([
-                ["account", [
-                  ["profile", "user", "Profile", "Personal details and photo"],
-                  ["work", "truck", "Work", "Driver profile and listings"],
-                  ["billing", "wallet", "Billing", "Plan and payments"],
-                  ...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team", "users", "Team", "Dealership access"]] : []),
-                ]],
-                ["preferences", [
-                  ["notifications", "bell", "Notifications", "Alerts and updates"],
-                  ["messages", "message", "Messages", "Chat privacy and alerts"],
-                ]],
-                ["security", [
-                  ["security", "lock", "Security and privacy", "Password and account access"],
-                ]],
-              ] as Array<[typeof settingsGroup, Array<[SettingsView, import("@/components/LoadLinkIcon").LoadLinkIconName, string, string]>]>)
-                .find(([group]) => group === settingsGroup)?.[1]
-                .map(([view, icon, title, copy]) => (
-                  <button
-                    key={view}
-                    type="button"
-                    data-loadlink-settings-option="true"
-                    onClick={() => {
-                      setSettingsView(view);
-                      window.history.replaceState(null, "", `#${view === "messages" ? "message-privacy" : view}`);
-                    }}
-                  >
-                    <span className="ll-settings-row-icon"><LoadLinkIcon name={icon} size={19} /></span>
-                    <span className="ll-settings-row-copy"><strong>{title}</strong><small>{copy}</small></span>
-                    <LoadLinkIcon name="chevronRight" size={17} />
-                  </button>
-                ))}
-            </div>
+            {([
+              ["Account", [
+                ["profile", "user", "Profile", "Personal details and photo"],
+                ["work", "truck", "Work", "Driver profile and listings"],
+                ["billing", "wallet", "Billing", "Plan and payments"],
+                ...(form.subscription_plan.toLowerCase().includes("dealer") ? [["team", "users", "Team", "Dealership access"]] : []),
+              ]],
+              ["Preferences", [
+                ["notifications", "bell", "Notifications", "Alerts and updates"],
+                ["messages", "message", "Messages", "Chat privacy and alerts"],
+              ]],
+              ["Security", [
+                ["security", "lock", "Security and privacy", "Password and account access"],
+              ]],
+            ] as Array<[string, Array<[SettingsView, import("@/components/LoadLinkIcon").LoadLinkIconName, string, string]>]>).map(([group, items]) => (
+              <section className="ll-settings-group" key={group} aria-label={group}>
+                <h2 className="ll-settings-group-heading">{group}</h2>
+                <div className="ll-settings-menu">
+                  {items.map(([view, icon, title, copy]) => (
+                    <button
+                      key={view}
+                      type="button"
+                      data-loadlink-settings-option="true"
+                      onClick={() => {
+                        setSettingsView(view);
+                        window.history.replaceState(null, "", `#${view === "messages" ? "message-privacy" : view}`);
+                      }}
+                    >
+                      <span className="ll-settings-row-icon"><LoadLinkIcon name={icon} size={18} /></span>
+                      <span className="ll-settings-row-copy"><strong>{title}</strong><small>{copy}</small></span>
+                      <LoadLinkIcon name="chevronRight" size={17} />
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
         ) : (
           <button
