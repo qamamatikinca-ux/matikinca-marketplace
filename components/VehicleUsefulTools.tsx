@@ -42,6 +42,7 @@ export default function VehicleUsefulTools({ darkMode }: { darkMode: boolean }) 
       </div>
       <div
         ref={scrollRef}
+        data-loadlink-no-swipe-dots="true"
         onScroll={updateFromScroll}
         className={"mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 [-webkit-overflow-scrolling:touch] " + noScroll}
         aria-label="Useful tools carousel"
