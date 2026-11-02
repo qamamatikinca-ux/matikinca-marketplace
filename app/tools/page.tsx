@@ -4,7 +4,7 @@
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
-import VehicleUsefulTools from "@/components/VehicleUsefulTools";
+
 import LogisticsDocumentEditor from "@/components/LogisticsDocumentEditor";
 import LoadLinkDocumentPreview from "@/components/LoadLinkDocumentPreview";
 import Link from "next/link";
@@ -176,9 +176,12 @@ export default function ToolsPage() {
         </div> : <button type="button" onClick={() => setSelected(null)} className="self-start rounded-full border border-current/20 px-5 py-3 text-sm font-bold">All tools</button>}
       </div>
 
-      {!tool ? <><VehicleUsefulTools darkMode={darkMode} />
-
-      <div className="mt-7 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+      {!tool ? <>
+      <nav aria-label="Vehicle tools" className="mt-6 grid max-w-2xl grid-cols-2 gap-2.5">
+        <Link href="/tools/truck-finance" className={`flex min-h-14 items-center justify-between gap-2 rounded-xl border px-3.5 py-3 text-xs font-semibold no-underline sm:text-sm ${card}`}>Truck finance <LoadLinkIcon name="chevronRight" size={16} /></Link>
+        <Link href="/tools/vehicle-price-guide" className={`flex min-h-14 items-center justify-between gap-2 rounded-xl border px-3.5 py-3 text-xs font-semibold no-underline sm:text-sm ${card}`}>Vehicle price guide <LoadLinkIcon name="chevronRight" size={16} /></Link>
+      </nav>
+      <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
         {visible.map(item=><button key={item.id} type="button" onClick={()=>openTool(item.id)} className={`group min-h-[128px] rounded-2xl border p-4 text-left transition ${selected===item.id?"border-[#f6b800] bg-[#f6b800] text-black":card}`}>
           <ToolIcon id={item.id} active={selected===item.id}/>
           <h2 className="mt-3 text-base font-black tracking-[-.02em]">{item.name}</h2>
