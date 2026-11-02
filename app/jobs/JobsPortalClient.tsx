@@ -675,7 +675,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
           >
             <div className="grid gap-3 md:grid-cols-2">
               <label className="block min-w-0">
-                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-[#f6b800]" : "text-[#70716f]"}`}>Job or truck type</span>
+                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-white/70" : "text-[#70716f]"}`}>Job or truck type</span>
                 <input
                   list="loadlink-job-search-terms"
                   value={keyword}
@@ -690,7 +690,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
               </label>
 
               <label className="relative block min-w-0">
-                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-[#f6b800]" : "text-[#70716f]"}`}>Location</span>
+                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-white/70" : "text-[#70716f]"}`}>Location</span>
                 <SouthAfricaLocationInput
                   value={city}
                   onChange={setCity}
@@ -702,7 +702,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
               </label>
 
               <label className="block min-w-0 md:col-span-2">
-                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-[#f6b800]" : "text-[#70716f]"}`}>Category</span>
+                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-white/70" : "text-[#70716f]"}`}>Category</span>
                 <select
                   value={group}
                   onChange={(e) => setGroup(e.target.value as VehicleGroup | "")}
@@ -807,7 +807,7 @@ function FeaturedJobsRail({ jobs, darkMode, onOpen }: { jobs: JobListing[]; dark
               <div className="p-4">
                 <p className={`text-xs font-bold ${darkMode ? "text-white/55" : "text-black/55"}`}>{job.city} · {job.group}</p>
                 <h3 className="mt-2 text-lg font-black leading-tight">{job.title}</h3>
-                <p className="mt-3 text-base font-black text-[#b88900]">{formatListingRate(job.rate)}</p>
+                <p className="mt-3 text-base font-bold">{formatListingRate(job.rate)}</p>
               </div>
             </button>
           ))}
@@ -833,7 +833,7 @@ function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onRe
       </div>
 
       <div className="p-5">
-        <p className="text-3xl font-black tracking-[-.04em] text-[#b88900]">{formatListingRate(job.rate)}</p>
+        <p className="text-3xl font-bold tracking-[-.04em]">{formatListingRate(job.rate)}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="rounded-full bg-[#2f9f5b] px-3 py-1.5 text-[10px] font-black uppercase text-white">{job.listingLabel || "Job"}</span>
           <span className={`rounded-full px-3 py-1.5 text-[10px] font-black uppercase ${darkMode ? "bg-white/10 text-white" : "bg-[#eef2f8] text-[#263246]"}`}>{job.group}</span>
@@ -987,7 +987,7 @@ function ListingAnalyticsModal({ job, ownerKey, onClose }: { job: JobListing; ow
       <section className="mx-auto my-6 max-w-2xl border border-[#f6b800]/60 bg-[#080808] text-white shadow-2xl">
         <header className="flex items-start justify-between gap-4 border-b border-white/10 p-5">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#f6b800]">Listing analytics</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-white/70">Listing analytics</p>
             <h2 className="mt-2 text-2xl font-black">{job.title}</h2>
           </div>
           <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center border border-white/20 text-xl font-black" aria-label="Close analytics"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
@@ -1001,7 +1001,7 @@ function ListingAnalyticsModal({ job, ownerKey, onClose }: { job: JobListing; ow
 
         <div className="grid gap-6 p-5 md:grid-cols-2">
           <div>
-            <h3 className="text-sm font-black uppercase tracking-[0.16em] text-[#f6b800]">Views over 7 days</h3>
+            <h3 className="text-sm font-semibold tracking-[0.01em] text-white/80">Views over 7 days</h3>
             {loading ? <div className="mt-4 h-36 loadlink-skeleton bg-white/5" /> : analytics.dailyViews.length ? (
               <div className="mt-4 flex h-40 items-end gap-2 border-b border-white/15 px-1 pb-2">
                 {analytics.dailyViews.map((item) => (
@@ -1018,7 +1018,7 @@ function ListingAnalyticsModal({ job, ownerKey, onClose }: { job: JobListing; ow
           </div>
 
           <div>
-            <h3 className="text-sm font-black uppercase tracking-[0.16em] text-[#f6b800]">Viewer devices</h3>
+            <h3 className="text-sm font-semibold tracking-[0.01em] text-white/80">Viewer devices</h3>
             {analytics.devices.length ? <div className="mt-4 space-y-4">{analytics.devices.map((item) => (
               <div key={item.label}>
                 <div className="mb-1.5 flex justify-between text-xs font-bold"><span className="capitalize">{item.label}</span><span>{item.count}</span></div>
@@ -1030,15 +1030,15 @@ function ListingAnalyticsModal({ job, ownerKey, onClose }: { job: JobListing; ow
 
         {analytics.sources.length ? (
           <div className="border-t border-white/10 px-5 py-5">
-            <h3 className="text-sm font-black uppercase tracking-[0.16em] text-[#f6b800]">How viewers found it</h3>
+            <h3 className="text-sm font-semibold tracking-[0.01em] text-white/80">How viewers found it</h3>
             <div className="mt-3 flex flex-wrap gap-2">{analytics.sources.map((item) => <span key={item.label} className="rounded-full border border-white/15 px-3 py-2 text-xs font-bold capitalize">{item.label}: {item.count}</span>)}</div>
           </div>
         ) : null}
 
-        <div className="border-t border-white/10 p-5"><h3 className="text-sm font-black uppercase tracking-[0.16em] text-[#f6b800]">Signed-in viewers</h3>{analytics.recentViewers.length?<div className="mt-4 grid gap-3 sm:grid-cols-2">{analytics.recentViewers.map((viewer,index)=><div key={viewer.name+index} className="flex items-center gap-3 border border-white/10 p-3"><div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f6b800] font-black text-black">{viewer.name.slice(0,1).toUpperCase()}</div><div><p className="text-sm font-black">{viewer.name}</p><p className="text-[10px] text-white/40">{viewer.viewedAt?new Date(viewer.viewedAt).toLocaleString():"Viewed your listing"}</p></div></div>)}</div>:<p className="mt-3 text-sm leading-6 text-white/50">Anonymous views remain private. Signed-in members will appear here after they open the listing.</p>}</div>
+        <div className="border-t border-white/10 p-5"><h3 className="text-sm font-semibold tracking-[0.01em] text-white/80">Signed-in viewers</h3>{analytics.recentViewers.length?<div className="mt-4 grid gap-3 sm:grid-cols-2">{analytics.recentViewers.map((viewer,index)=><div key={viewer.name+index} className="flex items-center gap-3 border border-white/10 p-3"><div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f6b800] font-black text-black">{viewer.name.slice(0,1).toUpperCase()}</div><div><p className="text-sm font-black">{viewer.name}</p><p className="text-[10px] text-white/40">{viewer.viewedAt?new Date(viewer.viewedAt).toLocaleString():"Viewed your listing"}</p></div></div>)}</div>:<p className="mt-3 text-sm leading-6 text-white/50">Anonymous views remain private. Signed-in members will appear here after they open the listing.</p>}</div>
 
         <div className="border-t border-[#f6b800]/30 bg-[#120f03] p-5">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f6b800]">Visibility advice</p>
+          <p className="text-xs font-semibold tracking-[0.01em] text-white/75">Visibility advice</p>
           <p className="mt-2 text-sm font-semibold leading-6 text-white/70">{insight}</p>
         </div>
       </section>
@@ -1047,7 +1047,7 @@ function ListingAnalyticsModal({ job, ownerKey, onClose }: { job: JobListing; ow
 }
 
 function Metric({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
-  return <div className={`border-r border-white/10 p-4 last:border-r-0 ${wide ? "col-span-2 md:col-span-1" : ""}`}><p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/45">{label}</p><p className="mt-2 text-xl font-black text-[#f6b800]">{value}</p></div>;
+  return <div className={`border-r border-white/10 p-4 last:border-r-0 ${wide ? "col-span-2 md:col-span-1" : ""}`}><p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/45">{label}</p><p className="mt-2 text-xl font-bold text-white">{value}</p></div>;
 }
 
 function PhotoGalleryModal({ job, onClose }: { job: JobListing; onClose: () => void }) {
