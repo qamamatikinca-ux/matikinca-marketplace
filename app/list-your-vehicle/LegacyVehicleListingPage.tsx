@@ -401,20 +401,24 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   }
 
   function selectTruckModel(name: string) {
-    setModelName(name); setModelConfirmed(false);
+    setModelName(name);
+    setModelConfirmed(false);
     const reference = findTruckReference(brand, name);
-    setTransmission(reference?.verified_transmission || "");
-    setFuelType(reference?.verified_fuel || "");
-    setAxleConfiguration(reference?.axle_options.length === 1 ? reference.axle_options[0] : "");
+    const catalogue = getTruckModel(brand, name, year);
+    // Autofill only a confirmed reference value or a unique model-family option.
+    // Never infer the exact engine, GVM or payload from a model-family name.
+    setTransmission(reference?.verified_transmission || (catalogue?.transmissions.length === 1 ? catalogue.transmissions[0] : ""));
+    setFuelType(reference?.verified_fuel || (catalogue?.fuels.length === 1 ? catalogue.fuels[0] : ""));
+    setAxleConfiguration(reference?.axle_options.length === 1 ? reference.axle_options[0] : catalogue?.axleConfigurations.length === 1 ? catalogue.axleConfigurations[0] : "");
   }
 
   function confirmSelectedModel() {
     if (!selectedModel) { setMessage("Choose a valid year, truck brand and model first."); return; }
     setTitle(`${year} ${brand} ${modelName}`);
     const reference = findTruckReference(brand, modelName);
-    setTransmission(reference?.verified_transmission || "");
-    setFuelType(reference?.verified_fuel || "");
-    setAxleConfiguration(selectedModel.axleConfigurations.length === 1 ? selectedModel.axleConfigurations[0] : "");
+    setTransmission(reference?.verified_transmission || (selectedModel.transmissions.length === 1 ? selectedModel.transmissions[0] : ""));
+    setFuelType(reference?.verified_fuel || (selectedModel.fuels.length === 1 ? selectedModel.fuels[0] : ""));
+    setAxleConfiguration(reference?.axle_options.length === 1 ? reference.axle_options[0] : selectedModel.axleConfigurations.length === 1 ? selectedModel.axleConfigurations[0] : "");
     setModelConfirmed(true);
     setMessage("");
   }
@@ -878,6 +882,16 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
             </div>
             {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7">
               <button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>
+              {selectedModel ? <div className={`mt-4 rounded-xl border px-4 py-3 ${darkMode ? "border-white/12 bg-white/[.03]" : "border-black/10 bg-black/[.02]"}`}>
+                <h3 className="text-sm font-bold">Model reference · {year} {brand} {modelName}</h3>
+                <p className={`mt-1 text-xs leading-5 ${muted}`}>Loaded from the LoadLink make/model catalogue. Fields with one supported value are filled in automatically; choose the actual vehicle configuration when several exist.</p>
+                <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
+                  <div><span className={muted}>Fuel options</span><strong className="mt-1 block">{selectedModel.fuels.join(" / ")}</strong></div>
+                  <div><span className={muted}>Gearbox options</span><strong className="mt-1 block">{selectedModel.transmissions.join(" / ")}</strong></div>
+                  <div><span className={muted}>Axle options</span><strong className="mt-1 block">{selectedModel.axleConfigurations.join(" / ")}</strong></div>
+                </div>
+                {referenceImage?.specSourceUrl ? <a href={referenceImage.specSourceUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex text-xs font-semibold text-[#b98900] underline underline-offset-4">Manufacturer specification source</a> : null}
+              </div> : null}
               {imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Finding a model-year reference…</p> : null}
               {referenceImage?.imageUrl ? <div className="mt-4 max-w-xl"><VehicleModelReferencePhoto photo={{url:referenceImage.imageUrl,title:referenceImage.title,credit:"",license:"",matchKind:"generation"}} year={year}/></div> : null}
               {!referenceImage?.imageUrl && truckYearPhotos.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2">{truckYearPhotos.map(photo=><VehicleModelReferencePhoto key={photo.url} photo={photo} year={year}/>)}</div> : null}
@@ -899,14 +913,18 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 <Field label={vehicleCategory === "truck" ? "Body type" : "Type"}><select value={bodyType || vehicleSubtype} onChange={(event) => setBodyType(event.target.value)} className={inputClass}>{(vehicleCategory === "truck" ? truckBodyTypes : vehicleCategory === "bakkie_van" ? bakkieVanTypes : vehicleCategory === "trailer" ? trailerTypes : mobileUnitTypes).map((item) => <option key={item}>{item}</option>)}</select></Field>
                 <Field label="Condition"><select value={condition} onChange={(event) => setCondition(event.target.value)} className={inputClass}><option>Excellent</option><option>Very good</option><option>Good</option><option>Fair</option><option>Needs attention</option></select></Field>
                 <Field label="Transmission"><select value={transmission} onChange={(event) => setTransmission(event.target.value)} className={inputClass} required><option value="">Choose gearbox</option>{gearboxOptions.map((item) => <option key={item}>{item}</option>)}</select></Field>
-                <Field label="Fuel / power type"><input value={fuelType} onChange={(event) => setFuelType(event.target.value)} placeholder={vehicleCategory === "trailer" ? "Not applicable" : "Confirm fuel / power type"} className={inputClass} required /></Field>
+                <Field label="Fuel / power type">{vehicleCategory === "truck" && selectedModel
+                  ? <select value={fuelType} onChange={(event) => setFuelType(event.target.value)} className={inputClass} required><option value="">Choose actual fuel type</option>{Array.from(new Set([...selectedModel.fuels, ...(fuelType ? [fuelType as typeof selectedModel.fuels[number]] : [])])).map((item) => <option key={item} value={item}>{item}</option>)}</select>
+                  : <input value={fuelType} onChange={(event) => setFuelType(event.target.value)} placeholder={vehicleCategory === "trailer" ? "Not applicable" : "Confirm fuel / power type"} className={inputClass} required />}</Field>
                 <Field label="Mileage / usage"><input type="number" min="0" value={odometerKm} onChange={(event) => setOdometerKm(event.target.value)} placeholder="Kilometres or usage reading" className={inputClass} required /></Field>
                 <Field label="Previous owners"><input type="number" min="0" value={previousOwners} onChange={(event) => setPreviousOwners(event.target.value)} placeholder="0" className={inputClass} /></Field>
                 <Field label="Service history"><select value={serviceHistory} onChange={(event) => setServiceHistory(event.target.value)} className={inputClass}><option>Full service history</option><option>Partial service history</option><option>No service history</option><option>Not applicable</option></select></Field>
                 <Field label="Registration number"><input value={registrationNumber} onChange={(event) => setRegistrationNumber(event.target.value)} className={inputClass} required /></Field>
                 <Field label="VIN / chassis number"><input value={vin} onChange={(event) => setVin(event.target.value)} className={inputClass} required /></Field>
                 <Field label="Engine / serial number"><input value={engineNumber} onChange={(event) => setEngineNumber(event.target.value)} className={inputClass} /></Field>
-                <Field label="Axle configuration"><input value={axleConfiguration} onChange={(event) => setAxleConfiguration(event.target.value)} placeholder="4x2, tandem, tri-axle" className={inputClass} /></Field>
+                <Field label="Axle configuration">{vehicleCategory === "truck" && selectedModel
+                  ? <select value={axleConfiguration} onChange={(event) => setAxleConfiguration(event.target.value)} className={inputClass}><option value="">Choose actual axle configuration</option>{Array.from(new Set([...selectedModel.axleConfigurations, ...(axleConfiguration ? [axleConfiguration] : [])])).map((item) => <option key={item}>{item}</option>)}</select>
+                  : <input value={axleConfiguration} onChange={(event) => setAxleConfiguration(event.target.value)} placeholder="4x2, tandem, tri-axle" className={inputClass} />}</Field>
                 <Field label="GVM kg"><input type="number" min="0" value={gvmKg} onChange={(event) => setGvmKg(event.target.value)} className={inputClass} /></Field>
                 <Field label="Payload / capacity kg"><input type="number" min="0" value={payloadKg} onChange={(event) => setPayloadKg(event.target.value)} className={inputClass} /></Field>
                 <Field label="How is this unit available?"><select value={offerMode} onChange={(event) => setOfferMode(event.target.value as OfferMode)} className={inputClass}><option value="sale">For sale only</option><option value="rental">Rental only</option><option value="sale_or_rental">Sale or rental</option><option value="poa">POA — price on application</option></select></Field>
