@@ -11,7 +11,6 @@ import { useEffect, useMemo, useState } from "react";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import RequireAuthLink from "@/components/RequireAuthLink";
 import VehicleFullDetails from "@/components/VehicleFullDetails";
-import VehicleUsefulTools from "@/components/VehicleUsefulTools";
 import { advertisedSalePrice, fieldFromDescription } from "@/lib/vehicleMarketGuide";
 import { formatListingRate } from "@/lib/formatCurrency";
 import { jobVehicleRelevance } from "@/lib/vehiclePostingIntelligence";
@@ -226,7 +225,6 @@ export default function VehicleProductPage() {
                   </div>
                 ))}
               </div>
-              {photos.length > 1 ? <div className="flex items-center justify-center gap-1.5 border-t border-current/10 px-4 py-3">{photos.map((_, index) => <span key={index} className={`h-1.5 w-1.5 rounded-full ${index === 0 ? "bg-[#f6b800]" : darkMode ? "bg-white/25" : "bg-black/20"}`} />)}</div> : null}
 
               <div className="p-5 md:p-7">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -291,7 +289,6 @@ export default function VehicleProductPage() {
             <section className={`mt-5 rounded-[28px] border p-5 md:p-7 ${surface}`}>
               <VehicleFullDetails description={String(listing.description || "")} city={String(listing.city || "")} dealershipId={listing.dealership_id || null} darkMode={darkMode} />
             </section>
-            <VehicleUsefulTools darkMode={darkMode} />
             <VehicleContactActions listing={listing} whatsapp={whatsapp} mobile={true} darkMode={darkMode} />
           </>
         )}
