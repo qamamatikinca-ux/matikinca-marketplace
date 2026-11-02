@@ -110,7 +110,6 @@ export default function TruckFinanceCalculatorPage() {
       <div className={styles.container}>
         <header className={styles.heading}>
           <Link href="/tools" className={styles.back}>‹ All tools</Link>
-          <p className={styles.eyebrow}>LOADLINK · FINANCE</p>
           <h1>Truck finance calculator</h1>
           <p>Tell us your monthly budget. We’ll show your estimated buying power and suitable commercial vehicles listed on LoadLink.</p>
         </header>
@@ -182,7 +181,7 @@ export default function TruckFinanceCalculatorPage() {
         {selectedPrice > 0 ? (
           <section className={styles.selected} aria-label="Selected vehicle repayment">
             <div>
-              <p className={styles.eyebrow}>SELECTED VEHICLE</p>
+              <p className={styles.eyebrow}>Selected vehicle</p>
               <strong>{selected?.title || "Commercial vehicle"}</strong>
               <span>Advertised price: {money(selectedPrice)}</span>
             </div>
