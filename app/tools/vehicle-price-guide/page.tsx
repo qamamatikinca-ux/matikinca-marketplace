@@ -6,6 +6,8 @@ import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { comparableAskingPrices, formatZar, type VehicleMarketRow } from "@/lib/vehicleMarketGuide";
+import { truckCatalog } from "@/lib/truckCatalog";
+import { findCatalogBrand, findCatalogModel } from "@/lib/truckCatalogLookup";
 
 export default function CommercialVehiclePriceGuide() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
@@ -41,6 +43,9 @@ export default function CommercialVehiclePriceGuide() {
   const muted = darkMode ? "text-white/60" : "text-black/60";
   const surface = darkMode ? "border-white/10 bg-[#151615]" : "border-black/10 bg-white";
   const input = darkMode ? "border-white/15 bg-[#1b1d1a] text-white" : "border-black/10 bg-[#fafaf8] text-black";
+  const catalogBrand = useMemo(() => findCatalogBrand(make), [make]);
+  const catalogMatch = useMemo(() => findCatalogModel(make, model, /^\d{4}$/.test(year) ? Number(year) : undefined), [make, model, year]);
+  const availableModels = catalogBrand?.models || [];
   const yearValid = !year || (/^\d{4}$/.test(year) && Number(year) >= 1970 && Number(year) <= new Date().getFullYear() + 1);
 
   return (
@@ -50,16 +55,22 @@ export default function CommercialVehiclePriceGuide() {
         <Link href="/tools" className={"inline-flex min-h-10 items-center gap-1 text-xs font-semibold " + muted}><LoadLinkIcon name="chevronLeft" size={16} /> All tools</Link>
         <p className="mt-6 text-[11px] font-bold uppercase tracking-[.12em] text-[#c59400]">LoadLink useful tools</p>
         <h1 className="mt-2 text-[clamp(28px,6vw,42px)] font-bold leading-[1.12] tracking-[-.045em]">Commercial vehicle price guide</h1>
-        <p className={"mt-3 max-w-2xl text-sm leading-6 " + muted}>Compare advertised asking prices for similar trucks and commercial vehicles currently listed on LoadLink. This is not a certified valuation or an estimate of what a vehicle will sell for.</p>
+        <p className={"mt-3 max-w-2xl text-sm leading-6 " + muted}>Compare real advertised asking prices on LoadLink. Choose a model from our truck catalog or enter your own make and model.</p>
 
         <section className={"mt-7 rounded-2xl border p-5 sm:p-6 " + surface} aria-labelledby="compare-heading">
           <h2 id="compare-heading" className="text-lg font-bold">Find comparable listings</h2>
+          <datalist id="loadlink-truck-makes">
+            {truckCatalog.map((brand) => <option key={brand.name} value={brand.name} />)}
+          </datalist>
+          <datalist id="loadlink-truck-models">
+            {availableModels.map((item) => <option key={item.name} value={item.name} />)}
+          </datalist>
           <form className="mt-4 grid gap-3 sm:grid-cols-3" onSubmit={(event) => { event.preventDefault(); setSearched(true); }}>
             <label className="block text-xs font-semibold">Make
-              <input type="text" autoComplete="off" maxLength={80} value={make} onChange={(e)=>{setMake(e.target.value);setSearched(false);}} placeholder="e.g. Volvo" className={"mt-2 min-h-12 w-full rounded-xl border px-3 text-base outline-none focus:border-[#f6b800] " + input} required />
+              <input type="text" autoComplete="off" maxLength={80} value={make} onChange={(e)=>{setMake(e.target.value);setSearched(false);}} placeholder="e.g. Volvo" list="loadlink-truck-makes" className={"mt-2 min-h-12 w-full rounded-xl border px-3 text-base outline-none focus:border-[#f6b800] " + input} required />
             </label>
             <label className="block text-xs font-semibold">Model
-              <input type="text" autoComplete="off" maxLength={80} value={model} onChange={(e)=>{setModel(e.target.value);setSearched(false);}} placeholder="e.g. FH" className={"mt-2 min-h-12 w-full rounded-xl border px-3 text-base outline-none focus:border-[#f6b800] " + input} required />
+              <input type="text" autoComplete="off" maxLength={80} value={model} onChange={(e)=>{setModel(e.target.value);setSearched(false);}} placeholder="e.g. FH" list="loadlink-truck-models" className={"mt-2 min-h-12 w-full rounded-xl border px-3 text-base outline-none focus:border-[#f6b800] " + input} required />
             </label>
             <label className="block text-xs font-semibold">Year <span className={muted}>(optional ±2 years)</span>
               <input type="text" inputMode="numeric" maxLength={4} value={year} onChange={(e)=>{setYear(e.target.value.replace(/\D/g,""));setSearched(false);}} placeholder="e.g. 2022" className={"mt-2 min-h-12 w-full rounded-xl border px-3 text-base outline-none focus:border-[#f6b800] " + input} />
@@ -72,6 +83,24 @@ export default function CommercialVehiclePriceGuide() {
             </div>
           </form>
         </section>
+
+        {catalogMatch ? (
+          <section className={"mt-4 rounded-2xl border p-5 sm:p-6 " + surface} aria-label="Truck model specifications reference">
+            <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-[#d2a000]">LoadLink truck catalog</p>
+            <h2 className="mt-1.5 text-base font-bold">{catalogMatch.brand.name} {catalogMatch.model.name}</h2>
+            <p className={"mt-1 text-xs leading-5 " + muted}>Model-family information; specifications vary by year, market and exact vehicle configuration.</p>
+            <dl className="mt-4 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-current/10 pt-4">
+              <div><dt className={"text-[11px] " + muted}>Model years in catalog</dt><dd className="mt-1 text-sm font-semibold">{catalogMatch.model.from}–{catalogMatch.model.to}</dd></div>
+              <div><dt className={"text-[11px] " + muted}>Fuel options</dt><dd className="mt-1 text-sm font-semibold">{catalogMatch.model.fuels.join(", ")}</dd></div>
+              <div><dt className={"text-[11px] " + muted}>Gearbox options</dt><dd className="mt-1 text-sm font-semibold">{catalogMatch.model.transmissions.join(", ")}</dd></div>
+              <div><dt className={"text-[11px] " + muted}>Axle configurations</dt><dd className="mt-1 text-sm font-semibold">{catalogMatch.model.axleConfigurations.join(", ")}</dd></div>
+              <div className="col-span-2"><dt className={"text-[11px] " + muted}>Typical applications</dt><dd className="mt-1 text-sm font-semibold">{catalogMatch.model.applications.slice(0, 6).join(", ")}</dd></div>
+            </dl>
+            <p className={"mt-4 text-xs leading-5 " + muted}>These are possible configurations, not verified specifications of a particular listing. Confirm the exact truck's specification plate and documents before purchase.</p>
+          </section>
+        ) : make.trim() && model.trim() && catalogBrand ? (
+          <p className={"mt-3 text-xs leading-5 " + muted}>That model/year combination is not confirmed in the truck catalog. You can still compare current advertised listings.</p>
+        ) : null}
 
         {loading ? <p role="status" className={"mt-6 text-sm " + muted}>Checking current LoadLink listings…</p> : error ? (
           <p role="alert" className="mt-5 rounded-xl border border-red-500/30 p-4 text-sm">{error}</p>

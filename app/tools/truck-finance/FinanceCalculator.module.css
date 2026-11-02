@@ -1,0 +1,157 @@
+.page {
+  --finance-bg: #f8f7f3;
+  --finance-surface: #fff;
+  --finance-text: #151819;
+  --finance-muted: #596168;
+  --finance-border: #dfe2e4;
+  --finance-field: #fff;
+  --finance-gold: #f6b800;
+  background: var(--finance-bg);
+  color: var(--finance-text);
+  min-height: 100vh;
+}
+.page[data-theme="dark"] {
+  --finance-bg: #080909;
+  --finance-surface: #131514;
+  --finance-text: #f6f7f5;
+  --finance-muted: #acb0ad;
+  --finance-border: #383c38;
+  --finance-field: #191c1a;
+}
+.container { max-width: 760px; margin: 0 auto; padding: 30px 17px 90px; }
+.heading h1 {
+  margin: 8px 0 9px; font-size: clamp(28px, 6vw, 39px);
+  font-weight: 750; letter-spacing: -.043em; line-height: 1.17;
+}
+.heading > p:last-child { margin: 0; max-width: 640px; font-size: 14px; line-height: 1.65; color: var(--finance-muted); }
+.eyebrow { margin: 0; font-size: 10px; font-weight: 760; letter-spacing: .105em; color: #bc8e00; }
+.back {
+  display: inline-flex; align-items: center; min-height: 35px;
+  margin: 0 0 19px; padding: 4px 0;
+  color: var(--finance-muted); font-size: 12px; font-weight: 650; text-decoration: none;
+}
+.calculator { margin: 23px 0 0; }
+.visual {
+  display: flex; justify-content: center; align-items: flex-end;
+  height: clamp(140px, 39vw, 252px);
+  overflow: hidden;
+  background: transparent;
+}
+.truckImage {
+  display: block !important; width: auto !important; height: 100% !important;
+  max-width: 94% !important; object-fit: contain !important; object-position: center bottom !important;
+}
+.estimate { display: flex; flex-direction: column; align-items: center; margin: 13px 0 24px; text-align: center; }
+.estimate strong { font-size: clamp(35px, 8vw, 52px); font-weight: 780; letter-spacing: -.055em; line-height: 1.17; }
+.estimate span { display: block; margin-top: 4px; font-size: 15px; font-weight: 620; }
+.estimate small { display: block; margin-top: 7px; color: var(--finance-muted); font-size: 12px; font-weight: 470; line-height: 1.5; }
+.form {
+  padding: 0 !important; background: transparent !important;
+  box-shadow: none !important; border: none !important;
+}
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 11px; }
+.fullWidth { grid-column: 1 / -1; }
+.field {
+  display: flex; flex-direction: column; justify-content: center; gap: 7px;
+  min-width: 0; min-height: 79px;
+  border: 1px solid var(--finance-border); border-radius: 11px;
+  padding: 12px 14px;
+  background: var(--finance-field);
+  color: var(--finance-text);
+  transition: border-color .15s ease;
+}
+.field:focus-within { border-color: #f6b800; outline: 1px solid #f6b800; }
+.fieldLabel { display: block; font-size: 12px; line-height: 1.25; color: var(--finance-muted); font-weight: 540; }
+.fieldValue { display: flex; flex-direction: row; align-items: baseline; gap: 4px; min-width: 0; color: var(--finance-text); }
+.fieldValue input, .fieldValue select {
+  display: block !important; appearance: none !important;
+  width: 100% !important; min-width: 0 !important; max-width: 100% !important;
+  min-height: 29px !important; height: auto !important;
+  padding: 0 !important; margin: 0 !important;
+  color: var(--finance-text) !important; -webkit-text-fill-color: var(--finance-text) !important;
+  background: transparent !important; border: none !important;
+  border-radius: 0 !important; outline: none !important;
+  font-size: 17px !important; font-weight: 680 !important; letter-spacing: -.025em;
+  box-shadow: none !important; text-transform: none !important;
+  font-variant-numeric: tabular-nums;
+}
+.fieldValue select { padding-right: 16px !important; cursor: pointer; }
+.fieldValue select option { background: var(--finance-surface); color: var(--finance-text); }
+.unit { font-size: 17px; line-height: 1.4; font-weight: 680; white-space: nowrap; }
+.advanced { margin: 12px 0 0; border-top: 1px solid var(--finance-border); }
+.advanced > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 9px;
+  min-height: 48px; padding: 8px 2px; cursor: pointer; list-style: none;
+  font-size: 12px; font-weight: 660; color: var(--finance-text);
+}
+.advanced > summary::-webkit-details-marker { display: none; }
+.advanced > summary span { color: var(--finance-muted); font-size: 11px; font-weight: 450; }
+.advanced > .fields { margin: 2px 0 12px; }
+.advanced > p { margin: 0 0 12px; font-size: 11px; line-height: 1.6; color: var(--finance-muted); }
+.primary {
+  display: flex !important; align-items: center !important; justify-content: center !important;
+  width: 100% !important; min-height: 49px !important; margin: 15px 0 0 !important;
+  padding: 12px 17px !important;
+  background: #f6b800 !important; color: #151515 !important; border: 1px solid #efb000 !important;
+  border-radius: 11px !important; font-size: 14px !important; font-weight: 760 !important;
+  box-shadow: none !important; cursor: pointer;
+}
+.primary:active { transform: scale(.995); }
+.disclaimer { margin: 13px 3px 0; color: var(--finance-muted); font-size: 11px; line-height: 1.65; }
+.matches { padding-top: 29px; scroll-margin-top: 110px; }
+.matchHeading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.matchHeading h2 { margin: 0; font-size: 19px; font-weight: 720; letter-spacing: -.025em; }
+.matchHeading a { color: var(--finance-text); font-size: 12px; font-weight: 600; text-underline-offset: 4px; }
+.matchGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-top: 16px; }
+.matchCard {
+  display: flex; min-width: 0; flex-direction: column;
+  overflow: hidden; border-radius: 12px;
+  border: 1px solid var(--finance-border); background: var(--finance-surface);
+  color: var(--finance-text); text-decoration: none;
+}
+.matchImage { display: grid; place-items: center; aspect-ratio: 16/10; overflow: hidden; background: var(--finance-field); color: var(--finance-muted); font-size: 11px; }
+.listingImage { display: block !important; width: 100% !important; height: 100% !important; object-fit: cover !important; }
+.matchInfo { display: flex; flex-direction: column; gap: 4px; padding: 12px 13px 14px; }
+.matchInfo > span { color: var(--finance-muted); font-size: 11px; }
+.matchInfo > strong { line-height: 1.4; font-size: 13px; font-weight: 680; }
+.matchInfo > b { margin-top: 5px; font-size: 15px; font-weight: 740; }
+.matchInfo > small { color: var(--finance-muted); font-size: 11px; }
+.empty {
+  margin: 15px 0 0; padding: 19px 16px;
+  border: 1px solid var(--finance-border); border-radius: 11px;
+  color: var(--finance-muted); background: var(--finance-surface);
+  font-size: 12px; line-height: 1.6;
+}
+.selected {
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px;
+  margin-top: 21px; padding: 17px 18px; border: 1px solid var(--finance-border); border-radius: 12px;
+  background: var(--finance-surface);
+}
+.selected > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.selected strong { display: block; font-size: 13px; line-height: 1.4; }
+.selected span { color: var(--finance-muted); font-size: 11px; }
+.selected a { font-size: 12px; color: var(--finance-text); text-underline-offset: 4px; }
+.page :is(a,button):focus-visible { outline: 2px solid #f6b800; outline-offset: 3px; }
+@media(max-width:540px) {
+  .container { padding: 22px 16px 75px; }
+  .visual { height: clamp(138px, 41vw, 192px); }
+  .fields { gap: 9px; }
+  .field { padding: 10px 11px; min-height: 75px; }
+  .fieldLabel { font-size: 11px; }
+  .fieldValue input,.fieldValue select,.unit { font-size: 16px !important; }
+  .matchGrid { grid-template-columns: 1fr; }
+  .matchCard { flex-direction: row; }
+  .matchImage { width: 40%; min-height: 125px; aspect-ratio: auto; flex: 0 0 40%; }
+  .matchInfo { justify-content: center; min-width: 0; flex: 1; }
+}
+@media(prefers-reduced-motion: reduce) { .field, .primary { transition: none; } }
+
+/* Undo legacy site-wide field blur and iOS input rectangles just on this calculator. */
+:global(html) :global(body[data-loadlink-path="/tools/truck-finance"]) .fieldValue input,
+:global(html) :global(body[data-loadlink-path="/tools/truck-finance"]) .fieldValue select {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-appearance: none !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}

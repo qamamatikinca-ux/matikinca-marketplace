@@ -7,6 +7,7 @@ import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import LoadLinkSiteFooter20260822 from "@/components/LoadLinkSiteFooter20260822";
 import LoadLinkHomepagePortalGrid20260822 from "@/components/LoadLinkHomepagePortalGrid20260822";
+import GoogleOneTap from "@/components/GoogleOneTap";
 import Link from "next/link";
 import { lazy, Suspense } from "react";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
@@ -30,6 +31,7 @@ function HomeExperience() {
   return (
     <main className={`min-h-screen transition-colors duration-300 ${darkMode ? "bg-black text-white" : "bg-[#fff6dc] text-black"}`}>
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
+      <GoogleOneTap />
 
       <LoadLinkBoundary name="marketplace search">
         <Suspense fallback={null}>
@@ -51,6 +53,22 @@ function HomeExperience() {
             <LogisticsNews darkMode={darkMode} />
           </Suspense>
         </LoadLinkBoundary>
+      </section>
+
+      <section
+        aria-labelledby="loadlink-our-mission"
+        className={`border-t px-5 py-14 md:px-12 md:py-20 ${darkMode ? "border-white/10 bg-[#0c0d0c] text-white" : "border-black/10 bg-[#f7f6f1] text-[#151515]"}`}
+      >
+        <div className="mx-auto max-w-4xl">
+          <p className="text-[11px] font-bold uppercase tracking-[.13em] text-[#c99700]">Our mission</p>
+          <h2 id="loadlink-our-mission" className="mt-3 max-w-3xl text-[clamp(29px,6vw,44px)] font-bold leading-[1.15] tracking-[-.04em]">
+            Building a smarter way to connect logistics opportunities.
+          </h2>
+          <p className={`mt-5 max-w-3xl text-sm leading-7 md:text-base ${darkMode ? "text-white/65" : "text-black/65"}`}>
+            LoadLink brings verified logistics opportunities, commercial vehicles, professional drivers and direct business communication into one South African marketplace. Find the right work, equipment and industry partners without unnecessary friction.
+          </p>
+          <p className={`mt-5 text-xs font-semibold ${darkMode ? "text-[#f6b800]" : "text-[#8a6700]"}`}>Logistics Made Easier.</p>
+        </div>
       </section>
 
       <LoadLinkSiteFooter20260822 darkMode={darkMode} />
