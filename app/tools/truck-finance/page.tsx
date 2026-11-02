@@ -114,14 +114,14 @@ export default function TruckFinanceCalculatorPage() {
         <header className="mb-6">
           <p className="text-[11px] font-semibold uppercase tracking-[.1em] text-[#d8a100]">Finance tools</p>
           <h1 className="mt-2 text-[clamp(28px,6vw,39px)] font-bold leading-[1.15] tracking-[-.035em]">Truck finance calculator</h1>
-          <p className={${muted} + " mt-2 text-sm leading-6"}>Estimate your budget before buying a commercial vehicle.</p>
+          <p className={muted + " mt-2 text-sm leading-6"}>Estimate your budget before buying a commercial vehicle.</p>
         </header>
 
-        <section className={${card} + " overflow-hidden rounded-2xl border"} aria-label="Finance estimate">
+        <section className={card + " overflow-hidden rounded-2xl border"} aria-label="Finance estimate">
           <div className="border-b border-current/10 px-5 py-5 sm:px-6">
-            <p className={${muted} + " text-xs font-medium"}>Estimated buying power</p>
+            <p className={muted + " text-xs font-medium"}>Estimated buying power</p>
             <p className="mt-1 break-words text-[clamp(30px,7vw,42px)] font-bold leading-tight tracking-[-.035em]" aria-live="polite">{rand(buyingPower)}</p>
-            <p className={${muted} + " mt-2 text-xs leading-5"}>
+            <p className={muted + " mt-2 text-xs leading-5"}>
               Based on {rand(monthly)} per month over {term} months at {annualRate}% interest.
             </p>
           </div>
@@ -151,10 +151,10 @@ export default function TruckFinanceCalculatorPage() {
               </FinanceField>
             </div>
 
-            <details className={${darkMode ? "border-[#3b3e39]" : "border-[#e2e4de]"} + " group mt-4 overflow-hidden rounded-xl border"}>
+            <details className={(darkMode ? "border-[#3b3e39]" : "border-[#e2e4de]") + " group mt-4 overflow-hidden rounded-xl border"}>
               <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 text-xs font-semibold marker:hidden">
                 <span>More options</span>
-                <span className={${muted} + " text-[11px] font-medium"}>Trade-in, balloon and fees</span>
+                <span className={muted + " text-[11px] font-medium"}>Trade-in, balloon and fees</span>
               </summary>
               <div className="grid grid-cols-2 gap-3 border-t border-current/10 p-3 sm:p-4">
                 <FinanceField label="Trade-in" fieldClass={field}>
@@ -172,7 +172,7 @@ export default function TruckFinanceCalculatorPage() {
             </details>
 
             {balloonRatio > 0 ? (
-              <p className={${muted} + " mt-3 text-xs leading-5"}>
+              <p className={muted + " mt-3 text-xs leading-5"}>
                 A balloon of up to 40% leaves a final amount due at the end of the loan.
               </p>
             ) : null}
@@ -182,17 +182,17 @@ export default function TruckFinanceCalculatorPage() {
                 Find vehicles in your budget
               </a>
             </div>
-            <p className={${muted} + " mt-3 text-xs leading-5"}>
+            <p className={muted + " mt-3 text-xs leading-5"}>
               Estimates only, not a finance offer or approval. Final repayments depend on a lender's terms.
             </p>
           </div>
         </section>
 
         {selectedPrice > 0 ? (
-          <section className={${card} + " mt-4 rounded-2xl border p-5 sm:p-6"} aria-label="Selected vehicle finance estimate">
-            <p className={${muted} + " text-xs font-medium"}>Selected LoadLink vehicle</p>
+          <section className={card + " mt-4 rounded-2xl border p-5 sm:p-6"} aria-label="Selected vehicle finance estimate">
+            <p className={muted + " text-xs font-medium"}>Selected LoadLink vehicle</p>
             <h2 className="mt-1 text-base font-bold">{selectedRow?.title || "Commercial vehicle"}</h2>
-            <p className="mt-2 text-2xl font-bold">{rand(selectedMonthly)} <span className={${muted} + " text-xs font-medium"}>/ month estimated</span></p>
+            <p className="mt-2 text-2xl font-bold">{rand(selectedMonthly)} <span className={muted + " text-xs font-medium"}>/ month estimated</span></p>
             <div className="mt-3 flex flex-wrap items-center gap-4 text-xs">
               <span className={muted}>Asking price: {rand(selectedPrice)}</span>
               <Link href={"/vehicles/" + encodeURIComponent(selectedId)} className="font-semibold underline underline-offset-4">View vehicle</Link>
@@ -205,32 +205,32 @@ export default function TruckFinanceCalculatorPage() {
             <h2 className="text-xl font-bold tracking-[-.025em] sm:text-2xl">Vehicles in your budget</h2>
             <Link href="/list-your-vehicle#vehicle-marketplace-vehicles" className="text-xs font-semibold underline underline-offset-4">Browse all vehicles</Link>
           </div>
-          <p className={${muted} + " mt-2 text-xs leading-5"}>
+          <p className={muted + " mt-2 text-xs leading-5"}>
             Based on current advertised prices, not pre-approved finance.
           </p>
 
           {loading ? (
             <div className="mt-4 grid gap-3 sm:grid-cols-2" role="status" aria-label="Loading vehicles">
-              {[0, 1].map((item) => <div key={item} className={${card} + " h-52 animate-pulse rounded-xl border"} />)}
+              {[0, 1].map((item) => <div key={item} className={card + " h-52 animate-pulse rounded-xl border"} />)}
             </div>
           ) : monthly <= 0 ? (
             <EmptyState darkMode={darkMode} title="Set a monthly budget" text="Enter an amount above to see matching vehicles." />
           ) : matches.length ? (
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {matches.map((row) => (
-                <Link key={row.id} href={"/vehicles/" + encodeURIComponent(row.id)} className={${card} + " flex min-w-0 overflow-hidden rounded-xl border no-underline"}>
+                <Link key={row.id} href={"/vehicles/" + encodeURIComponent(row.id)} className={card + " flex min-w-0 overflow-hidden rounded-xl border no-underline"}>
                   <div className="h-28 w-28 shrink-0 overflow-hidden bg-black/10 sm:h-32 sm:w-32">
                     {row.photos?.[0] ? (
                       <LoadLinkImage src={row.photos[0]} alt={row.title || "Commercial vehicle"} className="h-full w-full object-cover" />
                     ) : (
-                      <div className={${muted} + " flex h-full items-center justify-center px-2 text-center text-[11px]"}>Photo unavailable</div>
+                      <div className={muted + " flex h-full items-center justify-center px-2 text-center text-[11px]"}>Photo unavailable</div>
                     )}
                   </div>
                   <div className="min-w-0 flex-1 p-3 sm:p-4">
-                    <p className={${muted} + " truncate text-[11px]"}>{row.city || "South Africa"}</p>
+                    <p className={muted + " truncate text-[11px]"}>{row.city || "South Africa"}</p>
                     <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-5">{row.title || "Commercial vehicle"}</h3>
                     <p className="mt-2 text-base font-bold">{rand(row.price)}</p>
-                    <p className={${muted} + " mt-1 text-[11px]"}>{rand(row.monthly)} / month estimated</p>
+                    <p className={muted + " mt-1 text-[11px]"}>{rand(row.monthly)} / month estimated</p>
                   </div>
                 </Link>
               ))}
@@ -263,8 +263,8 @@ function NumberInput({ value, onChange, suffix }: { value: string; onChange: (va
   </div>;
 }
 function EmptyState({ darkMode, title, text }: { darkMode: boolean; title: string; text: string }) {
-  return <div className={${darkMode ? "border-white/12 bg-[#141614] text-white" : "border-black/10 bg-white text-black"} + " mt-4 rounded-xl border px-5 py-7"}>
+  return <div className={(darkMode ? "border-white/12 bg-[#141614] text-white" : "border-black/10 bg-white text-black") + " mt-4 rounded-xl border px-5 py-7"}>
     <h3 className="text-sm font-semibold">{title}</h3>
-    <p className={${darkMode ? "text-white/55" : "text-black/55"} + " mt-1 text-xs leading-5"}>{text}</p>
+    <p className={(darkMode ? "text-white/55" : "text-black/55") + " mt-1 text-xs leading-5"}>{text}</p>
   </div>;
 }
