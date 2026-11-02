@@ -53,8 +53,7 @@ export default function CommercialVehiclePriceGuide() {
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
       <div className="mx-auto max-w-4xl px-4 pb-20 pt-8 sm:px-6">
         <Link href="/tools" className={"inline-flex min-h-10 items-center gap-1 text-xs font-semibold " + muted}><LoadLinkIcon name="chevronLeft" size={16} /> All tools</Link>
-        <p className="mt-6 text-[11px] font-bold uppercase tracking-[.12em] text-[#c59400]">LoadLink useful tools</p>
-        <h1 className="mt-2 text-[clamp(28px,6vw,42px)] font-bold leading-[1.12] tracking-[-.045em]">Commercial vehicle price guide</h1>
+        <h1 className="mt-5 text-[clamp(28px,6vw,42px)] font-bold leading-[1.12] tracking-[-.045em]">Commercial vehicle price guide</h1>
         <p className={"mt-3 max-w-2xl text-sm leading-6 " + muted}>Compare real advertised asking prices on LoadLink. Choose a model from our truck catalog or enter your own make and model.</p>
 
         <section className={"mt-7 rounded-2xl border p-5 sm:p-6 " + surface} aria-labelledby="compare-heading">
@@ -86,7 +85,7 @@ export default function CommercialVehiclePriceGuide() {
 
         {catalogMatch ? (
           <section className={"mt-4 rounded-2xl border p-5 sm:p-6 " + surface} aria-label="Truck model specifications reference">
-            <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-[#d2a000]">LoadLink truck catalog</p>
+            <p className={"text-[11px] font-semibold " + muted}>Model reference</p>
             <h2 className="mt-1.5 text-base font-bold">{catalogMatch.brand.name} {catalogMatch.model.name}</h2>
             <p className={"mt-1 text-xs leading-5 " + muted}>Model-family information; specifications vary by year, market and exact vehicle configuration.</p>
             <dl className="mt-4 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-current/10 pt-4">
