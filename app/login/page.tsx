@@ -9,6 +9,7 @@ import { clearActiveAccountState, syncAccountState } from "@/lib/accountState";
 import { isAuthenticatedUser, safeNextPath } from "@/lib/auth";
 import { destinationAfterMfa, friendlyAuthError } from "@/lib/authSecurity";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+import { beginLoadLinkGoogleSignIn } from "@/lib/googleSignIn";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 export default function LoginPage() {
@@ -77,12 +78,11 @@ export default function LoginPage() {
     setMessage("");
     if (!isSupabaseConfigured) { setMessage("Secure sign-in is temporarily unavailable."); return; }
     setBusy(true);
-    const next = getNextPath();
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
-    if (error) {
+    try {
+      await beginLoadLinkGoogleSignIn(getNextPath());
+    } catch {
       setBusy(false);
-      setMessage("Google sign-in could not start. Try again.");
+      setMessage("Google sign-in could not start. You can sign in with email, or retry Google.");
     }
   }
 
