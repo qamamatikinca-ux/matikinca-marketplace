@@ -104,21 +104,28 @@ export default function TruckFinanceCalculatorPage() {
   const page = darkMode ? "bg-[#080908] text-[#f7f7f5]" : "bg-[#f7f6f2] text-[#171817]";
   const card = darkMode ? "border-[#363a35] bg-[#141614]" : "border-[#e0e2dc] bg-white";
   const muted = darkMode ? "text-[#a9ada8]" : "text-[#626761]";
-  const field = darkMode ? "border-[#3b3e39] bg-[#1c1e1b] text-white" : "border-[#e2e4de] bg-[#fafaf8] text-[#151615]";
+  const field = darkMode
+    ? "border-[#414540] bg-[#1f211f] text-[#fafbf7] [&_input]:text-[#fafbf7] [&_select]:text-[#fafbf7]"
+    : "border-[#dcdfd7] bg-[#fbfbf9] text-[#191c18] [&_input]:text-[#191c18] [&_select]:text-[#191c18]";
 
   return (
     <main className={page + " min-h-screen"} data-loadlink-finance="20261102-minimal">
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <div className="mx-auto max-w-4xl px-4 pb-24 pt-7 sm:px-6 sm:pt-10">
-        <header className="mb-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[.1em] text-[#d8a100]">Finance tools</p>
-          <h1 className="mt-2 text-[clamp(28px,6vw,39px)] font-bold leading-[1.15] tracking-[-.035em]">Truck finance calculator</h1>
-          <p className={muted + " mt-2 text-sm leading-6"}>Estimate your budget before buying a commercial vehicle.</p>
+        <header className="mb-6 grid grid-cols-[minmax(0,1fr)_110px] items-center gap-3 sm:grid-cols-[minmax(0,1fr)_190px] sm:gap-8">
+          <div className="min-w-0">
+            <p className={`text-[11px] font-bold uppercase tracking-[.11em] ${darkMode ? "text-[#f6b800]" : "text-[#906800]"}`}>Vehicle finance</p>
+            <h1 className="mt-2 text-[clamp(26px,5vw,39px)] font-bold leading-[1.15] tracking-[-.035em]">Truck finance calculator</h1>
+            <p className={muted + " mt-2 text-sm leading-6"}>Explore a realistic budget before you shop.</p>
+          </div>
+          <div className={`relative flex h-[104px] items-center justify-center overflow-hidden rounded-xl sm:h-[148px] ${darkMode ? "bg-[#151715]" : "bg-[#eeeee9]"}`}>
+            <LoadLinkImage src="/images/loadlink-finance-truck.webp" alt="Commercial truck" className="h-full w-full object-contain p-2" />
+          </div>
         </header>
 
         <section className={card + " overflow-hidden rounded-2xl border"} aria-label="Finance estimate">
-          <div className="border-b border-current/10 px-5 py-5 sm:px-6">
+          <div className="border-b border-current/10 px-4 py-5 sm:px-6">
             <p className={muted + " text-xs font-medium"}>Estimated buying power</p>
             <p className="mt-1 break-words text-[clamp(30px,7vw,42px)] font-bold leading-tight tracking-[-.035em]" aria-live="polite">{rand(buyingPower)}</p>
             <p className={muted + " mt-2 text-xs leading-5"}>
@@ -126,9 +133,10 @@ export default function TruckFinanceCalculatorPage() {
             </p>
           </div>
 
-          <div className="px-5 py-5 sm:px-6">
+          <div className="px-4 py-5 sm:px-6">
             <h2 className="text-base font-bold">Your figures</h2>
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            <p className={muted + " mt-1 text-xs leading-5"}>Change any number to recalculate instantly.</p>
+            <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3">
               <FinanceField label="Monthly budget" fieldClass={field}>
                 <MoneyInput value={monthlyBudget} onChange={setMonthlyBudget} />
               </FinanceField>
@@ -245,7 +253,7 @@ export default function TruckFinanceCalculatorPage() {
 }
 
 function FinanceField({ label, fieldClass, children }: { label: string; fieldClass: string; children: React.ReactNode }) {
-  return <label className={fieldClass + " block min-w-0 rounded-xl border px-3 py-2.5"}>
+  return <label className={fieldClass + " block min-w-0 rounded-[12px] border px-3 py-2.5 focus-within:border-[#f6b800]"}>
     <span className="block text-[11px] font-medium opacity-70">{label}</span>
     {children}
   </label>;
@@ -253,12 +261,12 @@ function FinanceField({ label, fieldClass, children }: { label: string; fieldCla
 function MoneyInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   return <div className="mt-1 flex min-w-0 items-center gap-1 text-base font-semibold">
     <span>R</span>
-    <input inputMode="decimal" value={value} onFocus={(event) => event.currentTarget.select()} onChange={(event) => onChange(event.target.value)} placeholder="0" className="w-full min-w-0 bg-transparent py-1 text-base font-semibold outline-none" />
+    <input type="text" inputMode="decimal" autoComplete="off" value={value} onFocus={(event) => event.currentTarget.select()} onChange={(event) => onChange(event.target.value)} placeholder="0" className="w-full min-w-0 bg-transparent py-1 text-base font-semibold text-inherit outline-none" />
   </div>;
 }
 function NumberInput({ value, onChange, suffix }: { value: string; onChange: (value: string) => void; suffix: string }) {
   return <div className="mt-1 flex min-w-0 items-center gap-1 text-base font-semibold">
-    <input inputMode="decimal" value={value} onFocus={(event) => event.currentTarget.select()} onChange={(event) => onChange(event.target.value)} className="w-full min-w-0 bg-transparent py-1 text-base font-semibold outline-none" />
+    <input type="text" inputMode="decimal" autoComplete="off" value={value} onFocus={(event) => event.currentTarget.select()} onChange={(event) => onChange(event.target.value)} className="w-full min-w-0 bg-transparent py-1 text-base font-semibold text-inherit outline-none" />
     <span>{suffix}</span>
   </div>;
 }
