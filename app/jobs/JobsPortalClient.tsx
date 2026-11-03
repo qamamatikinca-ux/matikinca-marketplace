@@ -648,13 +648,13 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
       : { title: "Find paid logistics work", description: "For truck owners, drivers, mobile kitchens, mobile fridges, farming vehicles and mining transport operators looking for real posted jobs.", searchButton: "Search jobs", listLabel: "Post job", listHref: "/jobs/list", results: "Available jobs" };
 
   return (
-    <main data-loadlink-jobs-page="true" className={`min-h-screen scroll-smooth ${darkMode ? "bg-black text-white" : "bg-[#fff7df] text-black"}`}>
+    <main data-loadlink-jobs-page="true" className={`min-h-screen scroll-smooth ${darkMode ? "bg-black text-white" : "bg-[#f8f8f7] text-black"}`}>
       {isSearching ? <LoadLinkLoading /> : null}
       <Header darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
 
       <section className="relative min-h-[82vh] overflow-hidden border-b border-[#f6b800]/40">
         <LoadLinkImage src="/images/jobs/jobs-hero-fleet.jpg" alt="Truck fleet ready for logistics work" loading="eager" fetchPriority="high" sizes="100vw" className="absolute inset-0 h-full w-full object-cover grayscale" />
-        <div className={`absolute inset-0 ${darkMode ? "bg-gradient-to-b from-black/15 via-black/45 to-black" : "bg-gradient-to-b from-black/5 via-black/35 to-[#fff7df]"}`} />
+        <div className={`absolute inset-0 ${darkMode ? "bg-gradient-to-b from-black/15 via-black/45 to-black" : "bg-gradient-to-b from-black/5 via-black/35 to-[#f8f8f7]"}`} />
 
         <div className="relative mx-auto flex min-h-[82vh] max-w-5xl flex-col justify-end px-5 pb-8 pt-20">
           <div className="max-w-4xl text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">
@@ -790,7 +790,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
 
 function FeaturedJobsRail({ jobs, darkMode, onOpen }: { jobs: JobListing[]; darkMode: boolean; onOpen: (job: JobListing) => void }) {
   return (
-    <section data-loadlink-promoted-rail="true" className={`border-b px-5 py-8 md:px-12 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-[#fff7df] text-black"}`}>
+    <section data-loadlink-promoted-rail="true" className={`border-b px-5 py-8 md:px-12 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-[#f8f8f7] text-black"}`}>
       <div className="mx-auto max-w-5xl">
         <h2 className="text-3xl font-black tracking-[-.04em]">Promoted listings</h2>
         <div data-loadlink-swipe-dots="true" className="no-scrollbar mt-5 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3">
@@ -845,7 +845,7 @@ function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onRe
 
         <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">{job.vehicleNeeded?<span className="rounded-full bg-[#eef2ff] px-3 py-2 text-black">{job.vehicleNeeded}</span>:null}<span className="rounded-full bg-[#eef2ff] px-3 py-2 text-black">{job.city}</span>{isOwner && isPro ? <span className="rounded-full bg-black px-3 py-2 text-white">{job.viewCount||0} views</span> : null}</div>
 
-        {isOwner && (job.viewCount || 0) > 0 ? <div className={`mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3 ${darkMode?"border-[#f6b800]/25 bg-[#f6b800]/[.07]":"border-[#d7b65c]/40 bg-[#fffbef]"}`}><div className="min-w-0"><p className={`text-[10px] font-black uppercase tracking-[.08em] ${darkMode?"text-[#f6b800]":"text-[#856500]"}`}>Listing activity</p><p className={`mt-1 text-xs font-semibold ${darkMode?"text-white/70":"text-black/60"}`}>{job.viewCount} views on this listing</p></div><button type="button" onClick={onOpenAnalytics} className={`min-h-10 shrink-0 rounded-xl border px-4 text-[11px] font-black ${darkMode?"border-[#f6b800]/45 bg-[#f6b800]/10 text-[#f6b800]":"border-[#d7b65c]/65 bg-white text-[#674e00]"}`}>{isPro?"View analytics":"Pro analytics"}</button></div>:null}
+        {isOwner && (job.viewCount || 0) > 0 ? <div className={`mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3 ${darkMode?"border-[#f6b800]/25 bg-[#f6b800]/[.07]":"border-[#d7b65c]/40 bg-white"}`}><div className="min-w-0"><p className={`text-[10px] font-black uppercase tracking-[.08em] ${darkMode?"text-[#f6b800]":"text-[#856500]"}`}>Listing activity</p><p className={`mt-1 text-xs font-semibold ${darkMode?"text-white/70":"text-black/60"}`}>{job.viewCount} views on this listing</p></div><button type="button" onClick={onOpenAnalytics} className={`min-h-10 shrink-0 rounded-xl border px-4 text-[11px] font-black ${darkMode?"border-[#f6b800]/45 bg-[#f6b800]/10 text-[#f6b800]":"border-[#d7b65c]/65 bg-white text-[#674e00]"}`}>{isPro?"View analytics":"Pro analytics"}</button></div>:null}
 
         <details className={`mt-5 border ${darkMode?"border-white/10":"border-black/10"}`}>
           <summary className="cursor-pointer list-none px-4 py-4 text-sm font-black uppercase tracking-wide">View full details</summary>
