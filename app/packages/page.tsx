@@ -61,7 +61,7 @@ const planDetails = {
 function titleCasePlan(plan?: string | null) {
   if (plan === "dealer") return "Dealer";
   if (plan === "pro") return "Pro";
-  if (plan === "manual") return "Standard";
+  if (plan === "manual" || plan === "standard") return "Standard";
   return "plan";
 }
 
