@@ -70,15 +70,15 @@ function equipmentAliases(query: string): string[] {
   if (/\b(mobile kitchens?|food trucks?|catering trailers?|kitchen trailers?|mobile catering)\b/.test(clean)) {
     return ["mobile kitchen", "mobile kitchens", "food truck", "food trucks", "catering trailer", "kitchen trailer", "mobile catering"];
   }
-  if (/\b(mobile fridges?|cold rooms?|refrigerated units?|reefer units?)\b/.test(clean)) {
+  if (/\b(mobile fridges?|cold rooms?|refrigerated units?|reefer units?|cold chain|refrigerated trailers?)\b/.test(clean)) {
     return ["mobile fridge", "mobile fridges", "cold room", "refrigerated unit", "reefer unit", "refrigeration"];
   }
-  if (/\b(side tippers?|tipper trucks?)\b/.test(clean)) return ["side tipper", "side tippers", "tipper", "tipper truck"];
+  if (/\b(side tippers?|tipper trucks?|bulk tippers?)\b/.test(clean)) return ["side tipper", "side tippers", "tipper", "tipper truck", "bulk tipper"];
   if (/\b(tautliners?|curtainsiders?)\b/.test(clean)) return ["tautliner", "curtainsider", "curtain side"];
   if (/\b(trailers?)\b/.test(clean)) return ["trailer", "flat deck", "lowbed", "superlink", "tautliner"];
   if (/\b(bakkies?|vans?)\b/.test(clean)) return ["bakkie", "van", "panel van", "pickup"];
   if (/\b(trucks?|lorries|lorry|tractor units?)\b/.test(clean)) return ["truck", "lorry", "tractor unit", "horse", "tipper", "scania", "volvo", "actros", "isuzu", "hino", "man tgs", "man tgx"];
-  if (/\b(mobile units?)\b/.test(clean)) return ["mobile unit", "mobile kitchen", "mobile fridge", "mobile clinic", "mobile toilet", "mobile office"];
+  if (/\b(mobile units?|mobile offices?|portable toilets?|mobile toilets?|mobile clinics?)\b/.test(clean)) return ["mobile unit", "mobile kitchen", "mobile fridge", "mobile clinic", "mobile toilet", "mobile office"];
   return [];
 }
 
@@ -161,16 +161,18 @@ export function dealerToSearchResult(dealer: DealerSearchRow): SearchResult {
 
 export function scoreSearchResult(item: SearchResult, query: string, location = "") {
   if (location.trim() && item.scope !== "page" && !matchesSouthAfricanLocation(item.location || item.meta, location)) return -1;
-  const combined = normaliseSearch(query);
+  const combined = normaliseSearch(query).replace(/\b(please|can you|could you|show me|find me|looking for|i need|i want|search for|near me|browse|available)\b/g, " ").replace(/\s+/g, " ").trim();
   if (!combined) return item.priority + (location.trim() ? 18 : 0);
   const tokens = searchTokens(combined);
   const searchable = normaliseSearch(`${item.label} ${item.meta} ${item.searchable}`);
-  const matches = tokens.filter((token) => tokenMatches(searchable, token)).length;
+  const inferred = inferSearchScope(query);
+  const meaningful = tokens.filter(token => !["job", "jobs", "work", "contract", "contracts", "vehicle", "vehicles", "driver", "drivers", "dealer", "dealership", "dealerships", "any", "me", "a", "an", "for", "the"].includes(token));
+  const matches = meaningful.filter(token => tokenMatches(searchable, token)).length;
   const aliases = equipmentAliases(query);
   const equipmentMatch = aliases.length > 0 && aliases.some(term => searchable.includes(term));
   if (aliases.length && ["asset", "job", "contract"].includes(item.scope) && !equipmentMatch) return -1;
   if (/\btrucks?\b/.test(combined) && item.scope === "asset" && /\btrailers?\b/.test(normaliseSearch(item.label)) && !/\btrucks?\b/.test(normaliseSearch(item.label))) return -1;
-  if (!flexibleMatch(searchable, combined) && matches === 0 && !equipmentMatch) return -1;
+  if (meaningful.length && !flexibleMatch(searchable, meaningful.join(" ")) && matches === 0 && !equipmentMatch) return -1;
 
   let score = item.priority + matches * 22 + (equipmentMatch ? 95 : 0);
   const cleanLabel = normaliseSearch(item.label);
@@ -179,7 +181,6 @@ export function scoreSearchResult(item: SearchResult, query: string, location = 
   if (searchable.includes(combined)) score += 30;
   if (location.trim() && item.scope !== "page") score += 20;
 
-  const inferred = inferSearchScope(query);
   if (inferred !== "all") {
     if (item.scope === inferred) score += 90;
     else if (item.scope !== "page") score -= 100;

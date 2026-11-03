@@ -7,13 +7,13 @@ import { supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 type Message = { from: "bot" | "user"; text: string; actions?: Array<{label:string;href:string}> };
-const initial = ["Talk to an agent", "View my support cases", "Find something on LoadLink", "Post or manage a listing", "Fix a problem"];
+const initial = ["Find logistics jobs", "Find available trucks", "Find mobile kitchens", "Talk to an agent", "Report a problem"];
 
 export default function LinkBot() {
   const { darkMode } = useLoadLinkTheme();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { from: "bot", text: "Hi, I’m LinkBot. Tell me what you’re trying to do on LoadLink and I’ll take you to the exact next step." },
+    { from: "bot", text: "Hi, I’m LinkBot. Ask me to find published jobs, trucks or mobile units, or explain a problem. I’ll show relevant results or connect you with support." },
   ]);
   const [choices, setChoices] = useState(initial);
   const [input, setInput] = useState("");
