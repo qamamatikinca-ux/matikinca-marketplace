@@ -648,7 +648,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
       : { title: "Find paid logistics work", description: "For truck owners, drivers, mobile kitchens, mobile fridges, farming vehicles and mining transport operators looking for real posted jobs.", searchButton: "Search jobs", listLabel: "Post job", listHref: "/jobs/list", results: "Available jobs" };
 
   return (
-    <main data-loadlink-jobs-page="true" className={`min-h-screen scroll-smooth transition-colors duration-500 ${darkMode ? "bg-black text-white" : "bg-[#fff7df] text-black"}`}>
+    <main data-loadlink-jobs-page="true" data-theme={darkMode ? "dark" : "light"} className={`min-h-screen ${darkMode ? "bg-[#050505] text-white" : "bg-[#fff7df] text-[#151515]"}`}>
       {isSearching ? <LoadLinkLoading /> : null}
       <Header darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
 
@@ -690,7 +690,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
                 <SouthAfricaLocationInput
                   value={city}
                   onChange={setCity}
-                  darkMode={false}
+                  darkMode={darkMode}
                   placeholder="City, town or province"
                   ariaLabel="Filter jobs by South African location"
                   className="h-12 w-full min-w-0 rounded-xl border border-[#dedede] bg-white px-4 text-base font-semibold text-[#171717] outline-none placeholder:text-[#929292] focus:border-[#f6b800]"
@@ -790,12 +790,12 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
 
 function FeaturedJobsRail({ jobs, darkMode, onOpen }: { jobs: JobListing[]; darkMode: boolean; onOpen: (job: JobListing) => void }) {
   return (
-    <section className={`border-b px-5 py-8 md:px-12 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-[#fff7df] text-black"}`}>
+    <section data-loadlink-promoted-rail="true" className={`border-b px-5 py-8 md:px-12 ${darkMode ? "border-white/10 bg-[#050505] text-white" : "border-black/10 bg-[#fff7df] text-[#151515]"}`}>
       <div className="mx-auto max-w-5xl">
         <h2 className="text-3xl font-black tracking-[-.04em]">Promoted listings</h2>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div data-loadlink-swipe-dots="true" className="no-scrollbar mt-5 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3">
           {jobs.map((job) => (
-            <button key={job.id} onClick={() => onOpen(job)} className={`overflow-hidden rounded-2xl border text-left ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+            <button key={job.id} type="button" onClick={() => onOpen(job)} data-loadlink-promoted-card="true" className={`w-[84vw] max-w-[390px] shrink-0 snap-start overflow-hidden rounded-2xl border text-left sm:w-[46vw] sm:max-w-[420px] ${darkMode ? "border-white/10 bg-[#0b0b0b] text-white" : "border-black/10 bg-white text-[#151515]"}`}>
               <div className="relative aspect-[16/9] bg-black">
                 <LoadLinkImage src={job.photos[0] || "/images/jobs/job-card-1.jpg"} alt={job.title} className="h-full w-full object-cover" />
                 <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] text-black">Promoted</span>
