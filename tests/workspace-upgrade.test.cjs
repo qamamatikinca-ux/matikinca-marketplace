@@ -19,7 +19,19 @@ test('image proxy allowlist rejects private hosts, credentials and non-TLS targe
 const summary={overdue_followups:3,new_leads:5,unread_messages:2,quotes_open:1};const context={permissions:['leads.read','messages.read','inventory.read'],verification_status:'approved',subscription_status:'active'};
 test('dealer work queue prioritises overdue customers over general recommendations',()=>{const queue=priorities.dealerPriorities(summary,[],context);assert.equal(queue[0].id,'follow-ups');assert.equal(queue[1].id,'inbox');assert.ok(queue.find(row=>row.id==='quotes'));});
 test('dealer priorities respect roles and distinguish loaded stock from totals',()=>{assert.equal(priorities.dealerPriorities(summary,[],{...context,permissions:[]}).length,0);const queue=priorities.dealerPriorities({},[{stock_status:'available',lifecycle_status:'live',days_in_stock:65,moderation_status:'approved'}],context);assert.match(queue[0].title,/1 loaded vehicle/);});
-const bot=load('app/api/linkbot/route.ts',{'@/lib/serverRateLimit':{serverRateLimit:()=>null},'@/lib/helpKnowledge':help});
+// Keep support-unit fixtures independent of live marketplace services.
+const marketplaceSearchFixture = {
+  inferSearchScope: () => 'all',
+  filterAndRankResults: () => [],
+  isCurrentListing: () => true,
+  listingToSearchResult: () => ({}),
+  routeForScope: () => '/search',
+};
+const bot=load('app/api/linkbot/route.ts',{
+  '@/lib/serverRateLimit':{serverRateLimit:()=>null},
+  '@/lib/helpKnowledge':help,
+  '@/lib/loadlinkSearch':marketplaceSearchFixture,
+});
 test('LinkBot returns a working internal payment action without a model key',async()=>{const old=process.env.OPENAI_API_KEY;delete process.env.OPENAI_API_KEY;try{const r=await bot.POST(new Request('https://loadlink.test/api/linkbot',{method:'POST',body:JSON.stringify({message:'I paid but my package is not active'})}));assert.equal(r.status,200);const body=await r.json();assert.equal(body.actions[0].href,'/account/packages');assert.match(body.answer,/Do not pay again/);}finally{if(old)process.env.OPENAI_API_KEY=old;}});
 test('LinkBot enforces real body bytes and handles malformed JSON',async()=>{const huge=await bot.POST(new Request('https://loadlink.test/api/linkbot',{method:'POST',body:JSON.stringify({message:'a'.repeat(30000)}),headers:{'content-length':'1'}}));assert.equal(huge.status,413);const bad=await bot.POST(new Request('https://loadlink.test/api/linkbot',{method:'POST',body:'{'}));assert.equal(bad.status,400);});
 function documentRoute({bytes=new Uint8Array([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]),signedIn=true}={}){const calls=[];const storage={createSignedUploadUrl:async path=>({data:{path,signedUrl:'https://storage.test/upload'},error:null}),download:async()=>({data:new Blob([bytes]),error:null}),remove:async()=>({error:null})};const client={auth:{getUser:async()=>({data:{user:signedIn?{id:'owner'}:null},error:null})},functions:{invoke:async(name,options)=>{assert.equal(name,'loadlink-driver-evidence');calls.push(options.body);return {data:{document:{id:'doc'}},error:null};}},storage:{from:()=>storage},from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:{id:'profile'},error:null})})})}),rpc:async(name,payload)=>{calls.push(payload);return {data:{document:{id:'doc'},previousStoragePath:null},error:null};}};const route=load('app/api/phase2/documents/route.ts',{'@/lib/serverRateLimit':{serverRateLimit:()=>null},'@/lib/phase2/supabase':{bearer:request=>request.headers.has('authorization')?'fixture':null,publicSupabase:()=>client}});return {route,calls};}
