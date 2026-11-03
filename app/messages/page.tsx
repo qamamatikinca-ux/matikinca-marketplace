@@ -814,8 +814,10 @@ export default function MessagesPage() {
     const buyerKeys = [currentBuyerKey, ...getBuyerKeys().filter(key => key !== currentBuyerKey)];
     const ownerKeys = getOwnerKeys();
     const tasks = [
-      ...buyerKeys.map(key => ({ key, role: "buyer" as const })),
-      ...ownerKeys.map(key => ({ key, role: "owner" as const })),
+      ...(buyerKeys[0] ? [{ key: buyerKeys[0], role: "buyer" as const }] : []),
+      ...(ownerKeys[0] ? [{ key: ownerKeys[0], role: "owner" as const }] : []),
+      ...buyerKeys.slice(1).map(key => ({ key, role: "buyer" as const })),
+      ...ownerKeys.slice(1).map(key => ({ key, role: "owner" as const })),
     ];
     const locallyArchived = readLocalArchivedIds();
     const merged = new Map<string, Conversation>();
