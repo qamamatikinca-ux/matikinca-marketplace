@@ -39,3 +39,51 @@ html { scroll-padding-top: 5rem; }
   letter-spacing: .1em !important;
   border-radius: 999px !important;
 }
+
+/* The Jobs portal owns its theme. Prevent old glass/marketplace rules from
+   leaving a light promoted rail inside a dark page after switching modes. */
+html[data-loadlink-theme="dark"] body main[data-loadlink-jobs-page="true"] {
+  background-color: #050505 !important;
+  color: #fff !important;
+}
+html[data-loadlink-theme="light"] body main[data-loadlink-jobs-page="true"] {
+  background-color: #fff7df !important;
+  color: #151515 !important;
+}
+html[data-loadlink-theme="dark"] body main[data-loadlink-jobs-page="true"] [data-loadlink-promoted-rail="true"] {
+  background-color: #050505 !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,.12) !important;
+}
+html[data-loadlink-theme="light"] body main[data-loadlink-jobs-page="true"] [data-loadlink-promoted-rail="true"] {
+  background-color: #fff7df !important;
+  color: #151515 !important;
+  border-color: rgba(0,0,0,.1) !important;
+}
+html[data-loadlink-theme="dark"] body main[data-loadlink-jobs-page="true"] [data-loadlink-promoted-card="true"] {
+  background-color: #0b0b0b !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,.12) !important;
+}
+html[data-loadlink-theme="light"] body main[data-loadlink-jobs-page="true"] [data-loadlink-promoted-card="true"] {
+  background-color: #fff !important;
+  color: #151515 !important;
+  border-color: rgba(0,0,0,.12) !important;
+}
+html[data-loadlink-theme="dark"] body main[data-loadlink-jobs-page="true"] [data-loadlink-jobs-search-shell] :is(input,select) {
+  background-color: #202020 !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,.2) !important;
+  color-scheme: dark !important;
+}
+html[data-loadlink-theme="light"] body main[data-loadlink-jobs-page="true"] [data-loadlink-jobs-search-shell] :is(input,select) {
+  background-color: #fff !important;
+  color: #171717 !important;
+  border-color: rgba(0,0,0,.14) !important;
+  color-scheme: light !important;
+}
+html body main[data-loadlink-jobs-page="true"],
+html body main[data-loadlink-jobs-page="true"] [data-loadlink-promoted-rail="true"],
+html body main[data-loadlink-jobs-page="true"] [data-loadlink-promoted-card="true"] {
+  transition-property: none !important;
+}
