@@ -1,7 +1,7 @@
 "use client";
 
 import { getImageProps } from "next/image";
-import { useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type ComponentPropsWithRef } from "react";
+import { useImperativeHandle, useLayoutEffect, useRef, useState, type ComponentPropsWithRef } from "react";
 
 type Props = ComponentPropsWithRef<"img">;
 function canOptimize(src: string) {
@@ -13,6 +13,27 @@ function canOptimize(src: string) {
   } catch { return false; }
 }
 const UNAVAILABLE_IMAGE = "/images/image-unavailable.svg";
+const imageDeliveryCache = new Map<string, Pick<Props, "src" | "srcSet" | "sizes">>();
+const IMAGE_DELIVERY_CACHE_LIMIT = 96;
+
+// Pure metadata cache keeps repeated image sizing cheap, including test and SSR calls.
+function getOptimizedDelivery(value: string, srcSet: string | undefined, sizes: string | undefined, alt: string, className: string) {
+  if (!value || srcSet || !canOptimize(value)) return { src: value || undefined, srcSet, sizes };
+  const compact = /(?:h|w)-(?:8|9|10|11|12|14|16)(?:\s|$)/.test(className) || /avatar|profile/i.test(alt);
+  const sizeHint = sizes || (compact ? "96px" : "(max-width: 767px) 100vw, 50vw");
+  const key = JSON.stringify([value, sizeHint]);
+  const cached = imageDeliveryCache.get(key);
+  if (cached) return cached;
+  const props = getImageProps({ src: value, alt, width: 1200, height: 900, quality: 75, sizes: sizeHint }).props;
+  const delivery = { src: props.src, srcSet: props.srcSet, sizes: props.sizes };
+  if (imageDeliveryCache.size >= IMAGE_DELIVERY_CACHE_LIMIT) {
+    const oldest = imageDeliveryCache.keys().next().value;
+    if (oldest) imageDeliveryCache.delete(oldest);
+  }
+  imageDeliveryCache.set(key, delivery);
+  return delivery;
+}
+
 
 export default function LoadLinkImage({ src, srcSet, sizes, loading, decoding, onLoad, onError, ref, ...rest }: Props) {
   const value = typeof src === "string" ? src : "";
@@ -22,13 +43,8 @@ export default function LoadLinkImage({ src, srcSet, sizes, loading, decoding, o
   const stage = recovery?.source === value ? recovery.stage : null;
   useImperativeHandle(ref, () => imageRef.current!, []);
   const critical = /logo|avatar|profile|hero/i.test(`${rest.alt || ""} ${rest.className || ""}`);
-  // Avoid rebuilding responsive srcset values every time marketplace cards rerender.
-  const stableDelivery = useMemo<Pick<Props, "src" | "srcSet" | "sizes">>(() => {
-    if (!value || srcSet || !canOptimize(value)) return { src: value || undefined, srcSet, sizes };
-    const compact = /(?:h|w)-(?:8|9|10|11|12|14|16)(?:\s|$)/.test(rest.className || "") || /avatar|profile/i.test(rest.alt || "");
-    const image = getImageProps({ src: value, alt: rest.alt || "", width: 1200, height: 900, quality: 75, sizes: sizes || (compact ? "96px" : "(max-width: 767px) 100vw, 50vw") }).props;
-    return { src: image.src, srcSet: image.srcSet, sizes: image.sizes };
-  }, [value, srcSet, sizes, rest.className, rest.alt]);
+  // Avoid re-deriving responsive srcset values for every marketplace filter render.
+  const stableDelivery = getOptimizedDelivery(value, srcSet, sizes, rest.alt || "", rest.className || "");
   let delivery = stableDelivery;
   const optimized = stableDelivery.src !== value;
   if (stage === "original") delivery = { src: value };

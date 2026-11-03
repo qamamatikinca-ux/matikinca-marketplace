@@ -30,7 +30,7 @@ test("large offscreen homepage portal images defer loading", () => {
 
 test("marketplace images memoize responsive metadata without changing fallback", () => {
   const image = read("components/LoadLinkImage.tsx");
-  assert.ok(image.includes('useMemo<Pick<Props'));
+  assert.ok(image.includes('imageDeliveryCache = new Map'));
   assert.ok(image.includes('const optimized = stableDelivery.src !== value'));
   assert.ok(image.includes('if (stage === "fallback")'));
   assert.ok(image.includes("getImageProps"));
