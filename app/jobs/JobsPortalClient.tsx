@@ -9,6 +9,7 @@ import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+import LoadLinkSiteFooter20260822 from "@/components/LoadLinkSiteFooter20260822";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -261,17 +262,11 @@ async function shareListing(job: JobListing) {
 }
 
 function reportListing(job: JobListing) {
-  const reason = window.prompt("Briefly explain why you are reporting this listing.");
-  if (!reason?.trim()) return;
-  try {
-    const reports = JSON.parse(localStorage.getItem("loadlink-pending-reports") || "[]");
-    const next = [{ listingId: job.id, title: job.title, reason: reason.trim(), createdAt: new Date().toISOString() }, ...(Array.isArray(reports) ? reports : [])];
-    localStorage.setItem("loadlink-pending-reports", JSON.stringify(next));
-    window.alert("Report saved. It will be sent when the complaints email connection is added.");
-  } catch {
-    window.alert("The report could not be saved on this device.");
-  }
+  // The capture-phase ListingReportGuard submits authenticated listing reports
+  // directly to moderation. This route is a real fallback, not a local-only save.
+  window.location.href = `/report-suspicious-activity?listing=${encodeURIComponent(job.id)}`;
 }
+
 
 function formatPostedDate(value?: string) {
   if (!value) return "Posted recently";
@@ -669,6 +664,20 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
             </p>
           </div>
 
+          <nav aria-label="Explore LoadLink portals" data-loadlink-jobs-portal-navigation className="no-scrollbar mt-6 flex items-center gap-2 overflow-x-auto pb-1">
+            {([
+              { label: "Jobs", href: "/jobs?portal=job", active: !portalFilter || portalFilter === "job" },
+              { label: "Contracts", href: "/contracts", active: portalFilter === "contract" },
+              { label: "Vehicles", href: "/list-your-vehicle?view=marketplace#vehicle-marketplace", active: portalFilter === "asset" },
+              { label: "Drivers", href: "/drivers", active: false },
+            ] as const).map((item) => (
+              <Link key={item.label} href={item.href} aria-current={item.active ? "page" : undefined}
+                className={`inline-flex min-h-10 shrink-0 items-center justify-center rounded-full border px-4 text-sm font-semibold transition ${item.active ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-white/25 bg-black/75 text-white hover:border-white/55"}`}>
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
           <div
             data-loadlink-jobs-search-shell="contracts-matched-v2"
             className={`loadlink-glass mt-6 rounded-[24px] border p-4 shadow-[0_20px_60px_rgba(0,0,0,.18)] backdrop-blur-xl md:p-5 ${darkMode ? "border-white/20 bg-black/72 text-white" : "border-white/55 bg-[#b7b4ab]/85 text-black"}`}
@@ -783,7 +792,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
       </section>
 
       <RecentActivityPanel darkMode={darkMode} />
-      <Footer darkMode={darkMode} />
+      <LoadLinkSiteFooter20260822 darkMode={darkMode} />
 
       {galleryJob ? <PhotoGalleryModal job={galleryJob} onClose={() => setGalleryJob(null)} /> : null}
       {analyticsJob ? <ListingAnalyticsModal job={analyticsJob} ownerKey={ownedJobs[analyticsJob.id] || ""} onClose={() => setAnalyticsJob(null)} /> : null}
@@ -823,7 +832,7 @@ function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onRe
   const isPro = ["pro", "dealer"].includes(job.packageType || "");
 
   return (
-    <article id={`job-${job.id}`} className={`scroll-mt-24 overflow-hidden border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+    <article data-listing-id={job.id} id={`job-${job.id}`} className={`scroll-mt-24 overflow-hidden border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
       <div role="button" tabIndex={0} onClick={onOpenGallery} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" ")onOpenGallery()}} className="group relative block w-full cursor-pointer overflow-hidden bg-black text-left">
         <div className="aspect-[4/3] w-full overflow-hidden md:aspect-[16/9]"><LoadLinkImage src={coverPhoto} alt={job.title} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" /></div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/45" />
@@ -1137,32 +1146,6 @@ function EditJobModal({ job, ownerKey, onClose, onUpdated }: { job: JobListing; 
 function Header({ darkMode, toggleDarkMode }: { darkMode: boolean; toggleDarkMode: () => void }) {
   return (
     <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleDarkMode} />
-  );
-}
-
-function Footer({ darkMode }: { darkMode: boolean }) {
-  const sections = ["Company", "Logistics", "Services", "Customers"];
-
-  return (
-    <footer className={`px-5 py-10 transition-colors duration-500 ${darkMode ? "bg-black text-white" : "bg-white text-black"}`}>
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-8 flex items-center justify-center overflow-visible">
-          <HomeLogoLink theme={darkMode ? "dark" : "light"} />
-        </div>
-
-        <div className="grid gap-0">
-          {sections.map((section) => (
-            <details key={section} className={`border-t py-7 ${darkMode ? "border-white/10" : "border-black/10"}`}>
-              <summary className="flex cursor-pointer list-none items-center justify-between text-3xl font-black tracking-[-0.04em]">
-                {section}
-                <span className="text-[#b88900]">v</span>
-              </summary>
-              <p className={`mt-4 text-sm leading-7 ${darkMode ? "text-white/60" : "text-black/60"}`}>More LoadLink information will be added here.</p>
-            </details>
-          ))}
-        </div>
-      </div>
-    </footer>
   );
 }
 

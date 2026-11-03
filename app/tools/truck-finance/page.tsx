@@ -61,7 +61,6 @@ export default function TruckFinanceCalculatorPage() {
   const [selectedId, setSelectedId] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [showMatches, setShowMatches] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -162,16 +161,7 @@ export default function TruckFinanceCalculatorPage() {
               </div>
               <p>Balloon payments leave an amount due at the end of the loan. Any lender fees or other charges can change the result.</p>
             </details>
-            <button
-              className={styles.primary}
-              type="button"
-              onClick={() => {
-                setShowMatches(true);
-                document.getElementById("truck-finance-matches")?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-            >
-              See your vehicle matches
-            </button>
+
           </div>
           <p className={styles.disclaimer}>
             Estimates only, not a finance quotation or approval. Insurance, VAT differences and lender costs may change affordability.
@@ -194,12 +184,11 @@ export default function TruckFinanceCalculatorPage() {
 
         <section id="truck-finance-matches" className={styles.matches}>
           <div className={styles.matchHeading}>
-            <h2>Vehicles in your budget</h2>
-            <Link href="/list-your-vehicle#vehicle-marketplace-vehicles">Browse all vehicles</Link>
+            <div><h2>Vehicles within your budget</h2><p className={styles.matchSubhead}>Current LoadLink asking prices · Estimates only</p></div>
           </div>
           {loading ? <p role="status" className={styles.empty}>Checking current LoadLink listings…</p>
             : loadError ? <p role="alert" className={styles.empty}>Vehicle listings could not be loaded. Your calculator still works; try reloading to see matches.</p>
-            : monthly <= 0 ? <p className={styles.empty}>{showMatches ? "Enter a monthly budget above R0 to see matches." : "Enter your budget above to see current listings you may be able to afford."}</p>
+            : monthly <= 0 ? <p className={styles.empty}>"Enter a monthly budget above R0 to see matching vehicles."</p>
             : matches.length ? (
               <div className={styles.matchGrid}>
                 {matches.map((row) => (
@@ -218,7 +207,7 @@ export default function TruckFinanceCalculatorPage() {
                   </Link>
                 ))}
               </div>
-            ) : <p className={styles.empty}>No current listings within this budget. Adjust your figures or browse the vehicle marketplace.</p>}
+            ) : <p className={styles.empty}>No current listings within this budget. Adjust your figures or browse all vehicles.</p>}
         </section>
       </div>
     </main>
