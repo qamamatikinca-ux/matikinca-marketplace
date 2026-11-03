@@ -8,6 +8,7 @@ import { useParams, useRouter } from "next/navigation";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
+import { CONTRACT_TYPES, type ContractType } from "@/lib/contractTypes";
 
 type QuickScope = "job" | "contract" | "asset" | "driver" | "dealer";
 
@@ -86,15 +87,23 @@ export default function QuickLinkPicturePage() {
   const config = CONFIG[scope];
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("");
+  const [contractType, setContractType] = useState<ContractType | "">("");
   const [imageFailed, setImageFailed] = useState(false);
 
   const searchHref = useMemo(() => {
+    if (scope === "contract") {
+      const params = new URLSearchParams();
+      if (query.trim()) params.set("search", query.trim());
+      if (location.trim()) params.set("city", location.trim());
+      if (contractType) params.set("category", contractType);
+      return `/contracts${params.size ? "?" + params.toString() : ""}`;
+    }
     const search = new URLSearchParams();
     search.set("category", scope);
     if (query.trim()) search.set("q", query.trim());
     if (location.trim()) search.set("location", location.trim());
     return `/search?${search.toString()}`;
-  }, [location, query, scope]);
+  }, [location, query, scope, contractType]);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -132,7 +141,7 @@ export default function QuickLinkPicturePage() {
                 key={item.value}
                 href={`/quick-links/${item.value}`}
                 aria-current={item.value === scope ? "page" : undefined}
-                className={`inline-flex min-h-10 shrink-0 items-center justify-center rounded-[11px] border px-3 text-[12px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f6b800] ${item.value === scope
+                className={`inline-flex min-h-10 shrink-0 items-center justify-center rounded-full border px-4 text-[12px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f6b800] ${item.value === scope
                   ? "border-[#f6b800] bg-[#f6b800] text-black"
                   : darkMode ? "border-white/15 bg-[#151615] text-white/85" : "border-black/10 bg-white text-black/75"}`}
               >
@@ -150,9 +159,20 @@ export default function QuickLinkPicturePage() {
           <div className="mt-2">
             <SouthAfricaLocationInput id="loadlink-quick-link-location" value={location} onChange={setLocation} darkMode={darkMode} placeholder="City, town or province" ariaLabel={`${config.label} location`} className={`h-14 w-full rounded-[15px] border px-4 text-base font-semibold outline-none transition focus:border-[#f6b800] ${darkMode ? "border-white/10 bg-[#171717] text-white placeholder:text-white/35" : "border-black/10 bg-[#fafafa] text-black placeholder:text-black/38"}`} />
           </div>
+          {scope === "contract" ? (
+            <label className="mt-2 block">
+              <span className="sr-only">Contract type</span>
+              <select aria-label="Contract type" value={contractType} onChange={(event) => setContractType(event.target.value as ContractType | "")}
+                className={`h-14 w-full rounded-[15px] border px-4 text-base font-semibold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/10 bg-[#171717] text-white" : "border-black/10 bg-[#fafafa] text-black"}`}
+                style={{ colorScheme: darkMode ? "dark" : "light" }}>
+                <option value="">All contract types</option>
+                {CONTRACT_TYPES.map((item) => <option value={item} key={item}>{item}</option>)}
+              </select>
+            </label>
+          ) : null}
           <div className="mt-3 grid grid-cols-[.8fr_1.2fr] gap-2">
-            <Link href={config.browseHref} className={`flex h-12 items-center justify-center rounded-[13px] border text-sm font-black ${darkMode ? "border-white/12" : "border-black/10"}`}>Browse all</Link>
-            <button type="submit" className="h-12 rounded-[13px] bg-[#f6b800] text-sm font-black text-black">Search {config.label}</button>
+            <Link href={config.browseHref} className={`flex h-12 items-center justify-center rounded-full border text-sm font-black ${darkMode ? "border-white/12" : "border-black/10"}`}>Browse all</Link>
+            <button type="submit" className="h-12 rounded-full bg-[#f6b800] text-sm font-black text-black">Search {config.label}</button>
           </div>
         </form>
       </section>

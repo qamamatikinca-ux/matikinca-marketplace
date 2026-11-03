@@ -325,11 +325,32 @@ function cleanError(error: unknown, fallback: string) {
   if (/jwt|session|unauthorized|401/i.test(message)) {
     return "Your sign-in session expired. Sign in again and your conversation will remain available.";
   }
-  if (/fetch|network|timeout|connection/i.test(message))
+  if (/load failed|failed to fetch|fetch|network|timeout|connection|networkerror|offline/i.test(message))
     return "Connection interrupted. Check your signal and try again.";
   return message || fallback;
 }
 
+/** Read-only chat requests may be retried; never retry sending messages or uploads. */
+function transientChatReadError(error: unknown) {
+  const detail = errorMessage(error, "");
+  return /load failed|failed to fetch|fetch|network|timeout|connection|networkerror|offline|abort/i.test(detail);
+}
+
+async function reliableChatRead<T extends { error?: { message?: string } | null }>(read: () => PromiseLike<T>): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const result = await read();
+      if (!result.error || !transientChatReadError(result.error) || attempt === 2) return result;
+      lastError = result.error;
+    } catch (error) {
+      if (!transientChatReadError(error) || attempt === 2) throw error;
+      lastError = error;
+    }
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 260 * (attempt + 1)));
+  }
+  throw lastError || new Error("Chat connection unavailable.");
+}
 
 type QuoteReuseListingRow = {
   id?: string | null;
@@ -435,6 +456,7 @@ export default function MessagesPage() {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [connectionRetry, setConnectionRetry] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
   const [recording, setRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -452,6 +474,12 @@ export default function MessagesPage() {
     () => DEFAULT_MESSAGE_PRIVACY,
   );
   const [presenceNow, setPresenceNow] = useState(() => Date.now());
+  useEffect(() => {
+    const reconnect = () => setConnectionRetry((value) => value + 1);
+    window.addEventListener("online", reconnect);
+    return () => window.removeEventListener("online", reconnect);
+  }, []);
+
 
   // The mobile chat settings panel behaves like a separate screen.
   useEffect(() => {
@@ -781,9 +809,10 @@ export default function MessagesPage() {
     const requestSequence = ++conversationLoadSequenceRef.current;
     const buyerKeys = getBuyerKeys();
     const ownerKeys = getOwnerKeys();
-    const [buyerGroups, ownerGroups] = await Promise.all([
-      Promise.all(buyerKeys.map(async (buyerKey) => {
-        const result = await supabase.rpc("get_buyer_guest_threads", { p_buyer_key: buyerKey });
+    // A stale legacy access key must not hide conversations fetched with valid keys.
+    const [buyerResults, ownerResults] = await Promise.all([
+      Promise.allSettled(buyerKeys.map(async (buyerKey) => {
+        const result = await reliableChatRead(() => supabase.rpc("get_buyer_guest_threads", { p_buyer_key: buyerKey }));
         if (result.error) throw result.error;
         return ((result.data || []) as ConversationRow[]).map((row) => ({
           ...row,
@@ -792,8 +821,8 @@ export default function MessagesPage() {
           unreadCount: toCount(row.unread_count),
         }));
       })),
-      Promise.all(ownerKeys.map(async (ownerKey) => {
-        const result = await supabase.rpc("get_owner_guest_threads", { p_owner_key: ownerKey });
+      Promise.allSettled(ownerKeys.map(async (ownerKey) => {
+        const result = await reliableChatRead(() => supabase.rpc("get_owner_guest_threads", { p_owner_key: ownerKey }));
         if (result.error) throw result.error;
         return ((result.data || []) as ConversationRow[]).map((row) => ({
           ...row,
@@ -803,8 +832,11 @@ export default function MessagesPage() {
         }));
       })),
     ]);
-    const buyerRows: Conversation[] = buyerGroups.flat();
-    const ownerRows: Conversation[] = ownerGroups.flat();
+    const successful = [...buyerResults, ...ownerResults].filter((entry) => entry.status === "fulfilled");
+    const failed = [...buyerResults, ...ownerResults].find((entry) => entry.status === "rejected");
+    if (!successful.length && failed?.status === "rejected") throw failed.reason;
+    const buyerRows: Conversation[] = buyerResults.flatMap((entry) => entry.status === "fulfilled" ? entry.value : []);
+    const ownerRows: Conversation[] = ownerResults.flatMap((entry) => entry.status === "fulfilled" ? entry.value : []);
 
     const locallyArchived = readLocalArchivedIds();
     const merged = new Map<string, Conversation>();
@@ -844,11 +876,12 @@ export default function MessagesPage() {
       const requestSequence = ++messageLoadSequenceRef.current;
       if (showLoader) setMessagesLoading(true);
       try {
-        const result = await supabase.rpc("get_listing_guest_messages", {
+        const result = await reliableChatRead(() => supabase.rpc("get_listing_guest_messages", {
           p_thread_id: conversation.id,
           p_access_key: conversation.accessKey,
-        });
+        }));
         if (result.error) throw result.error;
+        setError((current) => /connection interrupted/i.test(current) ? "" : current);
         const rows = (result.data || []) as ChatMessage[];
         if (requestSequence !== messageLoadSequenceRef.current) return;
         if (showLoader) setShowStarterSuggestions(rows.length === 0);
@@ -870,7 +903,7 @@ export default function MessagesPage() {
           window.dispatchEvent(new Event("loadlink-chat-unread-updated"));
         }
       } catch (loadError) {
-        setError(cleanError(loadError, "Messages could not load."));
+        if (showLoader) setError(cleanError(loadError, "Messages could not load."));
       } finally {
         if (showLoader) setMessagesLoading(false);
       }
@@ -995,7 +1028,7 @@ export default function MessagesPage() {
       active = false;
       if (refreshTimer) clearInterval(refreshTimer);
     };
-  }, [loadConversations, router]);
+  }, [loadConversations, router, connectionRetry]);
 
   useEffect(() => {
     if (!selectedConversation) {
@@ -2027,7 +2060,14 @@ ${message}` : message)}
 
               {error ? (
                 <div className="border-t border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-                  {error}
+                  <span>{error}</span>
+                  {/connection interrupted|took too long/i.test(error) ? (
+                    <button type="button" onClick={() => {
+                      setError("");
+                      setConnectionRetry((value) => value + 1);
+                      if (selectedConversation) void loadMessages(selectedConversation, true);
+                    }} className="ml-3 inline-flex min-h-9 items-center rounded-full border border-red-300 px-3 text-xs font-bold">Retry</button>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -2065,7 +2105,7 @@ ${message}` : message)}
                 {uploading && uploadProgress ? <div className="mx-auto mb-2 max-w-3xl"><div className="h-1.5 overflow-hidden rounded-full bg-black/10"><div className="h-full rounded-full bg-[#f6b800] transition-[width]" style={{ width: `${uploadProgress}%` }} /></div><p className="mt-1 text-right text-[9px] font-bold text-black/40">Uploading {uploadProgress}%</p></div> : null}
                 {failedUpload && !uploading ? <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[10px] font-bold text-red-700"><span className="min-w-0 truncate">{failedUpload.file.type.startsWith("audio/") ? "Voice note" : failedUpload.file.name} failed to send.</span><span className="flex shrink-0 gap-2"><button type="button" onClick={() => void sendAttachment(failedUpload.file, failedUpload.caption)} className="rounded-lg bg-red-600 px-3 py-1.5 font-black text-white">Retry</button><button type="button" onClick={() => setFailedUpload(null)} className="rounded-lg border border-red-300 px-2 py-1.5 font-black">Dismiss</button></span></div> : null}
                 <div className="mx-auto flex w-full max-w-3xl items-end gap-2">
-                  <div className="loadlink-message-input min-w-0 flex-1 rounded-[22px] border border-black/10 bg-white/55 px-4 py-2.5 shadow-sm backdrop-blur-xl focus-within:border-[#f6b800]">
+                  <div className={`loadlink-message-input min-w-0 flex-1 rounded-[22px] border px-4 py-2.5 shadow-sm focus-within:border-[#f6b800] ${darkMode ? "border-white/15 bg-[#171717] text-white" : "border-black/10 bg-white text-[#171717]"}`}>
                     <textarea
                       value={text}
                       onChange={(event) => updateTyping(event.target.value)}
@@ -2089,7 +2129,7 @@ ${message}` : message)}
                       rows={1}
                       maxLength={4000}
                       disabled={sending || uploading || dailyLimitReached || conversationBlocked || potentialDealPending || potentialDealDeclined}
-                      className="max-h-28 min-h-7 w-full resize-none bg-transparent py-1 text-[15px] font-medium leading-6 outline-none placeholder:text-black/38 disabled:opacity-50"
+                      className={`max-h-28 min-h-7 w-full resize-none bg-transparent py-1 text-[15px] font-medium leading-6 outline-none disabled:opacity-50 ${darkMode ? "text-white caret-[#f6b800] placeholder:text-white/45" : "text-[#171717] caret-[#b98b00] placeholder:text-black/45"}`}
                     />
                   </div>
                   {text.trim() || editingMessageId ? (
