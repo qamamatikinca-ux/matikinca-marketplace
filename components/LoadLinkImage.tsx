@@ -1,7 +1,7 @@
 "use client";
 
 import { getImageProps } from "next/image";
-import { useImperativeHandle, useLayoutEffect, useRef, useState, type ComponentPropsWithRef } from "react";
+import { useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type ComponentPropsWithRef } from "react";
 
 type Props = ComponentPropsWithRef<"img">;
 function canOptimize(src: string) {
@@ -22,14 +22,15 @@ export default function LoadLinkImage({ src, srcSet, sizes, loading, decoding, o
   const stage = recovery?.source === value ? recovery.stage : null;
   useImperativeHandle(ref, () => imageRef.current!, []);
   const critical = /logo|avatar|profile|hero/i.test(`${rest.alt || ""} ${rest.className || ""}`);
-  let delivery: Pick<Props, "src" | "srcSet" | "sizes"> = { src: value || undefined, srcSet, sizes };
-  if (value && !srcSet && canOptimize(value)) {
-    const compact = /(?:h|w)-(?:8|9|10|11|12|14|16)(?:\s|$)/.test(rest.className || "") || /avatar|profile/i.test(rest.alt || "");
-    const optimized = getImageProps({ src: value, alt: rest.alt || "", width: 1200, height: 900, quality: 75, sizes: sizes || (compact ? "96px" : "(max-width: 767px) 100vw, 50vw") }).props;
-    // Preserve the caller's geometry; only src/srcSet/sizes control delivery.
-    delivery = { src: optimized.src, srcSet: optimized.srcSet, sizes: optimized.sizes };
-  }
-  const optimized = delivery.src !== value;
+  // Avoid rebuilding responsive srcset values every time marketplace cards rerender.
+  const stableDelivery = useMemo<Pick<Props, "src" | "srcSet" | "sizes">>(() => {
+    if (!value || srcSet || !canOptimize(value)) return { src: value || undefined, srcSet, sizes };
+    const compact = /(?:h|w)-(?:8|9|10|11|12|14|16)(?:\\s|$)/.test(rest.className || "") || /avatar|profile/i.test(rest.alt || "");
+    const image = getImageProps({ src: value, alt: rest.alt || "", width: 1200, height: 900, quality: 75, sizes: sizes || (compact ? "96px" : "(max-width: 767px) 100vw, 50vw") }).props;
+    return { src: image.src, srcSet: image.srcSet, sizes: image.sizes };
+  }, [value, srcSet, sizes, rest.className, rest.alt]);
+  let delivery = stableDelivery;
+  const optimized = stableDelivery.src !== value;
   if (stage === "original") delivery = { src: value };
   if (stage === "fallback") delivery = { src: UNAVAILABLE_IMAGE };
   const sourceKey = `${value}|${stage || "optimized"}`;

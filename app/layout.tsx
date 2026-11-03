@@ -34,6 +34,7 @@ import "./loadlink-call-chat-20261013.css";
 import "./loadlink-vehicle-experience-20261013.css";
 import "./loadlink-refresh-theme-20261015.css";
 import "./loadlink-workspace-20261021.css";
+import "./loadlink-interaction-speed.css";
 import VehicleDraftResumeToast from "@/components/VehicleDraftResumeToast";
 import ChatLauncher from "@/components/ChatLauncher";
 import SwipeDotsEnhancer from "@/components/SwipeDotsEnhancer";

@@ -207,6 +207,12 @@ export default function LoadLinkSmartUxPass20260826() {
   useEffect(() => {
     applyAll();
     const cleanupDriver = rememberDriverSetup();
+    // Avoid whole-page scans in unrelated portals and on driver form keystrokes.
+    const dynamicRoute = pathname === "/" || /^\/(?:jobs|contracts|listing|packages|messages|vehicles)(?:\/|$)/.test(pathname);
+    if (!dynamicRoute) return () => {
+      cleanupDriver();
+      delete document.documentElement.dataset.loadlinkContractGoldProgress;
+    };
     let queued = false;
     const observer = new MutationObserver(() => {
       if (queued) return;
