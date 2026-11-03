@@ -75,25 +75,11 @@ function applyContractProgress() {
   document.documentElement.dataset.loadlinkContractGoldProgress = "true";
 }
 
-function enhancePackageGuide() {
+// Never insert a promotional partner card into package management.
+// Clean up a leftover node if the page was navigated without a full reload.
+function removeLegacyPartnerCard() {
   if (!window.location.pathname.startsWith("/packages")) return;
-  const guideHeading = findByText(/Tell us how you use LoadLink/i)[0];
-  const guideCard = nearestCard(guideHeading);
-  if (guideCard) guideCard.dataset.loadlinkPackageGuideGlass = "true";
-
-  if (document.querySelector('[data-loadlink-partner-cta="true"]')) return;
-  const target = guideCard || document.querySelector<HTMLElement>("main");
-  if (!target) return;
-  const cta = document.createElement("aside");
-  cta.dataset.loadlinkPartnerCta = "true";
-  cta.innerHTML = `
-    <div>
-      <span>LOADLINK PARTNERS</span>
-      <strong>Become a LoadLink partner today.</strong>
-      <p>Unlock Pro or Dealer tools when they are available for your account. If a plan is not currently available, LoadLink will take you to the package options instead of leaving you at a dead end.</p>
-    </div>
-    <a href="/packages#plans">View packages</a>`;
-  target.appendChild(cta);
+  document.querySelectorAll('[data-loadlink-partner-cta="true"]').forEach((node) => node.remove());
 }
 
 function rememberDriverSetup() {
@@ -196,7 +182,7 @@ function applyAll() {
   applyMessagePolish();
   enhanceDealerPoster();
   applyContractProgress();
-  enhancePackageGuide();
+  removeLegacyPartnerCard();
   standardiseSortControls();
   smartFollowUp();
 }
