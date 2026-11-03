@@ -732,7 +732,7 @@ html[data-loadlink-theme="dark"] .loadlink-ui-label {
 
 /* Match iOS's bottom overscroll canvas to the white homepage footer only.
    Do not change the pale-yellow marketplace sections themselves. */
-html[data-loadlink-theme="light"]:has(main[data-loadlink-homepage="true"]),
-html[data-loadlink-theme="light"] body:has(main[data-loadlink-homepage="true"]) {
+html[data-loadlink-theme="light"]:has(footer[data-loadlink-footer]),
+html[data-loadlink-theme="light"] body:has(footer[data-loadlink-footer]) {
   background-color: #fff !important;
 }
