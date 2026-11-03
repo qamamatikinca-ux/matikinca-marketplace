@@ -26,7 +26,6 @@ type HoursValue = { closed?: boolean; open?: string; close?: string };
 
 type OpenState = { label: "Open" | "Closed" | "Hours unavailable"; open: boolean; detail: string };
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 function initials(name: string) { return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase() || "LL"; }
 function listingTitle(item: Listing) { return item.title || [item.vehicle_year, item.brand, item.model].filter(Boolean).join(" ") || "Commercial vehicle"; }
 function price(item: Listing) {
@@ -67,7 +66,6 @@ export default function PublicDealershipInstagramShowroom({ slug }: { slug: stri
   const glass = darkMode ? "border-white/10 bg-white/[.045]" : "border-black/10 bg-white/65";
   const average = useMemo(() => reviews.length ? reviews.reduce((s, r) => s + Number(r.rating || 0), 0) / reviews.length : null, [reviews]);
   const trading = useMemo(() => openState(dealer?.trading_hours), [dealer?.trading_hours]);
-  const schedule = useMemo(() => parseHours(dealer?.trading_hours), [dealer?.trading_hours]);
 
   useEffect(() => {
     let alive = true;
@@ -163,19 +161,7 @@ export default function PublicDealershipInstagramShowroom({ slug }: { slug: stri
     {updates.length ? <section className={`mx-auto max-w-6xl border-t px-4 py-6 sm:px-6 ${border}`}><h2 className="text-lg font-black">Latest from {dealer.name}</h2><div className="no-scrollbar mt-4 flex gap-3 overflow-x-auto">{updates.map((u) => <article key={u.id} className={`w-[220px] shrink-0 rounded-2xl border p-3 ${glass}`}><div className="flex items-center gap-2">{u.image_url ? <LoadLinkImage src={u.image_url} alt="" className="h-10 w-10 rounded-xl object-cover" /> : null}<strong className="line-clamp-2 text-xs">{u.title}</strong></div><p className={`mt-2 line-clamp-3 text-[11px] font-semibold leading-5 ${muted}`}>{u.body}</p></article>)}</div></section> : null}
 
     <section className={`mx-auto max-w-6xl border-t px-4 pb-14 pt-7 sm:px-6 ${border}`}>
-      <div className="grid gap-4 lg:grid-cols-[.85fr_1.15fr]">
-        <div className={`rounded-[20px] border p-4 ${glass}`}>
-          <div className="flex items-center justify-between gap-3"><div><p className={`text-[9px] font-black uppercase tracking-[.11em] ${muted}`}>Opening hours</p><h2 className="mt-1 text-xl font-black">Trading times</h2></div><span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-black ${trading.open ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-400" : "border-current/10"}`}><span className={`h-1.5 w-1.5 rounded-full ${trading.open ? "bg-emerald-400" : "bg-current opacity-40"}`} />{trading.label}</span></div>
-          <p className={`mt-2 text-xs font-semibold ${muted}`}>{trading.detail}</p>
-          <div className="mt-4 grid gap-1.5">{schedule ? DAYS.map((day) => { const h = schedule[day]; return <div key={day} className={`flex items-center justify-between rounded-xl px-3 py-2 text-xs ${day === clock().day ? darkMode ? "bg-white/[.055]" : "bg-black/[.035]" : ""}`}><span className="font-bold">{day}</span><span className={muted}>{!h || h.closed ? "Closed" : `${h.open || "–"} – ${h.close || "–"}`}</span></div>; }) : <p className={`text-sm font-semibold ${muted}`}>Trading hours have not been supplied.</p>}</div>
-        </div>
-
-        <div id="reviews" className={`rounded-[20px] border p-4 ${glass}`}>
-          <div className="flex items-end justify-between gap-4"><div><p className={`text-[9px] font-black uppercase tracking-[.11em] ${muted}`}>Customer feedback</p><h2 className="mt-1 text-xl font-black">Reviews</h2></div><div className="text-right"><p className="text-2xl font-black tracking-[-.04em]">{average === null ? "—" : average.toFixed(1)}</p><p className={`text-[10px] font-semibold ${muted}`}>{reviews.length} review{reviews.length === 1 ? "" : "s"}</p></div></div>
-          {reviews.length ? <div className="mt-4 grid gap-2 sm:grid-cols-2">{reviews.slice(0, 6).map((r) => <article key={r.id} className={`rounded-2xl border px-3.5 py-3 ${darkMode ? "border-white/[.07] bg-black/20" : "border-black/[.06] bg-white/40"}`}><div className="flex items-center justify-between"><span className="text-[10px] tracking-[.06em] text-[#d49e00]"><LoadLinkRatingStars rating={Math.max(1, Math.min(5, Number(r.rating || 0)))} /></span><span className={`text-[10px] font-bold ${muted}`}>{Number(r.rating || 0).toFixed(1)}</span></div>{r.body ? <p className={`mt-2 line-clamp-3 text-xs font-semibold leading-5 ${muted}`}>{r.body}</p> : null}</article>)}</div> : <p className={`mt-4 text-sm font-semibold ${muted}`}>No customer reviews yet.</p>}
-        </div>
-      </div>
-      <div className="mt-6 max-w-3xl"><h2 className="text-lg font-black">About this dealership</h2><p className={`mt-2 text-sm font-semibold leading-6 ${muted}`}>{dealer.business_description || about}</p></div>
+      <div className="max-w-3xl"><h2 className="text-lg font-black">About this dealership</h2><p className={`mt-2 text-sm font-semibold leading-6 ${muted}`}>{dealer.business_description || about}</p></div>
     </section>
 
     {verificationOpen ? <div className="fixed inset-0 z-[2147483500] grid place-items-end bg-black/60 p-3 backdrop-blur-md sm:place-items-center" role="dialog" aria-modal="true"><section className={`w-full max-w-sm rounded-[22px] border p-4 shadow-2xl ${darkMode ? "border-white/10 bg-[#0b0b0b]/96" : "border-black/10 bg-white/96"}`}><div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-full bg-[#f6b800] text-sm font-black text-black"><LoadLinkIcon name="check" size={18} className="inline-block shrink-0 align-middle" /></span><div><p className={`text-[9px] font-black uppercase tracking-[.1em] ${muted}`}>LoadLink verified</p><h2 className="text-base font-black">Verified dealership</h2></div></div><button type="button" onClick={() => setVerificationOpen(false)} className="grid h-9 w-9 place-items-center rounded-full border border-current/10 text-lg" aria-label="Close"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button></div><p className={`mt-4 text-xs font-semibold leading-5 ${muted}`}>Business and verification documents were reviewed for this dealership profile.</p><div className={`mt-4 flex items-center justify-between rounded-xl border px-3 py-2.5 ${darkMode ? "border-white/8 bg-white/[.03]" : "border-black/8 bg-black/[.02]"}`}><span className="text-xs font-bold">Trading now</span><span className={`text-xs font-black ${trading.open ? "text-emerald-400" : ""}`}>{trading.label}</span></div><button type="button" onClick={() => setVerificationOpen(false)} className="mt-4 h-11 w-full rounded-xl bg-[#f6b800] text-xs font-black text-black">Done</button></section></div> : null}
