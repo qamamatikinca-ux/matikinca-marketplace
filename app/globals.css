@@ -213,16 +213,16 @@ header img.loadlink-logo-img,
 
 /* LoadLink single-source theme coordination */
 html[data-loadlink-theme="light"] {
-  --background: #f4efe3;
+  --background: #f8f8f7;
   --foreground: #111111;
-  background: #f4efe3;
+  background: #f8f8f7;
 }
 html[data-loadlink-theme="dark"] {
   --background: #050505;
   --foreground: #f7f7f7;
   background: #050505;
 }
-html[data-loadlink-theme="light"] body { background:#f4efe3; color:#111; }
+html[data-loadlink-theme="light"] body { background:#f8f8f7; color:#111; }
 html[data-loadlink-theme="dark"] body { background:#050505; color:#f7f7f7; }
 body { min-height:100vh; }
 
@@ -303,9 +303,9 @@ html[data-loadlink-theme="dark"] .loadlink-messages [class*="border-black/"] { b
 /* LOADLINK UNIVERSAL THEME NORMALISATION V1 */
 html[data-loadlink-theme="light"] {
   color-scheme: light;
-  --loadlink-page: #f4efe3;
+  --loadlink-page: #f8f8f7;
   --loadlink-surface: #ffffff;
-  --loadlink-surface-soft: #f8f5ed;
+  --loadlink-surface-soft: #f4f5f4;
   --loadlink-text: #111111;
   --loadlink-muted: rgba(17,17,17,.58);
   --loadlink-border: rgba(17,17,17,.12);
