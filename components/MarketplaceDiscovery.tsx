@@ -42,7 +42,6 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
   const [smartInfoOpen, setSmartInfoOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [fabOpen, setFabOpen] = useState(false);
-  const [hasDealerUpdates, setHasDealerUpdates] = useState(false);
   const [searchReady, setSearchReady] = useState(false);
   const [liveListings, setLiveListings] = useState<ListingSearchRow[]>([]);
   const [liveDrivers, setLiveDrivers] = useState<DriverSearchRow[]>([]);
@@ -168,10 +167,9 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
         className={`px-4 py-4 sm:px-5 md:px-12 md:py-6 ${darkMode ? "bg-[#050505] text-white" : "bg-[#fff6dc] text-black"}`}
       >
         <div className="mx-auto max-w-7xl">
-          <LoadLinkDealerUpdateRail20260822 darkMode={darkMode} onAvailabilityChange={setHasDealerUpdates} />
+          <LoadLinkDealerUpdateRail20260822 darkMode={darkMode} />
 
-          {!hasDealerUpdates ? (
-            <div className="no-scrollbar overflow-x-auto py-1" aria-label="Search category">
+          <div className="no-scrollbar overflow-x-auto py-1" aria-label="Search category">
               <div className="flex min-w-max items-center gap-1.5">
                 {visibleScopes.map((item) => (
                   <button
@@ -193,7 +191,6 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                 ))}
               </div>
             </div>
-          ) : null}
 
           <div className="mt-3 max-w-5xl">
             <div
