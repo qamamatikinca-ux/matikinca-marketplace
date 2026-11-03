@@ -335,13 +335,13 @@ html[data-loadlink-theme="light"] body main[data-loadlink-contracts-marketplace]
 
 /* Do not leave stale inline light-mode paint on Jobs or promoted cards. */
 html[data-loadlink-theme="light"] main[data-loadlink-jobs-page="true"] {
-  background-color: #fff7df !important; color: #111 !important;
+  background-color: #f8f8f7 !important; color: #111 !important;
 }
 html[data-loadlink-theme="dark"] main[data-loadlink-jobs-page="true"] {
   background-color: #050505 !important; color: #fff !important;
 }
 html[data-loadlink-theme="light"] main[data-loadlink-jobs-page="true"] [data-loadlink-promoted-rail="true"] {
-  background: #fff7df !important; color: #111 !important; border-color: rgba(0,0,0,.09) !important;
+  background: #f8f8f7 !important; color: #111 !important; border-color: rgba(0,0,0,.09) !important;
 }
 html[data-loadlink-theme="dark"] main[data-loadlink-jobs-page="true"] [data-loadlink-promoted-rail="true"] {
   background: #050505 !important; color: #fff !important; border-color: rgba(255,255,255,.13) !important;
