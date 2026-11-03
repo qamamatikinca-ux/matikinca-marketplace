@@ -1,6 +1,8 @@
 "use client";
 
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+import SmartSearchIcon from "@/components/SmartSearchIcon";
+import { readSearchInterests, rememberSearchInterest } from "@/lib/searchInterests";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
@@ -18,7 +20,9 @@ import {
   dealerToSearchResult,
   driverToSearchResult,
   filterAndRankResults,
+  inferSearchScope,
   isCurrentListing,
+  listingScope,
   listingToSearchResult,
   loadLinkSitePages,
   placeholderForScope,
@@ -57,8 +61,12 @@ export default function SearchResultsClient() {
   const [drivers, setDrivers] = useState<DriverSearchRow[]>([]);
   const [dealers, setDealers] = useState<DealerSearchRow[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [smartInfoOpen, setSmartInfoOpen] = useState(false);
+  const [interests, setInterests] = useState<string[]>([]);
 
   useEffect(() => {
+    if (query.trim()) rememberSearchInterest(query);
+    setInterests(readSearchInterests());
     setInput(query);
     setPlace(location);
     setFiltersOpen(Boolean(location));
@@ -122,6 +130,20 @@ export default function SearchResultsClient() {
     [dealers, drivers, includeSitePages, listings, location, query, scope],
   );
 
+  // Recommend only actual approved jobs, never generated opportunities.
+  const suggestedJobs = useMemo<SearchResult[]>(() => {
+    if (loading || (scope !== "asset" && !(scope === "all" && inferSearchScope(query) === "asset"))) return [];
+    const opportunities = listings.filter(row => listingScope(row) === "job").map(listingToSearchResult);
+    const hints = [...new Set([query.trim(), ...interests].filter(Boolean))].slice(0, 5);
+    const matched = new Map<string, SearchResult>();
+    for (const hint of hints) {
+      for (const item of filterAndRankResults(opportunities, "job", hint).slice(0, 8)) {
+        if (!matched.has(item.id)) matched.set(item.id, item);
+      }
+    }
+    return [...matched.values()].slice(0, 3);
+  }, [interests, listings, loading, query, scope]);
+
   const totalPages = Math.max(1, Math.ceil(results.length / RESULTS_PER_PAGE));
   const paginatedResults = useMemo(() => {
     const start = (currentPage - 1) * RESULTS_PER_PAGE;
@@ -139,6 +161,7 @@ export default function SearchResultsClient() {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    rememberSearchInterest(input);
     router.push(searchResultsRoute(scope, input, place));
   }
 
@@ -198,7 +221,7 @@ export default function SearchResultsClient() {
           </div>
 
           <form onSubmit={submit} className={`mt-3 rounded-[18px] border p-2.5 ${surface}`}>
-            <div className={`grid h-[52px] grid-cols-[44px_minmax(0,1fr)] items-center overflow-hidden rounded-[13px] border ${darkMode ? "border-white/10 bg-[#171717]" : "border-black/10 bg-[#fafafa]"}`}>
+            <div className={`grid h-[52px] grid-cols-[44px_minmax(0,1fr)_44px] items-center overflow-hidden rounded-[13px] border ${darkMode ? "border-white/10 bg-[#171717]" : "border-black/10 bg-[#fafafa]"}`}>
               <span className={`flex h-full items-center justify-center ${darkMode ? "text-[#f6b800]" : "text-black/45"}`}><SearchIcon /></span>
               <label htmlFor="loadlink-results-search" className="sr-only">Search LoadLink</label>
               <input
@@ -209,7 +232,18 @@ export default function SearchResultsClient() {
                 autoComplete="off"
                 className={`h-full min-w-0 border-0 bg-transparent px-1 pr-3 text-[15px] font-medium outline-none ${darkMode ? "text-white placeholder:text-white/38" : "text-black placeholder:text-black/38"}`}
               />
+              <button type="button" aria-label="About LoadLink Smart Search" aria-expanded={smartInfoOpen}
+                onClick={() => setSmartInfoOpen(value => !value)}
+                className="flex h-full items-center justify-center focus-visible:outline-2 focus-visible:outline-[#f6b800]">
+                <SmartSearchIcon />
+              </button>
             </div>
+            {smartInfoOpen ? (
+              <div role="note" className={`mt-2 rounded-xl border px-4 py-3 ${darkMode ? "border-white/15 bg-[#161719] text-white" : "border-black/10 bg-[#f8f8f8] text-black"}`}>
+                <strong className="text-sm font-semibold">Smart Search</strong>
+                <p className={`mt-1 text-xs leading-5 ${muted}`}>Find specific vehicles, mobile units or work from published listings. Job suggestions use searches stored on this device.</p>
+              </div>
+            ) : null}
 
             <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
               <button
@@ -296,6 +330,20 @@ export default function SearchResultsClient() {
             <p className={`mx-auto mt-2 max-w-md text-sm leading-6 ${muted}`}>Try a broader keyword, remove the location filter, or search All.</p>
           </div>
         )}
+        {!loading && suggestedJobs.length > 0 ? (
+          <aside className={`mt-8 rounded-[18px] border p-4 sm:p-5 ${surface}`} aria-labelledby="loadlink-related-jobs">
+            <h2 id="loadlink-related-jobs" className="text-lg font-semibold">Related transport jobs</h2>
+            <p className={`mt-1 text-xs leading-5 ${muted}`}>Based on your vehicle interests and recent searches on this device.</p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              {suggestedJobs.map(job => (
+                <Link key={job.id} href={job.href} className={`rounded-xl border p-3 no-underline transition hover:border-[#f6b800] ${darkMode ? "border-white/12 bg-[#171817]" : "border-black/10 bg-[#fafafa]"}`}>
+                  <strong className="block line-clamp-2 text-sm font-semibold">{job.label}</strong>
+                  <span className={`mt-1 block truncate text-xs ${muted}`}>{job.meta}</span>
+                </Link>
+              ))}
+            </div>
+          </aside>
+        ) : null}
       </section>
     </main>
   );

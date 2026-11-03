@@ -29,7 +29,7 @@ function HomeExperience() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
 
   return (
-    <main className={`min-h-screen transition-colors duration-300 ${darkMode ? "bg-black text-white" : "bg-[#fff6dc] text-black"}`}>
+    <main data-loadlink-homepage="true" className={`min-h-screen transition-colors duration-300 ${darkMode ? "bg-black text-white" : "bg-[#fff6dc] text-black"}`}>
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
       <GoogleOneTap />
 
@@ -58,7 +58,7 @@ function HomeExperience() {
       {/* Restore the original centred homepage treatment and the early LoadLink messaging.
           No decorative gold eyebrow labels, extra slogans, or invented company claims. */}
       <section
-        aria-label="LoadLink mission and vision"
+        aria-labelledby="loadlink-our-mission"
         className={`border-t px-5 py-14 transition-colors duration-300 md:px-12 md:py-20 ${darkMode ? "border-white/10 bg-[#050505] text-white" : "border-black/10 bg-[#fff6dc] text-black"}`}
       >
         <div className="mx-auto max-w-5xl text-center">
@@ -74,14 +74,7 @@ function HomeExperience() {
             </p>
           </div>
 
-          <div className={`mx-auto mt-10 max-w-3xl border-t pt-9 md:mt-12 md:pt-11 ${darkMode ? "border-white/15" : "border-black/15"}`}>
-            <h2 className="text-[clamp(26px,5vw,40px)] font-bold leading-tight tracking-[-.04em]">
-              Our Vision
-            </h2>
-            <p className="mt-5 text-[clamp(22px,4.3vw,34px)] font-semibold leading-[1.24] tracking-[-.035em]">
-              One Platform. More Opportunities.
-            </p>
-          </div>
+
         </div>
       </section>
 

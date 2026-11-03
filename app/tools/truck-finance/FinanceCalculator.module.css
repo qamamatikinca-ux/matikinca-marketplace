@@ -155,3 +155,6 @@
   background-color: transparent !important;
   box-shadow: none !important;
 }
+/* The calculator results flow directly from the inputs, without another oversized CTA. */
+.matches { margin-top: 23px; padding-top: 22px; border-top: 1px solid var(--finance-border); }
+.matchSubhead { margin: 5px 0 0; color: var(--finance-muted); font-size: 12px; line-height: 1.5; }

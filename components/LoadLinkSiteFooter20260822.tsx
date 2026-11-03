@@ -1,138 +1,134 @@
 "use client";
 
 import LoadLinkImage from "@/components/LoadLinkImage";
-
 import Link from "next/link";
 import RequireAuthLink from "@/components/RequireAuthLink";
+import { useEffect, useRef } from "react";
 
 const socialLinks = [
-  { label: "TikTok", href: process.env.NEXT_PUBLIC_LOADLINK_TIKTOK_URL || "", icon: "tiktok" },
-  { label: "Instagram", href: process.env.NEXT_PUBLIC_LOADLINK_INSTAGRAM_URL || "", icon: "instagram" },
-  { label: "LinkedIn", href: process.env.NEXT_PUBLIC_LOADLINK_LINKEDIN_URL || "", icon: "linkedin" },
+  { label: "Instagram", href: "https://www.instagram.com/loadlinksouthafrica?xtok=MWlybmUyamttenEzbg==", logo: "/brands/instagram.svg" },
+  { label: "TikTok", href: "https://www.tiktok.com/@loadlinksouthafrica?_r=1&_t=ZS-9B5rC2okOaD", logo: "/brands/tiktok.svg" },
+  { label: "Facebook", href: "https://www.facebook.com/share/1FyBiNb57K/", logo: "/brands/facebook.svg" },
+  { label: "Email", href: "mailto:loadlinkmarketing@gmail.com", logo: "/brands/gmail.svg" },
 ] as const;
 
 const PLAY_BADGE = "https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png";
+const APP_BADGE = "https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg";
 
 export default function LoadLinkSiteFooter20260822({ darkMode }: { darkMode: boolean }) {
-  const border = darkMode ? "border-white/10" : "border-black/10";
+  const subtle = darkMode ? "text-white/57" : "text-[#575d64]";
+  const line = darkMode ? "border-white/12" : "border-[#e6e8ea]";
   const playUrl = process.env.NEXT_PUBLIC_LOADLINK_PLAY_STORE_URL || "";
+  const appleUrl = process.env.NEXT_PUBLIC_LOADLINK_APP_STORE_URL || "";
+  const footerRef = useRef<HTMLElement>(null);
+
+  // On iOS Safari, the browser bar can show the page's cream theme colour
+  // below a white footer. Switch that chrome colour only while the footer
+  // is in the viewport; preserve the actual yellow marketplace backgrounds.
+  useEffect(() => {
+    const footer = footerRef.current;
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (!footer || !meta || typeof IntersectionObserver === "undefined") return;
+    const pageColor = darkMode ? "#050505" : "#f4efe3";
+    const footerColor = darkMode ? "#080909" : "#ffffff";
+    const observer = new IntersectionObserver(([entry]) => {
+      meta.setAttribute("content", entry.isIntersecting ? footerColor : pageColor);
+    }, { threshold: 0 });
+    observer.observe(footer);
+    return () => { observer.disconnect(); meta.setAttribute("content", pageColor); };
+  }, [darkMode]);
+
 
   function openCookiePreferences() {
     window.dispatchEvent(new Event("loadlink:open-cookie-preferences"));
   }
 
   return (
-    <footer className={`px-5 py-10 transition-colors duration-300 md:px-12 md:py-14 ${darkMode ? "bg-black text-white" : "bg-white text-black"}`} data-loadlink-footer="compact-20260823">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex justify-center">
-          <Link href="/" aria-label="LoadLink home" className="block max-w-full outline-none">
-            <LoadLinkImage src={darkMode ? "/images/loadlink-logo-dark.png" : "/images/loadlink-logo-light.png"} alt="LoadLink" className="h-auto w-[min(68vw,320px)] object-contain" />
+    <footer ref={footerRef} data-loadlink-footer="clean-20261103" className={`relative z-10 w-full px-5 pb-[max(36px,env(safe-area-inset-bottom))] pt-11 md:px-12 md:py-14 ${darkMode ? "bg-[#080909] text-white" : "bg-white text-[#151922]"}`}>
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Link href="/" aria-label="LoadLink home" className="inline-flex max-w-full">
+            <LoadLinkImage src={darkMode ? "/images/loadlink-logo-dark.png" : "/images/loadlink-logo-light.png"} alt="LoadLink" className="h-auto w-[min(55vw,210px)] object-contain" />
           </Link>
+          <p className={`text-sm font-medium ${subtle}`}>Logistics Made Easier.</p>
         </div>
 
-        <div className={`divide-y border-y ${darkMode ? "divide-white/10 border-white/10" : "divide-black/10 border-black/10"}`}>
-          <FooterDetails title="Company" darkMode={darkMode}>
+        <div className={`divide-y border-y ${line}`}>
+          <FooterDetails title="Company">
             <Link href="/about">About LoadLink</Link>
-            <a href="mailto:loadlinksouthafrica@gmail.com">Contact support</a>
-            <Link href="/help">Help & FAQ</Link>
-            <Link href="/#industry-insights">Industry insights</Link>
-          </FooterDetails>
-
-          <FooterDetails title="Logistics" darkMode={darkMode}>
-            <Link href="/jobs?portal=job">Find jobs</Link>
-            <Link href="/contracts">Find contracts</Link>
-            <RequireAuthLink href="/list-your-vehicle">List your vehicle</RequireAuthLink>
-            <Link href="/list-your-vehicle?view=marketplace#vehicle-marketplace">Vehicles & units</Link>
-            <Link href="/drivers">Drivers</Link>
-          </FooterDetails>
-
-          <FooterDetails title="Services" darkMode={darkMode}>
-            <Link href="/packages">Packages & plans</Link>
-            <Link href="/dealer">Dealership tools</Link>
-            <Link href="/help#contact-support">Business support</Link>
-          </FooterDetails>
-
-          <FooterDetails title="Customers" darkMode={darkMode}>
-            <Link href="/legal#marketplace-safety-policy">Safety centre</Link>
-            <Link href="/help?topic=troubleshooting">Report a problem</Link>
             <Link href="/help">Help centre</Link>
-            <Link href="/legal#privacy-policy">Privacy & account safety</Link>
+            <Link href="/#industry-insights">Logistics news</Link>
+            <a href="mailto:loadlinkmarketing@gmail.com">Marketing enquiries</a>
           </FooterDetails>
-
-          <FooterDetails title="Legal" darkMode={darkMode}>
-            <Link href="/legal#terms-of-use">Terms of Use</Link>
-            <Link href="/legal#privacy-policy">Privacy Policy</Link>
-            <Link href="/legal#marketplace-safety-policy">Marketplace & Safety Policy</Link>
-            <Link href="/legal#refund-cancellation-policy">Refund & Cancellation Policy</Link>
-            <Link href="/legal#cookie-policy">Cookie Policy</Link>
-            <button type="button" onClick={openCookiePreferences} className="w-fit text-left">Cookie Preferences</button>
+          <FooterDetails title="Marketplace">
+            <Link href="/jobs?portal=job">Find jobs</Link>
+            <Link href="/contracts">Contracts</Link>
+            <Link href="/list-your-vehicle?view=marketplace#vehicle-marketplace">Vehicles & mobile units</Link>
+            <Link href="/drivers">Drivers</Link>
+            <RequireAuthLink href="/list-your-vehicle">List a vehicle</RequireAuthLink>
           </FooterDetails>
-        </div>
-
-        <section className={`mt-7 grid gap-6 border-b pb-7 ${border} md:grid-cols-[minmax(0,1fr)_auto] md:items-end`}>
-          <div className="max-w-3xl">
-            <p className="text-xl font-black tracking-[-.03em]">Trade with confidence.</p>
-            <p className={`mt-2 max-w-2xl text-sm font-semibold leading-6 ${darkMode ? "text-white/58" : "text-black/58"}`}>
-              Verify people, businesses, vehicles and documents before completing a transaction. LoadLink provides marketplace and safety tools; transactions remain between users unless stated otherwise.
-            </p>
-            <Link href="/help" className={`mt-4 inline-flex min-h-10 items-center justify-center rounded-full border px-4 text-xs font-black ${darkMode ? "border-white/14 bg-white/[.035]" : "border-black/10 bg-black/[.025]"}`}>Report suspicious activity</Link>
-          </div>
-
-          <div className="md:text-right">
-            <p className="text-sm font-black">Get LoadLink</p>
-            {playUrl ? (
-              <a href={playUrl} target="_blank" rel="noreferrer" aria-label="Get LoadLink on Google Play" className="mt-2 inline-block">
-                <LoadLinkImage src={PLAY_BADGE} alt="Get it on Google Play" className="h-[50px] w-auto object-contain" />
-              </a>
-            ) : (
-              <div className="mt-2 inline-flex flex-col items-start md:items-end">
-                <LoadLinkImage src={PLAY_BADGE} alt="Google Play" className="h-[50px] w-auto object-contain opacity-70 grayscale-[.15]" />
-                <span className={`mt-1 text-[10px] font-bold ${darkMode ? "text-white/42" : "text-black/45"}`}>Android release coming soon</span>
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section className={`mt-6 grid gap-5 md:grid-cols-[1fr_auto] md:items-center`}>
-          <div>
-            <p className="text-sm font-black">Follow LoadLink</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {socialLinks.map((item) => item.href ? (
-                <a key={item.label} href={item.href} target="_blank" rel="noreferrer" aria-label={`LoadLink on ${item.label}`} className={`inline-flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-black ${border}`}>
-                  <SocialIcon name={item.icon} /> {item.label}
-                </a>
-              ) : null)}
-            </div>
-          </div>
-          <div className={`flex flex-wrap gap-x-5 gap-y-2 text-xs font-bold ${darkMode ? "text-white/55" : "text-black/55"}`}>
+          <FooterDetails title="Services">
+            <Link href="/packages">Packages & billing</Link>
+            <Link href="/dealer">Dealer centre</Link>
+            <Link href="/tools">Logistics tools</Link>
+          </FooterDetails>
+          <FooterDetails title="Safety & support">
+            <Link href="/report-suspicious-activity">Report suspicious activity</Link>
+            <Link href="/help#contact-support">Contact support</Link>
+            <Link href="/legal#marketplace-safety-policy">Marketplace safety</Link>
+          </FooterDetails>
+          <FooterDetails title="Legal">
             <Link href="/legal#terms-of-use">Terms</Link>
             <Link href="/legal#privacy-policy">Privacy</Link>
-            <Link href="/legal#marketplace-safety-policy">Safety</Link>
             <Link href="/legal#refund-cancellation-policy">Refunds</Link>
-            <button type="button" onClick={openCookiePreferences}>Cookies</button>
+            <button type="button" onClick={openCookiePreferences} className="w-fit text-left">Cookie preferences</button>
+          </FooterDetails>
+        </div>
+
+        {(playUrl || appleUrl) ? (
+          <section className="mt-8" aria-label="Download LoadLink">
+            <h2 className="text-base font-semibold">Download the app</h2>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              {appleUrl ? <a href={appleUrl} rel="noopener noreferrer" target="_blank" aria-label="Download LoadLink on the App Store"><img src={APP_BADGE} alt="Download on the App Store" width={140} height={42} className="h-[42px] w-auto" /></a> : null}
+              {playUrl ? <a href={playUrl} rel="noopener noreferrer" target="_blank" aria-label="Get LoadLink on Google Play"><img src={PLAY_BADGE} alt="Get it on Google Play" width={147} height={42} className="h-[42px] w-auto" /></a> : null}
+            </div>
+          </section>
+        ) : null}
+
+        <section className="mt-9" aria-labelledby="loadlink-social-heading">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 id="loadlink-social-heading" className="text-base font-semibold">Connect with LoadLink</h2>
+              <p className={`mt-1 text-xs ${subtle}`}>Social updates, news and enquiries.</p>
+            </div>
+            <a href="mailto:loadlinkmarketing@gmail.com" className={`text-xs font-medium underline underline-offset-4 ${subtle}`}>loadlinkmarketing@gmail.com</a>
+          </div>
+          <div className="mt-4 flex items-center gap-3">
+            {socialLinks.map(({ label, href, logo }) => (
+              <a key={label} href={href} target={href.startsWith("mailto:") ? undefined : "_blank"} rel="noopener noreferrer" title={label} aria-label={`LoadLink on ${label}`}
+                className={`inline-flex h-12 w-12 items-center justify-center rounded-full border transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-[#f6b800] ${darkMode ? "border-white/15 bg-white" : "border-[#e7e7e7] bg-white"}`}>
+                <img src={logo} width={24} height={24} alt={label} className="h-6 w-6 object-contain" loading="lazy" />
+              </a>
+            ))}
           </div>
         </section>
-
-        <p className={`mt-6 border-t pt-5 text-xs font-semibold ${border} ${darkMode ? "text-white/45" : "text-black/50"}`}>© 2026 LoadLink. All rights reserved. · South Africa</p>
+        <div className={`mt-9 flex flex-wrap items-center justify-between gap-2 border-t pt-5 text-xs ${line} ${subtle}`}>
+          <span>© 2026 LoadLink. All rights reserved.</span>
+          <span>South Africa</span>
+        </div>
       </div>
     </footer>
   );
 }
 
-function FooterDetails({ title, darkMode, children }: { title: string; darkMode: boolean; children: React.ReactNode }) {
+function FooterDetails({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <details className="group py-4">
-      <summary className="flex cursor-pointer list-none items-center justify-between text-lg font-black">
+      <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 text-[19px] font-semibold tracking-[-.025em] marker:hidden">
         {title}
-        <span aria-hidden="true" className={`text-sm opacity-35 transition group-open:rotate-180 ${darkMode ? "text-white" : "text-black"}`}>⌄</span>
+        <svg className="h-4 w-4 shrink-0 opacity-55 transition-transform group-open:rotate-180" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
       </summary>
-      <div className={`mt-4 grid gap-3 text-sm font-semibold ${darkMode ? "text-white/70" : "text-black/70"}`}>{children}</div>
+      <div className="grid gap-3 pb-3 pt-2 text-sm font-medium text-inherit opacity-75 [&_a:hover]:underline [&_a:focus-visible]:underline">{children}</div>
     </details>
   );
-}
-
-function SocialIcon({ name }: { name: "tiktok" | "instagram" | "linkedin" }) {
-  if (name === "instagram") return <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" strokeWidth="2"/><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/><circle cx="17.4" cy="6.7" r="1" fill="currentColor"/></svg>;
-  if (name === "linkedin") return <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M5.2 3.8A2.2 2.2 0 1 0 5.2 8.2 2.2 2.2 0 0 0 5.2 3.8ZM3.3 9.5h3.8V21H3.3V9.5Zm6.1 0H13v1.6h.1c.5-.9 1.7-2 3.6-2 3.9 0 4.6 2.5 4.6 5.8V21h-3.8v-5.4c0-1.3 0-3-1.9-3s-2.2 1.4-2.2 2.9V21H9.4V9.5Z"/></svg>;
-  return <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M14.7 3c.4 2.7 2 4.4 4.8 4.6v3.2a8.7 8.7 0 0 1-4.7-1.4v5.9a6.3 6.3 0 1 1-5.5-6.2v3.3a3.1 3.1 0 1 0 2.2 3V3h3.2Z" fill="currentColor"/></svg>;
 }
