@@ -456,6 +456,7 @@ export default function MessagesPage() {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [connectionRetry, setConnectionRetry] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
   const [recording, setRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -473,6 +474,12 @@ export default function MessagesPage() {
     () => DEFAULT_MESSAGE_PRIVACY,
   );
   const [presenceNow, setPresenceNow] = useState(() => Date.now());
+  useEffect(() => {
+    const reconnect = () => setConnectionRetry((value) => value + 1);
+    window.addEventListener("online", reconnect);
+    return () => window.removeEventListener("online", reconnect);
+  }, []);
+
 
   // The mobile chat settings panel behaves like a separate screen.
   useEffect(() => {
@@ -802,8 +809,9 @@ export default function MessagesPage() {
     const requestSequence = ++conversationLoadSequenceRef.current;
     const buyerKeys = getBuyerKeys();
     const ownerKeys = getOwnerKeys();
-    const [buyerGroups, ownerGroups] = await Promise.all([
-      Promise.all(buyerKeys.map(async (buyerKey) => {
+    // A stale legacy access key must not hide conversations fetched with valid keys.
+    const [buyerResults, ownerResults] = await Promise.all([
+      Promise.allSettled(buyerKeys.map(async (buyerKey) => {
         const result = await reliableChatRead(() => supabase.rpc("get_buyer_guest_threads", { p_buyer_key: buyerKey }));
         if (result.error) throw result.error;
         return ((result.data || []) as ConversationRow[]).map((row) => ({
@@ -813,7 +821,7 @@ export default function MessagesPage() {
           unreadCount: toCount(row.unread_count),
         }));
       })),
-      Promise.all(ownerKeys.map(async (ownerKey) => {
+      Promise.allSettled(ownerKeys.map(async (ownerKey) => {
         const result = await reliableChatRead(() => supabase.rpc("get_owner_guest_threads", { p_owner_key: ownerKey }));
         if (result.error) throw result.error;
         return ((result.data || []) as ConversationRow[]).map((row) => ({
@@ -824,8 +832,11 @@ export default function MessagesPage() {
         }));
       })),
     ]);
-    const buyerRows: Conversation[] = buyerGroups.flat();
-    const ownerRows: Conversation[] = ownerGroups.flat();
+    const successful = [...buyerResults, ...ownerResults].filter((entry) => entry.status === "fulfilled");
+    const failed = [...buyerResults, ...ownerResults].find((entry) => entry.status === "rejected");
+    if (!successful.length && failed?.status === "rejected") throw failed.reason;
+    const buyerRows: Conversation[] = buyerResults.flatMap((entry) => entry.status === "fulfilled" ? entry.value : []);
+    const ownerRows: Conversation[] = ownerResults.flatMap((entry) => entry.status === "fulfilled" ? entry.value : []);
 
     const locallyArchived = readLocalArchivedIds();
     const merged = new Map<string, Conversation>();
@@ -1017,7 +1028,7 @@ export default function MessagesPage() {
       active = false;
       if (refreshTimer) clearInterval(refreshTimer);
     };
-  }, [loadConversations, router]);
+  }, [loadConversations, router, connectionRetry]);
 
   useEffect(() => {
     if (!selectedConversation) {
@@ -2053,8 +2064,7 @@ ${message}` : message)}
                   {/connection interrupted|took too long/i.test(error) ? (
                     <button type="button" onClick={() => {
                       setError("");
-                      void loadConversations(selectedConversation?.id).then(() => setError(""))
-                        .catch((failure) => setError(cleanError(failure, "Messages could not load.")));
+                      setConnectionRetry((value) => value + 1);
                       if (selectedConversation) void loadMessages(selectedConversation, true);
                     }} className="ml-3 inline-flex min-h-9 items-center rounded-full border border-red-300 px-3 text-xs font-bold">Retry</button>
                   ) : null}
