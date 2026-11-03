@@ -88,53 +88,11 @@ function captureSeenClick(event: MouseEvent) {
   window.requestAnimationFrame(repairSeenListings);
 }
 
-function repairDealerPackage() {
-  if (!window.location.pathname.startsWith("/packages") && !window.location.pathname.startsWith("/list-your-vehicle")) return;
-  const cards = [...document.querySelectorAll<HTMLElement>("article")];
-  const dealer = cards.find((card) => /^\s*Dealer\s*$/i.test(card.querySelector("h3")?.textContent || ""));
-  const list = dealer?.querySelector("ul");
-  if (!dealer || !list) return;
-  const add = (label: string) => {
-    if ((dealer.textContent || "").toLowerCase().includes(label.toLowerCase())) return;
-    const li = document.createElement("li");
-    li.className = "flex gap-2 text-[11px] font-semibold";
-    li.innerHTML = '<span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]"></span>' + label;
-    list.appendChild(li);
-  };
-  add("Public dealership opening times");
-  add("Verified customer reviews");
-}
-
-function repairDealerProfile() {
+// Real dealership showroom components already render trading hours and reviews.
+// Remove obsolete injected placeholder cards when navigating without a full reload.
+function removeLegacyDealerCards() {
   if (!window.location.pathname.startsWith("/dealership/")) return;
-  if (document.querySelector('[data-loadlink-dealer-business-info="true"]')) return;
-  const main = document.querySelector("main");
-  if (!main) return;
-  const section = document.createElement("section");
-  section.dataset.loadlinkDealerBusinessInfo = "true";
-  section.className = "loadlink-dealer-business-info";
-  section.innerHTML = `
-    <div class="loadlink-dealer-business-grid">
-      <article class="loadlink-dealer-business-card">
-        <div class="loadlink-dealer-card-kicker">Opening times</div>
-        <h2>Showroom hours</h2>
-        <div class="loadlink-hours-grid" aria-label="Dealership opening times">
-          <span>Monday – Friday</span><strong>08:00 – 17:00</strong>
-          <span>Saturday</span><strong>08:00 – 13:00</strong>
-          <span>Sunday</span><strong>Closed</strong>
-        </div>
-        <p>Dealer accounts can publish their own trading hours on the public showroom.</p>
-      </article>
-      <article class="loadlink-dealer-business-card">
-        <div class="loadlink-dealer-card-kicker">Reviews</div>
-        <div class="loadlink-review-heading"><h2>Customer reviews</h2><strong>Dealer</strong></div>
-        <p>Verified customers can review a dealership after a genuine LoadLink interaction. Reviews stay attached to the dealership profile rather than one stock card.</p>
-        <button type="button" data-loadlink-review-action="true">Write a review</button>
-      </article>
-    </div>`;
-  const firstContentSection = main.querySelector("section:nth-of-type(2)");
-  if (firstContentSection?.nextSibling) main.insertBefore(section, firstContentSection.nextSibling);
-  else main.appendChild(section);
+  document.querySelectorAll('[data-loadlink-dealer-business-info="true"]').forEach((node) => node.remove());
 }
 
 function ensureStyles() {
@@ -147,17 +105,6 @@ function ensureStyles() {
 .loadlink-chat-header button[aria-label="View latest dealer update"] [aria-label$="profile picture"]{width:100%!important;height:100%!important}
 [aria-label$="profile picture"]>span{background:transparent!important}
 .loadlink-seen-post-badge{display:none!important;position:absolute!important;top:12px!important;left:12px!important;right:auto!important;z-index:20!important;pointer-events:none!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:9px!important;background:rgba(18,18,18,.78)!important;color:#fff!important;padding:8px 13px!important;font-size:12px!important;font-weight:700!important;line-height:1!important;letter-spacing:0!important;box-shadow:0 6px 18px rgba(0,0,0,.2)!important;backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important}
-.loadlink-dealer-business-info{padding:28px 20px;border-bottom:1px solid rgba(0,0,0,.08)}
-.loadlink-dealer-business-grid{width:min(100%,1216px);margin:0 auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-.loadlink-dealer-business-card{border:1px solid rgba(0,0,0,.1);background:rgba(255,255,255,.78);border-radius:24px;padding:22px;box-shadow:0 12px 34px rgba(0,0,0,.05)}
-.loadlink-dealer-card-kicker{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#9a7300}
-.loadlink-dealer-business-card h2{margin:8px 0 0;font-size:24px;font-weight:900;letter-spacing:-.035em}
-.loadlink-dealer-business-card p{margin:13px 0 0;font-size:13px;font-weight:600;line-height:1.65;color:rgba(0,0,0,.58)}
-.loadlink-hours-grid{margin-top:18px;display:grid;grid-template-columns:1fr auto;gap:10px 18px;font-size:13px}.loadlink-hours-grid strong{font-weight:900}
-.loadlink-review-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}.loadlink-review-heading>strong{border-radius:999px;background:#f6b800;color:#000;padding:6px 9px;font-size:9px;text-transform:uppercase}
-.loadlink-dealer-business-card button{margin-top:18px;height:42px;border:0;border-radius:12px;background:#f6b800;color:#000;padding:0 16px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
-html[data-loadlink-theme="dark"] .loadlink-dealer-business-info{border-color:rgba(255,255,255,.1)}html[data-loadlink-theme="dark"] .loadlink-dealer-business-card{border-color:rgba(255,255,255,.11);background:rgba(13,13,13,.92);color:#fff}html[data-loadlink-theme="dark"] .loadlink-dealer-business-card p{color:rgba(255,255,255,.58)}
-@media(max-width:720px){.loadlink-dealer-business-grid{grid-template-columns:1fr}.loadlink-dealer-business-info{padding:20px 16px}}
 `;
   document.head.appendChild(style);
 }
@@ -166,8 +113,7 @@ function runRepairs() {
   ensureStyles();
   repairContractLinks();
   repairSeenListings();
-  repairDealerPackage();
-  repairDealerProfile();
+  removeLegacyDealerCards();
 }
 
 export default function LoadLinkUiRepairV273() {
