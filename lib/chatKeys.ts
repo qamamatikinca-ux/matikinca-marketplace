@@ -117,7 +117,8 @@ export function getOwnerKeys() {
   }
 
   Object.values(getOwnedJobKeys()).forEach((key) => {
-    if (key.length >= 20) keys.add(key);
+    // Ownership markers (account:UUID) are not valid chat credentials.
+    if (key.length >= 20 && !key.startsWith("account:")) keys.add(key);
   });
 
   return Array.from(keys);
