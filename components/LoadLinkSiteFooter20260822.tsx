@@ -46,9 +46,9 @@ export default function LoadLinkSiteFooter20260822({ darkMode }: { darkMode: boo
   return (
     <footer ref={footerRef} data-loadlink-footer="clean-20261103" className={`relative z-10 w-full px-5 pb-[max(36px,env(safe-area-inset-bottom))] pt-11 md:px-12 md:py-14 ${darkMode ? "bg-[#080909] text-white" : "bg-white text-[#151922]"}`}>
       <div className="mx-auto max-w-6xl">
-        <div className="mb-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Link href="/" aria-label="LoadLink home" className="inline-flex max-w-full">
-            <LoadLinkImage src={darkMode ? "/images/loadlink-logo-dark.png" : "/images/loadlink-logo-light.png"} alt="LoadLink" className="h-auto w-[min(55vw,210px)] object-contain" />
+        <div className="mb-8 flex flex-col items-center gap-3 text-center">
+          <Link href="/" aria-label="LoadLink home" className="inline-flex max-w-full justify-center">
+            <LoadLinkImage src={darkMode ? "/images/loadlink-logo-dark.png" : "/images/loadlink-logo-light.png"} alt="LoadLink" className="h-auto w-[min(75vw,250px)] object-contain" />
           </Link>
           <p className={`text-sm font-medium ${subtle}`}>Logistics Made Easier.</p>
         </div>
@@ -101,7 +101,6 @@ export default function LoadLinkSiteFooter20260822({ darkMode }: { darkMode: boo
               <h2 id="loadlink-social-heading" className="text-base font-semibold">Connect with LoadLink</h2>
               <p className={`mt-1 text-xs ${subtle}`}>Social updates, news and enquiries.</p>
             </div>
-            <a href="mailto:loadlinkmarketing@gmail.com" className={`text-xs font-medium underline underline-offset-4 ${subtle}`}>loadlinkmarketing@gmail.com</a>
           </div>
           <div className="mt-4 flex items-center gap-3">
             {socialLinks.map(({ label, href, logo }) => (

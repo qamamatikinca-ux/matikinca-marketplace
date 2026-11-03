@@ -672,7 +672,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
               { label: "Drivers", href: "/drivers", active: false },
             ] as const).map((item) => (
               <Link key={item.label} href={item.href} aria-current={item.active ? "page" : undefined}
-                className={`inline-flex min-h-10 shrink-0 items-center justify-center rounded-full border px-4 text-sm font-semibold transition ${item.active ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-white/25 bg-black/75 text-white hover:border-white/55"}`}>
+                className={`inline-flex min-h-10 shrink-0 items-center justify-center rounded-full border px-4 text-sm font-semibold transition active:border-[#f6b800] active:bg-[#f6b800] active:text-black focus-visible:border-[#f6b800] focus-visible:bg-[#f6b800] focus-visible:text-black ${item.active ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-white/25 bg-black/75 text-white hover:border-white/55"}`}>
                 {item.label}
               </Link>
             ))}
