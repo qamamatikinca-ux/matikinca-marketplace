@@ -203,7 +203,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                     darkMode ? "border-white/10 bg-[#171717]" : "border-black/10 bg-[#fafafa]"
                   }`}
                 >
-                  <span className={`flex h-full items-center justify-center ${darkMode ? "text-[#f6b800]" : "text-black/45"}`}>
+                  <span className={`flex h-full items-center justify-center ${darkMode ? "text-white/65" : "text-black/45"}`}>
                     <SearchIcon />
                   </span>
                   <label htmlFor="loadlink-marketplace-search" className="sr-only">Search LoadLink</label>
@@ -260,7 +260,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                         <button
                           type="button"
                           onClick={() => launchSearch()}
-                          className={`flex w-full items-center justify-between px-4 py-3 text-left text-[12px] font-semibold ${darkMode ? "text-[#f6b800]" : "text-[#9a7000]"}`}
+                          className={`flex w-full items-center justify-between px-4 py-3 text-left text-[12px] font-semibold ${darkMode ? "text-white/80" : "text-black/75"}`}
                         >
                           View all {resultLabel}
                           <ArrowIcon />
@@ -350,7 +350,7 @@ function PlusIcon({ open }: { open: boolean }) {
 }
 
 export function VerifiedBadge() {
-  return <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[#c99a17] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#b88900]"><CheckIcon />Verified</span>;
+  return <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-current/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-current"><CheckIcon />Verified</span>;
 }
 
 function CheckIcon() {

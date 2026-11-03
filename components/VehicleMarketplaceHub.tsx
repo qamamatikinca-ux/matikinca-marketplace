@@ -254,7 +254,6 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
           <section aria-labelledby="promoted-vehicle-heading" className={`mb-10 rounded-[24px] border p-4 sm:p-6 ${darkMode ? "border-[#f6b800]/30 bg-[#15130b]" : "border-[#d4b659]/45 bg-[#fffbef]"}`}>
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <span className={`text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-[#f6b800]" : "text-[#9a7600]"}`}>Featured stock</span>
                 <h2 id="promoted-vehicle-heading" className="mt-1 text-2xl font-black tracking-[-.04em] sm:text-3xl">Promoted listings</h2>
                 <p className={`mt-1 text-xs font-semibold ${muted}`}>Paid placements, clearly marked and prioritised on LoadLink.</p>
               </div>
@@ -271,7 +270,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
                   <div className="p-4">
                     <p className={`text-xs font-semibold ${muted}`}>{equipmentKind(row).replace("_", " ")} · {row.city || "South Africa"}</p>
                     <h3 className="mt-1 line-clamp-2 text-base font-black">{row.title || "Commercial vehicle"}</h3>
-                    <p className={`mt-2 text-xl font-black ${darkMode ? "text-[#f6b800]" : "text-[#956f00]"}`}>{formatListingRate(row.rate)}</p>
+                    <p className={`mt-2 text-xl font-black ${darkMode ? "text-white" : "text-black"}`}>{formatListingRate(row.rate)}</p>
                   </div>
                 </Link>
               ))}
@@ -331,7 +330,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
                     </Link>
 
                     <div className="p-4 sm:p-5">
-                      <p className={`text-2xl font-black tracking-[-.04em] ${darkMode ? "text-[#f6b800]" : "text-[#947000]"}`}>{formatListingRate(row.rate)}</p>
+                      <p className={`text-2xl font-black tracking-[-.04em] ${darkMode ? "text-white" : "text-black"}`}>{formatListingRate(row.rate)}</p>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <span className="rounded-full bg-[#2f9f5b] px-3 py-1.5 text-[10px] font-black uppercase text-white">{kindLabel}</span>
                         <span className={`rounded-full px-3 py-1.5 text-[10px] font-black uppercase ${softPill}`}>{type}</span>

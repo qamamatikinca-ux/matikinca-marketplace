@@ -55,19 +55,33 @@ function HomeExperience() {
         </LoadLinkBoundary>
       </section>
 
+      {/* Restore the original centred homepage treatment and the early LoadLink messaging.
+          No decorative gold eyebrow labels, extra slogans, or invented company claims. */}
       <section
-        aria-labelledby="loadlink-our-mission"
-        className={`border-t px-5 py-14 md:px-12 md:py-20 ${darkMode ? "border-white/10 bg-[#0c0d0c] text-white" : "border-black/10 bg-[#f7f6f1] text-[#151515]"}`}
+        aria-label="LoadLink mission and vision"
+        className={`border-t px-5 py-14 transition-colors duration-300 md:px-12 md:py-20 ${darkMode ? "border-white/10 bg-[#050505] text-white" : "border-black/10 bg-[#fff6dc] text-black"}`}
       >
-        <div className="mx-auto max-w-4xl">
-          <p className="text-[11px] font-bold uppercase tracking-[.13em] text-[#c99700]">Our mission</p>
-          <h2 id="loadlink-our-mission" className="mt-3 max-w-3xl text-[clamp(29px,6vw,44px)] font-bold leading-[1.15] tracking-[-.04em]">
-            Building a smarter way to connect logistics opportunities.
-          </h2>
-          <p className={`mt-5 max-w-3xl text-sm leading-7 md:text-base ${darkMode ? "text-white/65" : "text-black/65"}`}>
-            LoadLink brings verified logistics opportunities, commercial vehicles, professional drivers and direct business communication into one South African marketplace. Find the right work, equipment and industry partners without unnecessary friction.
-          </p>
-          <p className={`mt-5 text-xs font-semibold ${darkMode ? "text-[#f6b800]" : "text-[#8a6700]"}`}>Logistics Made Easier.</p>
+        <div className="mx-auto max-w-5xl text-center">
+          <div>
+            <h2 id="loadlink-our-mission" className="text-[clamp(26px,5vw,40px)] font-bold leading-tight tracking-[-.04em]">
+              Our Mission
+            </h2>
+            <p className="mx-auto mt-5 max-w-4xl text-[clamp(22px,4.3vw,34px)] font-semibold leading-[1.24] tracking-[-.035em]">
+              Building a smarter way to connect logistics opportunities.
+            </p>
+            <p className={`mx-auto mt-5 max-w-3xl text-sm leading-7 md:text-base ${darkMode ? "text-white/65" : "text-black/65"}`}>
+              LoadLink brings verified logistics opportunities, commercial vehicles, professional drivers and direct business communication into one South African marketplace. Our goal is to make finding work, equipment and reliable industry partners faster and more transparent.
+            </p>
+          </div>
+
+          <div className={`mx-auto mt-10 max-w-3xl border-t pt-9 md:mt-12 md:pt-11 ${darkMode ? "border-white/15" : "border-black/15"}`}>
+            <h2 className="text-[clamp(26px,5vw,40px)] font-bold leading-tight tracking-[-.04em]">
+              Our Vision
+            </h2>
+            <p className="mt-5 text-[clamp(22px,4.3vw,34px)] font-semibold leading-[1.24] tracking-[-.035em]">
+              One Platform. More Opportunities.
+            </p>
+          </div>
         </div>
       </section>
 

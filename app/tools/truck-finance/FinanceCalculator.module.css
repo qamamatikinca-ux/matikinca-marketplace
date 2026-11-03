@@ -24,7 +24,7 @@
   font-weight: 750; letter-spacing: -.043em; line-height: 1.17;
 }
 .heading > p:last-child { margin: 0; max-width: 640px; font-size: 14px; line-height: 1.65; color: var(--finance-muted); }
-.eyebrow { margin: 0; font-size: 10px; font-weight: 760; letter-spacing: .105em; color: #bc8e00; }
+.eyebrow { margin: 0; font-size: 12px; font-weight: 620; letter-spacing: 0; color: var(--finance-muted); }
 .back {
   display: inline-flex; align-items: center; min-height: 35px;
   margin: 0 0 19px; padding: 4px 0;
