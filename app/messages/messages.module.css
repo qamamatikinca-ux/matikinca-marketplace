@@ -80,3 +80,38 @@
 .messageApp :global(.loadlink-folder-tabs button){border-radius:999px!important;border:0!important;font-size:11px!important;min-height:40px!important;padding:10px 8px!important;font-weight:650!important}
 .messageApp :global(.loadlink-folder-tabs button[aria-selected=false]){background:transparent!important}
 @media(max-width:767px){.messageApp .inboxHeader{padding:20px 16px 16px!important}.messageApp .inboxSearch{font-size:16px!important}.messageApp .conversationRow{padding:17px 16px!important}}
+
+/* Chat composer stays readable in both themes, including the iOS keyboard. */
+.messageApp :global(.loadlink-message-input) {
+  background: #ffffff !important;
+  border-color: rgba(17,17,17,.12) !important;
+  color: #171717 !important;
+}
+.messageApp :global(.loadlink-message-input textarea[data-loadlink-message-composer="true"]) {
+  background: transparent !important;
+  color: #171717 !important;
+  -webkit-text-fill-color: #171717 !important;
+  caret-color: #ad8100 !important;
+  color-scheme: light !important;
+  opacity: 1 !important;
+}
+.messageApp :global(.loadlink-message-input textarea[data-loadlink-message-composer="true"]::placeholder) {
+  color: rgba(17,17,17,.48) !important;
+  -webkit-text-fill-color: rgba(17,17,17,.48) !important;
+}
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-message-input) {
+  background: #171717 !important;
+  border-color: rgba(255,255,255,.17) !important;
+  color: #f7f7f7 !important;
+}
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-message-input textarea[data-loadlink-message-composer="true"]) {
+  background: transparent !important;
+  color: #f7f7f7 !important;
+  -webkit-text-fill-color: #f7f7f7 !important;
+  caret-color: #f6b800 !important;
+  color-scheme: dark !important;
+}
+:global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-message-input textarea[data-loadlink-message-composer="true"]::placeholder) {
+  color: rgba(255,255,255,.46) !important;
+  -webkit-text-fill-color: rgba(255,255,255,.46) !important;
+}
