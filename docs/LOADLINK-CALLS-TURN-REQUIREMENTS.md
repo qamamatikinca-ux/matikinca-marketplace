@@ -8,20 +8,20 @@ The current marketplace Vercel project has the Supabase and Turnstile variables 
 
 ## Preferred provider: Cloudflare Realtime TURN
 
-LoadLink's \`GET /api/calls/ice\` endpoint now supports Cloudflare's managed TURN relay and automatically obtains **one-hour temporary TURN credentials** for authenticated users. It supports UDP 3478/443, TCP 3478/80 and TLS 5349/443; the long-lived provider token is never returned to the browser.
+LoadLink's `GET /api/calls/ice` endpoint now supports Cloudflare's managed TURN relay and automatically obtains **one-hour temporary TURN credentials** for authenticated users. It supports UDP 3478/443, TCP 3478/80 and TLS 5349/443; the long-lived provider token is never returned to the browser.
 
 **One-time Cloudflare account setup (requires an account owner):**
 
 1. Open [Cloudflare Dashboard](https://dash.cloudflare.com/?to=/:account/calls) → **Realtime** → **TURN Server** → **Create** and name the server "LoadLink voice calls".
 2. In Vercel → **matikinca-marketplace** → **Settings** → **Environment Variables**, add the following as **encrypted server-side** environment variables for Production and Preview:
-   - \`LOADLINK_CLOUDFLARE_TURN_KEY_ID\`: the Cloudflare **TURN Token ID** (32-character identifier).
-   - \`LOADLINK_CLOUDFLARE_TURN_API_TOKEN\`: the associated **TURN API Token**.
-3. Redeploy the reviewed marketplace release. Calls now request \`https://rtc.live.cloudflare.com/v1/turn/keys/{id}/credentials/generate-ice-servers\` from the server. The response is authenticated, rate-limited, no-store, and includes short-lived credentials.
-4. Test with two different real mobile networks. Confirm that \`/api/calls/ice\` indicates \`relayAvailable: true\` for an authenticated account. That confirms a credential was issued, **not** that a media call succeeds; verify both-way audio before declaring the repair finished.
+   - `LOADLINK_CLOUDFLARE_TURN_KEY_ID`: the Cloudflare **TURN Token ID** (32-character identifier).
+   - `LOADLINK_CLOUDFLARE_TURN_API_TOKEN`: the associated **TURN API Token**.
+3. Redeploy the reviewed marketplace release. Calls now request `https://rtc.live.cloudflare.com/v1/turn/keys/{id}/credentials/generate-ice-servers` from the server. The response is authenticated, rate-limited, no-store, and includes short-lived credentials.
+4. Test with two different real mobile networks. Confirm that `/api/calls/ice` indicates `relayAvailable: true` for an authenticated account. That confirms a credential was issued, **not** that a media call succeeds; verify both-way audio before declaring the repair finished.
 
 **Cloudflare pricing:** currently $0.05 per GB of relayed outbound traffic when used without its SFU (free in conjunction with Cloudflare Realtime SFU); usage charges may apply. The account owner must accept those terms. The site does not start billing or create a Cloudflare account merely by deploying the code.
 
-Do not paste Cloudflare's API token into the chat or store it in Github. Never use \`NEXT_PUBLIC_\` for provider secrets. The code fails with a clear 503 when Cloudflare is configured but cannot supply a valid relay, rather than silently returning STUN-only candidates.
+Do not paste Cloudflare's API token into the chat or store it in Github. Never use `NEXT_PUBLIC_` for provider secrets. The code fails with a clear 503 when Cloudflare is configured but cannot supply a valid relay, rather than silently returning STUN-only candidates.
 
 Official docs: https://developers.cloudflare.com/realtime/turn/generate-credentials/
 
