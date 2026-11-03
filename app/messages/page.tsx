@@ -2246,12 +2246,13 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
     return () => window.clearTimeout(timer);
   }, [url]);
 
-  async function loadVoiceNote(playAfterLoad = false) {
+  async function loadVoiceNote(playAfterLoad = false, forceReload = false) {
     if (!message.attachment_id || loading) return;
-    if (url) {
+    if (url && !forceReload) {
       if (playAfterLoad) void audioRef.current?.play().catch(() => { setPlaying(false); /* iOS can require a fresh tap. */ });
       return;
     }
+    if (forceReload && url) { URL.revokeObjectURL(url); setUrl(""); }
     setLoading(true);
     setLoadFailed(false);
     try {
@@ -2344,7 +2345,7 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
           </button>
           <div className={`mt-0.5 flex items-center justify-between gap-3 text-[10px] font-bold ${mine ? "text-white/58" : "text-black/48"}`}>
             <span>{url ? timeLabel(currentTime) : "Voice note"}</span>
-            <span className="flex items-center gap-2">{loadFailed ? <button type="button" onClick={() => { setUrl(""); void loadVoiceNote(false); }} className="font-black underline">Retry</button> : null}<span data-loadlink-voice-speeds="v2619-fixed" className="flex items-center gap-1" aria-label="Voice note playback speed">
+            <span className="flex items-center gap-2">{loadFailed ? <button type="button" onClick={() => void loadVoiceNote(false, true)} className="font-black underline">Retry</button> : null}<span data-loadlink-voice-speeds="v2619-fixed" className="flex items-center gap-1" aria-label="Voice note playback speed">
                   {([0.5, 1, 1.5, 2] as const).map((rate) => (
                     <button
                       key={rate}
