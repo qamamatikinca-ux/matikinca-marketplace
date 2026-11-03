@@ -807,68 +807,77 @@ export default function MessagesPage() {
 
   const loadConversations = useCallback(async (preferredId?: string) => {
     const requestSequence = ++conversationLoadSequenceRef.current;
-    const buyerKeys = getBuyerKeys();
+    // The primary account keys must take precedence; historical device keys must never
+    // hold the whole inbox hostage while one legacy request stalls.
+    const currentBuyerKey = getBuyerKey();
+    const buyerKeys = [currentBuyerKey, ...getBuyerKeys().filter(key => key !== currentBuyerKey)];
     const ownerKeys = getOwnerKeys();
-    // A stale legacy access key must not hide conversations fetched with valid keys.
-    const [buyerResults, ownerResults] = await Promise.all([
-      Promise.allSettled(buyerKeys.map(async (buyerKey) => {
-        const result = await reliableChatRead(() => supabase.rpc("get_buyer_guest_threads", { p_buyer_key: buyerKey }));
-        if (result.error) throw result.error;
-        return ((result.data || []) as ConversationRow[]).map((row) => ({
-          ...row,
-          accessKey: buyerKey,
-          role: "buyer" as const,
-          unreadCount: toCount(row.unread_count),
-        }));
-      })),
-      Promise.allSettled(ownerKeys.map(async (ownerKey) => {
-        const result = await reliableChatRead(() => supabase.rpc("get_owner_guest_threads", { p_owner_key: ownerKey }));
-        if (result.error) throw result.error;
-        return ((result.data || []) as ConversationRow[]).map((row) => ({
-          ...row,
-          accessKey: ownerKey,
-          role: "owner" as const,
-          unreadCount: toCount(row.unread_count),
-        }));
-      })),
-    ]);
-    const successful = [...buyerResults, ...ownerResults].filter((entry) => entry.status === "fulfilled");
-    const failed = [...buyerResults, ...ownerResults].find((entry) => entry.status === "rejected");
-    if (!successful.length && failed?.status === "rejected") throw failed.reason;
-    const buyerRows: Conversation[] = buyerResults.flatMap((entry) => entry.status === "fulfilled" ? entry.value : []);
-    const ownerRows: Conversation[] = ownerResults.flatMap((entry) => entry.status === "fulfilled" ? entry.value : []);
-
+    const tasks = [
+      ...buyerKeys.map(key => ({ key, role: "buyer" as const })),
+      ...ownerKeys.map(key => ({ key, role: "owner" as const })),
+    ];
     const locallyArchived = readLocalArchivedIds();
     const merged = new Map<string, Conversation>();
-    [...buyerRows, ...ownerRows].forEach((row) => {
-      const hasNewMessage = row.unreadCount > 0;
-      if (hasNewMessage) locallyArchived.delete(row.id);
-      merged.set(row.id, {
-        ...row,
-        archived: hasNewMessage ? false : Boolean(row.archived) || locallyArchived.has(row.id),
-      });
-    });
-    writeLocalArchivedIds(locallyArchived);
-    const rows = Array.from(merged.values()).sort((first, second) => {
-      return (
+    let successfulReads = 0;
+    let failedReads = 0;
+    let firstFailure: unknown = null;
+    const publish = () => {
+      if (requestSequence !== conversationLoadSequenceRef.current) return;
+      const rows = Array.from(merged.values()).sort((first, second) =>
         new Date(second.last_message_at || 0).getTime() -
         new Date(first.last_message_at || 0).getTime()
       );
-    });
-
+      setPresenceNow(Date.now());
+      setConversations(rows);
+      const nextId = preferredId || selectedIdRef.current ||
+        (window.innerWidth >= 768 ? rows[0]?.id || "" : "");
+      if (nextId && rows.some(row => row.id === nextId)) {
+        selectedIdRef.current = nextId;
+        setSelectedId(nextId);
+      }
+      window.dispatchEvent(new Event("loadlink-chat-unread-updated"));
+    };
+    let index = 0;
+    const readNext = async () => {
+      while (index < tasks.length && requestSequence === conversationLoadSequenceRef.current) {
+        const task = tasks[index++];
+        try {
+          const signal = AbortSignal.timeout(4500);
+          const result = task.role === "buyer"
+            ? await reliableChatRead(() => supabase.rpc("get_buyer_guest_threads", { p_buyer_key: task.key }).abortSignal(signal))
+            : await reliableChatRead(() => supabase.rpc("get_owner_guest_threads", { p_owner_key: task.key }).abortSignal(signal));
+          if (result.error) throw result.error;
+          successfulReads++;
+          ((result.data || []) as ConversationRow[]).forEach(row => {
+            const unreadCount = toCount(row.unread_count);
+            const archived = unreadCount > 0 ? false : Boolean(row.archived) || locallyArchived.has(row.id);
+            if (unreadCount > 0) locallyArchived.delete(row.id);
+            merged.set(row.id, { ...row, accessKey: task.key, role: task.role, unreadCount, archived });
+          });
+          publish();
+        } catch (readError) {
+          failedReads++;
+          if (!firstFailure) firstFailure = readError;
+        }
+      }
+    };
+    // Two requests show the current inbox promptly; historical accounts fill in
+    // progressively without launching dozens of simultaneous database calls.
+    const complete = Promise.allSettled(Array.from({ length: Math.min(3, tasks.length) }, () => readNext()));
+    await Promise.race([complete, new Promise<void>(resolve => window.setTimeout(resolve, 950))]);
     if (requestSequence !== conversationLoadSequenceRef.current) return;
-    setPresenceNow(Date.now());
-    setConversations(rows);
-    const nextId =
-      preferredId ||
-      selectedIdRef.current ||
-      (window.innerWidth >= 768 ? rows[0]?.id || "" : "");
-    if (nextId && rows.some((row) => row.id === nextId)) {
-      selectedIdRef.current = nextId;
-      setSelectedId(nextId);
+    if (successfulReads === 0 && failedReads === tasks.length && firstFailure) throw firstFailure;
+    if (successfulReads > 0 || tasks.length === 0) {
+      writeLocalArchivedIds(locallyArchived);
+      publish();
     }
-
-    window.dispatchEvent(new Event("loadlink-chat-unread-updated"));
+    // Allow remaining legacy keys to complete without blocking the first paint.
+    void complete.then(() => {
+      if (requestSequence === conversationLoadSequenceRef.current && successfulReads > 0) {
+        writeLocalArchivedIds(locallyArchived);
+        publish();
+      }
+    });
   }, []);
 
   const loadMessages = useCallback(
