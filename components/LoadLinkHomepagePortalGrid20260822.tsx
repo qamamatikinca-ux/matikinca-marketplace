@@ -67,10 +67,10 @@ export default function LoadLinkHomepagePortalGrid20260822({ darkMode }: { darkM
                 data-loadlink-managed-image="true"
                 draggable={false}
                 sizes="(max-width: 767px) 100vw, 50vw"
-                fetchPriority={portal.title === "Jobs" ? "high" : "auto"}
+                fetchPriority="auto"
                 src={src}
                 alt=""
-                loading="eager"
+                loading="lazy"
                 className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 ease-out group-hover:scale-[1.025]"
                 onError={(event) => {
                   const image = event.currentTarget;

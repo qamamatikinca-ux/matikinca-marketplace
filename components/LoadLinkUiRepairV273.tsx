@@ -182,7 +182,13 @@ export default function LoadLinkUiRepairV273() {
 
   useEffect(() => {
     runRepairs();
-    const observer = new MutationObserver(() => runRepairs());
+    let queuedFrame = 0;
+    // Batch legacy repairs into a single frame instead of running per DOM insertion.
+    const scheduleRepairs = () => {
+      if (queuedFrame) return;
+      queuedFrame = window.requestAnimationFrame(() => { queuedFrame = 0; runRepairs(); });
+    };
+    const observer = new MutationObserver(scheduleRepairs);
     observer.observe(document.body, { childList: true, subtree: true });
     const seenRefresh = () => runRepairs();
     document.addEventListener("click", captureSeenClick, true);
@@ -192,6 +198,7 @@ export default function LoadLinkUiRepairV273() {
     const timer = window.setTimeout(runRepairs, 350);
     return () => {
       observer.disconnect();
+      if (queuedFrame) window.cancelAnimationFrame(queuedFrame);
       document.removeEventListener("click", captureSeenClick, true);
       window.removeEventListener("loadlink-seen-listings-updated", seenRefresh);
       window.removeEventListener("loadlink-recent-activity-updated", seenRefresh);

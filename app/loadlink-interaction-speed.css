@@ -1,0 +1,28 @@
+/* Fast tactile controls without page-wide animation or extra GPU blur. */
+:where(button, a, [role="button"]) {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+:where(button, a, [role="button"]):not([disabled]):active {
+  opacity: .88;
+}
+:where(button, a, [role="button"]):focus-visible {
+  outline-color: #f6b800;
+  outline-offset: 2px;
+}
+html { scroll-padding-top: 5rem; }
+@media (max-width: 767px) {
+  [data-loadlink-site-header] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  [data-loadlink-home-portal-card] img {
+    will-change: auto !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(button, a, [role="button"]) {
+    transition-duration: 0ms !important;
+  }
+  html:focus-within { scroll-behavior: auto !important; }
+}

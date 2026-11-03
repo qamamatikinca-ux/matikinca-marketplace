@@ -130,12 +130,19 @@ export default function LoadLinkAuditUpdateBridge() {
     };
 
     scan();
-    document.addEventListener("click", onClick, true);
-    const observer = new MutationObserver(scan);
-    observer.observe(document.body, { childList: true, subtree: true });
+    if (pathname === "/tools") document.addEventListener("click", onClick, true);
+    // Jobs is the only route that needs these older card repairs.
+    let queuedFrame = 0;
+    const scheduleJobsScan = () => {
+      if (queuedFrame) return;
+      queuedFrame = window.requestAnimationFrame(() => { queuedFrame = 0; scan(); });
+    };
+    const observer = pathname === "/jobs" ? new MutationObserver(scheduleJobsScan) : null;
+    observer?.observe(document.body, { childList: true, subtree: true });
     return () => {
       document.removeEventListener("click", onClick, true);
-      observer.disconnect();
+      observer?.disconnect();
+      if (queuedFrame) window.cancelAnimationFrame(queuedFrame);
     };
   }, [pathname]);
 
