@@ -1,6 +1,8 @@
 "use client";
 
 import RequireAuthLink from "@/components/RequireAuthLink";
+import SmartSearchIcon from "@/components/SmartSearchIcon";
+import { rememberSearchInterest } from "@/lib/searchInterests";
 import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
 import LoadLinkDealerUpdateRail20260822 from "@/components/LoadLinkDealerUpdateRail20260822";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -37,6 +39,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
   const [location, setLocation] = useState("");
   const [scope, setScope] = useState<SearchScope>("all");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [smartInfoOpen, setSmartInfoOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [fabOpen, setFabOpen] = useState(false);
   const [hasDealerUpdates, setHasDealerUpdates] = useState(false);
@@ -141,7 +144,9 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
   }, [allSearchItems, location, query, scope]);
 
   function launchSearch(destination?: string) {
+    rememberSearchInterest(query);
     setShowSuggestions(false);
+    setSmartInfoOpen(false);
     router.push(destination || searchResultsRoute(scope, query, location));
   }
 
@@ -199,7 +204,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
             >
               <div ref={searchWrapperRef} className="relative">
                 <div
-                  className={`grid h-[52px] grid-cols-[44px_minmax(0,1fr)] items-center overflow-hidden rounded-[13px] border ${
+                  className={`grid h-[52px] grid-cols-[44px_minmax(0,1fr)_44px] items-center overflow-hidden rounded-[13px] border ${
                     darkMode ? "border-white/10 bg-[#171717]" : "border-black/10 bg-[#fafafa]"
                   }`}
                 >
@@ -215,9 +220,10 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                     enterKeyHint="search"
                     data-loadlink-home-search-input
                     value={query}
-                    onFocus={() => setShowSuggestions(Boolean(query.trim()))}
+                    onFocus={() => { setSmartInfoOpen(false); setShowSuggestions(Boolean(query.trim())); }}
                     onChange={(event) => {
                       setQuery(event.target.value);
+                      setSmartInfoOpen(false);
                       setShowSuggestions(Boolean(event.target.value.trim()));
                     }}
                     onKeyDown={(event) => {
@@ -230,7 +236,18 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                       darkMode ? "text-white placeholder:text-white/38" : "text-black placeholder:text-black/38"
                     }`}
                   />
+                  <button type="button" aria-label="About LoadLink Smart Search" aria-expanded={smartInfoOpen}
+                    onClick={() => { setSmartInfoOpen(value => !value); setShowSuggestions(false); }}
+                    className="flex h-full items-center justify-center focus-visible:outline-2 focus-visible:outline-[#f6b800]">
+                    <SmartSearchIcon />
+                  </button>
                 </div>
+                {smartInfoOpen ? (
+                  <div role="note" className={`absolute inset-x-0 top-[58px] z-50 rounded-[14px] border px-4 py-3 shadow-[0_18px_42px_rgba(0,0,0,.16)] ${darkMode ? "border-white/15 bg-[#171719] text-white" : "border-black/10 bg-white text-black"}`}>
+                    <strong className="text-sm font-semibold">Smart Search</strong>
+                    <p className={`mt-1 text-xs leading-5 ${darkMode ? "text-white/65" : "text-black/65"}`}>Search naturally, such as “truck” or “mobile kitchen”. LoadLink finds published listings and suggests relevant jobs using recent searches on this device.</p>
+                  </div>
+                ) : null}
 
                 {showSuggestions ? (
                   <div
