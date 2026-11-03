@@ -5,9 +5,10 @@ import Link from "next/link";
 import RequireAuthLink from "@/components/RequireAuthLink";
 
 const socialLinks = [
-  { label: "Instagram", href: "https://www.instagram.com/loadlinksouthafrica?xtok=MWlybmUyamttenEzbg==", logo: "https://cdn.simpleicons.org/instagram/E4405F" },
-  { label: "TikTok", href: "https://www.tiktok.com/@loadlinksouthafrica?_r=1&_t=ZS-9B5rC2okOaD", logo: "https://cdn.simpleicons.org/tiktok/25F4EE" },
-  { label: "Facebook", href: "https://www.facebook.com/share/1FyBiNb57K/", logo: "https://cdn.simpleicons.org/facebook/0866FF" },
+  { label: "Instagram", href: "https://www.instagram.com/loadlinksouthafrica?xtok=MWlybmUyamttenEzbg==", logo: "/brands/instagram.svg" },
+  { label: "TikTok", href: "https://www.tiktok.com/@loadlinksouthafrica?_r=1&_t=ZS-9B5rC2okOaD", logo: "/brands/tiktok.svg" },
+  { label: "Facebook", href: "https://www.facebook.com/share/1FyBiNb57K/", logo: "/brands/facebook.svg" },
+  { label: "Email", href: "mailto:loadlinkmarketing@gmail.com", logo: "/brands/gmail.svg" },
 ] as const;
 
 const PLAY_BADGE = "https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png";
@@ -78,15 +79,15 @@ export default function LoadLinkSiteFooter20260822({ darkMode }: { darkMode: boo
         <section className="mt-9" aria-labelledby="loadlink-social-heading">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 id="loadlink-social-heading" className="text-base font-semibold">Follow LoadLink</h2>
-              <p className={`mt-1 text-xs ${subtle}`}>News, updates and opportunities from LoadLink South Africa.</p>
+              <h2 id="loadlink-social-heading" className="text-base font-semibold">Connect with LoadLink</h2>
+              <p className={`mt-1 text-xs ${subtle}`}>Social updates, news and enquiries.</p>
             </div>
             <a href="mailto:loadlinkmarketing@gmail.com" className={`text-xs font-medium underline underline-offset-4 ${subtle}`}>loadlinkmarketing@gmail.com</a>
           </div>
           <div className="mt-4 flex items-center gap-3">
             {socialLinks.map(({ label, href, logo }) => (
-              <a key={label} href={href} target="_blank" rel="noopener noreferrer" title={label} aria-label={`LoadLink on ${label}`}
-                className={`inline-flex h-12 w-12 items-center justify-center rounded-full border transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-[#f6b800] ${darkMode ? "border-white/15 bg-[#171818]" : "border-[#e7e7e7] bg-[#fafafa]"}`}>
+              <a key={label} href={href} target={href.startsWith("mailto:") ? undefined : "_blank"} rel="noopener noreferrer" title={label} aria-label={`LoadLink on ${label}`}
+                className={`inline-flex h-12 w-12 items-center justify-center rounded-full border transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-[#f6b800] ${darkMode ? "border-white/15 bg-white" : "border-[#e7e7e7] bg-white"}`}>
                 <img src={logo} width={24} height={24} alt={label} className="h-6 w-6 object-contain" loading="lazy" />
               </a>
             ))}
