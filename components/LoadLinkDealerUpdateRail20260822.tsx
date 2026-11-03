@@ -163,10 +163,8 @@ export default function LoadLinkDealerUpdateRail20260822({ darkMode, onAvailabil
     router.push(`/dealership/${encodeURIComponent(dealer.slug)}`);
   }
 
-  if (!loaded || !signedIn) return null;
-
   return (
-    <div data-loadlink-dealer-update-rail className="mb-4">
+    <div data-loadlink-dealer-update-rail data-ready={loaded} className="mb-4" aria-label={signedIn ? "Followed dealerships and discovery" : "Find dealerships"}>
       <div className="no-scrollbar -mx-1 overflow-x-auto px-1 pb-1" aria-label="Followed dealerships">
         <div className="flex min-w-max gap-3 pr-2">
           <button
