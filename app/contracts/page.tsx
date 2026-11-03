@@ -184,16 +184,16 @@ export default function ContractsPage() {
 
   const surface = darkMode ? "border-white/10 bg-[#101010]" : "border-black/10 bg-white";
   const muted = darkMode ? "text-white/52" : "text-black/52";
-  const field = `h-12 w-full rounded-2xl border px-4 text-base font-semibold outline-none focus:border-[#f6b800] ${darkMode ? "border-white/15 bg-[#202020] text-white placeholder:text-white/40" : "border-black/10 bg-white text-[#161616] placeholder:text-black/40"}`;
+  const field = "h-12 w-full min-w-0 rounded-xl border border-[#dedede] bg-white px-4 text-base font-semibold text-[#171717] outline-none placeholder:text-[#929292] focus:border-[#f6b800]";
   const hasFilters = Boolean(query.trim() || city.trim() || equipment.trim() || group !== ALL || sortMode !== "newest");
 
   return (
-    <main className={`min-h-screen scroll-smooth ${darkMode ? "bg-black text-white" : "bg-[#fff7df] text-black"}`} data-loadlink-contracts-marketplace="contract-search-20260823-restored">
+    <main className={`min-h-screen scroll-smooth ${darkMode ? "bg-black text-white" : "bg-[#f8f8f7] text-black"}`} data-loadlink-contracts-marketplace="contract-search-20260823-restored">
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <section className="relative min-h-[78vh] overflow-hidden border-b border-[#f6b800]/40">
         <LoadLinkImage src="/images/contracts-1.jpg" alt="Transport and logistics contracts" className="absolute inset-0 h-full w-full object-cover grayscale" />
-        <div className={`absolute inset-0 ${darkMode ? "bg-gradient-to-b from-black/15 via-black/48 to-black" : "bg-gradient-to-b from-black/8 via-black/38 to-[#fff7df]"}`} />
+        <div className={`absolute inset-0 ${darkMode ? "bg-gradient-to-b from-black/15 via-black/48 to-black" : "bg-gradient-to-b from-black/8 via-black/38 to-[#f8f8f7]"}`} />
 
         <div className="relative mx-auto flex min-h-[78vh] max-w-5xl flex-col justify-end px-5 pb-8 pt-20">
           <div className="max-w-4xl text-white drop-shadow-[0_4px_16px_rgba(0,0,0,.95)]">
@@ -202,37 +202,46 @@ export default function ContractsPage() {
             <p className="mt-5 max-w-2xl text-base font-bold leading-7 md:text-lg">Search recurring, project and longer-term opportunities by contract scope, equipment category and operating location.</p>
           </div>
 
-          <div data-loadlink-contracts-search-shell className={`loadlink-glass mt-6 rounded-[24px] border p-4 shadow-[0_20px_60px_rgba(0,0,0,.18)] backdrop-blur-xl md:p-5 ${darkMode ? "border-white/15 bg-[#101010]" : "border-black/10 bg-white/95"}`}>
+          <div data-loadlink-contracts-search-shell className={`loadlink-glass mt-6 rounded-[24px] border p-4 shadow-[0_20px_60px_rgba(0,0,0,.18)] backdrop-blur-xl md:p-5 ${darkMode ? "border-white/20 bg-black/72 text-white" : "border-white/55 bg-[#b7b4ab]/85 text-black"}`}>
             <div className="grid gap-3 md:grid-cols-2">
-              <label className="block">
-                <span className="mb-2 block text-[10px] font-black uppercase tracking-[.15em] text-neutral-500">Contract / scope</span>
-                <input type="text" inputMode="text" value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") searchContracts(); }} placeholder="Mining haulage, recurring delivery, tender…" className={field} />
+              <label className="block min-w-0">
+                <span className="mb-2 block text-[10px] font-black uppercase tracking-[.15em] text-[#70716f]">Contract or scope</span>
+                <input type="search" inputMode="search" value={query} onChange={event => setQuery(event.target.value)}
+                  onKeyDown={event => { if (event.key === "Enter") searchContracts(); }}
+                  placeholder="Mining, transport, recurring delivery..." className={field} />
               </label>
-              <label className="block">
-                <span className="mb-2 block text-[10px] font-black uppercase tracking-[.15em] text-neutral-500">Contract type</span>
-                <select value={group} onChange={(event) => setGroup(event.target.value)} className={field} aria-label="Contract type" style={{colorScheme: darkMode ? "dark" : "light"}}>
+              <label className="relative block min-w-0">
+                <span className="mb-2 block text-[10px] font-black uppercase tracking-[.15em] text-[#70716f]">Operating location</span>
+                <SouthAfricaLocationInput id="loadlink-contract-location" value={city} onChange={setCity}
+                  darkMode={darkMode} placeholder="City, town or province" ariaLabel="Contract location" className={field} />
+              </label>
+              <label className="block min-w-0 md:col-span-2">
+                <span className="mb-2 block text-[10px] font-black uppercase tracking-[.15em] text-[#70716f]">Contract category</span>
+                <select value={group} onChange={event => setGroup(event.target.value)} className={field}
+                  aria-label="Contract category" style={{ colorScheme: "light" }}>
                   <option value={ALL}>All contract types</option>
-                  {categories.map((item) => <option value={item} key={item}>{item}</option>)}
+                  {categories.map(item => <option value={item} key={item}>{item}</option>)}
                 </select>
               </label>
-              <label className="block">
-                <span className="mb-2 block text-[10px] font-black uppercase tracking-[.15em] text-neutral-500">Vehicle / mobile unit needed</span>
-                <input type="text" inputMode="text" value={equipment} onChange={(event) => setEquipment(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") searchContracts(); }} placeholder="Side tipper, lowbed, reefer, mobile unit…" className={field} />
-              </label>
-              <label className="relative block">
-                <span className="mb-2 block text-[10px] font-black uppercase tracking-[.15em] text-neutral-500">Operating location</span>
-                <SouthAfricaLocationInput id="loadlink-contract-location" value={city} onChange={setCity} darkMode={darkMode} placeholder="City, town or province" ariaLabel="Contract location" className={field} />
-              </label>
             </div>
+            <details className="mt-3 rounded-xl border border-black/10 bg-white/65 px-3 py-2 text-black">
+              <summary className="cursor-pointer py-1 text-xs font-bold">More filters{equipment ? " · Vehicle filter active" : " · Vehicle or mobile unit"}</summary>
+              <label className="mt-3 block">
+                <span className="mb-2 block text-[10px] font-black uppercase tracking-[.13em] text-[#70716f]">Equipment required</span>
+                <input type="search" value={equipment} onChange={event => setEquipment(event.target.value)}
+                  onKeyDown={event => { if (event.key === "Enter") searchContracts(); }}
+                  placeholder="Side tipper, lowbed, reefer, mobile unit..." className={field} />
+              </label>
+            </details>
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <button type="button" onClick={searchContracts} className="min-h-12 flex-1 rounded-full border border-[#f6b800] bg-[#f6b800] px-7 text-sm font-black uppercase tracking-wide text-black active:scale-[.99] sm:flex-none">Search contracts</button>
+              <button type="button" onClick={searchContracts} className="min-h-12 w-full rounded-xl border border-[#f6b800] bg-[#f6b800] px-7 text-sm font-black uppercase tracking-wide text-black active:scale-[.99] sm:flex-none">Search contracts</button>
               {hasFilters ? <button type="button" onClick={clearFilters} className="min-h-12 rounded-full border border-white/24 bg-black/45 px-5 text-xs font-black text-white">Clear</button> : null}
             </div>
           </div>
 
           <div className="mt-5 grid max-w-xl gap-3 sm:grid-cols-2">
-            <RequireAuthLink href="/contracts/post" className="flex min-h-12 items-center justify-center rounded-full bg-[#f6b800] px-4 text-xs font-black uppercase tracking-[.08em] text-black">Post contract</RequireAuthLink>
-            <RequireAuthLink href="/my-posts" className="flex min-h-12 items-center justify-center rounded-full border border-white/35 bg-black/80 px-4 text-xs font-black uppercase tracking-[.08em] text-white">My posts</RequireAuthLink>
+            <RequireAuthLink href="/contracts/post" className="flex min-h-12 items-center justify-center rounded-xl bg-[#f6b800] px-4 text-xs font-black uppercase tracking-[.08em] text-black">Post contract</RequireAuthLink>
+            <RequireAuthLink href="/my-posts" className="flex min-h-12 items-center justify-center rounded-xl border border-white/35 bg-black/80 px-4 text-xs font-black uppercase tracking-[.08em] text-white">My posts</RequireAuthLink>
           </div>
         </div>
       </section>
