@@ -164,7 +164,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
       <section
         data-loadlink-home-search-section
         data-theme={darkMode ? "dark" : "light"}
-        className={`px-4 py-4 sm:px-5 md:px-12 md:py-6 ${darkMode ? "bg-[#050505] text-white" : "bg-[#fff6dc] text-black"}`}
+        className={`px-4 py-4 sm:px-5 md:px-12 md:py-6 ${darkMode ? "bg-[#050505] text-white" : "bg-[#f8f8f7] text-black"}`}
       >
         <div className="mx-auto max-w-7xl">
           <LoadLinkDealerUpdateRail20260822 darkMode={darkMode} />
