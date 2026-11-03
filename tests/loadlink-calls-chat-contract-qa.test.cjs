@@ -33,10 +33,10 @@ test("dark message composer keeps typed text and caret visible and offers reconn
 
 test("WebRTC connection waits for remote sound and exposes explicit iOS playback button", () => {
   const call = read("components/LoadLinkCallLayerReliable20260822.tsx");
-  assert.match(call, /audio\.play\(\)\.then\(\(\)=>\{setNotice\("");markConnected\(\)\}/);
+  assert.ok(call.includes('audio.play().then(()=>{setNotice("");markConnected()}'));
   assert.match(call, /Enable sound/);
   assert.match(call, /audio\.setAttribute\("webkit-playsinline","true"\)/);
-  assert.doesNotMatch(call, /peer\.onconnectionstatechange=\(\)=>\{if\(peer\.connectionState==="connected"\)markConnected\(\)/);
+  assert.ok(!call.includes('peer.onconnectionstatechange=()=>{if(peer.connectionState==="connected")markConnected()'));
 });
 test("contract search fields share a consistent light and dark surface", () => {
   const css = read("app/loadlink-refresh-theme-20261015.css");
