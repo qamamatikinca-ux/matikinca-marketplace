@@ -648,7 +648,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
       : { title: "Find paid logistics work", description: "For truck owners, drivers, mobile kitchens, mobile fridges, farming vehicles and mining transport operators looking for real posted jobs.", searchButton: "Search jobs", listLabel: "Post job", listHref: "/jobs/list", results: "Available jobs" };
 
   return (
-    <main data-loadlink-jobs-page="true" className={`min-h-screen scroll-smooth transition-colors duration-500 ${darkMode ? "bg-black text-white" : "bg-[#fff7df] text-black"}`}>
+    <main data-loadlink-jobs-page="true" className={`min-h-screen scroll-smooth ${darkMode ? "bg-black text-white" : "bg-[#fff7df] text-black"}`}>
       {isSearching ? <LoadLinkLoading /> : null}
       <Header darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
 
@@ -690,7 +690,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
                 <SouthAfricaLocationInput
                   value={city}
                   onChange={setCity}
-                  darkMode={false}
+                  darkMode={darkMode}
                   placeholder="City, town or province"
                   ariaLabel="Filter jobs by South African location"
                   className="h-12 w-full min-w-0 rounded-xl border border-[#dedede] bg-white px-4 text-base font-semibold text-[#171717] outline-none placeholder:text-[#929292] focus:border-[#f6b800]"
@@ -790,7 +790,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
 
 function FeaturedJobsRail({ jobs, darkMode, onOpen }: { jobs: JobListing[]; darkMode: boolean; onOpen: (job: JobListing) => void }) {
   return (
-    <section className={`border-b px-5 py-8 md:px-12 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-[#fff7df] text-black"}`}>
+    <section data-loadlink-promoted-rail="true" className={`border-b px-5 py-8 md:px-12 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-[#fff7df] text-black"}`}>
       <div className="mx-auto max-w-5xl">
         <h2 className="text-3xl font-black tracking-[-.04em]">Promoted listings</h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

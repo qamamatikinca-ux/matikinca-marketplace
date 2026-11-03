@@ -61,6 +61,23 @@ export default function PublicDealershipInstagramShowroom({ slug }: { slug: stri
   const [stockLoading, setStockLoading] = useState(false);
   const [verificationOpen, setVerificationOpen] = useState(false);
 
+  useEffect(() => {
+    // Older showroom UI may render duplicate summary cards ahead of the existing
+    // trading-hours and review sections. Remove only those two legacy cards.
+    const clearDuplicateCards = () => {
+      const root = document.querySelector('[data-loadlink-public-showroom="showroom-first-v3"]');
+      if (!root) return;
+      root.querySelectorAll("h2,h3").forEach((heading) => {
+        const title = heading.textContent?.trim().toLowerCase();
+        if (title !== "showroom hours" && title !== "customer reviews") return;
+        const card = heading.closest('article[class*="rounded-"],section[class*="rounded-"],div[class*="rounded-"]');
+        if (card && !card.querySelector('[id="showroom"],[id="reviews"]')) card.remove();
+      });
+    };
+    const handles = [0, 200, 800, 2200].map(delay => window.setTimeout(clearDuplicateCards, delay));
+    return () => handles.forEach(handle => window.clearTimeout(handle));
+  }, []);
+
   const page = darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black";
   const border = darkMode ? "border-white/10" : "border-black/10";
   const muted = darkMode ? "text-white/55" : "text-black/55";

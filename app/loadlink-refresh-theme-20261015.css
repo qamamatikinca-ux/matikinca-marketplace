@@ -332,3 +332,23 @@ html[data-loadlink-theme="light"] body main[data-loadlink-contracts-marketplace]
   border-color: rgba(17,17,17,.13) !important;
   color-scheme: light !important;
 }
+
+/* Do not leave stale inline light-mode paint on Jobs or promoted cards. */
+html[data-loadlink-theme="light"] main[data-loadlink-jobs-page="true"] {
+  background-color: #fff7df !important; color: #111 !important;
+}
+html[data-loadlink-theme="dark"] main[data-loadlink-jobs-page="true"] {
+  background-color: #050505 !important; color: #fff !important;
+}
+html[data-loadlink-theme="light"] main[data-loadlink-jobs-page="true"] [data-loadlink-promoted-rail="true"] {
+  background: #fff7df !important; color: #111 !important; border-color: rgba(0,0,0,.09) !important;
+}
+html[data-loadlink-theme="dark"] main[data-loadlink-jobs-page="true"] [data-loadlink-promoted-rail="true"] {
+  background: #050505 !important; color: #fff !important; border-color: rgba(255,255,255,.13) !important;
+}
+html[data-loadlink-theme="light"] main[data-loadlink-jobs-page="true"] [data-loadlink-promoted-rail="true"] button {
+  background: #fff !important; color: #111 !important; border-color: rgba(0,0,0,.12) !important;
+}
+html[data-loadlink-theme="dark"] main[data-loadlink-jobs-page="true"] [data-loadlink-promoted-rail="true"] button {
+  background: #111 !important; color: #fff !important; border-color: rgba(255,255,255,.15) !important;
+}

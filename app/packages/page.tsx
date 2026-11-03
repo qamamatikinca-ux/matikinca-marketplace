@@ -96,6 +96,22 @@ export default function PackagesPage() {
     return () => { alive = false; };
   }, []);
 
+  useEffect(() => {
+    // A previously shipped partner promotion may still be mounted by an older
+    // client enhancer. Remove only that exact legacy section, not package content.
+    const removeLegacyPartner = () => {
+      document.querySelectorAll("h1,h2,h3").forEach((heading) => {
+        if (heading.textContent?.trim().toLowerCase() === "become a loadlink partner today.") {
+          const section = heading.closest("section,article");
+          if (section && section !== document.querySelector("[data-loadlink-packages-page]")) section.remove();
+        }
+      });
+    };
+    removeLegacyPartner();
+    const handles = [100, 500, 1500, 3500].map(delay => window.setTimeout(removeLegacyPartner, delay));
+    return () => handles.forEach(window.clearTimeout);
+  }, []);
+
   const muted = darkMode ? "text-white/55" : "text-black/55";
   const surface = darkMode ? "border-white/10 bg-[#0a0a0a]" : "border-black/10 bg-white";
   const softSurface = darkMode ? "border-white/10 bg-white/[.035]" : "border-black/10 bg-black/[.025]";
@@ -387,16 +403,15 @@ export default function PackagesPage() {
     <main
       data-loadlink-packages-page="20261031"
       data-theme={darkMode ? "dark" : "light"}
-      className={`${styles.page} ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}
+      className={`${styles.page} ${darkMode ? "bg-[#080808] text-white" : "bg-[#f7f7f7] text-[#171717]"}`}
     >
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <div className={`${styles.container} mx-auto w-full max-w-6xl px-4 pb-[calc(48px+env(safe-area-inset-bottom))] pt-7 sm:px-6 md:pt-10`}>
         <header className="max-w-3xl">
-          <p className={`text-[11px] font-black uppercase tracking-[.15em] ${muted}`}>Packages</p>
-          <h1 className="mt-3 text-[38px] font-black leading-[.98] tracking-[-.055em] sm:text-[52px] md:text-[62px]">{activePlan ? "Your LoadLink package." : "Find the right package."}</h1>
+          <h1 className="mt-3 text-[38px] font-black leading-[.98] tracking-[-.055em] sm:text-[52px] md:text-[62px]">Packages</h1>
           <p className={`mt-4 max-w-2xl text-[14px] font-semibold leading-6 sm:text-[15px] ${muted}`}>
-            See what your current package covers, and the available options when you need more tools. Prices are checked against our billing catalog.
+            {activePlan ? "View your package and available upgrades." : "Choose a package that matches your transport business."}
           </p>
           <PlanNavigation active="packages" />
         </header>
@@ -424,56 +439,42 @@ export default function PackagesPage() {
               <button type="button" onClick={() => void actSubscription(paymentPlan)} disabled={Boolean(busy)} className="h-12 rounded-xl bg-[#f6b800] px-5 text-sm font-black text-black transition active:scale-[.99] disabled:opacity-45">Continue payment</button>
             </div>
           </section>
-        ) : activePlan ? (
-          <section className={`mt-7 rounded-[24px] border p-5 sm:p-6 ${surface}`}>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className={`text-[10px] font-black uppercase tracking-[.14em] ${muted}`}>Current plan</p>
-                <h2 className="mt-1 text-2xl font-black tracking-[-.04em]">{titleCasePlan(activePlan)} is active</h2>
-                <p className={`mt-1 text-xs font-semibold ${muted}`}>{activePlan === "dealer" ? "Your dealership tools, showroom and vehicle advertising are available. Other packages are hidden because they are already included." : "Your Pro listing tools are ready. You can keep Pro or upgrade to Dealer."}</p>
-              </div>
-              {tester
-                ? <span className="inline-flex min-h-11 items-center rounded-full border border-[#f6b800]/50 px-4 text-xs font-semibold">Internal testing · no renewal</span>
-                : <button type="button" onClick={() => void managePlan()} disabled={Boolean(busy)} className={`h-12 rounded-full border px-5 text-sm font-bold transition active:scale-[.99] disabled:opacity-45 ${darkMode ? "border-white/15" : "border-black/15"}`}>{busy === "manage" ? "Opening…" : "Manage plan"}</button>}
-            </div>
-          </section>
         ) : null}
 
         {notice ? <div className={`mt-4 rounded-2xl border px-4 py-3 text-[12px] font-bold leading-5 ${softSurface}`} role="status" aria-live="polite">{notice}</div> : null}
 
-        {tester ? <section className={`mt-5 rounded-[22px] border p-4 sm:p-5 ${surface}`} aria-label="Internal package testing controls">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div><p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#bb8800]">Internal testing</p><h2 className="mt-1 text-lg font-bold">Package testing controls</h2><p className={`mt-1 max-w-xl text-xs leading-5 ${muted}`}>Only this verified account can switch packages here. No checkout, expiry date or other customer access is changed. Standard listing activation still follows Standard credit rules.</p></div>
-            <span className="rounded-full border border-[#f6b800]/35 px-3 py-1.5 text-xs font-bold">{activePlan ? titleCasePlan(activePlan) : "Standard"} selected</span>
+        {tester ? <section className={`mt-5 rounded-[20px] border p-4 ${surface}`} aria-label="Internal package testing controls">
+          <div>
+            <h2 className="text-sm font-bold">Test packages</h2>
+            <p className={`mt-1 text-xs ${muted}`}>Restricted to this account · No charges or expiry</p>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-2">
             {(["standard","pro","dealer"] as const).map(plan => <button key={plan} type="button" onClick={() => void switchTestPackage(plan)} disabled={Boolean(busy)} aria-pressed={(activePlan || "standard") === plan} className={`min-h-11 rounded-full border px-2 text-xs font-bold transition active:scale-[.98] disabled:opacity-50 ${(activePlan || "standard") === plan ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/20 bg-[#181818] text-white" : "border-black/15 bg-white text-black"}`}>{busy === "test" ? "Updating…" : titleCasePlan(plan)}</button>)}
           </div>
         </section> : null}
 
-        <section className={`${styles.planGrid} mt-8 grid gap-4 ${activePlan === "dealer" ? "max-w-2xl lg:grid-cols-1" : activePlan === "pro" ? "lg:grid-cols-2" : "lg:grid-cols-3"}`} aria-label="LoadLink plans">
+        <section className={`${styles.planGrid} mt-6 grid gap-4 ${activePlan === "dealer" ? "max-w-2xl lg:grid-cols-1" : activePlan === "pro" ? "lg:grid-cols-2" : "lg:grid-cols-3"}`} aria-label="LoadLink plans">
           {showStandard ? <article className={`${styles.planCard} flex min-w-0 flex-col rounded-[18px] border p-5 sm:p-6 ${surface}`}>
             <div>
-              <p className={`text-[10px] font-black uppercase tracking-[.14em] ${muted}`}>Occasional</p>
               <h2 className="mt-2 text-[30px] font-black tracking-[-.05em]">Standard</h2>
-              <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <span className="text-[42px] font-black leading-none tracking-[-.06em]">{manualDailyReady ? money(manualProduct.unit_price_cents).replace(",00", "") : loading ? "Checking…" : "Unavailable"}</span>
+              <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="text-[36px] font-bold leading-none tracking-[-.04em]">{manualDailyReady ? money(manualProduct.unit_price_cents).replace(",00", "") : loading ? "Checking…" : "Unavailable"}</span>
                 <span className={`text-xs font-extrabold ${muted}`}>per vehicle / active day</span>
               </div>
-              <p className={`mt-4 min-h-[60px] text-xs font-semibold leading-5 ${muted}`}>{manualDailyReady ? `Vehicle advertising costs ${money(manualProduct.unit_price_cents)} for each active day. Paused listings do not use new daily credits.` : "Daily vehicle advertising is available when live pricing is confirmed."}</p>
+              <p className={`mt-3 text-xs leading-5 ${muted}`}>Pay only for the active listing days you need.</p>
             </div>
 
-            <div className="my-5 h-px bg-current/10" />
+            <div className="my-4 h-px bg-current/10" />
             <ul className="grid gap-3">
-              {["Up to 5 active vehicle listings with paid daily credits", "2 photos on each vehicle listing", "R14 per active vehicle day, with no fee for paused days", "Standard placement in marketplace results", "50 messages per day", "Browse jobs, contracts, vehicles and drivers", "Pro analytics and Dealer tools are not included"].map((feature) => (
-                <li key={feature} className="flex gap-3 text-[12px] font-semibold leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]" /><span>{feature}</span></li>
+              {["Up to 5 vehicle listings a month", "2 photos on each listing", "R14 per active vehicle per day", "50 messages per day"].map((feature) => (
+                <li key={feature} className="flex gap-3 text-[12px] font-semibold leading-5"><span className={`mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full ${darkMode ? "bg-white/45" : "bg-black/35"}`} /><span>{feature}</span></li>
               ))}
             </ul>
 
             {manualBalance.available > 0 ? (
               <div className={`mt-5 rounded-2xl border px-4 py-3 ${softSurface}`}>
                 <p className="text-sm font-black">{manualBalance.available} credit{manualBalance.available === 1 ? "" : "s"} ready</p>
-                <p className={`mt-1 text-[11px] font-semibold ${muted}`}>Existing paid listing periods keep their original terms.</p>
+                
                 <button type="button" onClick={() => window.location.assign("/list-your-vehicle")} className="mt-3 text-[11px] font-black underline decoration-[#f6b800] decoration-2 underline-offset-4">List a vehicle</button>
               </div>
             ) : null}
@@ -505,7 +506,7 @@ export default function PackagesPage() {
                     <div className="mt-1 flex justify-between gap-4 border-t border-current/10 pt-3"><dt className="font-black">Total</dt><dd className="text-base font-black">{money(manualTotalCents)}</dd></div>
                   </dl>
 
-                  <p className={`mt-3 text-[10px] font-semibold leading-4 ${muted}`}>Each credit covers one active day for one vehicle. Daily credits are used only while the listing is active.</p>
+                  
                   <button type="button" onClick={() => void payManual()} disabled={!manualDailyReady || busy === "manual" || busy === "verify"} className="mt-4 h-11 w-full rounded-xl bg-[#f6b800] text-sm font-black text-black transition active:scale-[.99] disabled:opacity-45">{busy === "manual" ? "Opening payment…" : `Continue to payment · ${money(manualTotalCents)}`}</button>
                   <button type="button" onClick={() => setManualOpen(false)} disabled={Boolean(busy)} className={`mt-3 w-full py-1 text-[11px] font-black ${muted}`}>Cancel</button>
                 </div>
@@ -517,14 +518,13 @@ export default function PackagesPage() {
             const details = planDetails[plan];
             const isPro = plan === "pro";
             return (
-              <article id={`${plan}-package`} key={plan} className={`${styles.planCard} relative flex min-w-0 flex-col rounded-[18px] border p-5 sm:p-6 ${isPro ? "border-[#f6b800]" : surface}`}>
-                {isPro ? <span className="absolute right-5 top-5 rounded-full bg-[#f6b800] px-2.5 py-1 text-[9px] font-black uppercase tracking-[.1em] text-black">Recommended</span> : null}
-                <div className="pr-20"><p className={`text-[10px] font-black uppercase tracking-[.14em] ${muted}`}>{details.eyebrow}</p><h2 className="mt-2 text-[30px] font-black tracking-[-.05em]">{details.name}</h2></div>
-                <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1"><span className="text-[42px] font-black leading-none tracking-[-.06em]">{prices[plan] !== undefined ? money(prices[plan]!).replace(",00", "") : pricesLoading ? "Checking…" : "Unavailable"}</span><span className={`text-xs font-extrabold ${muted}`}>{details.billing}</span></div>
-                <p className={`mt-4 min-h-[60px] text-xs font-semibold leading-5 ${muted}`}>{details.description}</p>
+              <article id={`${plan}-package`} key={plan} className={`${styles.planCard} relative flex min-w-0 flex-col rounded-[22px] border p-5 sm:p-6 ${surface}`}>
+                <div className="flex items-center justify-between gap-3"><h2 className="text-[30px] font-bold tracking-tight">{details.name}</h2>{activePlan === plan ? <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${darkMode ? "border-white/20" : "border-black/15"}`}>Current plan</span> : null}</div>
+                <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1"><span className="text-[36px] font-bold leading-none tracking-[-.04em]">{prices[plan] !== undefined ? money(prices[plan]!).replace(",00", "") : pricesLoading ? "Checking…" : "Unavailable"}</span><span className={`text-xs font-extrabold ${muted}`}>{details.billing}</span></div>
+                <p className={`mt-3 text-xs leading-5 ${muted}`}>{details.description}</p>
                 <div className="my-5 h-px bg-current/10" />
-                <p className={`mb-3 text-[11px] font-bold uppercase tracking-[.08em] ${muted}`}>What this package includes</p>
-                <ul className="grid gap-3">{details.features.map((feature) => <li key={feature} className="flex gap-3 text-[12px] font-semibold leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]" /><span>{feature}</span></li>)}</ul>
+                <ul className="grid gap-3">{details.features.slice(0, 4).map((feature) => <li key={feature} className="flex gap-3 text-[13px] leading-5"><span className={`mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full ${darkMode ? "bg-white/50" : "bg-black/35"}`} /><span>{feature}</span></li>)}</ul>
+                {details.features.length > 4 ? <details className="mt-4 text-sm"><summary className="cursor-pointer py-2 text-xs font-semibold underline underline-offset-4">See all benefits</summary><ul className="mt-3 grid gap-3">{details.features.slice(4).map(feature=><li key={feature} className="flex gap-3 text-[13px] leading-5"><span className={`mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full ${darkMode ? "bg-white/45" : "bg-black/35"}`}/><span>{feature}</span></li>)}</ul></details> : null}
                 <div className="mt-auto pt-6">
               {tester && activePlan === plan
                   ? <a href={plan === "dealer" ? "/dealer" : "/packages/manage"} className="flex h-12 w-full items-center justify-center rounded-full border border-[#f6b800] bg-[#f6b800] px-4 text-sm font-bold text-black">{plan === "dealer" ? "Open Dealer Centre" : "View package allowances"}</a>
