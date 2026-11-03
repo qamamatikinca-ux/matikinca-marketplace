@@ -310,3 +310,25 @@ html[data-loadlink-theme="dark"] [data-loadlink-policy] a { color: #f6b800; }
 html[data-loadlink-hydrating="true"] *, html[data-loadlink-hydrating="true"] *::before, html[data-loadlink-hydrating="true"] *::after {
   transition: none !important;
 }
+
+/* One consistent surface and visible type selection in the Contracts finder. */
+html[data-loadlink-theme="dark"] body main[data-loadlink-contracts-marketplace] [data-loadlink-contracts-search-shell] {
+  background: #101010 !important;
+  border-color: rgba(255,255,255,.15) !important;
+}
+html[data-loadlink-theme="dark"] body main[data-loadlink-contracts-marketplace] [data-loadlink-contracts-search-shell] :is(input,select) {
+  background: #202020 !important;
+  color: #f5f5f5 !important;
+  border-color: rgba(255,255,255,.15) !important;
+  color-scheme: dark !important;
+}
+html[data-loadlink-theme="light"] body main[data-loadlink-contracts-marketplace] [data-loadlink-contracts-search-shell] {
+  background: rgba(255,255,255,.95) !important;
+  border-color: rgba(17,17,17,.12) !important;
+}
+html[data-loadlink-theme="light"] body main[data-loadlink-contracts-marketplace] [data-loadlink-contracts-search-shell] :is(input,select) {
+  background: #ffffff !important;
+  color: #171717 !important;
+  border-color: rgba(17,17,17,.13) !important;
+  color-scheme: light !important;
+}
