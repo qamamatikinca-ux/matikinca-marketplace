@@ -4,6 +4,8 @@ import { getLoadLinkIntelligence } from "@/lib/loadlinkIntelligence";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import SubmissionSuccess from "@/components/SubmissionSuccess";
+import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+import { canOpenDealerSection } from "@/lib/dealer/access";
 import { isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { dealerFetch } from "@/lib/dealer/client";
 import type { DealerAppointment, DealerInsight, DealerInventoryItem, DealerLead, DealerProfile, DealerSection, DealerStaffMember, DealerSummary, DealerWorkspaceState } from "@/lib/dealer/types";
@@ -18,6 +20,8 @@ import DealerLeads from "./DealerLeads";
 import DealerMarketing from "./DealerMarketing";
 import DealerMessages from "./DealerMessages";
 import DealerOverview from "./DealerOverview";
+import DealerCompactOverview from "./DealerCompactOverview";
+import DealerAccessPanel from "./DealerAccessPanel";
 import DealerIntelligencePanel from "./DealerIntelligencePanel";
 import DealerReviews from "./DealerReviews";
 import DealerShell from "./DealerShell";
@@ -34,6 +38,7 @@ export default function DealerWorkspace() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const params = useSearchParams();
   const [loading, setLoading] = useState(true);
+  const [requiresDealerPlan, setRequiresDealerPlan] = useState(false);
   const [context, setContext] = useState<DealerWorkspaceState | null>(null);
   const [profile, setProfile] = useState<DealerProfile | null>(null);
   const [summary, setSummary] = useState<DealerSummary>(emptySummary);
@@ -87,15 +92,16 @@ export default function DealerWorkspace() {
   }, [refreshCore]);
 
   const boot = useCallback(async () => {
-    setLoading(true); setError("");
+    setLoading(true); setError(""); setRequiresDealerPlan(false);
     const { data: { user } } = await supabase.auth.getUser();
     if (!isAuthenticatedUser(user)) { window.location.assign(loginHref("/dealer")); return; }
     try {
       let data = await dealerFetch<{ context: DealerWorkspaceState | null; profile: DealerProfile | null }>("/api/dealer/context");
       if (!data.context?.dealership_id || !data.profile) {
         const intelligence = await getLoadLinkIntelligence();
-        if (intelligence.plan !== "dealer" && !intelligence.capabilities?.dealer_tools) {
-          window.location.assign("/packages");
+        const entitled = intelligence.capabilities?.dealer_tools === true || (intelligence.plan === "dealer" && ["active","trial","trialing","grace_period","cancelled"].includes(String(intelligence.plan_state)));
+        if (!entitled) {
+          setRequiresDealerPlan(true);
           return;
         }
         const metadata = (user.user_metadata || {}) as Record<string, unknown>;
@@ -103,6 +109,10 @@ export default function DealerWorkspace() {
         const inferredLocation = String(metadata.city || metadata.location || metadata.business_location || "").trim();
         await dealerFetch("/api/dealer/context", { method: "POST", body: JSON.stringify({ action: "create_profile", name: inferredName || "My dealership", location: inferredLocation }) });
         data = await dealerFetch<{ context: DealerWorkspaceState | null; profile: DealerProfile | null }>("/api/dealer/context");
+      }
+      if (data.context?.role === "owner" && data.context.subscription_status === "expired") {
+        setRequiresDealerPlan(true);
+        return;
       }
       contextRef.current=data.context;setContext(data.context); setProfile(data.profile);
       if (data.context?.dealership_id) await refreshCore();
@@ -128,6 +138,7 @@ export default function DealerWorkspace() {
   }, [context?.dealership_id, queueRefresh]);
 
   const validSection = useMemo<DealerSection>(() => ["overview","inventory","leads","customers","messages","analytics","marketing","team","showroom","verification","billing","reviews","activity","settings","support"].includes(section) ? section : "overview", [section]);
+  const sectionAllowed = context ? canOpenDealerSection(context, validSection) : false;
   function navigate(next: DealerSection) { setSection(next); window.history.replaceState({}, "", `/dealer?section=${next}`); }
   function openSuccess(title: string, message: string) { setSuccessText({ title, message }); setSuccess(true); window.setTimeout(() => setSuccess(false), 1800); }
   function addVehicle() {
@@ -136,13 +147,15 @@ export default function DealerWorkspace() {
   }
 
   if (loading) return <main className={`min-h-screen ${darkMode ? "bg-black text-white" : "bg-[#f4f0e7] text-black"}`}><div className="mx-auto flex min-h-screen max-w-lg items-center justify-center px-4"><Surface darkMode={darkMode} className="w-full p-8 text-center"><div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-current/10 border-t-[#f6b800]" /><div className="mt-4 text-sm font-black">Loading LoadLink</div></Surface></div></main>;
+  if (requiresDealerPlan) return <main className={`min-h-screen ${darkMode ? "bg-black text-white" : "bg-[#f4f0e7] text-black"}`}><LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} /><div className="px-4 py-8 sm:py-12"><DealerAccessPanel darkMode={darkMode} /></div></main>;
   if (error && !context) return <main className={`min-h-screen ${darkMode ? "bg-black text-white" : "bg-[#f4f0e7] text-black"}`}><div className="mx-auto flex min-h-screen max-w-lg items-center justify-center px-4"><Surface darkMode={darkMode} className="w-full p-8"><h1 className="text-xl font-black">Dealer could not open</h1><p className="mt-2 text-sm opacity-60">{error}</p><PrimaryButton type="button" className="mt-5" onClick={() => void boot()}>Try again</PrimaryButton></Surface></div></main>;
   if (!context || !profile) return <main className={`min-h-screen ${darkMode ? "bg-black text-white" : "bg-[#f4f0e7] text-black"}`}><div className="mx-auto flex min-h-screen max-w-lg items-center justify-center px-4"><Surface darkMode={darkMode} className="w-full p-8 text-center"><div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-current/10 border-t-[#f6b800]" /><div className="mt-4 text-sm font-black">Preparing Dealer workspace</div></Surface></div></main>;
 
   return <><SubmissionSuccess open={success} title={successText.title} message={successText.message} /><DealerShell darkMode={darkMode} toggleTheme={toggleTheme} profile={profile} context={context} section={validSection} setSection={navigate} onAddVehicle={addVehicle}>
     <div className="ll-dealer-refresh" role="status"><span>{failedAreas.length ? `Could not refresh: ${failedAreas.join(", ")}. Previous data remains visible where available.` : updatedAt ? `Summary updated ${new Date(updatedAt).toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})}` : "Loading workspace data"}</span><button type="button" disabled={refreshing} onClick={()=>void refreshCore()}>{refreshing?"Refreshing…":"Refresh"}</button></div>
+    {!sectionAllowed ? <DealerAccessPanel darkMode={darkMode} section={validSection} reason="permission" /> : <>
     {validSection === "overview" && !hasSummary ? <Surface darkMode={darkMode} className="p-6"><h1 className="text-xl font-bold">Your overview is unavailable</h1><p className="mt-2 text-sm opacity-60">Refresh to retry. Your other dealership tools remain available from the menu.</p></Surface>:null}
-    {validSection === "overview" && hasSummary ? <div className="grid gap-3 sm:gap-4"><DealerOverview darkMode={darkMode} context={context} summary={summary} leads={leads} appointments={appointments} insights={insights} inventory={inventory} setSection={navigate} onRefresh={refreshCore} /><DealerIntelligencePanel darkMode={darkMode} insights={insights} setSection={navigate} unavailable={failedAreas.includes("Briefing")} /></div> : null}
+    {validSection === "overview" && hasSummary ? <DealerCompactOverview darkMode={darkMode} summary={summary} leads={leads} appointments={appointments} setSection={navigate} onRefresh={refreshCore}><DealerOverview darkMode={darkMode} context={context} summary={summary} leads={leads} appointments={appointments} insights={insights} inventory={inventory} setSection={navigate} onRefresh={refreshCore} /><DealerIntelligencePanel darkMode={darkMode} insights={insights} setSection={navigate} unavailable={failedAreas.includes("Briefing")} /></DealerCompactOverview> : null}
     {validSection === "inventory" ? <DealerInventory darkMode={darkMode} context={context} onAddVehicle={addVehicle} /> : null}
     {validSection === "leads" ? <DealerLeads darkMode={darkMode} context={context} inventory={inventory} staff={staff} /> : null}
     {validSection === "customers" ? <DealerCustomers darkMode={darkMode} /> : null}
@@ -157,6 +170,7 @@ export default function DealerWorkspace() {
     {validSection === "activity" ? <DealerActivity darkMode={darkMode} /> : null}
     {validSection === "settings" ? <DealerSettings darkMode={darkMode} /> : null}
     {validSection === "support" ? <DealerSupport darkMode={darkMode} /> : null}
+    </>}
   </DealerShell></>;
 }
 
