@@ -53,7 +53,7 @@ export default function LoadLinkSiteFooter20260822({ darkMode }: { darkMode: boo
           <p className={`text-sm font-medium ${subtle}`}>Logistics Made Easier.</p>
         </div>
 
-        <div className={`divide-y border-y ${line}`}>
+        <div className={`border-t ${line}`}>
           <FooterDetails title="Company">
             <Link href="/about">About LoadLink</Link>
             <Link href="/help">Help centre</Link>
@@ -122,7 +122,7 @@ export default function LoadLinkSiteFooter20260822({ darkMode }: { darkMode: boo
 
 function FooterDetails({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <details className="group py-4">
+    <details className="group border-b border-current/20 py-4">
       <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 text-[19px] font-semibold tracking-[-.025em] marker:hidden">
         {title}
         <svg className="h-4 w-4 shrink-0 opacity-55 transition-transform group-open:rotate-180" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>

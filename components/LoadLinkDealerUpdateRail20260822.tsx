@@ -166,7 +166,13 @@ export default function LoadLinkDealerUpdateRail20260822({ darkMode, onAvailabil
   if (!loaded || !signedIn) return null;
 
   return (
-    <div data-loadlink-dealer-update-rail className="mb-4">
+    <div data-loadlink-dealer-update-rail className="mb-5 rounded-[22px] border border-current/10 px-3 py-4 sm:px-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div><h2 className="text-base font-bold tracking-tight">Dealership updates</h2>
+          <p className="mt-1 text-xs opacity-60">Recent updates from dealerships you follow</p>
+        </div>
+        <span className="rounded-full border border-current/15 px-3 py-1.5 text-[11px] font-semibold">{dealers.filter(item => Boolean(item.status_id)).length} active</span>
+      </div>
       <div className="no-scrollbar -mx-1 overflow-x-auto px-1 pb-1" aria-label="Followed dealerships">
         <div className="flex min-w-max gap-3 pr-2">
           <button

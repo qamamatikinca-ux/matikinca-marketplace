@@ -26,7 +26,7 @@ import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { isManualDailyProduct, MANUAL_DAILY_PRICE_CENTS, MANUAL_DAILY_UNAVAILABLE } from "@/lib/manualPricing";
 
 type SubscriptionPlan = "pro" | "dealer";
-type BusyAction = SubscriptionPlan | "manual" | "manage" | "verify" | "";
+type BusyAction = SubscriptionPlan | "manual" | "manage" | "verify" | "test" | "";
 
 const entitledStates = new Set(["active", "trial", "trialing", "grace_period", "cancelled"]);
 const paymentStates = new Set(["approved_for_payment", "payment_pending", "payment_failed", "payment_syncing"]);
@@ -46,7 +46,7 @@ const planDetails = {
     billing: "/ month",
     eyebrow: "Regular",
     description: "For individual owners and operators who advertise vehicles regularly.",
-    features: ["Up to 10 vehicle listings per month", "Up to 10 photos per listing", "Listing analytics", "Unlimited messages", "Higher search visibility", "Priority support"],
+    features: ["10 vehicle listings per month", "Up to 10 photos on each listing", "No Standard daily vehicle activation charge", "Unlimited messaging for business conversations", "View listing visits and engagement analytics", "Improved marketplace visibility", "Manage vehicles and enquiries from one account", "Priority customer support"],
   },
   dealer: {
     name: "Dealer",
@@ -54,14 +54,14 @@ const planDetails = {
     billing: "/ month",
     eyebrow: "Dealership",
     description: "For dealerships that need a public showroom, inventory tools and a sales workspace.",
-    features: ["Unlimited vehicle listings", "Up to 30 photos per listing", "Public dealership showroom", "Dealer Status updates", "Lead and customer workspace", "Team roles", "Dealer analytics"],
+    features: ["Unlimited commercial vehicle inventory", "Up to 30 photos on each listing", "Public dealership profile and searchable showroom", "Organise available, reserved and sold stock", "Capture enquiries and manage sales leads", "Customer follow-ups, appointments and quotations", "Dealership updates and stock promotions", "Staff access with defined permissions", "Inventory, engagement and sales performance insights", "Media library and bulk stock management"],
   },
 } as const;
 
 function titleCasePlan(plan?: string | null) {
   if (plan === "dealer") return "Dealer";
   if (plan === "pro") return "Pro";
-  if (plan === "manual") return "Standard";
+  if (plan === "manual" || plan === "standard") return "Standard";
   return "plan";
 }
 
@@ -83,6 +83,18 @@ export default function PackagesPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<BusyAction>("");
   const [notice, setNotice] = useState("");
+  const [tester, setTester] = useState(false);
+
+  // The server decides eligibility: knowing an email is not sufficient.
+  useEffect(() => {
+    let alive = true;
+    void supabase.auth.getUser().then(async ({data:{user}}) => {
+      if (!user) return;
+      const { data, error } = await supabase.rpc("loadlink_test_switch_plan", { p_plan: null });
+      if (alive && !error && data && typeof data === "object") setTester((data as {eligible?:boolean}).eligible === true);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   const muted = darkMode ? "text-white/55" : "text-black/55";
   const surface = darkMode ? "border-white/10 bg-[#0a0a0a]" : "border-black/10 bg-white";
@@ -216,6 +228,11 @@ export default function PackagesPage() {
     [manualProduct, manualQuantity],
   );
   const manualCovered = Boolean(activePlan);
+  // Active Dealer shows Dealer only; Pro shows Pro and Dealer upgrade;
+  // Standard/credit users and users without packages can compare all options.
+  const showStandard = !activePlan;
+  const showPro = activePlan !== "dealer";
+  const showDealer = true;
   const manualDisabled = Boolean(loading || busy || pendingPlan || manualCovered || !manualDailyReady);
 
   async function managePlan() {
@@ -275,6 +292,23 @@ export default function PackagesPage() {
       await refreshAccount();
     } catch (error) {
       setNotice(loadLinkHumanError(error, "LoadLink could not submit that plan request right now."));
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function switchTestPackage(plan: "standard" | "pro" | "dealer") {
+    if (!tester || busy) return;
+    setBusy("test");
+    setNotice("");
+    try {
+      const { data, error } = await supabase.rpc("loadlink_test_switch_plan", { p_plan: plan });
+      if (error || !data || (data as { eligible?: boolean }).eligible !== true) throw error || new Error("Test package access was denied.");
+      await Promise.all([refreshAccount(), refreshManualBalance()]);
+      window.dispatchEvent(new Event("loadlink-account-state-changed"));
+      setNotice(`Testing access switched to ${titleCasePlan(plan)}. This change is restricted to this account and is not a purchase.`);
+    } catch (error) {
+      setNotice(loadLinkHumanError(error, "The test package could not be changed."));
     } finally {
       setBusy("");
     }
@@ -360,9 +394,9 @@ export default function PackagesPage() {
       <div className={`${styles.container} mx-auto w-full max-w-6xl px-4 pb-[calc(48px+env(safe-area-inset-bottom))] pt-7 sm:px-6 md:pt-10`}>
         <header className="max-w-3xl">
           <p className={`text-[11px] font-black uppercase tracking-[.15em] ${muted}`}>Packages</p>
-          <h1 className="mt-3 text-[38px] font-black leading-[.98] tracking-[-.055em] sm:text-[52px] md:text-[62px]">Choose how you use LoadLink.</h1>
+          <h1 className="mt-3 text-[38px] font-black leading-[.98] tracking-[-.055em] sm:text-[52px] md:text-[62px]">{activePlan ? "Your LoadLink package." : "Find the right package."}</h1>
           <p className={`mt-4 max-w-2xl text-[14px] font-semibold leading-6 sm:text-[15px] ${muted}`}>
-            Compare Standard, Pro and Dealer. Current prices are checked against LoadLink’s billing catalog.
+            See what your current package covers, and the available options when you need more tools. Prices are checked against our billing catalog.
           </p>
           <PlanNavigation active="packages" />
         </header>
@@ -396,17 +430,29 @@ export default function PackagesPage() {
               <div>
                 <p className={`text-[10px] font-black uppercase tracking-[.14em] ${muted}`}>Current plan</p>
                 <h2 className="mt-1 text-2xl font-black tracking-[-.04em]">{titleCasePlan(activePlan)} is active</h2>
-                <p className={`mt-1 text-xs font-semibold ${muted}`}>{activePlan === "dealer" ? "Your dealership tools and vehicle advertising are available." : "Your vehicle advertising and Pro tools are available."}</p>
+                <p className={`mt-1 text-xs font-semibold ${muted}`}>{activePlan === "dealer" ? "Your dealership tools, showroom and vehicle advertising are available. Other packages are hidden because they are already included." : "Your Pro listing tools are ready. You can keep Pro or upgrade to Dealer."}</p>
               </div>
-              <button type="button" onClick={() => void managePlan()} disabled={Boolean(busy)} className={`h-12 rounded-xl border px-5 text-sm font-black transition active:scale-[.99] disabled:opacity-45 ${darkMode ? "border-white/15" : "border-black/15"}`}>{busy === "manage" ? "Opening…" : "Manage plan"}</button>
+              {tester
+                ? <span className="inline-flex min-h-11 items-center rounded-full border border-[#f6b800]/50 px-4 text-xs font-semibold">Internal testing · no renewal</span>
+                : <button type="button" onClick={() => void managePlan()} disabled={Boolean(busy)} className={`h-12 rounded-full border px-5 text-sm font-bold transition active:scale-[.99] disabled:opacity-45 ${darkMode ? "border-white/15" : "border-black/15"}`}>{busy === "manage" ? "Opening…" : "Manage plan"}</button>}
             </div>
           </section>
         ) : null}
 
         {notice ? <div className={`mt-4 rounded-2xl border px-4 py-3 text-[12px] font-bold leading-5 ${softSurface}`} role="status" aria-live="polite">{notice}</div> : null}
 
-        <section className={`${styles.planGrid} mt-8 grid gap-4 lg:grid-cols-3`} aria-label="LoadLink plans">
-          <article className={`${styles.planCard} flex min-w-0 flex-col rounded-[18px] border p-5 sm:p-6 ${surface}`}>
+        {tester ? <section className={`mt-5 rounded-[22px] border p-4 sm:p-5 ${surface}`} aria-label="Internal package testing controls">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div><p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#bb8800]">Internal testing</p><h2 className="mt-1 text-lg font-bold">Package testing controls</h2><p className={`mt-1 max-w-xl text-xs leading-5 ${muted}`}>Only this verified account can switch packages here. No checkout, expiry date or other customer access is changed. Standard listing activation still follows Standard credit rules.</p></div>
+            <span className="rounded-full border border-[#f6b800]/35 px-3 py-1.5 text-xs font-bold">{activePlan ? titleCasePlan(activePlan) : "Standard"} selected</span>
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {(["standard","pro","dealer"] as const).map(plan => <button key={plan} type="button" onClick={() => void switchTestPackage(plan)} disabled={Boolean(busy)} aria-pressed={(activePlan || "standard") === plan} className={`min-h-11 rounded-full border px-2 text-xs font-bold transition active:scale-[.98] disabled:opacity-50 ${(activePlan || "standard") === plan ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/20 bg-[#181818] text-white" : "border-black/15 bg-white text-black"}`}>{busy === "test" ? "Updating…" : titleCasePlan(plan)}</button>)}
+          </div>
+        </section> : null}
+
+        <section className={`${styles.planGrid} mt-8 grid gap-4 ${activePlan === "dealer" ? "max-w-2xl lg:grid-cols-1" : activePlan === "pro" ? "lg:grid-cols-2" : "lg:grid-cols-3"}`} aria-label="LoadLink plans">
+          {showStandard ? <article className={`${styles.planCard} flex min-w-0 flex-col rounded-[18px] border p-5 sm:p-6 ${surface}`}>
             <div>
               <p className={`text-[10px] font-black uppercase tracking-[.14em] ${muted}`}>Occasional</p>
               <h2 className="mt-2 text-[30px] font-black tracking-[-.05em]">Standard</h2>
@@ -419,7 +465,7 @@ export default function PackagesPage() {
 
             <div className="my-5 h-px bg-current/10" />
             <ul className="grid gap-3">
-              {["Up to 5 vehicle listings per month", "Up to 2 photos per listing", "Standard marketplace placement", "50 messages per day"].map((feature) => (
+              {["Up to 5 active vehicle listings with paid daily credits", "2 photos on each vehicle listing", "R14 per active vehicle day, with no fee for paused days", "Standard placement in marketplace results", "50 messages per day", "Browse jobs, contracts, vehicles and drivers", "Pro analytics and Dealer tools are not included"].map((feature) => (
                 <li key={feature} className="flex gap-3 text-[12px] font-semibold leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]" /><span>{feature}</span></li>
               ))}
             </ul>
@@ -435,7 +481,7 @@ export default function PackagesPage() {
             <div className="mt-auto pt-6">
               {!loading && !manualDailyReady ? <p className={`mb-3 text-xs leading-5 ${muted}`} role="status">{MANUAL_DAILY_UNAVAILABLE}</p> : null}
               {!manualOpen ? (
-                <button type="button" onClick={() => setManualOpen(true)} disabled={manualDisabled} className={`h-12 w-full rounded-xl text-sm font-black transition active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-45 ${darkMode ? "border border-white/15" : "border border-black/15"}`}>
+                <button type="button" onClick={() => setManualOpen(true)} disabled={manualDisabled} className={`h-12 w-full rounded-full text-sm font-black transition active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-45 ${darkMode ? "border border-white/15" : "border border-black/15"}`}>
                   {loading ? "Checking daily pricing…" : manualCovered ? `Included with ${titleCasePlan(activePlan)}` : pendingPlan ? "Request already in review" : !manualDailyReady ? "Payments temporarily unavailable" : "Buy daily credits"}
                 </button>
               ) : (
@@ -465,9 +511,9 @@ export default function PackagesPage() {
                 </div>
               )}
             </div>
-          </article>
+          </article> : null}
 
-          {(["pro", "dealer"] as const).map((plan) => {
+          {(["pro", "dealer"] as const).filter(plan => plan === "dealer" ? showDealer : showPro).map((plan) => {
             const details = planDetails[plan];
             const isPro = plan === "pro";
             return (
@@ -477,9 +523,12 @@ export default function PackagesPage() {
                 <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1"><span className="text-[42px] font-black leading-none tracking-[-.06em]">{prices[plan] !== undefined ? money(prices[plan]!).replace(",00", "") : pricesLoading ? "Checking…" : "Unavailable"}</span><span className={`text-xs font-extrabold ${muted}`}>{details.billing}</span></div>
                 <p className={`mt-4 min-h-[60px] text-xs font-semibold leading-5 ${muted}`}>{details.description}</p>
                 <div className="my-5 h-px bg-current/10" />
+                <p className={`mb-3 text-[11px] font-bold uppercase tracking-[.08em] ${muted}`}>What this package includes</p>
                 <ul className="grid gap-3">{details.features.map((feature) => <li key={feature} className="flex gap-3 text-[12px] font-semibold leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]" /><span>{feature}</span></li>)}</ul>
                 <div className="mt-auto pt-6">
-              <button type="button" onClick={() => activePlan === plan ? void managePlan() : void actSubscription(plan)} disabled={subscriptionDisabled(plan)} className={`h-12 w-full rounded-xl text-sm font-black transition active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-45 ${isPro || (activePlan === "pro" && plan === "dealer") ? "bg-[#f6b800] text-black" : darkMode ? "border border-white/15" : "border border-black/15"}`}>{subscriptionButtonLabel(plan)}</button></div>
+              {tester && activePlan === plan
+                  ? <a href={plan === "dealer" ? "/dealer" : "/packages/manage"} className="flex h-12 w-full items-center justify-center rounded-full border border-[#f6b800] bg-[#f6b800] px-4 text-sm font-bold text-black">{plan === "dealer" ? "Open Dealer Centre" : "View package allowances"}</a>
+                  : <button type="button" onClick={() => activePlan === plan ? void managePlan() : void actSubscription(plan)} disabled={subscriptionDisabled(plan)} className={`h-12 w-full rounded-full text-sm font-bold transition active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-45 ${isPro || (activePlan === "pro" && plan === "dealer") ? "bg-[#f6b800] text-black" : darkMode ? "border border-white/15" : "border border-black/15"}`}>{subscriptionButtonLabel(plan)}</button>}</div>
               </article>
             );
           })}

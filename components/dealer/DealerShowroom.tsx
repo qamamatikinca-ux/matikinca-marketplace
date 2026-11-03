@@ -122,6 +122,20 @@ export default function DealerShowroom({darkMode,profile,context,onProfile}:{dar
   const surface=darkMode?"border-white/10 bg-[#0c0c0c]":"border-black/10 bg-white";
 
   return <div className="mx-auto grid max-w-[1040px] gap-4 pb-28">
+    <section className={`rounded-[24px] border p-5 ${surface}`} aria-label="Showroom setup status">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[.12em] opacity-55">Your public showroom</p>
+          <h2 className="mt-1 text-xl font-bold tracking-tight">Make it easy for buyers to find you.</h2>
+          <p className="mt-2 max-w-xl text-sm leading-6 opacity-65">Keep stock, business details, contact information and trading hours accurate. Saved changes are checked against your Dealer verification status before publishing.</p>
+        </div>
+        <span className="rounded-full border border-[#f6b800]/45 px-3 py-2 text-xs font-bold">{profileComplete ? "Details complete" : `${missingRequired.length} details needed`}</span>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <button type="button" onClick={()=>setDetailsOpen(true)} className="min-h-11 rounded-full border border-[#f6b800]/55 px-3 text-xs font-bold">Edit business details</button>
+        <a href={`/dealership/${profile.slug}`} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center justify-center rounded-full bg-[#f6b800] px-3 text-center text-xs font-bold text-black">Preview showroom</a>
+      </div>
+    </section>
     <section className={`overflow-hidden rounded-[26px] border ${surface}`}>
       <div className="relative aspect-[16/6] min-h-[180px] overflow-hidden bg-[#111]">
         {profile.cover_image_url?<LoadLinkImage src={profile.cover_image_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70"/>:null}

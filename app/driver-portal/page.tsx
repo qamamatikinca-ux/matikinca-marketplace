@@ -36,7 +36,7 @@ export default function DriverPortalPage() {
             Browse approved drivers who are available for work or create your own professional LoadLink driver profile.
           </p>
 
-          <div className="mx-auto mt-6 grid w-full max-w-md gap-3">
+          <div data-loadlink-driver-entry-actions="true" className="mx-auto mt-6 grid w-full max-w-md gap-3">
             <Link
               href="#available-drivers"
               data-loadlink-hero-pill="true"
