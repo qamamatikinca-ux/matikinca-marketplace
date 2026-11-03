@@ -46,6 +46,8 @@ const SERVER_SNAPSHOT: AccountSnapshot = {
 let snapshot: AccountSnapshot = SERVER_SNAPSHOT;
 let started = false;
 let loadSequence = 0;
+let lastProfileFetchUserId = "";
+let lastProfileFetchAt = 0;
 const listeners = new Set<() => void>();
 
 function emit(next: AccountSnapshot) {
@@ -61,9 +63,17 @@ function cachedProfile(userId: string): Partial<AccountProfile> | null {
   } catch { return null; }
 }
 
-async function applyUser(user: User | null) {
+async function applyUser(user: User | null, force = false) {
+  if (user && !force && snapshot.user?.id === user.id && lastProfileFetchUserId === user.id && Date.now() - lastProfileFetchAt < 30000) {
+    // Token refreshes and account-state events must not restart all profile queries.
+    if (snapshot.user !== user) emit({ ...snapshot, user, ready: true });
+    return;
+  }
   const sequence = ++loadSequence;
+  if (user) { lastProfileFetchUserId = user.id; lastProfileFetchAt = Date.now(); }
   if (!user) {
+    lastProfileFetchUserId = "";
+    lastProfileFetchAt = 0;
     emit({ ready: true, user: null, profile: EMPTY_PROFILE, dealer: null, driverProfile: null });
     return;
   }
@@ -121,16 +131,17 @@ function ensureStarted() {
     window.setTimeout(() => void applyUser(user), 0);
   });
 
-  const refresh = () => void refreshLoadLinkAccount();
+  const refresh = () => void refreshLoadLinkAccount(true);
+  const softRefresh = () => void refreshLoadLinkAccount();
   window.addEventListener("loadlink-profile-updated", refresh);
   window.addEventListener("loadlink-driver-profile-updated", refresh);
-  window.addEventListener("loadlink-account-state-synced", refresh);
+  window.addEventListener("loadlink-account-state-synced", softRefresh);
 }
 
-export function refreshLoadLinkAccount() {
+export function refreshLoadLinkAccount(force = false) {
   if (!isSupabaseConfigured) return Promise.resolve();
   // This is display state; server-authorized operations still verify the user.
-  return supabase.auth.getSession().then(({ data, error }) => { if (!error) return applyUser(data.session?.user || null); });
+  return supabase.auth.getSession().then(({ data, error }) => { if (!error) return applyUser(data.session?.user || null, force); });
 }
 
 export function useLoadLinkAccount() {
