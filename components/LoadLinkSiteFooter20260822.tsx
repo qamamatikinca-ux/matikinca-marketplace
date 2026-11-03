@@ -3,6 +3,7 @@
 import LoadLinkImage from "@/components/LoadLinkImage";
 import Link from "next/link";
 import RequireAuthLink from "@/components/RequireAuthLink";
+import { useEffect, useRef } from "react";
 
 const socialLinks = [
   { label: "Instagram", href: "https://www.instagram.com/loadlinksouthafrica?xtok=MWlybmUyamttenEzbg==", logo: "/brands/instagram.svg" },
@@ -19,13 +20,31 @@ export default function LoadLinkSiteFooter20260822({ darkMode }: { darkMode: boo
   const line = darkMode ? "border-white/12" : "border-[#e6e8ea]";
   const playUrl = process.env.NEXT_PUBLIC_LOADLINK_PLAY_STORE_URL || "";
   const appleUrl = process.env.NEXT_PUBLIC_LOADLINK_APP_STORE_URL || "";
+  const footerRef = useRef<HTMLElement>(null);
+
+  // On iOS Safari, the browser bar can show the page's cream theme colour
+  // below a white footer. Switch that chrome colour only while the footer
+  // is in the viewport; preserve the actual yellow marketplace backgrounds.
+  useEffect(() => {
+    const footer = footerRef.current;
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (!footer || !meta || typeof IntersectionObserver === "undefined") return;
+    const pageColor = darkMode ? "#050505" : "#f4efe3";
+    const footerColor = darkMode ? "#080909" : "#ffffff";
+    const observer = new IntersectionObserver(([entry]) => {
+      meta.setAttribute("content", entry.isIntersecting ? footerColor : pageColor);
+    }, { threshold: 0 });
+    observer.observe(footer);
+    return () => { observer.disconnect(); meta.setAttribute("content", pageColor); };
+  }, [darkMode]);
+
 
   function openCookiePreferences() {
     window.dispatchEvent(new Event("loadlink:open-cookie-preferences"));
   }
 
   return (
-    <footer data-loadlink-footer="clean-20261103" className={`relative z-10 w-full px-5 pb-[max(36px,env(safe-area-inset-bottom))] pt-11 md:px-12 md:py-14 ${darkMode ? "bg-[#080909] text-white" : "bg-white text-[#151922]"}`}>
+    <footer ref={footerRef} data-loadlink-footer="clean-20261103" className={`relative z-10 w-full px-5 pb-[max(36px,env(safe-area-inset-bottom))] pt-11 md:px-12 md:py-14 ${darkMode ? "bg-[#080909] text-white" : "bg-white text-[#151922]"}`}>
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Link href="/" aria-label="LoadLink home" className="inline-flex max-w-full">
