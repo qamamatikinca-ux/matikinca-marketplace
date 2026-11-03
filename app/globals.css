@@ -736,3 +736,12 @@ html[data-loadlink-theme="light"]:has(footer[data-loadlink-footer]),
 html[data-loadlink-theme="light"] body:has(footer[data-loadlink-footer]) {
   background-color: #fff !important;
 }
+
+/* Gold state for the Jobs portal navigation, without adding a new quick-link strip. */
+[data-loadlink-jobs-portal-navigation] a[aria-current="page"],
+[data-loadlink-jobs-portal-navigation] a:focus-visible,
+[data-loadlink-jobs-portal-navigation] a:active {
+  background-color: #f6b800 !important;
+  border-color: #f6b800 !important;
+  color: #101010 !important;
+}
