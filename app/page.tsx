@@ -29,7 +29,7 @@ function HomeExperience() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
 
   return (
-    <main data-loadlink-homepage="true" className={`min-h-screen transition-colors duration-300 ${darkMode ? "bg-black text-white" : "bg-[#fff6dc] text-black"}`}>
+    <main data-loadlink-homepage="true" className={`min-h-screen transition-colors duration-300 ${darkMode ? "bg-black text-white" : "bg-[#f8f8f7] text-black"}`}>
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
       <GoogleOneTap />
 
@@ -59,7 +59,7 @@ function HomeExperience() {
           No decorative gold eyebrow labels, extra slogans, or invented company claims. */}
       <section
         aria-labelledby="loadlink-our-mission"
-        className={`border-t px-5 py-14 transition-colors duration-300 md:px-12 md:py-20 ${darkMode ? "border-white/10 bg-[#050505] text-white" : "border-black/10 bg-[#fff6dc] text-black"}`}
+        className={`border-t px-5 py-14 transition-colors duration-300 md:px-12 md:py-20 ${darkMode ? "border-white/10 bg-[#050505] text-white" : "border-black/10 bg-[#f8f8f7] text-black"}`}
       >
         <div className="mx-auto max-w-5xl text-center">
           <div>
@@ -93,7 +93,7 @@ function HomeFallback() {
   ] as const;
 
   return (
-    <main className="min-h-screen bg-[#fff6dc] px-5 py-10 text-black">
+    <main className="min-h-screen bg-[#f8f8f7] px-5 py-10 text-black">
       <div className="mx-auto max-w-4xl">
         <header className="border-b border-black/10 pb-6 text-center">
           <LoadLinkImage src="/images/loadlink-logo-light.png" alt="LoadLink" className="mx-auto h-14 w-auto object-contain" />
