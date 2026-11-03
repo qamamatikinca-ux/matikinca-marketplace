@@ -31,6 +31,40 @@ export function applyLoadLinkTheme(theme: LoadLinkTheme) {
   }
 }
 
+// All mounted portals share one set of browser theme listeners.
+type ThemeSubscriber = (next: LoadLinkTheme) => void;
+const themeSubscribers = new Set<ThemeSubscriber>();
+let preferenceQuery: MediaQueryList | null = null;
+const notifyThemeSubscribers = () => {
+  const next = readLoadLinkTheme();
+  applyLoadLinkTheme(next);
+  themeSubscribers.forEach((callback) => callback(next));
+};
+const onVisibility = () => { if (document.visibilityState === "visible") notifyThemeSubscribers(); };
+function subscribeTheme(callback: ThemeSubscriber) {
+  themeSubscribers.add(callback);
+  if (themeSubscribers.size === 1) {
+    preferenceQuery = window.matchMedia?.("(prefers-color-scheme: dark)") || null;
+    window.addEventListener("storage", notifyThemeSubscribers);
+    window.addEventListener("loadlink-theme-change", notifyThemeSubscribers);
+    window.addEventListener("pageshow", notifyThemeSubscribers);
+    window.addEventListener("focus", notifyThemeSubscribers);
+    document.addEventListener("visibilitychange", onVisibility);
+    preferenceQuery?.addEventListener("change", notifyThemeSubscribers);
+  }
+  return () => {
+    themeSubscribers.delete(callback);
+    if (themeSubscribers.size !== 0) return;
+    window.removeEventListener("storage", notifyThemeSubscribers);
+    window.removeEventListener("loadlink-theme-change", notifyThemeSubscribers);
+    window.removeEventListener("pageshow", notifyThemeSubscribers);
+    window.removeEventListener("focus", notifyThemeSubscribers);
+    document.removeEventListener("visibilitychange", onVisibility);
+    preferenceQuery?.removeEventListener("change", notifyThemeSubscribers);
+    preferenceQuery = null;
+  };
+}
+
 let themeTransitionRunning = false;
 let fallbackCleanup: number | null = null;
 
@@ -50,7 +84,9 @@ export function setLoadLinkTheme(theme: LoadLinkTheme) {
   };
 
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  if (reducedMotion || root.dataset.loadlinkHydrating === "true") {
+  const mobileTouch = window.matchMedia?.("(hover: none) and (pointer: coarse)").matches;
+  // Full-page snapshots can stall iOS and Android scrolling.
+  if (reducedMotion || mobileTouch || root.dataset.loadlinkHydrating === "true") {
     commit();
     return;
   }
@@ -91,27 +127,11 @@ export function useLoadLinkTheme() {
   const [theme, setThemeState] = useState<LoadLinkTheme>("light");
 
   useLayoutEffect(() => {
-    const sync = () => {
-      const next = readLoadLinkTheme();
-      setThemeState(next);
-      applyLoadLinkTheme(next);
-    };
-    sync();
-    const media = window.matchMedia?.("(prefers-color-scheme: dark)");
-    window.addEventListener("storage", sync);
-    window.addEventListener("loadlink-theme-change", sync as EventListener);
-    window.addEventListener("pageshow", sync);
-    window.addEventListener("focus", sync);
-    document.addEventListener("visibilitychange", sync);
-    media?.addEventListener("change", sync);
-    return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener("loadlink-theme-change", sync as EventListener);
-      window.removeEventListener("pageshow", sync);
-      window.removeEventListener("focus", sync);
-      document.removeEventListener("visibilitychange", sync);
-      media?.removeEventListener("change", sync);
-    };
+    const sync = (next: LoadLinkTheme) => setThemeState((previous) => previous === next ? previous : next);
+    const initial = readLoadLinkTheme();
+    applyLoadLinkTheme(initial);
+    sync(initial);
+    return subscribeTheme(sync);
   }, []);
 
   const setTheme = useCallback((next: LoadLinkTheme) => {

@@ -3,7 +3,7 @@
 import LoadLinkImage from "@/components/LoadLinkImage";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { clearActiveAccountState } from "@/lib/accountState";
@@ -29,6 +29,9 @@ const marketplaceLinks: MenuLink[] = [
 
 export default function SiteMenu({ darkMode, className = "" }: { darkMode: boolean; className?: string }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
   const account = useLoadLinkAccount();
   const signedIn = Boolean(account.user);
   const { unread: unreadMessages } = useUnreadMessages(signedIn);
@@ -76,12 +79,25 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
 
   useEffect(() => setOpen(false), [pathname]);
 
+  // Warm the two most common destinations only after the user opens the menu.
+  useEffect(() => {
+    if (!open) return;
+    const network = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    if (network?.saveData || /2g/.test(network?.effectiveType || "")) return;
+    const timer = window.setTimeout(() => {
+      if (pathname !== "/jobs") void router.prefetch("/jobs");
+      if (pathname !== "/contracts") void router.prefetch("/contracts");
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [open, pathname, router]);
+
   useEffect(() => {
     if (!open) return;
 
     const body = document.body;
     const html = document.documentElement;
     const scrollY = window.scrollY || window.pageYOffset || 0;
+    const openAtPathname = pathname;
     const previous = {
       bodyPosition: body.style.position,
       bodyTop: body.style.top,
@@ -144,10 +160,13 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
       html.style.overflow = previous.htmlOverflow;
       html.style.overscrollBehavior = previous.htmlOverscroll;
 
-      window.scrollTo(0, scrollY);
-      window.setTimeout(() => openButtonRef.current?.focus(), 0);
+      // Do not jump to the old page's scroll position after entering a new portal.
+      if (pathnameRef.current === openAtPathname) {
+        window.scrollTo({ top: scrollY, left: 0, behavior: "instant" });
+        window.setTimeout(() => openButtonRef.current?.focus(), 0);
+      }
     };
-  }, [open]);
+  }, [open, pathname]);
 
   const initials = useMemo(() => {
     const source = account.profile.full_name || account.user?.email || "LoadLink";
