@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+import Link from "next/link";
 import PlanNavigation from "@/components/PlanNavigation";
 import { DEALER_PLAN_BENEFITS } from "@/lib/dealer/access";
 import { supabase } from "@/lib/supabaseClient";
