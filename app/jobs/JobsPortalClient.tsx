@@ -793,9 +793,9 @@ function FeaturedJobsRail({ jobs, darkMode, onOpen }: { jobs: JobListing[]; dark
     <section data-loadlink-promoted-rail="true" className={`border-b px-5 py-8 md:px-12 ${darkMode ? "border-white/10 bg-black text-white" : "border-black/10 bg-[#fff7df] text-black"}`}>
       <div className="mx-auto max-w-5xl">
         <h2 className="text-3xl font-black tracking-[-.04em]">Promoted listings</h2>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div data-loadlink-swipe-dots="true" className="no-scrollbar mt-5 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3">
           {jobs.map((job) => (
-            <button key={job.id} onClick={() => onOpen(job)} className={`overflow-hidden rounded-2xl border text-left ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+            <button key={job.id} type="button" onClick={() => onOpen(job)} data-loadlink-promoted-card="true" className={`w-[84vw] max-w-[390px] shrink-0 snap-start overflow-hidden rounded-2xl border text-left sm:w-[46vw] sm:max-w-[420px] ${darkMode ? "border-white/10 bg-[#0b0b0b] text-white" : "border-black/10 bg-white text-[#151515]"}`}>
               <div className="relative aspect-[16/9] bg-black">
                 <LoadLinkImage src={job.photos[0] || "/images/jobs/job-card-1.jpg"} alt={job.title} className="h-full w-full object-cover" />
                 <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] text-black">Promoted</span>

@@ -26,7 +26,8 @@ test("Jobs theme changes cannot retain stale inline white backgrounds", () => {
   const css = read("app/loadlink-refresh-theme-20261015.css");
   assert.doesNotMatch(legacy, /main\.style\.backgroundColor\s*=\s*"#fff"/);
   assert.doesNotMatch(legacy, /section\.style\.backgroundColor\s*=\s*"#fff"/);
-  assert.match(legacy, /loadlinkPromotedRail/);
+  assert.doesNotMatch(legacy, /function promotedCarousel\(/);
+  assert.doesNotMatch(legacy, /loadlink-promoted-carousel/);
   assert.match(jobs, /data-loadlink-promoted-rail="true"/);
   assert.match(jobs, /darkMode=\{darkMode\}/);
   assert.match(css, /main\[data-loadlink-jobs-page="true"\] \[data-loadlink-promoted-rail="true"\]/);
