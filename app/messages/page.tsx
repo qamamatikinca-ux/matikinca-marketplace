@@ -502,6 +502,7 @@ export default function MessagesPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const conversationLoadSequenceRef = useRef(0);
   const messageLoadSequenceRef = useRef(0);
+  const messageReadInFlightRef = useRef("");
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const recordingChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -882,13 +883,18 @@ export default function MessagesPage() {
 
   const loadMessages = useCallback(
     async (conversation: Conversation, showLoader = false) => {
+      // A slow response must finish or time out before the next poll starts.
+      // Previously a new poll invalidated every earlier response, so messages
+      // could remain blank until the browser was refreshed.
+      if (messageReadInFlightRef.current === conversation.id) return;
+      messageReadInFlightRef.current = conversation.id;
       const requestSequence = ++messageLoadSequenceRef.current;
       if (showLoader) setMessagesLoading(true);
       try {
         const result = await reliableChatRead(() => supabase.rpc("get_listing_guest_messages", {
           p_thread_id: conversation.id,
           p_access_key: conversation.accessKey,
-        }));
+        }).abortSignal(AbortSignal.timeout(5000)));
         if (result.error) throw result.error;
         setError((current) => /connection interrupted/i.test(current) ? "" : current);
         const rows = (result.data || []) as ChatMessage[];
@@ -914,6 +920,7 @@ export default function MessagesPage() {
       } catch (loadError) {
         if (showLoader) setError(cleanError(loadError, "Messages could not load."));
       } finally {
+        if (messageReadInFlightRef.current === conversation.id) messageReadInFlightRef.current = "";
         if (showLoader) setMessagesLoading(false);
       }
     },
@@ -1021,8 +1028,8 @@ export default function MessagesPage() {
         if (!active) return;
         await loadConversations(openedId);
         refreshTimer = setInterval(
-          () => loadConversations().catch(() => undefined),
-          15000,
+          () => { if (document.visibilityState === "visible" && navigator.onLine) void loadConversations().catch(() => undefined); },
+          12000,
         );
       } catch (initialiseError) {
         if (active)
@@ -1046,6 +1053,7 @@ export default function MessagesPage() {
     }
 
     let active = true;
+    messageLoadSequenceRef.current += 1;
     setMessages([]);
     messageSignatureRef.current = "";
     forceScrollRef.current = true;
@@ -1060,8 +1068,8 @@ export default function MessagesPage() {
       if (status) setBlockState(status);
     });
     const messageTimer = setInterval(() => {
-      if (active) loadMessages(selectedConversation).catch(() => undefined);
-    }, 5000);
+      if (active && document.visibilityState === "visible" && navigator.onLine) void loadMessages(selectedConversation).catch(() => undefined);
+    }, 2400);
     const touchPresence = () => {
       if (document.visibilityState === "hidden") return;
       if (!messagePrivacy.activityVisible) return;
@@ -1077,7 +1085,7 @@ export default function MessagesPage() {
     const refreshAfterReconnect = () => { if (document.visibilityState === "visible" && navigator.onLine) { touchPresence(); void loadMessages(selectedConversation).catch(() => undefined); } };
     const handleVisibility = refreshAfterReconnect;
     window.addEventListener("online", refreshAfterReconnect);
-    window.addEventListener("focus", touchPresence);
+    window.addEventListener("focus", refreshAfterReconnect);
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
@@ -1085,7 +1093,7 @@ export default function MessagesPage() {
       clearInterval(messageTimer);
       clearInterval(presenceTimer);
       window.removeEventListener("online", refreshAfterReconnect);
-      window.removeEventListener("focus", touchPresence);
+      window.removeEventListener("focus", refreshAfterReconnect);
       document.removeEventListener("visibilitychange", handleVisibility);
       recordingRequestRef.current += 1;
       recordingPendingRef.current = false;
