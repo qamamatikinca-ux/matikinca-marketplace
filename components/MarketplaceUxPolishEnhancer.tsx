@@ -31,5 +31,5 @@ export default function MarketplaceUxPolishEnhancer(){const pathname=usePathname
     [100,300,700,1300,2200].forEach(delay=>timers.push(window.setTimeout(scan,delay)));
     void dealerGate();
   }
-  void initialise();return()=>{cancelled=true;timers.forEach(window.clearTimeout);document.getElementById(DEALER_GATE_ID)?.remove();document.getElementById("loadlink-promoted-carousel-controls")?.remove()}
+  void initialise();return()=>{cancelled=true;timers.forEach(window.clearTimeout);document.getElementById(DEALER_GATE_ID)?.remove();}
 },[pathname]);return null}
