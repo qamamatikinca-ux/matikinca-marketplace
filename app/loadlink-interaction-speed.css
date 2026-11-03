@@ -26,3 +26,16 @@ html { scroll-padding-top: 5rem; }
   }
   html:focus-within { scroll-behavior: auto !important; }
 }
+
+/* Same tap target, type size and corner radius for Driver and Vehicle portals. */
+[data-loadlink-driver-entry-actions="true"] > :is(a,button),
+[data-loadlink-vehicle-entry-actions="true"] > :is(a,button) {
+  height: 56px !important;
+  min-height: 56px !important;
+  padding: 0 24px !important;
+  font-size: 14px !important;
+  line-height: 1.2 !important;
+  font-weight: 900 !important;
+  letter-spacing: .1em !important;
+  border-radius: 999px !important;
+}
