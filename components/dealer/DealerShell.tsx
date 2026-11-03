@@ -51,7 +51,7 @@ export default function DealerShell({darkMode,toggleTheme,profile,context,sectio
             <div className="min-w-0"><div className="truncate text-sm font-black">{profile.name}</div><div className="mt-1 text-[9px] font-semibold opacity-42">{statusText(context)}</div></div>
           </div>
         </div>
-        <nav className="ll-dealer-navigation flex-1 p-2.5" aria-label="Dealership tools"><label className="ll-dealer-tool-search"><span className="sr-only">Find a dealership tool</span><input type="search" value={toolQuery} onChange={event=>setToolQuery(event.target.value)} placeholder="Find a tool…"/></label>{[{name:"Workspace",ids:["overview","inventory","leads","messages"]},{name:"Sales & reach",ids:["customers","analytics","marketing","reviews"]},{name:"Business",ids:["team","showroom","verification","billing","activity","settings","support"]}].map(group=>{const items=all.filter(item=>group.ids.includes(item.id)&&item.label.toLowerCase().includes(toolQuery.toLowerCase()));return items.length?<div className="ll-dealer-nav-group" key={group.name}><p>{group.name}</p>{items.map(i=><Nav key={i.id} item={i} active={section===i.id} onClick={()=>go(i.id)}/>)}</div>:null;})}</nav>
+        <nav className="ll-dealer-navigation flex-1 p-2.5" aria-label="Dealership tools"><label className="ll-dealer-tool-search"><span className="sr-only">Find a dealership tool</span><input type="search" value={toolQuery} onChange={event=>setToolQuery(event.target.value)} placeholder="Find a tool…"/></label>{[{name:"Daily operations",ids:["overview","inventory","leads","messages"]},{name:"Sales & growth",ids:["customers","analytics","marketing","reviews"]},{name:"Dealership management",ids:["team","showroom","verification","billing","activity","settings","support"]}].map(group=>{const items=all.filter(item=>group.ids.includes(item.id)&&item.label.toLowerCase().includes(toolQuery.toLowerCase()));return items.length?<div className="ll-dealer-nav-group" key={group.name}><p>{group.name}</p>{items.map(i=><Nav key={i.id} item={i} active={section===i.id} onClick={()=>go(i.id)}/>)}</div>:null;})}</nav>
         <div className="m-3 rounded-[18px] border border-[#f6b800]/20 bg-[#f6b800]/[.045] p-3.5">
           <div className="text-[10px] font-black text-[#c79300]">Dealer workspace</div>
           <p className={`mt-1.5 text-[9px] font-semibold leading-4 ${muted}`}>Stock, leads, messages, analytics and dealership controls stay in one place.</p>
@@ -59,6 +59,24 @@ export default function DealerShell({darkMode,toggleTheme,profile,context,sectio
       </aside>
 
       <div className="min-w-0">
+        <section className={`mb-4 rounded-[24px] border p-4 sm:p-5 ${surface}`} aria-label="Dealer workspace navigation">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className={`text-[10px] font-bold uppercase tracking-[.12em] ${muted}`}>LoadLink Dealer Centre</p>
+              <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-[28px]">{section === "overview" ? "Dealership overview" : all.find(item => item.id === section)?.label || "Dealership workspace"}</h1>
+              <p className={`mt-1 text-xs leading-5 ${muted}`}>Your stock, enquiries, sales activity and showroom in one organised space.</p>
+            </div>
+            <span className="rounded-full border border-[#f6b800]/40 px-3 py-1.5 text-[11px] font-bold">{statusText(context)}</span>
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {([{id:"inventory",label:"Inventory"},{id:"leads",label:"Enquiries"},{id:"showroom",label:"Showroom"}] as const).map(item=>(
+              <button key={item.id} type="button" disabled={!can(item.id)} onClick={()=>go(item.id)} aria-current={section===item.id?"page":undefined}
+                className={`min-h-11 rounded-full border px-2 text-xs font-bold transition active:scale-[.98] disabled:opacity-30 ${section===item.id?"border-[#f6b800] bg-[#f6b800] text-black":darkMode?"border-white/20":"border-black/15"}`}>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </section>
         <div className="relative mb-4 flex items-center justify-end gap-2" data-loadlink-dealer-topbar="true">
           <button type="button" onClick={()=>go("team")} className={`hidden h-10 items-center gap-2 rounded-full border px-4 text-[10px] font-black sm:flex ${darkMode?"border-[#f6b800]/55 bg-[#f6b800]/[.04] text-[#ffd259]":"border-[#c08d00]/45 bg-white text-[#8a6500]"}`}><LoadLinkIcon name="plus" size={16}/> Invite member</button>
           <Link href="/notifications" aria-label="Notifications" className={`relative flex h-10 w-10 items-center justify-center rounded-full border ${darkMode?"border-white/10 bg-white/[.035]":"border-black/10 bg-white"}`}><BellIcon/><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#f6b800]"/></Link>
