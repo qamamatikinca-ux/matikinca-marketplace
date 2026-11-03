@@ -7,6 +7,7 @@ import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import LoadLinkSiteFooter20260822 from "@/components/LoadLinkSiteFooter20260822";
 import LoadLinkHomepagePortalGrid20260822 from "@/components/LoadLinkHomepagePortalGrid20260822";
+import MarketplaceDiscovery from "@/components/MarketplaceDiscovery";
 import GoogleOneTap from "@/components/GoogleOneTap";
 import Link from "next/link";
 import { lazy, Suspense } from "react";
@@ -14,7 +15,6 @@ import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import LoadLinkBoundary from "@/components/platform/LoadLinkBoundary";
 
 const RecentActivityPanel = lazy(() => import("@/components/RecentActivityPanel"));
-const MarketplaceDiscovery = lazy(() => import("@/components/MarketplaceDiscovery"));
 const LogisticsNews = lazy(() => import("@/components/LogisticsNews"));
 
 export default function Home() {
