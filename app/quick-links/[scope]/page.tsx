@@ -102,7 +102,7 @@ export default function QuickLinkPicturePage() {
   }
 
   return (
-    <main data-loadlink-quick-links-page="pictures" className={darkMode ? "min-h-screen bg-black text-white" : "min-h-screen bg-[#f6f2e8] text-black"}>
+    <main data-loadlink-quick-links-page="pictures" data-theme={darkMode ? "dark" : "light"} className={darkMode ? "min-h-screen bg-black text-white" : "min-h-screen bg-[#f6f2e8] text-black"}>
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <section className="relative isolate min-h-[430px] overflow-hidden bg-black text-white sm:min-h-[500px]">
@@ -110,6 +110,9 @@ export default function QuickLinkPicturePage() {
           src={imageFailed ? config.fallback : config.image}
           onError={() => setImageFailed(true)}
           alt=""
+          loading="eager"
+          fetchPriority="high"
+          sizes="100vw"
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/82 via-black/54 to-black/12" />
@@ -122,13 +125,22 @@ export default function QuickLinkPicturePage() {
       </section>
 
       <section className="relative z-10 mx-auto -mt-1 max-w-7xl px-4 pb-14 pt-4 sm:px-5 md:px-8">
-        <div className="no-scrollbar overflow-x-auto py-1" aria-label="Quick search categories">
-          <div className="flex min-w-max gap-2">
+        <nav data-loadlink-quick-search-nav="true" className="no-scrollbar overflow-x-auto py-1" aria-label="Quick search categories">
+          <div className="flex min-w-max items-center gap-1.5">
             {NAV.map((item) => (
-              <Link key={item.value} href={`/quick-links/${item.value}`} className={`flex h-10 items-center rounded-full border px-4 text-[12px] font-black ${item.value === scope ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/12 bg-white/[.04] text-white/70" : "border-black/10 bg-white text-black/65"}`}>{item.label}</Link>
+              <Link
+                key={item.value}
+                href={`/quick-links/${item.value}`}
+                aria-current={item.value === scope ? "page" : undefined}
+                className={`inline-flex min-h-10 shrink-0 items-center justify-center rounded-[11px] border px-3 text-[12px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f6b800] ${item.value === scope
+                  ? "border-[#f6b800] bg-[#f6b800] text-black"
+                  : darkMode ? "border-white/15 bg-[#151615] text-white/85" : "border-black/10 bg-white text-black/75"}`}
+              >
+                {item.label}
+              </Link>
             ))}
           </div>
-        </div>
+        </nav>
 
         <form onSubmit={submit} className={`mt-4 overflow-visible rounded-[20px] border p-3 shadow-[0_18px_50px_rgba(0,0,0,.08)] ${darkMode ? "border-white/12 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
           <label className="block">

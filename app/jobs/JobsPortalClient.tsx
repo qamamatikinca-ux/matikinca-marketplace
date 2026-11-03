@@ -653,7 +653,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
       <Header darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
 
       <section className="relative min-h-[82vh] overflow-hidden border-b border-[#f6b800]/40">
-        <LoadLinkImage src="/images/jobs/jobs-hero-fleet.jpg" alt="Truck fleet ready for logistics work" className="absolute inset-0 h-full w-full object-cover grayscale" />
+        <LoadLinkImage src="/images/jobs/jobs-hero-fleet.jpg" alt="Truck fleet ready for logistics work" loading="eager" fetchPriority="high" sizes="100vw" className="absolute inset-0 h-full w-full object-cover grayscale" />
         <div className={`absolute inset-0 ${darkMode ? "bg-gradient-to-b from-black/15 via-black/45 to-black" : "bg-gradient-to-b from-black/5 via-black/35 to-[#fff7df]"}`} />
 
         <div className="relative mx-auto flex min-h-[82vh] max-w-5xl flex-col justify-end px-5 pb-8 pt-20">
@@ -664,19 +664,6 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
             </p>
           </div>
 
-          <nav aria-label="Explore LoadLink portals" data-loadlink-jobs-portal-navigation className="no-scrollbar mt-6 flex items-center gap-2 overflow-x-auto pb-1">
-            {([
-              { label: "Jobs", href: "/jobs?portal=job", active: !portalFilter || portalFilter === "job" },
-              { label: "Contracts", href: "/contracts", active: portalFilter === "contract" },
-              { label: "Vehicles", href: "/list-your-vehicle?view=marketplace#vehicle-marketplace", active: portalFilter === "asset" },
-              { label: "Drivers", href: "/drivers", active: false },
-            ] as const).map((item) => (
-              <Link key={item.label} href={item.href} aria-current={item.active ? "page" : undefined}
-                className={`inline-flex min-h-10 shrink-0 items-center justify-center rounded-full border px-4 text-sm font-semibold transition active:border-[#f6b800] active:bg-[#f6b800] active:text-black focus-visible:border-[#f6b800] focus-visible:bg-[#f6b800] focus-visible:text-black ${item.active ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-white/25 bg-black/75 text-white hover:border-white/55"}`}>
-                {item.label}
-              </Link>
-            ))}
-          </nav>
 
           <div
             data-loadlink-jobs-search-shell="contracts-matched-v2"

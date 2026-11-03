@@ -105,8 +105,8 @@ export default function LoadLinkSiteFooter20260822({ darkMode }: { darkMode: boo
           <div className="mt-4 flex items-center gap-3">
             {socialLinks.map(({ label, href, logo }) => (
               <a key={label} href={href} target={href.startsWith("mailto:") ? undefined : "_blank"} rel="noopener noreferrer" title={label} aria-label={`LoadLink on ${label}`}
-                className={`inline-flex h-12 w-12 items-center justify-center rounded-full border transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-[#f6b800] ${darkMode ? "border-white/15 bg-white" : "border-[#e7e7e7] bg-white"}`}>
-                <img src={logo} width={24} height={24} alt={label} className="h-6 w-6 object-contain" loading="lazy" />
+                className={`inline-flex h-12 w-12 items-center justify-center rounded-full border transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-[#f6b800] ${darkMode ? "border-[#414744] bg-[#171a18]" : "border-[#e7e7e7] bg-white"}`}>
+                <img src={logo} width={label === "TikTok" ? 30 : 26} height={label === "TikTok" ? 30 : 26} alt="" className={label === "TikTok" ? "h-[30px] w-[30px] rounded-[8px] bg-black p-[3px] object-contain" : "h-[26px] w-[26px] object-contain"} loading="lazy" decoding="async" />
               </a>
             ))}
           </div>

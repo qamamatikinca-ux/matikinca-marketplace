@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
   const key = process.env.OPENAI_API_KEY;
   // Vercel's short-lived project OIDC credential can authenticate to AI Gateway without exposing a provider key.
   // If the gateway isn't enabled, approved public listings and support guidance still work.
-  const gatewayToken = request.headers.get("x-vercel-oidc-token") || process.env.VERCEL_OIDC_TOKEN || "";
+  const gatewayToken = process.env.VERCEL_OIDC_TOKEN || "";
   const gatewayEnabled = !key && Boolean(gatewayToken);
   if (key || gatewayEnabled) {
     try {
