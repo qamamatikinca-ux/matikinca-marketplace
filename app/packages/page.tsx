@@ -387,17 +387,14 @@ export default function PackagesPage() {
     <main
       data-loadlink-packages-page="20261031"
       data-theme={darkMode ? "dark" : "light"}
-      className={`${styles.page} ${darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"}`}
+      className={`${styles.page} ${darkMode ? "bg-[#080808] text-white" : "bg-[#f8f8f7] text-[#171717]"}`}
     >
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <div className={`${styles.container} mx-auto w-full max-w-6xl px-4 pb-[calc(48px+env(safe-area-inset-bottom))] pt-7 sm:px-6 md:pt-10`}>
         <header className="max-w-3xl">
-          <p className={`text-[11px] font-black uppercase tracking-[.15em] ${muted}`}>Packages</p>
-          <h1 className="mt-3 text-[38px] font-black leading-[.98] tracking-[-.055em] sm:text-[52px] md:text-[62px]">{activePlan ? "Your LoadLink package." : "Find the right package."}</h1>
-          <p className={`mt-4 max-w-2xl text-[14px] font-semibold leading-6 sm:text-[15px] ${muted}`}>
-            See what your current package covers, and the available options when you need more tools. Prices are checked against our billing catalog.
-          </p>
+          <h1 className="text-[34px] font-bold leading-tight tracking-[-.04em] sm:text-[44px]">{activePlan ? "Your package" : "Choose a package"}</h1>
+          <p className={`mt-2 text-sm leading-6 ${muted}`}>{activePlan ? "Current benefits and available upgrades." : "Simple options for occasional listings, transport businesses and dealerships."}</p>
           <PlanNavigation active="packages" />
         </header>
 
@@ -424,34 +421,21 @@ export default function PackagesPage() {
               <button type="button" onClick={() => void actSubscription(paymentPlan)} disabled={Boolean(busy)} className="h-12 rounded-xl bg-[#f6b800] px-5 text-sm font-black text-black transition active:scale-[.99] disabled:opacity-45">Continue payment</button>
             </div>
           </section>
-        ) : activePlan ? (
-          <section className={`mt-7 rounded-[24px] border p-5 sm:p-6 ${surface}`}>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className={`text-[10px] font-black uppercase tracking-[.14em] ${muted}`}>Current plan</p>
-                <h2 className="mt-1 text-2xl font-black tracking-[-.04em]">{titleCasePlan(activePlan)} is active</h2>
-                <p className={`mt-1 text-xs font-semibold ${muted}`}>{activePlan === "dealer" ? "Your dealership tools, showroom and vehicle advertising are available. Other packages are hidden because they are already included." : "Your Pro listing tools are ready. You can keep Pro or upgrade to Dealer."}</p>
-              </div>
-              {tester
-                ? <span className="inline-flex min-h-11 items-center rounded-full border border-[#f6b800]/50 px-4 text-xs font-semibold">Internal testing · no renewal</span>
-                : <button type="button" onClick={() => void managePlan()} disabled={Boolean(busy)} className={`h-12 rounded-full border px-5 text-sm font-bold transition active:scale-[.99] disabled:opacity-45 ${darkMode ? "border-white/15" : "border-black/15"}`}>{busy === "manage" ? "Opening…" : "Manage plan"}</button>}
-            </div>
-          </section>
         ) : null}
 
         {notice ? <div className={`mt-4 rounded-2xl border px-4 py-3 text-[12px] font-bold leading-5 ${softSurface}`} role="status" aria-live="polite">{notice}</div> : null}
 
-        {tester ? <section className={`mt-5 rounded-[22px] border p-4 sm:p-5 ${surface}`} aria-label="Internal package testing controls">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div><p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#bb8800]">Internal testing</p><h2 className="mt-1 text-lg font-bold">Package testing controls</h2><p className={`mt-1 max-w-xl text-xs leading-5 ${muted}`}>Only this verified account can switch packages here. No checkout, expiry date or other customer access is changed. Standard listing activation still follows Standard credit rules.</p></div>
-            <span className="rounded-full border border-[#f6b800]/35 px-3 py-1.5 text-xs font-bold">{activePlan ? titleCasePlan(activePlan) : "Standard"} selected</span>
+        {tester ? <section className={`mt-5 rounded-[20px] border p-4 ${surface}`} aria-label="Private plan testing">
+          <div className="flex items-center justify-between gap-3">
+            <div><h2 className="text-sm font-semibold">Test packages</h2><p className={`mt-1 text-xs ${muted}`}>Private to this account · no charges or expiry</p></div>
+            <span className={`text-xs font-semibold ${muted}`}>{titleCasePlan(activePlan || "standard")}</span>
           </div>
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            {(["standard","pro","dealer"] as const).map(plan => <button key={plan} type="button" onClick={() => void switchTestPackage(plan)} disabled={Boolean(busy)} aria-pressed={(activePlan || "standard") === plan} className={`min-h-11 rounded-full border px-2 text-xs font-bold transition active:scale-[.98] disabled:opacity-50 ${(activePlan || "standard") === plan ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/20 bg-[#181818] text-white" : "border-black/15 bg-white text-black"}`}>{busy === "test" ? "Updating…" : titleCasePlan(plan)}</button>)}
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {(["standard","pro","dealer"] as const).map(plan => <button key={plan} type="button" onClick={() => void switchTestPackage(plan)} disabled={Boolean(busy)} aria-pressed={(activePlan || "standard") === plan} className={`min-h-11 rounded-full border px-2 text-xs font-semibold transition active:scale-[.98] disabled:opacity-50 ${(activePlan || "standard") === plan ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/20 bg-[#181818] text-white" : "border-black/15 bg-white text-black"}`}>{busy === "test" ? "Updating…" : titleCasePlan(plan)}</button>)}
           </div>
         </section> : null}
 
-        <section className={`${styles.planGrid} mt-8 grid gap-4 ${activePlan === "dealer" ? "max-w-2xl lg:grid-cols-1" : activePlan === "pro" ? "lg:grid-cols-2" : "lg:grid-cols-3"}`} aria-label="LoadLink plans">
+        <section className={`${styles.planGrid} mt-6 grid gap-4 ${activePlan === "dealer" ? "max-w-2xl lg:grid-cols-1" : activePlan === "pro" ? "lg:grid-cols-2" : "lg:grid-cols-3"}`} aria-label="LoadLink plans">
           {showStandard ? <article className={`${styles.planCard} flex min-w-0 flex-col rounded-[18px] border p-5 sm:p-6 ${surface}`}>
             <div>
               <p className={`text-[10px] font-black uppercase tracking-[.14em] ${muted}`}>Occasional</p>
@@ -460,15 +444,19 @@ export default function PackagesPage() {
                 <span className="text-[42px] font-black leading-none tracking-[-.06em]">{manualDailyReady ? money(manualProduct.unit_price_cents).replace(",00", "") : loading ? "Checking…" : "Unavailable"}</span>
                 <span className={`text-xs font-extrabold ${muted}`}>per vehicle / active day</span>
               </div>
-              <p className={`mt-4 min-h-[60px] text-xs font-semibold leading-5 ${muted}`}>{manualDailyReady ? `Vehicle advertising costs ${money(manualProduct.unit_price_cents)} for each active day. Paused listings do not use new daily credits.` : "Daily vehicle advertising is available when live pricing is confirmed."}</p>
+              <p className={`mt-3 text-sm leading-6 ${muted}`}>{manualDailyReady ? "Pay only for active listing days." : "Daily listing prices are temporarily unavailable."}</p>
             </div>
 
             <div className="my-5 h-px bg-current/10" />
             <ul className="grid gap-3">
-              {["Up to 5 active vehicle listings with paid daily credits", "2 photos on each vehicle listing", "R14 per active vehicle day, with no fee for paused days", "Standard placement in marketplace results", "50 messages per day", "Browse jobs, contracts, vehicles and drivers", "Pro analytics and Dealer tools are not included"].map((feature) => (
-                <li key={feature} className="flex gap-3 text-[12px] font-semibold leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]" /><span>{feature}</span></li>
+              {["Up to 5 vehicle listings using daily credits", "2 photos per vehicle", "50 messages per day", "Standard marketplace visibility"].map((feature) => (
+                <li key={feature} className="flex gap-3 text-[12px] font-semibold leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-35" /><span>{feature}</span></li>
               ))}
             </ul>
+            <details className="mt-4 text-xs">
+              <summary className={`cursor-pointer py-2 font-semibold ${muted}`}>More about Standard</summary>
+              <p className={`mt-2 leading-6 ${muted}`}>Browse jobs, contracts, vehicles and drivers. Pro analytics and Dealer tools are not included. Each credit covers one active day for one vehicle.</p>
+            </details>
 
             {manualBalance.available > 0 ? (
               <div className={`mt-5 rounded-2xl border px-4 py-3 ${softSurface}`}>
@@ -517,15 +505,17 @@ export default function PackagesPage() {
             const details = planDetails[plan];
             const isPro = plan === "pro";
             return (
-              <article id={`${plan}-package`} key={plan} className={`${styles.planCard} relative flex min-w-0 flex-col rounded-[18px] border p-5 sm:p-6 ${isPro ? "border-[#f6b800]" : surface}`}>
-                {isPro ? <span className="absolute right-5 top-5 rounded-full bg-[#f6b800] px-2.5 py-1 text-[9px] font-black uppercase tracking-[.1em] text-black">Recommended</span> : null}
-                <div className="pr-20"><p className={`text-[10px] font-black uppercase tracking-[.14em] ${muted}`}>{details.eyebrow}</p><h2 className="mt-2 text-[30px] font-black tracking-[-.05em]">{details.name}</h2></div>
-                <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1"><span className="text-[42px] font-black leading-none tracking-[-.06em]">{prices[plan] !== undefined ? money(prices[plan]!).replace(",00", "") : pricesLoading ? "Checking…" : "Unavailable"}</span><span className={`text-xs font-extrabold ${muted}`}>{details.billing}</span></div>
-                <p className={`mt-4 min-h-[60px] text-xs font-semibold leading-5 ${muted}`}>{details.description}</p>
+              <article id={`${plan}-package`} key={plan} className={`${styles.planCard} relative flex min-w-0 flex-col rounded-[18px] border p-5 sm:p-6 ${surface}`}>
+                <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-[28px] font-bold tracking-[-.04em]">{details.name}</h2>{activePlan === plan ? <span className={`rounded-full border border-current/15 px-3 py-1.5 text-[11px] font-semibold ${muted}`}>Current plan</span> : null}</div>
+                <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1"><span className="text-[36px] font-bold leading-none tracking-[-.05em]">{tester && activePlan === plan ? "Included" : prices[plan] !== undefined ? money(prices[plan]!).replace(",00", "") : pricesLoading ? "Checking…" : "Unavailable"}</span><span className={`text-xs font-medium ${muted}`}>{tester && activePlan === plan ? "test access" : details.billing}</span></div>
+                <p className={`mt-3 text-sm leading-6 ${muted}`}>{details.description}</p>
                 <div className="my-5 h-px bg-current/10" />
-                <p className={`mb-3 text-[11px] font-bold uppercase tracking-[.08em] ${muted}`}>What this package includes</p>
-                <ul className="grid gap-3">{details.features.map((feature) => <li key={feature} className="flex gap-3 text-[12px] font-semibold leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]" /><span>{feature}</span></li>)}</ul>
-                <div className="mt-auto pt-6">
+                <ul className="grid gap-3">{details.features.slice(0,4).map((feature) => <li key={feature} className="flex gap-3 text-[13px] leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-35" /><span>{feature}</span></li>)}</ul>
+                {details.features.length > 4 ? <details className="mt-4">
+                  <summary className={`cursor-pointer py-2 text-xs font-semibold ${muted}`}>See all {details.features.length} benefits</summary>
+                  <ul className="mt-2 grid gap-3">{details.features.slice(4).map((feature) => <li key={feature} className="flex gap-3 text-[13px] leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-35" /><span>{feature}</span></li>)}</ul>
+                </details> : null}
+                <div className="mt-auto pt-5">
               {tester && activePlan === plan
                   ? <a href={plan === "dealer" ? "/dealer" : "/packages/manage"} className="flex h-12 w-full items-center justify-center rounded-full border border-[#f6b800] bg-[#f6b800] px-4 text-sm font-bold text-black">{plan === "dealer" ? "Open Dealer Centre" : "View package allowances"}</a>
                   : <button type="button" onClick={() => activePlan === plan ? void managePlan() : void actSubscription(plan)} disabled={subscriptionDisabled(plan)} className={`h-12 w-full rounded-full text-sm font-bold transition active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-45 ${isPro || (activePlan === "pro" && plan === "dealer") ? "bg-[#f6b800] text-black" : darkMode ? "border border-white/15" : "border border-black/15"}`}>{subscriptionButtonLabel(plan)}</button>}</div>
