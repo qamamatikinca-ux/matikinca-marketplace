@@ -6,10 +6,11 @@ const read = name => fs.readFileSync(path.join(__dirname, "..", name), "utf8");
 
 test("followed dealership updates remain an unboxed row without an unwanted heading", () => {
   const rail = read("components/LoadLinkDealerUpdateRail20260822.tsx");
-  assert.match(rail, /data-loadlink-dealer-update-rail className="mb-4"/);
+  assert.match(rail, /data-loadlink-dealer-update-rail data-ready=\{loaded\} className="mb-4"/);
+  assert.doesNotMatch(rail, /if \(!loaded \|\| !signedIn\) return null/);
   assert.doesNotMatch(rail, /<h2[^>]*>Dealership updates<\/h2>/);
   assert.doesNotMatch(rail, />0 active</);
-  assert.match(rail, /Find dealers/);
+  assert.match(rail, /Find dealerships/);
 });
 
 test("public showroom keeps existing lower reviews and hours while rejecting duplicates", () => {
@@ -35,13 +36,26 @@ test("Jobs theme changes cannot retain stale inline white backgrounds", () => {
   assert.match(css, /html\[data-loadlink-theme="light"\]/);
 });
 
-test("Packages is a simple plan comparison with expandable detail and restricted testing", () => {
+test("Packages shows complete plan benefits while restricting internal testing", () => {
   const packages = read("app/packages/page.tsx");
-  assert.match(packages, /See all benefits/);
+  assert.match(packages, /details\.features\.map/);
+  assert.match(packages, /DEALER_PLAN_BENEFITS/);
+  assert.match(packages, /Get .* plan/);
   assert.match(packages, /Restricted to this account/);
   assert.match(packages, /loadlink_test_switch_plan/);
   assert.match(packages, /removeLegacyPartner/);
   assert.doesNotMatch(packages, />Recommended<\/span>/);
   assert.doesNotMatch(packages, /Your dealership tools, showroom and vehicle advertising are available\. Other packages are hidden/);
   assert.match(packages, /bg-\[#f7f7f7\]/);
+});
+
+test("vehicle marketplace offers make/model filtering and neutral light surfaces", () => {
+  const vehicle = read("components/VehicleMarketplaceHub.tsx");
+  const contract = read("app/contracts/page.tsx");
+  assert.match(vehicle, /makeQuery/);
+  assert.match(vehicle, /modelQuery/);
+  assert.match(vehicle, /Search vehicle makes and models/);
+  assert.match(vehicle, /bg-\[#f8f8f7\]/);
+  assert.match(contract, /Contract category/);
+  assert.match(contract, /More filters/);
 });
