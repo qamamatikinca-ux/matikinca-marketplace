@@ -25,7 +25,7 @@ export default function LoadLinkImage({ src, srcSet, sizes, loading, decoding, o
   // Avoid rebuilding responsive srcset values every time marketplace cards rerender.
   const stableDelivery = useMemo<Pick<Props, "src" | "srcSet" | "sizes">>(() => {
     if (!value || srcSet || !canOptimize(value)) return { src: value || undefined, srcSet, sizes };
-    const compact = /(?:h|w)-(?:8|9|10|11|12|14|16)(?:\\s|$)/.test(rest.className || "") || /avatar|profile/i.test(rest.alt || "");
+    const compact = /(?:h|w)-(?:8|9|10|11|12|14|16)(?:\s|$)/.test(rest.className || "") || /avatar|profile/i.test(rest.alt || "");
     const image = getImageProps({ src: value, alt: rest.alt || "", width: 1200, height: 900, quality: 75, sizes: sizes || (compact ? "96px" : "(max-width: 767px) 100vw, 50vw") }).props;
     return { src: image.src, srcSet: image.srcSet, sizes: image.sizes };
   }, [value, srcSet, sizes, rest.className, rest.alt]);
