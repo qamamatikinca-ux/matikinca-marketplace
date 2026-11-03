@@ -1464,7 +1464,10 @@ export default function MessagesPage() {
         },
       });
       if (requestId !== recordingRequestRef.current) { stream.getTracks().forEach((track) => track.stop()); return; }
-      const preferredTypes = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg;codecs=opus"];
+      const prefersMp4 = /iPad|iPhone|iPod|Macintosh/i.test(navigator.userAgent) && ("ontouchend" in window || /iPhone|iPad|iPod/i.test(navigator.userAgent));
+      const preferredTypes = prefersMp4
+        ? ["audio/mp4;codecs=mp4a.40.2", "audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"]
+        : ["audio/webm;codecs=opus", "audio/mp4;codecs=mp4a.40.2", "audio/mp4", "audio/webm", "audio/ogg;codecs=opus"];
       const mimeType = preferredTypes.find((type) => MediaRecorder.isTypeSupported(type)) || "";
       const options: MediaRecorderOptions = { audioBitsPerSecond: 128_000 };
       if (mimeType) options.mimeType = mimeType;
@@ -1505,7 +1508,8 @@ export default function MessagesPage() {
           void sendAttachment(file, "Voice note");
         }
       };
-      recorder.start(500);
+      // MP4 fragments may be unplayable on Safari when concatenated.
+      recorder.start();
       setRecording(true);
       const startedAt = Date.now();
       recordingTimerRef.current = setInterval(() => {
@@ -2210,15 +2214,32 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
   const [loadFailed, setLoadFailed] = useState(false);
   const [playbackRate, setPlaybackRate] = useState<0.5 | 1 | 1.5 | 2>(1);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const attachmentRef = useRef<HTMLDivElement>(null);
   const autoplayRef = useRef(false);
 
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
+
+  // Prefetch voice notes near the visible chat so mobile Play receives a user gesture.
+  useEffect(() => {
+    const element = attachmentRef.current;
+    if (!element || !message.attachment_id || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        observer.disconnect();
+        void loadVoiceNote(false);
+      }
+    }, { rootMargin: "250px 0px" });
+    observer.observe(element);
+    return () => observer.disconnect();
+  // Only rerun when a different voice attachment is opened.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message.attachment_id, accessKey]);
 
   useEffect(() => {
     if (!url || !autoplayRef.current) return;
     autoplayRef.current = false;
     const timer = window.setTimeout(() => {
-      void audioRef.current?.play().catch(() => onError("Tap Play again to start this voice note."));
+      void audioRef.current?.play().catch(() => { setPlaying(false); /* iOS can require a fresh tap. */ });
     }, 0);
     return () => window.clearTimeout(timer);
   }, [url]);
@@ -2226,7 +2247,7 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
   async function loadVoiceNote(playAfterLoad = false) {
     if (!message.attachment_id || loading) return;
     if (url) {
-      if (playAfterLoad) void audioRef.current?.play().catch(() => onError("Tap Play again to start this voice note."));
+      if (playAfterLoad) void audioRef.current?.play().catch(() => { setPlaying(false); /* iOS can require a fresh tap. */ });
       return;
     }
     setLoading(true);
@@ -2274,13 +2295,13 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
   const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
 
   return (
-    <div className={`loadlink-voice-note mb-2 w-full min-w-0 max-w-full rounded-2xl border px-3 py-2.5 ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}>
+    <div ref={attachmentRef} className={`loadlink-voice-note mb-2 w-full min-w-0 max-w-full rounded-2xl border px-3 py-2.5 ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}>
       {url ? (
         <audio
           ref={audioRef}
           src={url}
           preload="metadata"
-          onError={() => { setPlaying(false); setLoadFailed(true); setUrl(""); onError("This voice note could not be loaded. Tap Retry."); }}
+          onError={() => { setPlaying(false); setLoadFailed(true); onError("This audio format is not supported on this device. Try another browser or re-record in MP4."); }}
           className="hidden"
           onLoadedMetadata={(event) => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
           onDurationChange={(event) => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
@@ -2321,7 +2342,7 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
           </button>
           <div className={`mt-0.5 flex items-center justify-between gap-3 text-[10px] font-bold ${mine ? "text-white/58" : "text-black/48"}`}>
             <span>{url ? timeLabel(currentTime) : "Voice note"}</span>
-            <span className="flex items-center gap-2">{loadFailed ? <button type="button" onClick={() => void loadVoiceNote(false)} className="font-black underline">Retry</button> : null}<span data-loadlink-voice-speeds="v2619-fixed" className="flex items-center gap-1" aria-label="Voice note playback speed">
+            <span className="flex items-center gap-2">{loadFailed ? <button type="button" onClick={() => { setUrl(""); void loadVoiceNote(false); }} className="font-black underline">Retry</button> : null}<span data-loadlink-voice-speeds="v2619-fixed" className="flex items-center gap-1" aria-label="Voice note playback speed">
                   {([0.5, 1, 1.5, 2] as const).map((rate) => (
                     <button
                       key={rate}
