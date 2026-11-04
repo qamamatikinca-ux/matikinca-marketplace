@@ -54,8 +54,12 @@ test("vehicle marketplace offers make/model filtering and neutral light surfaces
   const contract = read("app/contracts/page.tsx");
   assert.match(vehicle, /makeQuery/);
   assert.match(vehicle, /modelQuery/);
-  assert.match(vehicle, /Search vehicle makes and models/);
+  assert.match(vehicle, /data-loadlink-vehicle-make-search="category-only"/);
+  assert.match(vehicle, /\{makeModelVisible \? \(/);
+  assert.match(vehicle, /MOBILE_EQUIPMENT_TYPES/);
+  assert.match(vehicle, /VehicleMakeModelPicker/);
   assert.match(vehicle, /bg-\[#f8f8f7\]/);
-  assert.match(contract, /Contract category/);
-  assert.match(contract, /More filters/);
+  assert.match(contract, /data-loadlink-contracts-search-shell/);
+  assert.doesNotMatch(contract, /More filters/);
+  assert.match(contract, /loadlink-glass/);
 });
