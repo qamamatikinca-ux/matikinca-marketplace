@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+import Link from "next/link";
 import PlanNavigation from "@/components/PlanNavigation";
+import { DEALER_PLAN_BENEFITS } from "@/lib/dealer/access";
 import { supabase } from "@/lib/supabaseClient";
 import styles from "./Packages.module.css";
 import {
@@ -54,7 +56,7 @@ const planDetails = {
     billing: "/ month",
     eyebrow: "Dealership",
     description: "For dealerships that need a public showroom, inventory tools and a sales workspace.",
-    features: ["Unlimited commercial vehicle inventory", "Up to 30 photos on each listing", "Public dealership profile and searchable showroom", "Organise available, reserved and sold stock", "Capture enquiries and manage sales leads", "Customer follow-ups, appointments and quotations", "Dealership updates and stock promotions", "Staff access with defined permissions", "Inventory, engagement and sales performance insights", "Media library and bulk stock management"],
+    features: DEALER_PLAN_BENEFITS,
   },
 } as const;
 
@@ -244,10 +246,9 @@ export default function PackagesPage() {
     [manualProduct, manualQuantity],
   );
   const manualCovered = Boolean(activePlan);
-  // Active Dealer shows Dealer only; Pro shows Pro and Dealer upgrade;
-  // Standard/credit users and users without packages can compare all options.
-  const showStandard = !activePlan;
-  const showPro = activePlan !== "dealer";
+  // Everyone can compare all packages. Unavailable actions are disabled, never hidden.
+  const showStandard = true;
+  const showPro = true;
   const showDealer = true;
   const manualDisabled = Boolean(loading || busy || pendingPlan || manualCovered || !manualDailyReady);
 
@@ -384,7 +385,7 @@ export default function PackagesPage() {
     if (pendingPlan && pendingPlan !== plan) return "Request already in review";
     if (paymentPlan === plan) return "Continue payment";
     if (activePlan === "pro" && plan === "dealer") return "Upgrade to Dealer";
-    return `Choose ${titleCasePlan(plan)}`;
+    return `Get ${titleCasePlan(plan)} plan`;
   }
 
   function subscriptionDisabled(plan: SubscriptionPlan) {
@@ -415,6 +416,17 @@ export default function PackagesPage() {
           </p>
           <PlanNavigation active="packages" />
         </header>
+
+        {!loading && state?.authenticated ? (
+          <section className={`mt-6 flex flex-wrap items-center justify-between gap-4 rounded-[20px] border px-5 py-4 ${softSurface}`} aria-label="Your current package">
+            <div>
+              <p className={`text-[10px] font-bold uppercase tracking-[.1em] ${muted}`}>Your current package</p>
+              <h2 className="mt-1 text-lg font-bold">{titleCasePlan(activePlan || "standard")}</h2>
+              <p className={`mt-1 text-[11px] leading-5 ${muted}`}>Compare every package and see what each one includes. Your account access is based on your confirmed subscription status.</p>
+            </div>
+            <Link href="/packages/manage" className={`inline-flex min-h-11 items-center justify-center rounded-full border px-5 text-xs font-bold ${darkMode ? "border-white/15" : "border-black/15"}`}>View my plan</Link>
+          </section>
+        ) : null}
 
         {pricesError ? <p role="status" className={styles.pricingNotice}>Some subscription prices could not be confirmed. New requests are paused until pricing is available.</p> : null}
 
@@ -453,7 +465,7 @@ export default function PackagesPage() {
           </div>
         </section> : null}
 
-        <section className={`${styles.planGrid} mt-6 grid gap-4 ${activePlan === "dealer" ? "max-w-2xl lg:grid-cols-1" : activePlan === "pro" ? "lg:grid-cols-2" : "lg:grid-cols-3"}`} aria-label="LoadLink plans">
+        <section className={`${styles.planGrid} mt-6 grid gap-4 lg:grid-cols-3`} aria-label="LoadLink plans">
           {showStandard ? <article className={`${styles.planCard} flex min-w-0 flex-col rounded-[18px] border p-5 sm:p-6 ${surface}`}>
             <div>
               <h2 className="mt-2 text-[30px] font-black tracking-[-.05em]">Standard</h2>
@@ -523,8 +535,9 @@ export default function PackagesPage() {
                 <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1"><span className="text-[36px] font-bold leading-none tracking-[-.04em]">{prices[plan] !== undefined ? money(prices[plan]!).replace(",00", "") : pricesLoading ? "Checking…" : "Unavailable"}</span><span className={`text-xs font-extrabold ${muted}`}>{details.billing}</span></div>
                 <p className={`mt-3 text-xs leading-5 ${muted}`}>{details.description}</p>
                 <div className="my-5 h-px bg-current/10" />
-                <ul className="grid gap-3">{details.features.slice(0, 4).map((feature) => <li key={feature} className="flex gap-3 text-[13px] leading-5"><span className={`mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full ${darkMode ? "bg-white/50" : "bg-black/35"}`} /><span>{feature}</span></li>)}</ul>
-                {details.features.length > 4 ? <details className="mt-4 text-sm"><summary className="cursor-pointer py-2 text-xs font-semibold underline underline-offset-4">See all benefits</summary><ul className="mt-3 grid gap-3">{details.features.slice(4).map(feature=><li key={feature} className="flex gap-3 text-[13px] leading-5"><span className={`mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full ${darkMode ? "bg-white/45" : "bg-black/35"}`}/><span>{feature}</span></li>)}</ul></details> : null}
+                <h3 className="mb-4 text-xs font-bold">All {details.name} benefits</h3>
+                <ul className="grid gap-3">{details.features.map((feature) => <li key={feature} className="flex gap-3 text-[12px] leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]" /><span>{feature}</span></li>)}</ul>
+                {activePlan !== plan && !(activePlan === "dealer" && plan === "pro") ? <p className={`mt-5 text-[11px] font-semibold leading-5 ${muted}`}>Get the {details.name} plan to access these benefits.</p> : null}
                 <div className="mt-auto pt-6">
               {tester && activePlan === plan
                   ? <a href={plan === "dealer" ? "/dealer" : "/packages/manage"} className="flex h-12 w-full items-center justify-center rounded-full border border-[#f6b800] bg-[#f6b800] px-4 text-sm font-bold text-black">{plan === "dealer" ? "Open Dealer Centre" : "View package allowances"}</a>

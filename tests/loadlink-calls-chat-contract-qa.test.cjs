@@ -27,13 +27,17 @@ test("dark message composer keeps typed text and caret visible and offers reconn
   assert.match(css, /caret-color: #f6b800 !important/);
   assert.match(msg, /load failed\|failed to fetch/);
   assert.match(msg, /reliableChatRead\(/);
-  assert.match(msg, /Promise\.allSettled\(buyerKeys/);
+  assert.match(msg, /Promise\.allSettled\(Array\.from/);
+  assert.match(msg, /const currentBuyerKey = getBuyerKey\(\)/);
+  assert.match(msg, /Promise\.race\(/);
+  assert.match(msg, /messageReadInFlightRef/);
   assert.match(msg, /setConnectionRetry\(\(value\) => value \+ 1\)/);
 });
 
 test("WebRTC connection waits for remote sound and exposes explicit iOS playback button", () => {
   const call = read("components/LoadLinkCallLayerReliable20260822.tsx");
-  assert.ok(call.includes('audio.play().then(()=>{setNotice("");markConnected()}'));
+  assert.match(call, /peer\.connectionState==="connected"&&!?remoteTrackRef\.current\?\.muted/);
+  assert.match(call, /remoteTrackRef\.current=event\.track/);
   assert.match(call, /Enable sound/);
   assert.match(call, /audio\.setAttribute\("webkit-playsinline","true"\)/);
   assert.ok(!call.includes('peer.onconnectionstatechange=()=>{if(peer.connectionState==="connected")markConnected()'));
@@ -43,4 +47,14 @@ test("contract search fields share a consistent light and dark surface", () => {
   const quick = read("app/quick-links/[scope]/page.tsx");
   assert.match(css, /main\[data-loadlink-contracts-marketplace\] \[data-loadlink-contracts-search-shell\]/);
   assert.match(quick, /rounded-full border px-4 text-\[12px\]/);
+});
+
+test("iPhone recordings favor playable MP4, visible voice notes prefetch and calls use authenticated ICE", () => {
+  const msg = read("app/messages/page.tsx");
+  const call = read("components/LoadLinkCallLayerReliable20260822.tsx");
+  assert.match(msg, /audio\/mp4;codecs=mp4a\.40\.2/);
+  assert.match(msg, /recorder\.start\(\);/);
+  assert.match(msg, /new IntersectionObserver/);
+  assert.match(call, /fetch\("\/api\/calls\/ice"/);
+  assert.match(call, /remoteTrackRef/);
 });

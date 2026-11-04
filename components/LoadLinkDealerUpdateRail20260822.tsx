@@ -163,22 +163,20 @@ export default function LoadLinkDealerUpdateRail20260822({ darkMode, onAvailabil
     router.push(`/dealership/${encodeURIComponent(dealer.slug)}`);
   }
 
-  if (!loaded || !signedIn) return null;
-
   return (
-    <div data-loadlink-dealer-update-rail className="mb-4">
+    <div data-loadlink-dealer-update-rail data-ready={loaded} className="mb-4" aria-label={signedIn ? "Followed dealerships and discovery" : "Find dealerships"}>
       <div className="no-scrollbar -mx-1 overflow-x-auto px-1 pb-1" aria-label="Followed dealerships">
         <div className="flex min-w-max gap-3 pr-2">
           <button
             type="button"
             onClick={() => router.push("/following?discover=1")}
-            className="group w-[66px] shrink-0 text-center outline-none"
+            className="group w-[92px] shrink-0 text-center outline-none"
             aria-label="Find other dealerships"
           >
             <span className={`relative mx-auto grid h-[56px] w-[56px] place-items-center rounded-full border backdrop-blur-xl transition group-active:scale-[.97] ${darkMode ? "border-white/12 bg-white/[.09] text-white" : "border-black/10 bg-black/[.78] text-white"}`}>
               <AddDealerIcon />
             </span>
-            <span className={`mt-1.5 block truncate text-[10px] font-semibold ${darkMode ? "text-white/64" : "text-black/64"}`}>Find dealers</span>
+            <span className={`mt-1.5 block text-[10px] font-semibold leading-4 ${darkMode ? "text-white/64" : "text-black/64"}`}>Find dealerships</span>
           </button>
 
           {visibleDealers.map((dealer) => {

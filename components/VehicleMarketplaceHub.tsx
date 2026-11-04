@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import LoadLinkPagination from "@/components/LoadLinkPagination";
 import DealershipListingActions20260822 from "@/components/DealershipListingActions20260822";
 import { formatListingRate } from "@/lib/formatCurrency";
+import { flexibleMatch, normaliseSearch } from "@/lib/smartSearch";
 
 type VehicleRow = {
   id: string;
@@ -165,6 +166,8 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
   const [mode, setMode] = useState<ViewMode>("all");
   const [sort, setSort] = useState<SortMode>("newest");
   const [intent,setIntent]=useState<Intent>("all");
+  const [makeQuery, setMakeQuery] = useState("");
+  const [modelQuery, setModelQuery] = useState("");
   const [seen, setSeen] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -201,8 +204,26 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
     return () => window.removeEventListener("hashchange", syncHash);
   }, []);
 
+  const brandOptions = useMemo(() => {
+    const knownMakes = ["MAN", "Mercedes-Benz", "Volvo", "Scania", "Isuzu", "Hino", "UD Trucks", "FAW", "Toyota", "Ford", "Volkswagen", "Iveco", "DAF", "Fuso", "Nissan", "Mitsubishi"];
+    return knownMakes.map(name => ({
+      name,
+      count: rows.filter(row => {
+        const make = readMeta(row.description, "Make") || readMeta(row.description, "Brand") || "";
+        return normaliseSearch(make || row.title || "").includes(normaliseSearch(name));
+      }).length,
+    })).filter(option => option.count > 0).sort((a, b) => b.count - a.count).slice(0, 7);
+  }, [rows]);
+
   const visible=useMemo(()=>{
-    const filtered=rows.filter(row=>equipmentMatches(equipmentKind(row),mode)&&intentMatch(row,intent));
+    const make = normaliseSearch(makeQuery);
+    const model = normaliseSearch(modelQuery);
+    const filtered=rows.filter(row => {
+      if (!equipmentMatches(equipmentKind(row), mode) || !intentMatch(row, intent)) return false;
+      const manufacturer = [readMeta(row.description, "Make"), readMeta(row.description, "Brand"), row.title || ""].join(" ");
+      const variant = [readMeta(row.description, "Model"), readMeta(row.description, "Variant"), readMeta(row.description, "Vehicle subtype"), row.title || ""].join(" ");
+      return (!make || flexibleMatch(manufacturer, make)) && (!model || flexibleMatch(variant, model));
+    });
     return [...filtered].sort((first,second)=>{
       if(sort!=="newest"){
         const a=numericPrice(first,intent),b=numericPrice(second,intent);
@@ -212,7 +233,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
       }
       return new Date(second.created_at||0).getTime()-new Date(first.created_at||0).getTime();
     });
-  },[mode,rows,sort,intent]);
+  },[mode,rows,sort,intent,makeQuery,modelQuery]);
 
   const promoted = useMemo(() =>
     rows.filter(isActiveVehiclePromotion).sort((a,b) => Number(b.display_tier || 1) - Number(a.display_tier || 1) ||
@@ -223,7 +244,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
     return visible.slice(start, start + LISTINGS_PER_PAGE);
   }, [currentPage, visible]);
 
-  useEffect(() => { setCurrentPage(1); }, [mode, sort, intent]);
+  useEffect(() => { setCurrentPage(1); }, [mode, sort, intent, makeQuery, modelQuery]);
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages); }, [currentPage, totalPages]);
 
   function changePage(nextPage: number) {
@@ -246,12 +267,12 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
   const softPill = darkMode ? "bg-white/10 text-white" : "bg-[#eef2f8] text-[#263246]";
 
   return (
-    <section id="vehicle-marketplace" className={`scroll-mt-24 border-t px-4 py-10 md:px-6 md:py-14 ${darkMode ? "border-white/10 bg-[#050505]" : "border-black/10 bg-[#f4efe3]"}`}>
+    <section id="vehicle-marketplace" className={`scroll-mt-24 border-t px-4 py-10 md:px-6 md:py-14 ${darkMode ? "border-white/10 bg-[#050505]" : "border-black/10 bg-[#f8f8f7]"}`}>
       <span id="vehicle-marketplace-vehicles" className="block scroll-mt-24" aria-hidden="true" />
       <span id="vehicle-marketplace-units" className="block scroll-mt-24" aria-hidden="true" />
       <div className="mx-auto max-w-5xl">
         {!loading && promoted.length > 0 ? (
-          <section aria-labelledby="promoted-vehicle-heading" className={`mb-10 rounded-[24px] border p-4 sm:p-6 ${darkMode ? "border-[#f6b800]/30 bg-[#15130b]" : "border-[#d4b659]/45 bg-[#fffbef]"}`}>
+          <section aria-labelledby="promoted-vehicle-heading" className={`mb-10 rounded-[24px] border p-4 sm:p-6 ${darkMode ? "border-white/12 bg-[#111111]" : "border-black/10 bg-white"}`}>
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h2 id="promoted-vehicle-heading" className="mt-1 text-2xl font-black tracking-[-.04em] sm:text-3xl">Promoted listings</h2>
@@ -289,12 +310,53 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
  />
         </div>
 
+        <section className={"mt-6 rounded-[22px] border p-4 sm:p-5 " + surface} aria-label="Search vehicle makes and models">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-base font-bold">Find a vehicle by make or model</h3>
+              <p className={"mt-1 text-xs leading-5 " + muted}>Search for a truck, bakkie, van or commercial vehicle. Results update as you type.</p>
+            </div>
+            {(makeQuery || modelQuery) ? <button type="button" onClick={() => { setMakeQuery(""); setModelQuery(""); }}
+              className={"min-h-9 rounded-full border px-4 text-xs font-bold " + (darkMode ? "border-white/15" : "border-black/10")}>Clear search</button> : null}
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="min-w-0">
+              <span className={"mb-2 block text-[11px] font-semibold " + muted}>Make / manufacturer</span>
+              <input type="search" list="loadlink-vehicle-make-suggestions" value={makeQuery}
+                onChange={event => setMakeQuery(event.target.value)}
+                placeholder="MAN, Volvo, Toyota, Ford..."
+                className={"h-12 w-full min-w-0 rounded-xl border px-4 text-base outline-none focus:border-[#f6b800] " + (darkMode ? "border-white/15 bg-[#1b1b1b] text-white placeholder:text-white/35" : "border-black/15 bg-[#fafafa] text-black placeholder:text-black/35")} />
+              <datalist id="loadlink-vehicle-make-suggestions">{brandOptions.map(option => <option key={option.name} value={option.name} />)}</datalist>
+            </label>
+            <label className="min-w-0">
+              <span className={"mb-2 block text-[11px] font-semibold " + muted}>Model or variant</span>
+              <input type="search" value={modelQuery} onChange={event => setModelQuery(event.target.value)}
+                placeholder="TGX, Hilux, Actros, Ranger..."
+                className={"h-12 w-full min-w-0 rounded-xl border px-4 text-base outline-none focus:border-[#f6b800] " + (darkMode ? "border-white/15 bg-[#1b1b1b] text-white placeholder:text-white/35" : "border-black/15 bg-[#fafafa] text-black placeholder:text-black/35")} />
+            </label>
+          </div>
+          {brandOptions.length > 0 ? <div className="mt-4 flex flex-wrap gap-2" aria-label="Popular makes in current listings">
+            {brandOptions.map(option => <button key={option.name} type="button"
+              onClick={() => setMakeQuery(current => current === option.name ? "" : option.name)}
+              aria-pressed={makeQuery === option.name}
+              className={"min-h-9 rounded-full border px-3 text-[11px] font-semibold " + (makeQuery === option.name ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/15 bg-white/[.04]" : "border-black/10 bg-[#f7f7f7]")}>
+              {option.name} <span className="opacity-55">{option.count}</span>
+            </button>)}
+          </div> : null}
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <p className={"text-[11px] font-semibold " + muted}>{loading ? "Checking stock…" : String(visible.length) + " matching listing" + (visible.length === 1 ? "" : "s")}</p>
+            <button type="button" onClick={() => document.getElementById("loadlink-vehicle-results")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#f6b800] px-5 text-xs font-bold text-black">Search vehicles</button>
+          </div>
+        </section>
+
         <div className="mt-6 flex max-w-full gap-2 overflow-x-auto pb-1">
           {([["all", "All equipment"], ["trucks", "Trucks"], ["vehicles", "Vehicles"], ["trailers_units", "Trailers & mobile units"]] as Array<[ViewMode, string]>).map(([value, label]) => (
             <button key={value} type="button" onClick={() => setMode(value)} className={`shrink-0 rounded-full border px-4 py-2.5 text-xs font-black transition ${mode === value ? "border-[#f6b800] bg-[#f6b800] text-black" : surface}`}>{label}</button>
           ))}
         </div>
 
+        <div id="loadlink-vehicle-results" className="scroll-mt-28" />
         {!loading && visible.length ? <div className={`mt-5 text-xs font-bold ${muted}`}>{visible.length} approved listing{visible.length === 1 ? "" : "s"}</div> : null}
 
         {loading ? (
@@ -370,7 +432,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
           <div className={`loadlink-glass mt-6 rounded-[24px] border p-8 text-center ${surface}`}>
             <h3 className="text-xl font-black">No approved listings in this category yet</h3>
             <p className={`mx-auto mt-2 max-w-md text-sm font-semibold leading-6 ${muted}`}>Try All equipment and All listings, or change your filters.</p>
-            {(mode !== "all" || intent !== "all") ? <button type="button" onClick={() => {setMode("all");setIntent("all");}} className="mt-4 min-h-10 rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">Clear filters</button> : null}
+            {(mode !== "all" || intent !== "all" || makeQuery || modelQuery) ? <button type="button" onClick={() => {setMode("all");setIntent("all");setMakeQuery("");setModelQuery("");}} className="mt-4 min-h-10 rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">Clear filters</button> : null}
           </div>
         )}
       </div>

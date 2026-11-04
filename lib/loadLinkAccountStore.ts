@@ -46,6 +46,8 @@ const SERVER_SNAPSHOT: AccountSnapshot = {
 let snapshot: AccountSnapshot = SERVER_SNAPSHOT;
 let started = false;
 let loadSequence = 0;
+let lastProfileFetchUserId = "";
+let lastProfileFetchAt = 0;
 const listeners = new Set<() => void>();
 
 function emit(next: AccountSnapshot) {
@@ -53,60 +55,70 @@ function emit(next: AccountSnapshot) {
   listeners.forEach((listener) => listener());
 }
 
-async function applyUser(user: User | null) {
+function cachedProfile(userId: string): Partial<AccountProfile> | null {
+  try {
+    const raw = window.sessionStorage.getItem("loadlink-profile-summary:" + userId);
+    const value = raw ? JSON.parse(raw) as Partial<AccountProfile> : null;
+    return value && typeof value === "object" ? value : null;
+  } catch { return null; }
+}
+
+async function applyUser(user: User | null, force = false) {
+  if (user && !force && snapshot.user?.id === user.id && lastProfileFetchUserId === user.id && Date.now() - lastProfileFetchAt < 30000) {
+    // Token refreshes and account-state events must not restart all profile queries.
+    if (snapshot.user !== user) emit({ ...snapshot, user, ready: true });
+    return;
+  }
   const sequence = ++loadSequence;
+  if (user) { lastProfileFetchUserId = user.id; lastProfileFetchAt = Date.now(); }
   if (!user) {
+    lastProfileFetchUserId = "";
+    lastProfileFetchAt = 0;
     emit({ ready: true, user: null, profile: EMPTY_PROFILE, dealer: null, driverProfile: null });
     return;
   }
 
   const metadata = user.user_metadata || {};
-  const fallbackProfile: AccountProfile = {
-    full_name: String(metadata.full_name || metadata.name || ""),
-    avatar_url: String(metadata.avatar_url || metadata.picture || ""),
-    role: "user",
-    subscription_plan: "standard",
-  };
-
-  // Refreshing the same account must not blank its portrait or navigation.
   const previous = snapshot.user?.id === user.id ? snapshot : null;
-  emit(previous ? { ...previous, user } : { ready: true, user, profile: fallbackProfile, dealer: null, driverProfile: null });
-
-  const [profileResult, dealerResult, driverProfileResult] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("full_name,avatar_url,role,subscription_plan")
-      .eq("id", user.id)
-      .maybeSingle(),
-    supabase
-      .from("dealership_profiles")
-      .select("verification_status,is_public")
-      .eq("owner_user_id", user.id)
-      .maybeSingle(),
-    supabase
-      .from("driver_profiles")
-      .select("id,status")
-      .eq("user_id", user.id)
-      .maybeSingle(),
-  ]);
-
-  if (sequence !== loadSequence) return;
-  const profile = (profileResult.error ? previous?.profile : profileResult.data) as Partial<AccountProfile> | null;
-  const dealer = dealerResult.data as DealerState | null;
-  const driverProfile = driverProfileResult.data as DriverProfileState | null;
-
-  emit({
-    ready: true,
-    user,
-    profile: {
-      full_name: String(profile?.full_name || fallbackProfile.full_name),
-      avatar_url: String(profile?.avatar_url || fallbackProfile.avatar_url),
-      role: String(profile?.role || "user"),
-      subscription_plan: String(profile?.subscription_plan || "standard"),
-    },
-    dealer: dealerResult.error ? previous?.dealer ?? null : dealer,
-    driverProfile: driverProfileResult.error ? previous?.driverProfile ?? null : driverProfile,
+  const remembered = previous?.profile || cachedProfile(user.id);
+  const fallbackProfile: AccountProfile = {
+    full_name: String(remembered?.full_name || metadata.full_name || metadata.name || ""),
+    avatar_url: String(remembered?.avatar_url || metadata.avatar_url || metadata.picture || ""),
+    role: String(remembered?.role || "user"),
+    subscription_plan: String(remembered?.subscription_plan || "standard"),
+  };
+  // Show the last known name and Google portrait without waiting for unrelated
+  // dealership and driver lookups. Every subsequent result updates independently.
+  emit(previous ? { ...previous, user, ready: true } : {
+    ready: true, user, profile: fallbackProfile, dealer: null, driverProfile: null,
   });
+
+  const profileRequest = supabase.from("profiles")
+    .select("full_name,avatar_url,role,subscription_plan").eq("id", user.id).maybeSingle()
+    .then(({ data, error }) => {
+      if (sequence !== loadSequence || error || !data) return;
+      const profile: AccountProfile = {
+        full_name: String(data.full_name || fallbackProfile.full_name),
+        avatar_url: String(data.avatar_url || fallbackProfile.avatar_url),
+        role: String(data.role || fallbackProfile.role),
+        subscription_plan: String(data.subscription_plan || fallbackProfile.subscription_plan),
+      };
+      try { window.sessionStorage.setItem("loadlink-profile-summary:" + user.id, JSON.stringify(profile)); } catch {}
+      emit({ ...snapshot, user, profile, ready: true });
+    });
+  const dealerRequest = supabase.from("dealership_profiles")
+    .select("verification_status,is_public").eq("owner_user_id", user.id).maybeSingle()
+    .then(({ data, error }) => {
+      if (sequence !== loadSequence || error) return;
+      emit({ ...snapshot, user, dealer: data as DealerState | null });
+    });
+  const driverRequest = supabase.from("driver_profiles")
+    .select("id,status").eq("user_id", user.id).maybeSingle()
+    .then(({ data, error }) => {
+      if (sequence !== loadSequence || error) return;
+      emit({ ...snapshot, user, driverProfile: data as DriverProfileState | null });
+    });
+  await Promise.allSettled([profileRequest, dealerRequest, driverRequest]);
 }
 
 function ensureStarted() {
@@ -119,15 +131,17 @@ function ensureStarted() {
     window.setTimeout(() => void applyUser(user), 0);
   });
 
-  const refresh = () => void refreshLoadLinkAccount();
+  const refresh = () => void refreshLoadLinkAccount(true);
+  const softRefresh = () => void refreshLoadLinkAccount();
   window.addEventListener("loadlink-profile-updated", refresh);
   window.addEventListener("loadlink-driver-profile-updated", refresh);
-  window.addEventListener("loadlink-account-state-synced", refresh);
+  window.addEventListener("loadlink-account-state-synced", softRefresh);
 }
 
-export function refreshLoadLinkAccount() {
+export function refreshLoadLinkAccount(force = false) {
   if (!isSupabaseConfigured) return Promise.resolve();
-  return supabase.auth.getUser().then(({ data, error }) => { if (!error) return applyUser(data.user); });
+  // This is display state; server-authorized operations still verify the user.
+  return supabase.auth.getSession().then(({ data, error }) => { if (!error) return applyUser(data.session?.user || null, force); });
 }
 
 export function useLoadLinkAccount() {

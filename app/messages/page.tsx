@@ -502,6 +502,7 @@ export default function MessagesPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const conversationLoadSequenceRef = useRef(0);
   const messageLoadSequenceRef = useRef(0);
+  const messageReadInFlightRef = useRef("");
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const recordingChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -807,79 +808,95 @@ export default function MessagesPage() {
 
   const loadConversations = useCallback(async (preferredId?: string) => {
     const requestSequence = ++conversationLoadSequenceRef.current;
-    const buyerKeys = getBuyerKeys();
+    // The primary account keys must take precedence; historical device keys must never
+    // hold the whole inbox hostage while one legacy request stalls.
+    const currentBuyerKey = getBuyerKey();
+    const buyerKeys = [currentBuyerKey, ...getBuyerKeys().filter(key => key !== currentBuyerKey)];
     const ownerKeys = getOwnerKeys();
-    // A stale legacy access key must not hide conversations fetched with valid keys.
-    const [buyerResults, ownerResults] = await Promise.all([
-      Promise.allSettled(buyerKeys.map(async (buyerKey) => {
-        const result = await reliableChatRead(() => supabase.rpc("get_buyer_guest_threads", { p_buyer_key: buyerKey }));
-        if (result.error) throw result.error;
-        return ((result.data || []) as ConversationRow[]).map((row) => ({
-          ...row,
-          accessKey: buyerKey,
-          role: "buyer" as const,
-          unreadCount: toCount(row.unread_count),
-        }));
-      })),
-      Promise.allSettled(ownerKeys.map(async (ownerKey) => {
-        const result = await reliableChatRead(() => supabase.rpc("get_owner_guest_threads", { p_owner_key: ownerKey }));
-        if (result.error) throw result.error;
-        return ((result.data || []) as ConversationRow[]).map((row) => ({
-          ...row,
-          accessKey: ownerKey,
-          role: "owner" as const,
-          unreadCount: toCount(row.unread_count),
-        }));
-      })),
-    ]);
-    const successful = [...buyerResults, ...ownerResults].filter((entry) => entry.status === "fulfilled");
-    const failed = [...buyerResults, ...ownerResults].find((entry) => entry.status === "rejected");
-    if (!successful.length && failed?.status === "rejected") throw failed.reason;
-    const buyerRows: Conversation[] = buyerResults.flatMap((entry) => entry.status === "fulfilled" ? entry.value : []);
-    const ownerRows: Conversation[] = ownerResults.flatMap((entry) => entry.status === "fulfilled" ? entry.value : []);
-
+    const tasks = [
+      ...(buyerKeys[0] ? [{ key: buyerKeys[0], role: "buyer" as const }] : []),
+      ...(ownerKeys[0] ? [{ key: ownerKeys[0], role: "owner" as const }] : []),
+      ...buyerKeys.slice(1).map(key => ({ key, role: "buyer" as const })),
+      ...ownerKeys.slice(1).map(key => ({ key, role: "owner" as const })),
+    ];
     const locallyArchived = readLocalArchivedIds();
     const merged = new Map<string, Conversation>();
-    [...buyerRows, ...ownerRows].forEach((row) => {
-      const hasNewMessage = row.unreadCount > 0;
-      if (hasNewMessage) locallyArchived.delete(row.id);
-      merged.set(row.id, {
-        ...row,
-        archived: hasNewMessage ? false : Boolean(row.archived) || locallyArchived.has(row.id),
-      });
-    });
-    writeLocalArchivedIds(locallyArchived);
-    const rows = Array.from(merged.values()).sort((first, second) => {
-      return (
+    let successfulReads = 0;
+    let failedReads = 0;
+    let firstFailure: unknown = null;
+    const publish = () => {
+      if (requestSequence !== conversationLoadSequenceRef.current) return;
+      const rows = Array.from(merged.values()).sort((first, second) =>
         new Date(second.last_message_at || 0).getTime() -
         new Date(first.last_message_at || 0).getTime()
       );
-    });
-
+      setPresenceNow(Date.now());
+      setConversations(rows);
+      const nextId = preferredId || selectedIdRef.current ||
+        (window.innerWidth >= 768 ? rows[0]?.id || "" : "");
+      if (nextId && rows.some(row => row.id === nextId)) {
+        selectedIdRef.current = nextId;
+        setSelectedId(nextId);
+      }
+      window.dispatchEvent(new Event("loadlink-chat-unread-updated"));
+    };
+    let index = 0;
+    const readNext = async () => {
+      while (index < tasks.length && requestSequence === conversationLoadSequenceRef.current) {
+        const task = tasks[index++];
+        try {
+          const signal = AbortSignal.timeout(4500);
+          const result = task.role === "buyer"
+            ? await reliableChatRead(() => supabase.rpc("get_buyer_guest_threads", { p_buyer_key: task.key }).abortSignal(signal))
+            : await reliableChatRead(() => supabase.rpc("get_owner_guest_threads", { p_owner_key: task.key }).abortSignal(signal));
+          if (result.error) throw result.error;
+          successfulReads++;
+          ((result.data || []) as ConversationRow[]).forEach(row => {
+            const unreadCount = toCount(row.unread_count);
+            const archived = unreadCount > 0 ? false : Boolean(row.archived) || locallyArchived.has(row.id);
+            if (unreadCount > 0) locallyArchived.delete(row.id);
+            merged.set(row.id, { ...row, accessKey: task.key, role: task.role, unreadCount, archived });
+          });
+          publish();
+        } catch (readError) {
+          failedReads++;
+          if (!firstFailure) firstFailure = readError;
+        }
+      }
+    };
+    // Two requests show the current inbox promptly; historical accounts fill in
+    // progressively without launching dozens of simultaneous database calls.
+    const complete = Promise.allSettled(Array.from({ length: Math.min(3, tasks.length) }, () => readNext()));
+    await Promise.race([complete, new Promise<void>(resolve => window.setTimeout(resolve, 950))]);
     if (requestSequence !== conversationLoadSequenceRef.current) return;
-    setPresenceNow(Date.now());
-    setConversations(rows);
-    const nextId =
-      preferredId ||
-      selectedIdRef.current ||
-      (window.innerWidth >= 768 ? rows[0]?.id || "" : "");
-    if (nextId && rows.some((row) => row.id === nextId)) {
-      selectedIdRef.current = nextId;
-      setSelectedId(nextId);
+    if (successfulReads === 0 && failedReads === tasks.length && firstFailure) throw firstFailure;
+    if (successfulReads > 0 || tasks.length === 0) {
+      writeLocalArchivedIds(locallyArchived);
+      publish();
     }
-
-    window.dispatchEvent(new Event("loadlink-chat-unread-updated"));
+    // Allow remaining legacy keys to complete without blocking the first paint.
+    void complete.then(() => {
+      if (requestSequence === conversationLoadSequenceRef.current && successfulReads > 0) {
+        writeLocalArchivedIds(locallyArchived);
+        publish();
+      }
+    });
   }, []);
 
   const loadMessages = useCallback(
     async (conversation: Conversation, showLoader = false) => {
+      // A slow response must finish or time out before the next poll starts.
+      // Previously a new poll invalidated every earlier response, so messages
+      // could remain blank until the browser was refreshed.
+      if (messageReadInFlightRef.current === conversation.id) return;
+      messageReadInFlightRef.current = conversation.id;
       const requestSequence = ++messageLoadSequenceRef.current;
       if (showLoader) setMessagesLoading(true);
       try {
         const result = await reliableChatRead(() => supabase.rpc("get_listing_guest_messages", {
           p_thread_id: conversation.id,
           p_access_key: conversation.accessKey,
-        }));
+        }).abortSignal(AbortSignal.timeout(5000)));
         if (result.error) throw result.error;
         setError((current) => /connection interrupted/i.test(current) ? "" : current);
         const rows = (result.data || []) as ChatMessage[];
@@ -905,6 +922,7 @@ export default function MessagesPage() {
       } catch (loadError) {
         if (showLoader) setError(cleanError(loadError, "Messages could not load."));
       } finally {
+        if (messageReadInFlightRef.current === conversation.id) messageReadInFlightRef.current = "";
         if (showLoader) setMessagesLoading(false);
       }
     },
@@ -1012,8 +1030,8 @@ export default function MessagesPage() {
         if (!active) return;
         await loadConversations(openedId);
         refreshTimer = setInterval(
-          () => loadConversations().catch(() => undefined),
-          15000,
+          () => { if (document.visibilityState === "visible" && navigator.onLine) void loadConversations().catch(() => undefined); },
+          12000,
         );
       } catch (initialiseError) {
         if (active)
@@ -1037,6 +1055,7 @@ export default function MessagesPage() {
     }
 
     let active = true;
+    messageLoadSequenceRef.current += 1;
     setMessages([]);
     messageSignatureRef.current = "";
     forceScrollRef.current = true;
@@ -1051,8 +1070,8 @@ export default function MessagesPage() {
       if (status) setBlockState(status);
     });
     const messageTimer = setInterval(() => {
-      if (active) loadMessages(selectedConversation).catch(() => undefined);
-    }, 5000);
+      if (active && document.visibilityState === "visible" && navigator.onLine) void loadMessages(selectedConversation).catch(() => undefined);
+    }, 2400);
     const touchPresence = () => {
       if (document.visibilityState === "hidden") return;
       if (!messagePrivacy.activityVisible) return;
@@ -1068,7 +1087,7 @@ export default function MessagesPage() {
     const refreshAfterReconnect = () => { if (document.visibilityState === "visible" && navigator.onLine) { touchPresence(); void loadMessages(selectedConversation).catch(() => undefined); } };
     const handleVisibility = refreshAfterReconnect;
     window.addEventListener("online", refreshAfterReconnect);
-    window.addEventListener("focus", touchPresence);
+    window.addEventListener("focus", refreshAfterReconnect);
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
@@ -1076,7 +1095,7 @@ export default function MessagesPage() {
       clearInterval(messageTimer);
       clearInterval(presenceTimer);
       window.removeEventListener("online", refreshAfterReconnect);
-      window.removeEventListener("focus", touchPresence);
+      window.removeEventListener("focus", refreshAfterReconnect);
       document.removeEventListener("visibilitychange", handleVisibility);
       recordingRequestRef.current += 1;
       recordingPendingRef.current = false;
@@ -1447,7 +1466,10 @@ export default function MessagesPage() {
         },
       });
       if (requestId !== recordingRequestRef.current) { stream.getTracks().forEach((track) => track.stop()); return; }
-      const preferredTypes = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg;codecs=opus"];
+      const prefersMp4 = /iPad|iPhone|iPod|Macintosh/i.test(navigator.userAgent) && ("ontouchend" in window || /iPhone|iPad|iPod/i.test(navigator.userAgent));
+      const preferredTypes = prefersMp4
+        ? ["audio/mp4;codecs=mp4a.40.2", "audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"]
+        : ["audio/webm;codecs=opus", "audio/mp4;codecs=mp4a.40.2", "audio/mp4", "audio/webm", "audio/ogg;codecs=opus"];
       const mimeType = preferredTypes.find((type) => MediaRecorder.isTypeSupported(type)) || "";
       const options: MediaRecorderOptions = { audioBitsPerSecond: 128_000 };
       if (mimeType) options.mimeType = mimeType;
@@ -1488,7 +1510,8 @@ export default function MessagesPage() {
           void sendAttachment(file, "Voice note");
         }
       };
-      recorder.start(500);
+      // MP4 fragments may be unplayable on Safari when concatenated.
+      recorder.start();
       setRecording(true);
       const startedAt = Date.now();
       recordingTimerRef.current = setInterval(() => {
@@ -2193,25 +2216,43 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
   const [loadFailed, setLoadFailed] = useState(false);
   const [playbackRate, setPlaybackRate] = useState<0.5 | 1 | 1.5 | 2>(1);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const attachmentRef = useRef<HTMLDivElement>(null);
   const autoplayRef = useRef(false);
 
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
+
+  // Prefetch voice notes near the visible chat so mobile Play receives a user gesture.
+  useEffect(() => {
+    const element = attachmentRef.current;
+    if (!element || !message.attachment_id || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        observer.disconnect();
+        void loadVoiceNote(false);
+      }
+    }, { rootMargin: "250px 0px" });
+    observer.observe(element);
+    return () => observer.disconnect();
+  // Only rerun when a different voice attachment is opened.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message.attachment_id, accessKey]);
 
   useEffect(() => {
     if (!url || !autoplayRef.current) return;
     autoplayRef.current = false;
     const timer = window.setTimeout(() => {
-      void audioRef.current?.play().catch(() => onError("Tap Play again to start this voice note."));
+      void audioRef.current?.play().catch(() => { setPlaying(false); /* iOS can require a fresh tap. */ });
     }, 0);
     return () => window.clearTimeout(timer);
   }, [url]);
 
-  async function loadVoiceNote(playAfterLoad = false) {
+  async function loadVoiceNote(playAfterLoad = false, forceReload = false) {
     if (!message.attachment_id || loading) return;
-    if (url) {
-      if (playAfterLoad) void audioRef.current?.play().catch(() => onError("Tap Play again to start this voice note."));
+    if (url && !forceReload) {
+      if (playAfterLoad) void audioRef.current?.play().catch(() => { setPlaying(false); /* iOS can require a fresh tap. */ });
       return;
     }
+    if (forceReload && url) { URL.revokeObjectURL(url); setUrl(""); }
     setLoading(true);
     setLoadFailed(false);
     try {
@@ -2257,13 +2298,13 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
   const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
 
   return (
-    <div className={`loadlink-voice-note mb-2 w-full min-w-0 max-w-full rounded-2xl border px-3 py-2.5 ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}>
+    <div ref={attachmentRef} className={`loadlink-voice-note mb-2 w-full min-w-0 max-w-full rounded-2xl border px-3 py-2.5 ${mine ? "border-white/15 bg-white/10" : "border-black/10 bg-[#f7f4ed]"}`}>
       {url ? (
         <audio
           ref={audioRef}
           src={url}
           preload="metadata"
-          onError={() => { setPlaying(false); setLoadFailed(true); setUrl(""); onError("This voice note could not be loaded. Tap Retry."); }}
+          onError={() => { setPlaying(false); setLoadFailed(true); onError("This audio format is not supported on this device. Try another browser or re-record in MP4."); }}
           className="hidden"
           onLoadedMetadata={(event) => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
           onDurationChange={(event) => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
@@ -2304,7 +2345,7 @@ function VoiceAttachment({ message, accessKey, mine, onError }: { message: ChatM
           </button>
           <div className={`mt-0.5 flex items-center justify-between gap-3 text-[10px] font-bold ${mine ? "text-white/58" : "text-black/48"}`}>
             <span>{url ? timeLabel(currentTime) : "Voice note"}</span>
-            <span className="flex items-center gap-2">{loadFailed ? <button type="button" onClick={() => void loadVoiceNote(false)} className="font-black underline">Retry</button> : null}<span data-loadlink-voice-speeds="v2619-fixed" className="flex items-center gap-1" aria-label="Voice note playback speed">
+            <span className="flex items-center gap-2">{loadFailed ? <button type="button" onClick={() => void loadVoiceNote(false, true)} className="font-black underline">Retry</button> : null}<span data-loadlink-voice-speeds="v2619-fixed" className="flex items-center gap-1" aria-label="Voice note playback speed">
                   {([0.5, 1, 1.5, 2] as const).map((rate) => (
                     <button
                       key={rate}
