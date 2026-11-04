@@ -10,7 +10,11 @@ test("price guide shows catalog model images for trucks and bakkies", () => {
   assert.match(guide, /ModelFamilyPhotoCard/);
   assert.match(guide, /lightCommercialCatalog/);
   assert.match(guide, /value === "truck" \? "Trucks" : "Bakkies"/);
-  assert.match(model, /fawpretoria\.co\.za\/images\/Trucks\/Showroom\/FAW-J5N-28380FT\.jpg/);
+  const catalog = require("../data/truck-model-catalog.json");
+  const j5n = catalog.find(row => row.brand === "FAW Trucks" && row.model === "J5N");
+  assert.equal(j5n.photo_url, "/images/truck-models/asia/faw-j5n-28380ft.webp");
+  assert.match(read("scripts/materialize-truck-model-photos.mjs"), /Verified \$\{count\} real truck photograph assets/);
+  assert.match(model, /localPhoto \? row\.photo_url/);
   assert.match(model, /Actual model-family photo/);
   assert.match(model, /referenceMatch !== "unverified"/);
 });
