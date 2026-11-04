@@ -6,8 +6,6 @@ export type ModelFamilyPhoto = {
   name: string;
   caption: string;
   yearVerified: boolean;
-  fallbackSrc?: string;
-  sourceUrl?: string;
 };
 
 const clean = (value: string) =>
