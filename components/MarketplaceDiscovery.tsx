@@ -178,7 +178,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                     onClick={() => chooseScope(item.value)}
                     data-loadlink-quick-scope="true"
                     aria-pressed={scope === item.value}
-                    className={`h-9 shrink-0 rounded-[11px] border px-3 text-[12px] font-semibold transition active:scale-[.98] ${
+                    className={`h-9 shrink-0 rounded-[11px] border px-3 text-[12px] font-semibold transition-colors duration-100 active:scale-[.98] ${
                       scope === item.value
                         ? "border-[#f6b800] bg-[#f6b800] text-black"
                         : darkMode
@@ -186,7 +186,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                           : "border-black/10 bg-white text-black/64"
                     }`}
                   >
-                    {item.label}
+                    {item.value === "vehicles" && !darkMode ? "Bakkies" : item.label}
                   </button>
                 ))}
               </div>
