@@ -15,7 +15,8 @@ type Props = {
 export default function ModelFamilyPhotoCard({ kind, make, model, year, darkMode, compact = false }: Props) {
   const photo = modelFamilyPhoto(kind, make, model, year);
   const [unavailable, setUnavailable] = useState(false);
-  useEffect(() => { setUnavailable(false); }, [photo?.src]);
+  const [fallback, setFallback] = useState(false);
+  useEffect(() => { setUnavailable(false); setFallback(false); }, [photo?.src]);
   if (!photo) return null;
   return (
     <div className={[
@@ -27,12 +28,12 @@ export default function ModelFamilyPhotoCard({ kind, make, model, year, darkMode
         <div className={compact ? "relative h-[108px] overflow-hidden bg-black/[.04] sm:h-[126px]" : "relative aspect-[16/9] overflow-hidden bg-black/[.04]"}>
           {!unavailable ? (
             <img
-              key={photo.src}
-              src={photo.src}
+              key={(fallback && photo.fallbackSrc) || photo.src}
+              src={(fallback && photo.fallbackSrc) || photo.src}
               alt={"Reference photo of " + photo.name}
               loading="lazy"
               decoding="async"
-              onError={() => setUnavailable(true)}
+              onError={() => { if (!fallback && photo.fallbackSrc) setFallback(true); else setUnavailable(true); }}
               className="h-full w-full object-contain"
             />
           ) : (
@@ -43,6 +44,7 @@ export default function ModelFamilyPhotoCard({ kind, make, model, year, darkMode
           <p className="text-[10px] font-bold uppercase tracking-[.12em] opacity-55">Model reference</p>
           <h3 className="mt-1 truncate text-base font-bold">{photo.name}</h3>
           <p className="mt-1 text-[11px] leading-5 opacity-60">{photo.caption}. Compare with the exact vehicle you are listing.</p>
+          {photo.sourceUrl ? <a href={photo.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-[10px] font-semibold text-[#bd8c05] underline underline-offset-2">Photo reference: FAW dealer</a> : null}
         </div>
       </div>
     </div>
