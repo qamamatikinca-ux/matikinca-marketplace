@@ -26,7 +26,6 @@ import HomeLogoLink from "@/components/HomeLogoLink";
 import JobTimingToast from "@/components/JobTimingToast";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
-import LoadLinkLoading from "@/components/LoadLinkLoading";
 import LogisticsMessageTools, { type QuoteAutofillDefaults, type QuoteVehicleOption, type StructuredQuote } from "@/components/LogisticsMessageTools";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
@@ -1836,7 +1835,7 @@ ${message}` : message)}
                   </button>
                 );
               })
-            ) : !inboxChecked && !inboxFetchError ? (
+            ) : (loading || !inboxChecked) && !inboxFetchError ? (
               <div className="space-y-2 p-4" role="status" aria-label="Retrieving your chats">
                 {[0, 1, 2, 3].map(index => (
                   <div key={index} className="flex items-center gap-3 rounded-xl border border-black/[.04] bg-white px-2 py-4">
