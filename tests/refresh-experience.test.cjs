@@ -113,12 +113,12 @@ test('prepaint and React agree on saved light mode even on a dark-mode device', 
   assert.equal(env.root.classList.contains('dark'), false);
 });
 
-test('blocked storage cannot crash theme startup or prevent a theme change', () => {
+test('blocked storage still defaults first visits to light and allows manual dark mode', () => {
   const env = themeEnvironment(null, true, true);
   vm.runInNewContext(prepaint, { window, document, localStorage: env.localStorage });
-  assert.equal(theme.readLoadLinkTheme(), 'dark');
-  assert.doesNotThrow(() => theme.setLoadLinkTheme('light'));
   assert.equal(theme.readLoadLinkTheme(), 'light');
+  assert.doesNotThrow(() => theme.setLoadLinkTheme('dark'));
+  assert.equal(theme.readLoadLinkTheme(), 'dark');
 });
 
 test('reapplying the current theme does not retrigger attribute observers', () => {

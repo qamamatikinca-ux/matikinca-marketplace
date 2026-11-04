@@ -15,7 +15,9 @@ export function readLoadLinkTheme(): LoadLinkTheme {
     const applied = document.documentElement.dataset.loadlinkTheme;
     if (applied === "dark" || applied === "light") return applied;
   }
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  // First-time visitors start in light mode regardless of device appearance.
+  // Only an explicitly stored LoadLink preference may turn on dark mode.
+  return "light";
 }
 
 export function applyLoadLinkTheme(theme: LoadLinkTheme) {
