@@ -412,7 +412,7 @@ export default function PackagesPage() {
         <header className="max-w-3xl">
           <h1 className="mt-3 text-[38px] font-black leading-[.98] tracking-[-.055em] sm:text-[52px] md:text-[62px]">Packages</h1>
           <p className={`mt-4 max-w-2xl text-[14px] font-semibold leading-6 sm:text-[15px] ${muted}`}>
-            {activePlan ? "View your package and available upgrades." : "Choose a package that matches your transport business."}
+            {activePlan ? "View your package and available upgrades." : "Choose how you want to list. Every price and benefit is shown before you pay."}
           </p>
           <PlanNavigation active="packages" />
         </header>
@@ -421,8 +421,8 @@ export default function PackagesPage() {
           <section className={`mt-6 flex flex-wrap items-center justify-between gap-4 rounded-[20px] border px-5 py-4 ${softSurface}`} aria-label="Your current package">
             <div>
               <p className={`text-[10px] font-bold uppercase tracking-[.1em] ${muted}`}>Your current package</p>
-              <h2 className="mt-1 text-lg font-bold">{titleCasePlan(activePlan || "standard")}</h2>
-              <p className={`mt-1 text-[11px] leading-5 ${muted}`}>Compare every package and see what each one includes. Your account access is based on your confirmed subscription status.</p>
+              <h2 className="mt-1 text-lg font-bold">{activePlan ? titleCasePlan(activePlan) : "No active subscription"}</h2>
+              <p className={`mt-1 text-[11px] leading-5 ${muted}`}>Your confirmed plan determines which features are unlocked.</p>
             </div>
             <Link href="/packages/manage" className={`inline-flex min-h-11 items-center justify-center rounded-full border px-5 text-xs font-bold ${darkMode ? "border-white/15" : "border-black/15"}`}>View my plan</Link>
           </section>
@@ -468,7 +468,7 @@ export default function PackagesPage() {
         <section className={`${styles.planGrid} mt-6 grid gap-4 lg:grid-cols-3`} aria-label="LoadLink plans">
           {showStandard ? <article className={`${styles.planCard} flex min-w-0 flex-col rounded-[18px] border p-5 sm:p-6 ${surface}`}>
             <div>
-              <h2 className="mt-2 text-[30px] font-black tracking-[-.05em]">Standard</h2>
+              <h2 className="mt-2 text-[30px] font-black tracking-[-.05em]">Standard</h2><p className={`mt-1 text-xs font-semibold ${muted}`}>Best for occasional vehicle listings</p>
               <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 <span className="text-[36px] font-bold leading-none tracking-[-.04em]">{manualDailyReady ? money(manualProduct.unit_price_cents).replace(",00", "") : loading ? "Checking…" : "Unavailable"}</span>
                 <span className={`text-xs font-extrabold ${muted}`}>per vehicle / active day</span>
@@ -535,8 +535,12 @@ export default function PackagesPage() {
                 <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1"><span className="text-[36px] font-bold leading-none tracking-[-.04em]">{prices[plan] !== undefined ? money(prices[plan]!).replace(",00", "") : pricesLoading ? "Checking…" : "Unavailable"}</span><span className={`text-xs font-extrabold ${muted}`}>{details.billing}</span></div>
                 <p className={`mt-3 text-xs leading-5 ${muted}`}>{details.description}</p>
                 <div className="my-5 h-px bg-current/10" />
-                <h3 className="mb-4 text-xs font-bold">All {details.name} benefits</h3>
-                <ul className="grid gap-3">{details.features.map((feature) => <li key={feature} className="flex gap-3 text-[12px] leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]" /><span>{feature}</span></li>)}</ul>
+                <h3 className="mb-3 text-[12px] font-bold">Included with {details.name}</h3>
+                <ul className="grid gap-2.5">{details.features.slice(0, 4).map((feature) => <li key={feature} className="flex gap-3 text-[12px] leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]" /><span>{feature}</span></li>)}</ul>
+                <details className="mt-4 rounded-xl border border-current/10 px-3 py-3" id={plan + "-benefits"}>
+                  <summary className="cursor-pointer text-[12px] font-semibold">View every benefit ({details.features.length})</summary>
+                  <ul className="mt-4 grid gap-2.5 border-t border-current/10 pt-3">{details.features.map((feature) => <li key={feature} className="flex gap-3 text-[12px] leading-5"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b800]" /><span>{feature}</span></li>)}</ul>
+                </details>
                 {activePlan !== plan && !(activePlan === "dealer" && plan === "pro") ? <p className={`mt-5 text-[11px] font-semibold leading-5 ${muted}`}>Get the {details.name} plan to access these benefits.</p> : null}
                 <div className="mt-auto pt-6">
               {tester && activePlan === plan
