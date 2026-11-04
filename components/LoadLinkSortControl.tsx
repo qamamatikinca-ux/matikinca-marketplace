@@ -92,74 +92,59 @@ export default function LoadLinkSortControl({
       </button>
 
       {sheetOpen ? (
-        <div
-          data-loadlink-vehicle-sort-sheet="true"
-          className="fixed inset-0 z-[2147483590] flex items-center justify-center bg-black/35 p-4 backdrop-blur-[12px]"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="vehicle-sort-filter-heading"
-          onMouseDown={(event) => { if (event.target === event.currentTarget) setSheetOpen(false); }}
-        >
-          <section className={`flex w-full max-w-[500px] max-h-[min(84dvh,820px)] flex-col overflow-hidden rounded-[28px] border p-4 shadow-[0_28px_90px_rgba(0,0,0,.2)] ${darkMode ? "border-white/20 bg-[#181818] text-white" : "border-white/90 bg-[#ebe9e5] text-black"}`}>
-            <div className="flex shrink-0 items-center justify-between gap-4 px-1 pb-3">
-              <h2 id="vehicle-sort-filter-heading" className="text-xl font-black uppercase tracking-[-.015em]">Sort &amp; filter</h2>
-              <button ref={closeRef} type="button" onClick={() => setSheetOpen(false)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-current/15" aria-label="Close sorting options">
-                <LoadLinkIcon name="close" size={16} />
-              </button>
+        <div data-loadlink-vehicle-sort-sheet="true"
+          className="fixed inset-0 z-[2147483590] flex items-center justify-center bg-black/55 p-3 backdrop-blur-sm sm:p-6"
+          role="dialog" aria-modal="true" aria-labelledby="vehicle-sort-filter-heading"
+          onMouseDown={(event) => { if (event.target === event.currentTarget) setSheetOpen(false); }}>
+          <section className={["w-full max-w-[560px] rounded-[26px] border px-4 py-4 shadow-2xl sm:px-6 sm:py-5",
+            darkMode ? "border-white/20 bg-[#171717] text-white" : "border-black/10 bg-white text-[#171717]"].join(" ")}>
+            <div className="flex items-center justify-between gap-3">
+              <h2 id="vehicle-sort-filter-heading" className="text-[19px] font-bold tracking-tight">Sort & filter</h2>
+              <button ref={closeRef} type="button" onClick={() => setSheetOpen(false)}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-current/15"
+                aria-label="Close sorting options"><LoadLinkIcon name="close" size={16} /></button>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 py-1 touch-pan-y [-webkit-overflow-scrolling:touch]">
-              <h3 className={`mb-3 text-[11px] font-black uppercase tracking-[.16em] ${darkMode ? "text-white/55" : "text-black/50"}`}>Sort order</h3>
-              {options.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  aria-pressed={value === option.value}
-                  onClick={() => onChange(option.value)}
-                  className={`mb-2 flex min-h-12 w-full items-center justify-between gap-3 rounded-[15px] border px-4 text-left text-sm font-bold ${value === option.value ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/12 bg-white/[.045]" : "border-black/10 bg-white/[.48]"}`}
-                >
-                  <span>{option.label}</span>
-                  {value === option.value ? <LoadLinkIcon name="check" size={17} strokeWidth={2.2} /> : null}
-                </button>
-              ))}
-              <div className={`my-5 border-t ${darkMode ? "border-white/12" : "border-black/10"}`} />
-
-              {equipment ? (
-                <>
-                  <h3 className={`mb-3 text-[11px] font-black uppercase tracking-[.16em] ${darkMode ? "text-white/55" : "text-black/50"}`}>Equipment type</h3>
-                  {equipment.options.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      aria-pressed={equipment.value === option.value}
-                      onClick={() => equipment.onChange(option.value)}
-                      className={`mb-2 flex min-h-12 w-full items-center justify-between gap-3 rounded-[15px] border px-4 text-left text-sm font-bold ${equipment.value === option.value ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/12 bg-white/[.045]" : "border-black/10 bg-white/[.48]"}`}
-                    >
-                      <span>{option.label}</span>
-                      {equipment.value === option.value ? <LoadLinkIcon name="check" size={17} strokeWidth={2.2} /> : null}
-                    </button>
-                  ))}
-                  <div className={`my-5 border-t ${darkMode ? "border-white/12" : "border-black/10"}`} />
-                </>
-              ) : null}
-              <h3 className={`mb-3 text-[11px] font-black uppercase tracking-[.16em] ${darkMode ? "text-white/55" : "text-black/50"}`}>Buying or renting</h3>
-              {filter.options.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  aria-pressed={filter.value === option.value}
-                  onClick={() => filter.onChange(option.value)}
-                  className={`mb-2 flex min-h-14 w-full items-center justify-between gap-3 rounded-[15px] border px-4 text-left text-sm font-bold ${filter.value === option.value ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/12 bg-white/[.045]" : "border-black/10 bg-white/[.48]"}`}
-                >
-                  <span className="min-w-0">
-                    <span className="block">{option.label}</span>
-                    {option.description ? <small className={`mt-1 block text-[11px] font-medium ${filter.value === option.value ? "text-black/65" : darkMode ? "text-white/50" : "text-black/50"}`}>{option.description}</small> : null}
-                  </span>
-                  {filter.value === option.value ? <LoadLinkIcon name="check" size={17} strokeWidth={2.2} /> : null}
-                </button>
-              ))}
-            </div>
-            <button type="button" onClick={() => setSheetOpen(false)} className="mt-3 min-h-12 shrink-0 rounded-[15px] bg-[#f6b800] px-5 text-sm font-black text-black">
-              {typeof filter.resultCount === "number" ? `Show ${filter.resultCount} listing${filter.resultCount === 1 ? "" : "s"}` : "Show listings"}
+            <fieldset className="mt-4">
+              <legend className="mb-2 text-[11px] font-bold uppercase tracking-wider opacity-60">Sort order</legend>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {options.map(option => (
+                  <button key={option.value} type="button" onClick={() => onChange(option.value)}
+                    aria-pressed={value === option.value}
+                    className={["flex min-h-12 items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-[12px] font-semibold",
+                      value === option.value ? "border-[#f6b800] bg-[#f6b800] text-black" :
+                      darkMode ? "border-white/20 bg-white/[.04]" : "border-black/10 bg-[#f7f7f7]"].join(" ")}>
+                    <span>{option.label}</span>
+                    {value === option.value && <LoadLinkIcon name="check" size={16} />}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            {equipment ? (
+              <label className="mt-4 block">
+                <span className="mb-2 block text-[11px] font-bold uppercase tracking-wider opacity-60">Equipment type</span>
+                <select value={equipment.value} onChange={event => equipment.onChange(event.target.value)}
+                  aria-label="Equipment type"
+                  className={["h-12 w-full rounded-xl border px-3 text-sm font-semibold outline-none focus:border-[#f6b800]",
+                    darkMode ? "border-white/20 bg-[#252525] text-white" : "border-black/10 bg-[#f7f7f7] text-black"].join(" ")}>
+                  {equipment.options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </label>
+            ) : null}
+            <fieldset className="mt-4">
+              <legend className="mb-2 text-[11px] font-bold uppercase tracking-wider opacity-60">Buying or renting</legend>
+              <div className="grid grid-cols-3 gap-2">
+                {filter.options.map(option => (
+                  <button key={option.value} type="button" onClick={() => filter.onChange(option.value)}
+                    aria-pressed={filter.value === option.value}
+                    className={["flex min-h-11 items-center justify-center rounded-xl border px-2 text-center text-[11px] font-semibold",
+                      filter.value === option.value ? "border-[#f6b800] bg-[#f6b800] text-black" :
+                      darkMode ? "border-white/20 bg-white/[.04]" : "border-black/10 bg-[#f7f7f7]"].join(" ")}>{option.label}</button>
+                ))}
+              </div>
+            </fieldset>
+            <button type="button" onClick={() => setSheetOpen(false)}
+              className="mt-5 min-h-12 w-full rounded-xl bg-[#f6b800] px-5 text-sm font-bold text-black">
+              {typeof filter.resultCount === "number" ? "Show " + filter.resultCount + " listing" + (filter.resultCount === 1 ? "" : "s") : "Show listings"}
             </button>
           </section>
         </div>

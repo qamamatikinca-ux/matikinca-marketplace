@@ -377,12 +377,12 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
         ) : null}
         <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-4xl font-black tracking-[-.05em] md:text-5xl">Vehicles and mobile units available</h2>
+            <h2 className="text-4xl font-black tracking-[-.05em] md:text-5xl">{darkMode ? "Vehicles" : "Bakkies"}, trucks and mobile units available</h2>
             <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Approved commercial stock, presented with the same clear marketplace pattern as LoadLink jobs.</p>
           </div>
           <LoadLinkSortControl darkMode={darkMode} value={sort} onChange={value=>setSort(value as SortMode)}
  options={[{value:"newest",label:"Newest first"},{value:"price_low",label:"Price: low to high"},{value:"price_high",label:"Price: high to low"}]}
- equipment={{value:mode,onChange:value=>onModeChange(value as ViewMode),options:[{value:"all",label:"All equipment"},{value:"trucks",label:"Trucks"},{value:"vehicles",label:"Vehicles"},{value:"trailers_units",label:"Trailers, mobile units & equipment"}]}}
+ equipment={{value:mode,onChange:value=>onModeChange(value as ViewMode),options:[{value:"all",label:"All equipment"},{value:"trucks",label:"Trucks"},{value:"vehicles",label:darkMode ? "Vehicles" : "Bakkies"},{value:"trailers_units",label:"Trailers, mobile units & equipment"}]}}
  filter={{value:intent,onChange:value=>setIntent(value as Intent),resultCount:visible.length,options:[{value:"all",label:"All listings"},{value:"sale",label:"For sale",description:"Available to buy"},{value:"rental",label:"For rent",description:"Available to hire or rent"}]}}
  />
         </div>
@@ -414,7 +414,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
             <button type="button"
               onClick={() => document.getElementById("loadlink-vehicle-results")?.scrollIntoView({ behavior: "smooth", block: "start" })}
               className="mt-4 min-h-12 w-full rounded-xl border border-[#f6b800] bg-[#f6b800] px-7 text-sm font-black uppercase tracking-wide text-black transition active:scale-[.99]">
-              Search {mode}
+              Search {mode === "vehicles" && !darkMode ? "Bakkies" : mode}
             </button>
             {makeQuery || modelQuery ? <button type="button" onClick={() => { setMakeQuery(""); setModelQuery(""); }}
               className={"mt-2 min-h-9 w-full text-xs font-semibold " + (darkMode ? "text-white/70" : "text-black/60")}>Clear make and model</button> : null}
@@ -422,7 +422,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
         ) : null}
 
         <div className="mt-6 flex max-w-full gap-2 overflow-x-auto pb-1">
-          {([["all", "All equipment"], ["trucks", "Trucks"], ["vehicles", "Vehicles"], ["trailers_units", "Trailers, mobile units & equipment"]] as Array<[ViewMode, string]>).map(([value, label]) => (
+          {([["all", "All equipment"], ["trucks", "Trucks"], ["vehicles", darkMode ? "Vehicles" : "Bakkies"], ["trailers_units", "Trailers, mobile units & equipment"]] as Array<[ViewMode, string]>).map(([value, label]) => (
             <button key={value} type="button" onClick={() => onModeChange(value)} className={`shrink-0 rounded-full border px-4 py-2.5 text-xs font-black transition ${mode === value ? "border-[#f6b800] bg-[#f6b800] text-black" : surface}`}>{label}</button>
           ))}
         </div>
@@ -439,7 +439,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
           </label>
         ) : null}
         {makePickerOpen && makeModelVisible ? (
-          <VehicleMakeModelPicker darkMode={darkMode} title={mode === "trucks" ? "Trucks" : "Vehicles"}
+          <VehicleMakeModelPicker darkMode={darkMode} title={mode === "trucks" ? "Trucks" : (darkMode ? "Vehicles" : "Bakkies")}
             brands={brandOptions} currentMake={makeQuery} currentModel={modelQuery} initialPanel={pickerPanel}
             onChoose={(make, model) => { setMakeQuery(make); setModelQuery(model); setMakePickerOpen(false); }}
             onClose={() => setMakePickerOpen(false)} />
