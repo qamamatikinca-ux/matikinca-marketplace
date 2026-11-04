@@ -33,6 +33,7 @@ export default function ModelFamilyPhotoCard({ kind, make, model, year, darkMode
               alt={"Reference photo of " + photo.name}
               loading="lazy"
               decoding="async"
+              referrerPolicy="no-referrer"
               onError={() => { if (!fallback && photo.fallbackSrc) setFallback(true); else setUnavailable(true); }}
               className="h-full w-full object-contain"
             />
