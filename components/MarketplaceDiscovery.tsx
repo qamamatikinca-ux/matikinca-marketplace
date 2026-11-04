@@ -186,7 +186,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                           : "border-black/10 bg-white text-black/64"
                     }`}
                   >
-                    {item.value === "vehicles" && !darkMode ? "Bakkies" : item.label}
+                    {item.value === "asset" && !darkMode ? "Bakkies" : item.label}
                   </button>
                 ))}
               </div>
