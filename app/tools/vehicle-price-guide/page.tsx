@@ -10,6 +10,7 @@ import { truckCatalog } from "@/lib/truckCatalog";
 import { findCatalogBrand, findCatalogModel } from "@/lib/truckCatalogLookup";
 import { lightCommercialCatalog } from "@/lib/southAfricanLightCommercialCatalog";
 import ModelFamilyPhotoCard from "@/components/ModelFamilyPhotoCard";
+import LoadLinkImage from "@/components/LoadLinkImage";
 
 export default function CommercialVehiclePriceGuide() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
@@ -140,9 +141,15 @@ export default function CommercialVehiclePriceGuide() {
             </div>
             <h3 className="px-5 pt-5 text-sm font-bold sm:px-6">Listings used for comparison</h3>
             <div className="px-5 pb-5 sm:px-6">{results.listings.map((item) =>
-              <Link href={"/vehicles/" + encodeURIComponent(item.id)} key={item.id} className="flex min-h-14 items-center justify-between gap-3 border-b border-current/10 py-3 text-sm last:border-0">
-                <span className="min-w-0"><strong className="block truncate">{item.title || "Commercial vehicle"}</strong><small className={muted}>{item.city || "South Africa"}</small></span>
-                <span className="shrink-0 text-right font-semibold">{formatZar(item.askingPrice)}</span>
+              <Link href={"/vehicles/" + encodeURIComponent(item.id)} key={item.id} className="flex min-h-[76px] items-center justify-between gap-3 border-b border-current/10 py-3 text-sm last:border-0">
+                <span className="flex min-w-0 items-center gap-3">
+                  {item.photos?.[0] ? (
+                    <LoadLinkImage src={item.photos[0]} alt={"Photo uploaded for " + (item.title || "commercial vehicle")}
+                      loading="lazy" sizes="80px" className="h-16 w-20 shrink-0 rounded-xl border border-current/10 object-cover" />
+                  ) : null}
+                  <span className="min-w-0"><strong className="block truncate">{item.title || "Commercial vehicle"}</strong><small className={muted}>{item.city || "South Africa"}</small></span>
+                </span>
+                <span className="shrink-0 text-right text-xs font-semibold sm:text-sm">{formatZar(item.askingPrice)}</span>
               </Link>
             )}</div>
           </section>
