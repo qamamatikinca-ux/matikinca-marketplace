@@ -8,11 +8,14 @@ import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { comparableAskingPrices, formatZar, type VehicleMarketRow } from "@/lib/vehicleMarketGuide";
 import { truckCatalog } from "@/lib/truckCatalog";
 import { findCatalogBrand, findCatalogModel } from "@/lib/truckCatalogLookup";
+import { lightCommercialCatalog } from "@/lib/southAfricanLightCommercialCatalog";
+import ModelFamilyPhotoCard from "@/components/ModelFamilyPhotoCard";
 
 export default function CommercialVehiclePriceGuide() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
+  const [kind, setKind] = useState<"truck" | "bakkie">("truck");
   const [year, setYear] = useState("");
   const [rows, setRows] = useState<VehicleMarketRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +29,7 @@ export default function CommercialVehiclePriceGuide() {
     setModel((params.get("model") || "").slice(0, 80));
     setYear((params.get("year") || "").slice(0, 4));
     setReferenceId(params.get("exclude") || "");
+    setKind(params.get("kind") === "bakkie" || params.get("category") === "bakkie" ? "bakkie" : "truck");
     setSearched(Boolean(params.get("make") && params.get("model")));
     let active = true;
     fetch("/api/job-listings", { cache: "no-store" })
@@ -43,9 +47,13 @@ export default function CommercialVehiclePriceGuide() {
   const muted = darkMode ? "text-white/60" : "text-black/60";
   const surface = darkMode ? "border-white/10 bg-[#151615]" : "border-black/10 bg-white";
   const input = darkMode ? "border-white/15 bg-[#1b1d1a] text-white" : "border-black/10 bg-[#fafaf8] text-black";
-  const catalogBrand = useMemo(() => findCatalogBrand(make), [make]);
-  const catalogMatch = useMemo(() => findCatalogModel(make, model, /^\d{4}$/.test(year) ? Number(year) : undefined), [make, model, year]);
-  const availableModels = catalogBrand?.models || [];
+  const catalogBrand = useMemo(() => kind === "truck" ? findCatalogBrand(make) : null, [kind, make]);
+  const commercialBrand = useMemo(() => kind === "bakkie"
+    ? lightCommercialCatalog.find(item => item.name.toLowerCase() === make.trim().toLowerCase()) : null, [kind, make]);
+  const catalogMatch = useMemo(() => kind === "truck"
+    ? findCatalogModel(make, model, /^\d{4}$/.test(year) ? Number(year) : undefined) : null, [kind, make, model, year]);
+  const availableModels = kind === "truck" ? (catalogBrand?.models || []) : (commercialBrand?.models || []);
+  const selectedYear = /^\d{4}$/.test(year) ? Number(year) : undefined;
   const yearValid = !year || (/^\d{4}$/.test(year) && Number(year) >= 1970 && Number(year) <= new Date().getFullYear() + 1);
 
   return (
@@ -54,12 +62,22 @@ export default function CommercialVehiclePriceGuide() {
       <div className="mx-auto max-w-4xl px-4 pb-20 pt-8 sm:px-6">
         <Link href="/tools" className={"inline-flex min-h-10 items-center gap-1 text-xs font-semibold " + muted}><LoadLinkIcon name="chevronLeft" size={16} /> All tools</Link>
         <h1 className="mt-5 text-[clamp(28px,6vw,42px)] font-bold leading-[1.12] tracking-[-.045em]">Commercial vehicle price guide</h1>
-        <p className={"mt-3 max-w-2xl text-sm leading-6 " + muted}>Compare real advertised asking prices on LoadLink. Choose a model from our truck catalog or enter your own make and model.</p>
+        <p className={"mt-3 max-w-2xl text-sm leading-6 " + muted}>Compare real advertised asking prices on LoadLink. Select a truck or bakkie and see its real model-family reference photo alongside current LoadLink asking prices. Photos are examples, not proof of a particular year or trim.</p>
 
-        <section className={"mt-7 rounded-2xl border p-5 sm:p-6 " + surface} aria-labelledby="compare-heading">
-          <h2 id="compare-heading" className="text-lg font-bold">Find comparable listings</h2>
+        <section className={"mt-7 rounded-[22px] border p-5 shadow-sm sm:p-6 " + surface} aria-labelledby="compare-heading">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="compare-heading" className="text-lg font-bold">Find comparable listings</h2>
+            <div className={"flex rounded-full border p-1 " + (darkMode ? "border-white/15 bg-white/[.04]" : "border-black/10 bg-[#f3f3f3]")} role="group" aria-label="Vehicle type">
+              {(["truck", "bakkie"] as const).map(value => <button key={value} type="button"
+                onClick={() => { if (kind !== value) { setKind(value); setMake(""); setModel(""); setSearched(false); } }}
+                aria-pressed={kind === value}
+                className={"min-h-10 rounded-full px-5 text-xs font-bold transition-colors " + (kind === value ? "bg-[#f6b800] text-black" : "opacity-65")}>
+                {value === "truck" ? "Trucks" : "Bakkies"}
+              </button>)}
+            </div>
+          </div>
           <datalist id="loadlink-truck-makes">
-            {truckCatalog.map((brand) => <option key={brand.name} value={brand.name} />)}
+            {(kind === "truck" ? truckCatalog : lightCommercialCatalog).map((brand) => <option key={brand.name} value={brand.name} />)}
           </datalist>
           <datalist id="loadlink-truck-models">
             {availableModels.map((item) => <option key={item.name} value={item.name} />)}
@@ -83,6 +101,12 @@ export default function CommercialVehiclePriceGuide() {
           </form>
         </section>
 
+        {make.trim() && model.trim() ? (
+          <section className="mt-4" aria-label="Actual selected model photo">
+            <ModelFamilyPhotoCard kind={kind} make={make} model={model} year={selectedYear} darkMode={darkMode} />
+          </section>
+        ) : null}
+
         {catalogMatch ? (
           <section className={"mt-4 rounded-2xl border p-5 sm:p-6 " + surface} aria-label="Truck model specifications reference">
             <p className={"text-[11px] font-semibold " + muted}>Model reference</p>
@@ -97,7 +121,7 @@ export default function CommercialVehiclePriceGuide() {
             </dl>
             <p className={"mt-4 text-xs leading-5 " + muted}>These are possible configurations, not verified specifications of a particular listing. Confirm the exact truck's specification plate and documents before purchase.</p>
           </section>
-        ) : make.trim() && model.trim() && catalogBrand ? (
+        ) : make.trim() && model.trim() && catalogBrand && kind === "truck" ? (
           <p className={"mt-3 text-xs leading-5 " + muted}>That model/year combination is not confirmed in the truck catalog. You can still compare current advertised listings.</p>
         ) : null}
 
