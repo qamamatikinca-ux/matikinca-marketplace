@@ -32,6 +32,7 @@ import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
 import { getBuyerKey, getBuyerKeys, getOwnerKeys } from "@/lib/chatKeys";
+import { readInboxSnapshot, writeInboxSnapshot, readMessageSnapshot, writeMessageSnapshot } from "@/lib/chatSessionSnapshots";
 import { recordUserActivity, syncAccountState } from "@/lib/accountState";
 import { errorMessage, getFreshAuthenticatedUser } from "@/lib/reliableSupabase";
 import {
@@ -453,6 +454,9 @@ export default function MessagesPage() {
   const [archiveBusy, setArchiveBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
+  const [inboxChecked, setInboxChecked] = useState(false);
+  const [inboxFetchError, setInboxFetchError] = useState(false);
+  const [threadChecked, setThreadChecked] = useState(false);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -501,6 +505,8 @@ export default function MessagesPage() {
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const conversationLoadSequenceRef = useRef(0);
+  const conversationsRef = useRef<Conversation[]>([]);
+  const activeInboxUserRef = useRef("");
   const messageLoadSequenceRef = useRef(0);
   const messageReadInFlightRef = useRef("");
   const recordingStreamRef = useRef<MediaStream | null>(null);
@@ -522,15 +528,6 @@ export default function MessagesPage() {
       window.removeEventListener("loadlink-message-privacy-updated", syncPrivacy as EventListener);
     };
   }, []);
-
-  useEffect(() => {
-    if (!loading) return;
-    const safety = window.setTimeout(() => {
-      setLoading(false);
-      setError((current) => current || "The inbox took too long to respond. Refresh to retry without being trapped on a black screen.");
-    }, 8000);
-    return () => window.clearTimeout(safety);
-  }, [loading]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setPresenceNow(Date.now()), 10_000);
@@ -806,81 +803,79 @@ export default function MessagesPage() {
     } }));
   };
 
-  const loadConversations = useCallback(async (preferredId?: string) => {
-    const requestSequence = ++conversationLoadSequenceRef.current;
-    // The primary account keys must take precedence; historical device keys must never
-    // hold the whole inbox hostage while one legacy request stalls.
-    const currentBuyerKey = getBuyerKey();
-    const buyerKeys = [currentBuyerKey, ...getBuyerKeys().filter(key => key !== currentBuyerKey)];
-    const ownerKeys = getOwnerKeys();
-    const tasks = [
-      ...(buyerKeys[0] ? [{ key: buyerKeys[0], role: "buyer" as const }] : []),
-      ...(ownerKeys[0] ? [{ key: ownerKeys[0], role: "owner" as const }] : []),
-      ...buyerKeys.slice(1).map(key => ({ key, role: "buyer" as const })),
-      ...ownerKeys.slice(1).map(key => ({ key, role: "owner" as const })),
-    ];
-    const locallyArchived = readLocalArchivedIds();
-    const merged = new Map<string, Conversation>();
-    let successfulReads = 0;
-    let failedReads = 0;
-    let firstFailure: unknown = null;
-    const publish = () => {
-      if (requestSequence !== conversationLoadSequenceRef.current) return;
-      const rows = Array.from(merged.values()).sort((first, second) =>
-        new Date(second.last_message_at || 0).getTime() -
-        new Date(first.last_message_at || 0).getTime()
-      );
-      setPresenceNow(Date.now());
-      setConversations(rows);
+  const loadConversations = useCallback(async (preferredId?: string, withLegacyKeys = false) => {
+    const sequence = ++conversationLoadSequenceRef.current;
+    const userId = activeInboxUserRef.current;
+    if (!userId) return;
+    const buyerKey = getBuyerKey();
+    const ownerKey = getOwnerKeys()[0] || buyerKey;
+    const localArchive = readLocalArchivedIds();
+    const merged = new Map<string, Conversation>(conversationsRef.current.map(item => [item.id, item]));
+    const fresh = new Map<string, Conversation>();
+    const apply = (rows: ConversationRow[], key: string, role: Role) => {
+      if (sequence !== conversationLoadSequenceRef.current || userId !== activeInboxUserRef.current) return;
+      for (const row of rows) {
+        if (!row.id || !row.listing_id) continue;
+        const unreadCount = toCount(row.unread_count);
+        const archived = unreadCount > 0 ? false : Boolean(row.archived) || localArchive.has(row.id);
+        if (unreadCount > 0) localArchive.delete(row.id);
+        const item = { ...row, accessKey: key, role, unreadCount, archived };
+        merged.set(row.id, item);
+        fresh.set(row.id, item);
+      }
+      const displayed = [...merged.values()].sort((a, b) =>
+        new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime());
+      conversationsRef.current = displayed;
+      setConversations(displayed);
+      writeInboxSnapshot(userId, displayed);
       const nextId = preferredId || selectedIdRef.current ||
-        (window.innerWidth >= 768 ? rows[0]?.id || "" : "");
-      if (nextId && rows.some(row => row.id === nextId)) {
+        (window.innerWidth >= 768 ? displayed[0]?.id || "" : "");
+      if (nextId && displayed.some(item => item.id === nextId)) {
         selectedIdRef.current = nextId;
         setSelectedId(nextId);
       }
       window.dispatchEvent(new Event("loadlink-chat-unread-updated"));
     };
-    let index = 0;
-    const readNext = async () => {
-      while (index < tasks.length && requestSequence === conversationLoadSequenceRef.current) {
-        const task = tasks[index++];
-        try {
-          const signal = AbortSignal.timeout(4500);
-          const result = task.role === "buyer"
-            ? await reliableChatRead(() => supabase.rpc("get_buyer_guest_threads", { p_buyer_key: task.key }).abortSignal(signal))
-            : await reliableChatRead(() => supabase.rpc("get_owner_guest_threads", { p_owner_key: task.key }).abortSignal(signal));
-          if (result.error) throw result.error;
-          successfulReads++;
-          ((result.data || []) as ConversationRow[]).forEach(row => {
-            const unreadCount = toCount(row.unread_count);
-            const archived = unreadCount > 0 ? false : Boolean(row.archived) || locallyArchived.has(row.id);
-            if (unreadCount > 0) locallyArchived.delete(row.id);
-            merged.set(row.id, { ...row, accessKey: task.key, role: task.role, unreadCount, archived });
-          });
-          publish();
-        } catch (readError) {
-          failedReads++;
-          if (!firstFailure) firstFailure = readError;
-        }
-      }
+    const read = async (key: string, role: Role) => {
+      const result = role === "buyer"
+        ? await supabase.rpc("get_buyer_guest_threads", { p_buyer_key: key }).abortSignal(AbortSignal.timeout(5000))
+        : await supabase.rpc("get_owner_guest_threads", { p_owner_key: key }).abortSignal(AbortSignal.timeout(5000));
+      if (result.error) throw result.error;
+      apply((result.data || []) as ConversationRow[], key, role);
+      return true;
     };
-    // Two requests show the current inbox promptly; historical accounts fill in
-    // progressively without launching dozens of simultaneous database calls.
-    const complete = Promise.allSettled(Array.from({ length: Math.min(3, tasks.length) }, () => readNext()));
-    await Promise.race([complete, new Promise<void>(resolve => window.setTimeout(resolve, 950))]);
-    if (requestSequence !== conversationLoadSequenceRef.current) return;
-    if (successfulReads === 0 && failedReads === tasks.length && firstFailure) throw firstFailure;
-    if (successfulReads > 0 || tasks.length === 0) {
-      writeLocalArchivedIds(locallyArchived);
-      publish();
-    }
-    // Allow remaining legacy keys to complete without blocking the first paint.
-    void complete.then(() => {
-      if (requestSequence === conversationLoadSequenceRef.current && successfulReads > 0) {
-        writeLocalArchivedIds(locallyArchived);
-        publish();
+    // Every buyer/owner conversation linked to auth.uid() is returned by these
+    // two primary RPCs. Do not ask for every historical device key on each poll.
+    const primaryResults = await Promise.allSettled([read(buyerKey, "buyer"), read(ownerKey, "owner")]);
+    if (sequence !== conversationLoadSequenceRef.current || userId !== activeInboxUserRef.current) return;
+    const mainSuccess = primaryResults.every(result => result.status === "fulfilled");
+    if (mainSuccess) {
+      // Once both account-level reads succeed, stale snapshots can be replaced.
+      // A legacy device-key backfill remains additive, not blocking.
+      if (fresh.size || !withLegacyKeys) {
+        const verified = [...fresh.values()].sort((a,b) =>
+          new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime());
+        conversationsRef.current = verified;
+        setConversations(verified);
+        writeInboxSnapshot(userId, verified);
       }
-    });
+      setInboxFetchError(false);
+      if (!withLegacyKeys || fresh.size) setInboxChecked(true);
+    } else {
+      setInboxFetchError(true);
+    }
+    if (withLegacyKeys) {
+      // Older local keys may carry chats not yet linked to the present account.
+      // Resolve a bounded number in the background, without hiding the inbox.
+      const older = getBuyerKeys().filter(key => key !== buyerKey).slice(0, 6);
+      if (older.length) {
+        void Promise.allSettled(older.map(key => read(key, "buyer"))).then(() => {
+          if (sequence !== conversationLoadSequenceRef.current || userId !== activeInboxUserRef.current) return;
+          if (mainSuccess) setInboxChecked(true);
+        });
+      } else if (mainSuccess) setInboxChecked(true);
+    }
+    writeLocalArchivedIds(localArchive);
   }, []);
 
   const loadMessages = useCallback(
@@ -902,6 +897,8 @@ export default function MessagesPage() {
         const rows = (result.data || []) as ChatMessage[];
         if (requestSequence !== messageLoadSequenceRef.current) return;
         if (showLoader) setShowStarterSuggestions(rows.length === 0);
+        setThreadChecked(true);
+        if (activeInboxUserRef.current) writeMessageSnapshot(activeInboxUserRef.current, conversation.id, rows);
         const signature = rows.map((row) => `${row.id}:${row.created_at}:${row.body}:${row.attachment_id || ""}:${row.edited_at || ""}:${row.deleted_at || ""}:${row.message_kind || ""}:${JSON.stringify(row.structured_payload || {})}`).join("|");
         const changed = signature !== messageSignatureRef.current;
         if (changed) {
@@ -933,6 +930,7 @@ export default function MessagesPage() {
     if (!isSupabaseConfigured) {
       setError("Messaging is not connected on this deployment yet.");
       setLoading(false);
+      setInboxFetchError(true);
       return;
     }
 
@@ -942,13 +940,30 @@ export default function MessagesPage() {
     async function initialise() {
       try {
         setError("");
-        const user = await getFreshAuthenticatedUser();
+        const sessionResult = await supabase.auth.getSession();
+        const user = isAuthenticatedUser(sessionResult.data.session?.user)
+          ? sessionResult.data.session!.user
+          : await getFreshAuthenticatedUser(1);
 
         if (!isAuthenticatedUser(user)) {
           router.replace(loginHref(currentRelativePath()));
           return;
         }
 
+        if (activeInboxUserRef.current !== user.id) {
+          conversationsRef.current = [];
+          setConversations([]);
+          setInboxChecked(false);
+        }
+        activeInboxUserRef.current = user.id;
+        const remembered = readInboxSnapshot<Conversation>(user.id)
+          .filter(item => item.id && item.listing_id && item.accessKey && (item.role === "buyer" || item.role === "owner"));
+        if (remembered.length) {
+          conversationsRef.current = remembered;
+          setConversations(remembered);
+        }
+        // Show the actual inbox immediately, not a full-screen loading wall.
+        setLoading(false);
         const privacyPromise = supabase
           .from("profiles")
           .select("message_activity_visible,message_typing_indicators,message_requests_enabled,message_notification_previews")
@@ -1028,14 +1043,16 @@ export default function MessagesPage() {
         }
 
         if (!active) return;
-        await loadConversations(openedId);
+        await loadConversations(openedId, true);
         refreshTimer = setInterval(
-          () => { if (document.visibilityState === "visible" && navigator.onLine) void loadConversations().catch(() => undefined); },
+          () => { if (document.visibilityState === "visible" && navigator.onLine) void loadConversations().catch(() => setInboxFetchError(true)); },
           12000,
         );
       } catch (initialiseError) {
-        if (active)
+        if (active) {
           setError(cleanError(initialiseError, "Chat could not open."));
+          setInboxFetchError(true);
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -1056,8 +1073,11 @@ export default function MessagesPage() {
 
     let active = true;
     messageLoadSequenceRef.current += 1;
-    setMessages([]);
-    messageSignatureRef.current = "";
+    messageReadInFlightRef.current = "";
+    const cached = readMessageSnapshot<ChatMessage>(activeInboxUserRef.current, selectedConversation.id);
+    setMessages(cached);
+    setThreadChecked(false);
+    messageSignatureRef.current = cached.map((row) => `${row.id}:${row.created_at}:${row.body}:${row.attachment_id || ""}:${row.edited_at || ""}:${row.deleted_at || ""}:${row.message_kind || ""}:${JSON.stringify(row.structured_payload || {})}`).join("|");
     forceScrollRef.current = true;
     setBlockState({ blocked_by_me: false, blocked_by_other: false });
     loadMessages(selectedConversation, true);
@@ -1688,19 +1708,6 @@ export default function MessagesPage() {
     window.history.replaceState({}, "", "/messages");
   }
 
-  if (loading) {
-    return (
-      <main
-        className={`min-h-[100svh] ${
-          darkMode ? "bg-black text-white" : "bg-[#f4efe3] text-black"
-        }`}
-      >
-        <LoadLinkLoading />
-      </main>
-    );
-  }
-
-
   if (selectedConversation && logisticsWorkspaceOpen) {
     return (
       <LogisticsMessageTools
@@ -1823,27 +1830,27 @@ ${message}` : message)}
                   </button>
                 );
               })
+            ) : !inboxChecked && !inboxFetchError ? (
+              <div className="space-y-2 p-4" role="status" aria-label="Retrieving your chats">
+                {[0, 1, 2, 3].map(index => (
+                  <div key={index} className="flex items-center gap-3 rounded-xl border border-black/[.04] bg-white px-2 py-4">
+                    <div className="h-11 w-11 shrink-0 animate-pulse rounded-full bg-black/[.07]" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="h-3 w-1/2 animate-pulse rounded-full bg-black/[.08]" />
+                      <div className="h-2.5 w-4/5 animate-pulse rounded-full bg-black/[.05]" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : inboxFetchError && !inboxChecked ? (
+              <div className="p-7 text-center">
+                <p className="text-sm font-semibold">Your chats could not sync. Existing messages have not been deleted.</p>
+                <button type="button" onClick={() => { setInboxFetchError(false); setConnectionRetry(value => value + 1); }}
+                  className="mt-4 min-h-11 rounded-full border border-black/15 bg-white px-6 text-xs font-bold">Retry connection</button>
+              </div>
             ) : (
-              <div className="p-8 text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-black text-[#f6b800]">
-                  <MessageIcon />
-                </div>
-                <h2 className="mt-5 text-xl font-black">
-                  {folder === "archived" ? "No archived conversations" : folder === "potential" ? "No potential deals yet" : "No conversations yet"}
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-black/55">
-                  {folder === "archived"
-                    ? "Archived conversations stay available here until you restore them."
-                    : folder === "potential"
-                      ? "New enquiries from people you have not accepted yet will appear here."
-                      : "Open a listing and tap Message to start a private conversation."}
-                </p>
-                <Link
-                  href="/jobs"
-                  className="mt-5 inline-flex rounded-xl bg-[#f6b800] px-5 py-3 text-xs font-black uppercase tracking-wide text-black"
-                >
-                  Browse listings
-                </Link>
+              <div className="p-7 text-center">
+                <p className="text-sm font-semibold">{query.trim() ? "No matching conversations" : folder === "archived" ? "Nothing archived yet" : folder === "potential" ? "No pending enquiries" : "Nothing in your inbox yet"}</p>
               </div>
             )}
           </div>
@@ -1981,8 +1988,11 @@ ${message}` : message)}
                 className={`loadlink-message-viewport loadlink-chat-wallpaper relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-5 sm:px-5 md:px-8 ${darkMode ? "bg-[#090909]" : "bg-[#f6f3eb]"}`}
               >
                 {chatCalls.error ? <div className="ll-call-history-retry" role="status">{chatCalls.error} <button type="button" onClick={chatCalls.retry}>Retry</button></div> : null}
-                {messagesLoading && messages.length === 0 && chatTimeline.length === 0 ? (
-                  <div className="ll-chat-loading" role="status" aria-label="Loading conversation"><span /><span /><span /><p>Loading conversation…</p></div>
+                {!threadChecked && messages.length === 0 && chatTimeline.length === 0 ? (
+                  <div className="mx-auto max-w-3xl space-y-3 px-2 py-5" role="status" aria-label="Retrieving messages">
+                    <div className="h-12 w-3/5 animate-pulse rounded-2xl bg-black/[.04]" />
+                    <div className="ml-auto h-10 w-1/2 animate-pulse rounded-2xl bg-[#f6b800]/15" />
+                  </div>
                 ) : chatTimeline.length ? (
                   <div className="mx-auto max-w-3xl space-y-3">
                     {chatTimeline.map((entry, index) => {
