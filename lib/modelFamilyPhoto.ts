@@ -29,12 +29,17 @@ export function modelFamilyPhoto(
     const row = truckPhotos.find(item => clean(item.brand) === manufacturer && clean(item.model) === family);
     if (!row?.photo_url) return null;
     const localPhoto = row.photo_url.startsWith("/images/truck-models/");
+    // This verified dealer image covers an exact J5N model whose legacy local
+    // image path was never checked into the repository.
+    const verifiedExternalImage = manufacturer === "faw trucks" && family === "j5n"
+      ? "https://www.fawpretoria.co.za/images/Trucks/Showroom/FAW-J5N-28380FT.jpg"
+      : "";
     const hasVerifiedYears = typeof row.photo_from_year === "number" || typeof row.photo_to_year === "number";
     const yearVerified = Boolean(year && hasVerifiedYears
       && (!row.photo_from_year || year >= row.photo_from_year)
       && (!row.photo_to_year || year <= row.photo_to_year));
     return {
-      src: localPhoto ? row.photo_url : "/api/truck-model-photo/" + encodeURIComponent(row.id),
+      src: verifiedExternalImage || (localPhoto ? row.photo_url : "/api/truck-model-photo/" + encodeURIComponent(row.id)),
       name: row.brand + " " + row.model,
       caption: yearVerified ? "Model-year reference" : "Actual model-family photo · year and trim may differ",
       yearVerified,
