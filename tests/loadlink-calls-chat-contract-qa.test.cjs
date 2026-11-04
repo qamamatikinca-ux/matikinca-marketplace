@@ -27,9 +27,9 @@ test("dark message composer keeps typed text and caret visible and offers reconn
   assert.match(css, /caret-color: #f6b800 !important/);
   assert.match(msg, /load failed\|failed to fetch/);
   assert.match(msg, /reliableChatRead\(/);
-  assert.match(msg, /Promise\.allSettled\(Array\.from/);
-  assert.match(msg, /const currentBuyerKey = getBuyerKey\(\)/);
-  assert.match(msg, /Promise\.race\(/);
+  assert.match(msg, /Promise\.allSettled\(\[read\(buyerKey, "buyer"\), read\(ownerKey, "owner"\)\]\)/);
+  assert.match(msg, /readInboxSnapshot/);
+  assert.match(msg, /setInboxChecked\(true\)/);
   assert.match(msg, /messageReadInFlightRef/);
   assert.match(msg, /setConnectionRetry\(\(value\) => value \+ 1\)/);
 });
