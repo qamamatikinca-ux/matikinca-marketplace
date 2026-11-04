@@ -6,6 +6,8 @@ export type ModelFamilyPhoto = {
   name: string;
   caption: string;
   yearVerified: boolean;
+  fallbackSrc?: string;
+  sourceUrl?: string;
 };
 
 const clean = (value: string) =>
@@ -43,6 +45,8 @@ export function modelFamilyPhoto(
       name: row.brand + " " + row.model,
       caption: yearVerified ? "Model-year reference" : "Actual model-family photo · year and trim may differ",
       yearVerified,
+      fallbackSrc: verifiedExternalImage ? "https://pbs.twimg.com/media/GIKP1V6WAAAbYnr.jpg" : undefined,
+      sourceUrl: verifiedExternalImage ? "https://www.fawpretoria.co.za/new-trucks/truck-tractors/j5n-28-380ft-6-4" : undefined,
     };
   }
   const row = bakkiePhotos.find(item => clean(item.make) === manufacturer && clean(item.model) === family
