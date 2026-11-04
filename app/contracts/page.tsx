@@ -104,7 +104,6 @@ export default function ContractsPage() {
   const [query, setQuery] = useState("");
   const [city, setCity] = useState("");
   const [group, setGroup] = useState(ALL);
-  const [equipment, setEquipment] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("newest");
   const [page, setPage] = useState(1);
 
@@ -113,7 +112,6 @@ export default function ContractsPage() {
     setQuery(params.get("search") || "");
     setCity(params.get("city") || "");
     setGroup(params.get("category") || ALL);
-    setEquipment(params.get("equipment") || "");
     const sort = params.get("sort");
     if (sort === "oldest" || sort === "starting" || sort === "newest") setSortMode(sort);
   }, []);
@@ -144,14 +142,12 @@ export default function ContractsPage() {
 
   const filtered = useMemo(() => {
     const q = normaliseSearch(query);
-    const equipmentQuery = normaliseSearch(equipment);
     const next = rows.filter((row) => {
       const requested = vehicleNeeded(row);
       const searchable = `${row.title || ""} ${row.city || ""} ${row.vehicle_group || ""} ${requested} ${row.rate || ""} ${row.posted_by || ""} ${cleanDescription(row.description)}`;
       const type = contractTypeFromDescription(row.description);
       const groupMatches = group === ALL || normaliseSearch(type || row.vehicle_group || "") === normaliseSearch(group);
-      const equipmentMatches = !equipmentQuery || flexibleMatch(`${requested} ${row.title || ""} ${cleanDescription(row.description)}`, equipmentQuery);
-      return (!q || flexibleMatch(searchable, q)) && groupMatches && equipmentMatches && (!city.trim() || matchesSouthAfricanLocation(row.city || searchable, city));
+      return (!q || flexibleMatch(searchable, q)) && groupMatches && (!city.trim() || matchesSouthAfricanLocation(row.city || searchable, city));
     });
     return next.sort((a, b) => {
       if (sortMode === "starting") return startTime(a) - startTime(b);
@@ -159,9 +155,9 @@ export default function ContractsPage() {
       const right = new Date(b.created_at || 0).getTime();
       return sortMode === "oldest" ? left - right : right - left;
     });
-  }, [rows, query, city, group, equipment, sortMode]);
+  }, [rows, query, city, group, sortMode]);
 
-  useEffect(() => setPage(1), [query, city, group, equipment, sortMode]);
+  useEffect(() => setPage(1), [query, city, group, sortMode]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
   const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -171,21 +167,20 @@ export default function ContractsPage() {
     if (query.trim()) params.set("search", query.trim());
     if (city.trim()) params.set("city", city.trim());
     if (group !== ALL) params.set("category", group);
-    if (equipment.trim()) params.set("equipment", equipment.trim());
     if (sortMode !== "newest") params.set("sort", sortMode);
     window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params.toString()}` : ""}`);
     requestAnimationFrame(() => document.getElementById("matching-contracts")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   function clearFilters() {
-    setQuery(""); setCity(""); setGroup(ALL); setEquipment(""); setSortMode("newest");
+    setQuery(""); setCity(""); setGroup(ALL); setSortMode("newest");
     window.history.replaceState({}, "", window.location.pathname);
   }
 
   const surface = darkMode ? "border-white/10 bg-[#101010]" : "border-black/10 bg-white";
   const muted = darkMode ? "text-white/52" : "text-black/52";
   const field = "h-12 w-full min-w-0 rounded-xl border border-[#dedede] bg-white px-4 text-base font-semibold text-[#171717] outline-none placeholder:text-[#929292] focus:border-[#f6b800]";
-  const hasFilters = Boolean(query.trim() || city.trim() || equipment.trim() || group !== ALL || sortMode !== "newest");
+  const hasFilters = Boolean(query.trim() || city.trim() || group !== ALL || sortMode !== "newest");
 
   return (
     <main className={`min-h-screen scroll-smooth ${darkMode ? "bg-black text-white" : "bg-[#f8f8f7] text-black"}`} data-loadlink-contracts-marketplace="contract-search-20260823-restored">
@@ -205,18 +200,18 @@ export default function ContractsPage() {
           <div data-loadlink-contracts-search-shell className={`loadlink-glass mt-6 rounded-[24px] border p-4 shadow-[0_20px_60px_rgba(0,0,0,.18)] backdrop-blur-xl md:p-5 ${darkMode ? "border-white/20 bg-black/72 text-white" : "border-white/55 bg-[#b7b4ab]/85 text-black"}`}>
             <div className="grid gap-3 md:grid-cols-2">
               <label className="block min-w-0">
-                <span className="mb-2 block text-[10px] font-black uppercase tracking-[.15em] text-[#70716f]">Contract or scope</span>
+                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-white/70" : "text-[#70716f]"}`}>Contract or scope</span>
                 <input type="search" inputMode="search" value={query} onChange={event => setQuery(event.target.value)}
                   onKeyDown={event => { if (event.key === "Enter") searchContracts(); }}
                   placeholder="Mining, transport, recurring delivery..." className={field} />
               </label>
               <label className="relative block min-w-0">
-                <span className="mb-2 block text-[10px] font-black uppercase tracking-[.15em] text-[#70716f]">Operating location</span>
+                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-white/70" : "text-[#70716f]"}`}>Location</span>
                 <SouthAfricaLocationInput id="loadlink-contract-location" value={city} onChange={setCity}
                   darkMode={darkMode} placeholder="City, town or province" ariaLabel="Contract location" className={field} />
               </label>
               <label className="block min-w-0 md:col-span-2">
-                <span className="mb-2 block text-[10px] font-black uppercase tracking-[.15em] text-[#70716f]">Contract category</span>
+                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-white/70" : "text-[#70716f]"}`}>Category</span>
                 <select value={group} onChange={event => setGroup(event.target.value)} className={field}
                   aria-label="Contract category" style={{ colorScheme: "light" }}>
                   <option value={ALL}>All contract types</option>
@@ -224,19 +219,10 @@ export default function ContractsPage() {
                 </select>
               </label>
             </div>
-            <details className="mt-3 rounded-xl border border-black/10 bg-white/65 px-3 py-2 text-black">
-              <summary className="cursor-pointer py-1 text-xs font-bold">More filters{equipment ? " · Vehicle filter active" : " · Vehicle or mobile unit"}</summary>
-              <label className="mt-3 block">
-                <span className="mb-2 block text-[10px] font-black uppercase tracking-[.13em] text-[#70716f]">Equipment required</span>
-                <input type="search" value={equipment} onChange={event => setEquipment(event.target.value)}
-                  onKeyDown={event => { if (event.key === "Enter") searchContracts(); }}
-                  placeholder="Side tipper, lowbed, reefer, mobile unit..." className={field} />
-              </label>
-            </details>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <button type="button" onClick={searchContracts} className="min-h-12 w-full rounded-xl border border-[#f6b800] bg-[#f6b800] px-7 text-sm font-black uppercase tracking-wide text-black active:scale-[.99] sm:flex-none">Search contracts</button>
-              {hasFilters ? <button type="button" onClick={clearFilters} className="min-h-12 rounded-full border border-white/24 bg-black/45 px-5 text-xs font-black text-white">Clear</button> : null}
-            </div>
+            <button type="button" onClick={searchContracts}
+              className="mt-4 min-h-12 w-full rounded-xl border border-[#f6b800] bg-[#f6b800] px-7 text-sm font-black uppercase tracking-wide text-black transition active:scale-[.99]">Search contracts</button>
+            {hasFilters ? <button type="button" onClick={clearFilters}
+              className={`mt-2 min-h-10 rounded-xl border px-4 text-xs font-semibold ${darkMode ? "border-white/15 text-white" : "border-black/15 text-black"}`}>Clear search</button> : null}
           </div>
 
           <div className="mt-5 grid max-w-xl gap-3 sm:grid-cols-2">
