@@ -339,13 +339,13 @@ function transientChatReadError(error: unknown) {
 
 async function reliableChatRead<T extends { error?: { message?: string } | null }>(read: () => PromiseLike<T>): Promise<T> {
   let lastError: unknown;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       const result = await read();
-      if (!result.error || !transientChatReadError(result.error) || attempt === 2) return result;
+      if (!result.error || !transientChatReadError(result.error) || attempt === 1) return result;
       lastError = result.error;
     } catch (error) {
-      if (!transientChatReadError(error) || attempt === 2) throw error;
+      if (!transientChatReadError(error) || attempt === 1) throw error;
       lastError = error;
     }
     await new Promise<void>((resolve) => window.setTimeout(resolve, 260 * (attempt + 1)));
@@ -891,7 +891,7 @@ export default function MessagesPage() {
         const result = await reliableChatRead(() => supabase.rpc("get_listing_guest_messages", {
           p_thread_id: conversation.id,
           p_access_key: conversation.accessKey,
-        }).abortSignal(AbortSignal.timeout(5000)));
+        }).abortSignal(AbortSignal.timeout(4000)));
         if (result.error) throw result.error;
         setError((current) => /connection interrupted/i.test(current) ? "" : current);
         const rows = (result.data || []) as ChatMessage[];
@@ -961,6 +961,12 @@ export default function MessagesPage() {
         if (remembered.length) {
           conversationsRef.current = remembered;
           setConversations(remembered);
+          const initialThread = new URLSearchParams(window.location.search).get("thread") || "";
+          const initialSelection = initialThread || (window.innerWidth >= 768 ? remembered[0].id : "");
+          if (initialSelection && remembered.some(item => item.id === initialSelection)) {
+            selectedIdRef.current = initialSelection;
+            setSelectedId(initialSelection);
+          }
         }
         // Show the actual inbox immediately, not a full-screen loading wall.
         setLoading(false);
