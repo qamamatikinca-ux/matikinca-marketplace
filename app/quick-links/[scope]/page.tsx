@@ -3,7 +3,7 @@
 import LoadLinkImage from "@/components/LoadLinkImage";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
@@ -83,12 +83,22 @@ export default function QuickLinkPicturePage() {
   const router = useRouter();
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const raw = String(params.scope || "job");
-  const scope: QuickScope = raw in CONFIG ? raw as QuickScope : "job";
+  const initialScope: QuickScope = raw in CONFIG ? raw as QuickScope : "job";
+  const [scope, setScope] = useState<QuickScope>(initialScope);
   const config = CONFIG[scope];
+  useEffect(() => { setScope(initialScope); }, [initialScope]);
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("");
   const [contractType, setContractType] = useState<ContractType | "">("");
-  const [imageFailed, setImageFailed] = useState(false);
+  const [imageFailures, setImageFailures] = useState<Partial<Record<QuickScope, boolean>>>({});
+
+  function chooseScope(next: QuickScope) {
+    if (next === scope) return;
+    // Switch the form, text and hero instantly. There is no route fetch or
+    // component remount; Next.js navigation previously blocked on a new page.
+    setScope(next);
+    window.history.replaceState(window.history.state, "", "/quick-links/" + next);
+  }
 
   const searchHref = useMemo(() => {
     if (scope === "contract") {
@@ -115,15 +125,18 @@ export default function QuickLinkPicturePage() {
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <section className="relative isolate min-h-[430px] overflow-hidden bg-black text-white sm:min-h-[500px]">
-        <LoadLinkImage
-          src={imageFailed ? config.fallback : config.image}
-          onError={() => setImageFailed(true)}
-          alt=""
-          loading="eager"
-          fetchPriority="high"
-          sizes="100vw"
-          className="absolute inset-0 h-full w-full object-cover object-center"
-        />
+        {NAV.map((item) => (
+          <LoadLinkImage key={item.value}
+            src={imageFailures[item.value] ? CONFIG[item.value].fallback : CONFIG[item.value].image}
+            onError={() => setImageFailures(previous => ({ ...previous, [item.value]: true }))}
+            alt=""
+            aria-hidden="true"
+            loading="eager"
+            fetchPriority={item.value === scope ? "high" : "low"}
+            sizes="100vw"
+            className={"absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-150 " + (item.value === scope ? "opacity-100" : "pointer-events-none opacity-0")}
+          />
+        ))}
         <div className="absolute inset-0 bg-gradient-to-r from-black/82 via-black/54 to-black/12" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/10" />
         <div className="relative mx-auto flex min-h-[430px] max-w-7xl flex-col justify-end px-5 pb-8 sm:min-h-[500px] sm:px-7 md:px-10 md:pb-10">
@@ -137,16 +150,17 @@ export default function QuickLinkPicturePage() {
         <nav data-loadlink-quick-search-nav="true" className="no-scrollbar overflow-x-auto py-1" aria-label="Quick search categories">
           <div className="flex min-w-max items-center gap-1.5">
             {NAV.map((item) => (
-              <Link
+              <button
                 key={item.value}
-                href={`/quick-links/${item.value}`}
-                aria-current={item.value === scope ? "page" : undefined}
+                type="button"
+                onClick={() => chooseScope(item.value)}
+                aria-pressed={item.value === scope}
                 className={`inline-flex min-h-10 shrink-0 items-center justify-center rounded-full border px-4 text-[12px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f6b800] ${item.value === scope
                   ? "border-[#f6b800] bg-[#f6b800] text-black"
                   : darkMode ? "border-white/15 bg-[#151615] text-white/85" : "border-black/10 bg-white text-black/75"}`}
               >
-                {item.label}
-              </Link>
+                {item.value === "asset" && !darkMode ? "Bakkies" : item.label}
+              </button>
             ))}
           </div>
         </nav>
