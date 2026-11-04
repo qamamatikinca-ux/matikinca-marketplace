@@ -12,7 +12,10 @@ import { useEffect, useMemo, useState } from "react";
 import LoadLinkPagination from "@/components/LoadLinkPagination";
 import DealershipListingActions20260822 from "@/components/DealershipListingActions20260822";
 import { formatListingRate } from "@/lib/formatCurrency";
-import { flexibleMatch, normaliseSearch } from "@/lib/smartSearch";
+import { normaliseSearch } from "@/lib/smartSearch";
+import { truckCatalog } from "@/lib/truckCatalog";
+import { lightCommercialCatalog } from "@/lib/southAfricanLightCommercialCatalog";
+import VehicleMakeModelPicker, { type MarketBrand } from "@/components/VehicleMakeModelPicker";
 
 type VehicleRow = {
   id: string;
@@ -36,7 +39,7 @@ type VehicleRow = {
 };
 
 type ViewMode = "all" | "vehicles" | "trucks" | "trailers_units";
-type EquipmentKind = "vehicle" | "truck" | "trailer" | "mobile_unit";
+type EquipmentKind = "vehicle" | "truck" | "trailer" | "mobile_unit" | "equipment";
 type Intent = "all" | "sale" | "rental";
 type SortMode = "newest" | "price_low" | "price_high";
 
@@ -74,12 +77,14 @@ function equipmentKind(row: VehicleRow): EquipmentKind {
   if (mobilePattern.test(type) || type === "mobile unit") return "mobile_unit";
   if (trailerPattern.test(type)) return "trailer";
   if (truckPattern.test(type)) return "truck";
+  if (/equipment|generator|compressor|excavator|forklift|earthmoving/.test(type)) return "equipment";
   if (/car|bakkie|van|suv|sedan|pickup|motorbike|motorcycle|bus|vehicle/i.test(type)) return "vehicle";
 
   // Handle older listings where listing type is a specific product, not a category.
   if (mobilePattern.test(subtype) || mobilePattern.test(title) || mobilePattern.test(group)) return "mobile_unit";
   if (trailerPattern.test(subtype) || trailerPattern.test(title) || group.includes("trailers") && !group.includes("trucks")) return "trailer";
   if (truckPattern.test(subtype) || truckPattern.test(title) || group === "trucks") return "truck";
+  if (/equipment|generator|compressor|excavator|forklift|earthmoving/.test(`${subtype} ${title} ${group}`)) return "equipment";
   return "vehicle";
 }
 
@@ -87,7 +92,51 @@ function equipmentMatches(kind: EquipmentKind, view: ViewMode) {
   return view === "all" ||
     (view === "vehicles" && kind === "vehicle") ||
     (view === "trucks" && kind === "truck") ||
-    (view === "trailers_units" && (kind === "trailer" || kind === "mobile_unit"));
+    (view === "trailers_units" && (kind === "trailer" || kind === "mobile_unit" || kind === "equipment"));
+}
+
+const MOBILE_EQUIPMENT_TYPES = [
+  { value: "all", label: "All trailers, mobile units & equipment", pattern: null },
+  { value: "trailers", label: "All trailers", pattern: /trailer|tautliner|lowbed|flatbed|tipper|car carrier|superlink/i },
+  { value: "lowbed", label: "Lowbed trailers", pattern: /lowbed|low-bed/i },
+  { value: "flatbed", label: "Flatbed trailers", pattern: /flatbed|flat-bed/i },
+  { value: "tautliner", label: "Tautliner trailers", pattern: /tautliner|curtainsider/i },
+  { value: "refrigerated", label: "Refrigerated trailers", pattern: /reefer|refrigerated trailer/i },
+  { value: "mobile_kitchen", label: "Mobile kitchens", pattern: /mobile kitchen|food truck|food trailer|catering unit/i },
+  { value: "mobile_fridge", label: "Mobile fridges & freezers", pattern: /mobile fridge|mobile freezer|cold room|refrigerated mobile unit/i },
+  { value: "mobile_toilet", label: "Mobile toilets", pattern: /mobile toilet|ablution|portable toilet/i },
+  { value: "mobile_office", label: "Mobile offices", pattern: /mobile office|site office|portable office/i },
+  { value: "mobile_clinic", label: "Mobile clinics", pattern: /mobile clinic|medical unit/i },
+  { value: "mobile_unit", label: "Other mobile units", pattern: /mobile unit|mobile classroom|mobile workshop|mobile accommodation|mobile shower/i },
+  { value: "equipment", label: "Equipment", pattern: /equipment|generator|compressor|excavator|forklift|earthmoving/i },
+] as const;
+
+function matchedSubtype(row: VehicleRow, value: string) {
+  if (value === "all") return true;
+  const kind = equipmentKind(row);
+  if (value === "trailers") return kind === "trailer";
+  if (value === "equipment") return kind === "equipment";
+  const selected = MOBILE_EQUIPMENT_TYPES.find(item => item.value === value);
+  return !selected?.pattern || selected.pattern.test([
+    row.title, row.vehicle_group, readMeta(row.description, "Listing type"),
+    readMeta(row.description, "Vehicle subtype"), readMeta(row.description, "Unit type"),
+  ].join(" "));
+}
+
+function catalogueMake(name: string) {
+  return name.replace(/\s+(?:Trucks|Truck & Bus|Motors)$/i, "").trim();
+}
+function rowHasMake(row: VehicleRow, make: string) {
+  const wanted = normaliseSearch(make);
+  const explicit = normaliseSearch(readMeta(row.description, "Make") || readMeta(row.description, "Brand"));
+  if (explicit) return explicit === wanted || explicit.startsWith(wanted + " ") || wanted.startsWith(explicit + " ");
+  return (" " + normaliseSearch(row.title || "") + " ").includes(" " + wanted + " ");
+}
+function rowHasModel(row: VehicleRow, model: string) {
+  const wanted = normaliseSearch(model);
+  const explicit = normaliseSearch(readMeta(row.description, "Model") || readMeta(row.description, "Variant"));
+  if (explicit) return explicit === wanted || explicit.startsWith(wanted + " ") || wanted.startsWith(explicit + " ");
+  return (" " + normaliseSearch(row.title || "") + " ").includes(" " + wanted + " ");
 }
 
 function intentMatch(row: VehicleRow, intent: Intent) {
@@ -168,6 +217,9 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
   const [intent,setIntent]=useState<Intent>("all");
   const [makeQuery, setMakeQuery] = useState("");
   const [modelQuery, setModelQuery] = useState("");
+  const [unitType, setUnitType] = useState("all");
+  const [makePickerOpen, setMakePickerOpen] = useState(false);
+  const [pickerPanel, setPickerPanel] = useState<"makes" | "models">("makes");
   const [seen, setSeen] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -204,25 +256,50 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
     return () => window.removeEventListener("hashchange", syncHash);
   }, []);
 
-  const brandOptions = useMemo(() => {
-    const knownMakes = ["MAN", "Mercedes-Benz", "Volvo", "Scania", "Isuzu", "Hino", "UD Trucks", "FAW", "Toyota", "Ford", "Volkswagen", "Iveco", "DAF", "Fuso", "Nissan", "Mitsubishi"];
-    return knownMakes.map(name => ({
-      name,
-      count: rows.filter(row => {
-        const make = readMeta(row.description, "Make") || readMeta(row.description, "Brand") || "";
-        return normaliseSearch(make || row.title || "").includes(normaliseSearch(name));
-      }).length,
-    })).filter(option => option.count > 0).sort((a, b) => b.count - a.count).slice(0, 7);
-  }, [rows]);
+  const onModeChange = (next: ViewMode) => {
+    if (next === mode) return;
+    setMode(next);
+    setMakeQuery("");
+    setModelQuery("");
+    setUnitType("all");
+    setMakePickerOpen(false);
+  };
+  const makeModelVisible = mode === "trucks" || mode === "vehicles";
+  const brandOptions = useMemo<MarketBrand[]>(() => {
+    if (mode !== "trucks" && mode !== "vehicles") return [];
+    const stock = rows.filter(row => equipmentMatches(equipmentKind(row), mode));
+    const catalogue = mode === "trucks" ? truckCatalog : lightCommercialCatalog;
+    const brands = new Map<string, Set<string>>();
+    for (const brand of catalogue) {
+      const name = catalogueMake(brand.name);
+      brands.set(name, new Set(brand.models.map(model => model.name)));
+    }
+    for (const row of stock) {
+      const make = readMeta(row.description, "Make") || readMeta(row.description, "Brand");
+      if (!make) continue;
+      if (!brands.has(make)) brands.set(make, new Set());
+      const model = readMeta(row.description, "Model");
+      if (model) brands.get(make)?.add(model);
+    }
+    return [...brands.entries()].map(([name, modelNames]) => {
+      const matches = stock.filter(row => rowHasMake(row, name));
+      return {
+        name, count: matches.length,
+        models: [...modelNames].sort((a,b) => a.localeCompare(b)).map(model => ({
+          name: model, count: matches.filter(row => rowHasModel(row, model)).length,
+        })),
+      };
+    }).sort((a,b) => a.name.localeCompare(b.name));
+  }, [mode, rows]);
 
   const visible=useMemo(()=>{
-    const make = normaliseSearch(makeQuery);
-    const model = normaliseSearch(modelQuery);
     const filtered=rows.filter(row => {
       if (!equipmentMatches(equipmentKind(row), mode) || !intentMatch(row, intent)) return false;
-      const manufacturer = [readMeta(row.description, "Make"), readMeta(row.description, "Brand"), row.title || ""].join(" ");
-      const variant = [readMeta(row.description, "Model"), readMeta(row.description, "Variant"), readMeta(row.description, "Vehicle subtype"), row.title || ""].join(" ");
-      return (!make || flexibleMatch(manufacturer, make)) && (!model || flexibleMatch(variant, model));
+      if (mode === "trailers_units") return matchedSubtype(row, unitType);
+      if (mode === "trucks" || mode === "vehicles") {
+        return (!makeQuery || rowHasMake(row, makeQuery)) && (!modelQuery || rowHasModel(row, modelQuery));
+      }
+      return true;
     });
     return [...filtered].sort((first,second)=>{
       if(sort!=="newest"){
@@ -233,7 +310,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
       }
       return new Date(second.created_at||0).getTime()-new Date(first.created_at||0).getTime();
     });
-  },[mode,rows,sort,intent,makeQuery,modelQuery]);
+  },[mode,rows,sort,intent,makeQuery,modelQuery,unitType]);
 
   const promoted = useMemo(() =>
     rows.filter(isActiveVehiclePromotion).sort((a,b) => Number(b.display_tier || 1) - Number(a.display_tier || 1) ||
@@ -244,7 +321,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
     return visible.slice(start, start + LISTINGS_PER_PAGE);
   }, [currentPage, visible]);
 
-  useEffect(() => { setCurrentPage(1); }, [mode, sort, intent, makeQuery, modelQuery]);
+  useEffect(() => { setCurrentPage(1); }, [mode, sort, intent, makeQuery, modelQuery, unitType]);
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages); }, [currentPage, totalPages]);
 
   function changePage(nextPage: number) {
@@ -305,56 +382,68 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
           </div>
           <LoadLinkSortControl darkMode={darkMode} value={sort} onChange={value=>setSort(value as SortMode)}
  options={[{value:"newest",label:"Newest first"},{value:"price_low",label:"Price: low to high"},{value:"price_high",label:"Price: high to low"}]}
- equipment={{value:mode,onChange:value=>setMode(value as ViewMode),options:[{value:"all",label:"All equipment"},{value:"trucks",label:"Trucks"},{value:"vehicles",label:"Vehicles"},{value:"trailers_units",label:"Trailers & mobile units"}]}}
+ equipment={{value:mode,onChange:value=>onModeChange(value as ViewMode),options:[{value:"all",label:"All equipment"},{value:"trucks",label:"Trucks"},{value:"vehicles",label:"Vehicles"},{value:"trailers_units",label:"Trailers, mobile units & equipment"}]}}
  filter={{value:intent,onChange:value=>setIntent(value as Intent),resultCount:visible.length,options:[{value:"all",label:"All listings"},{value:"sale",label:"For sale",description:"Available to buy"},{value:"rental",label:"For rent",description:"Available to hire or rent"}]}}
  />
         </div>
 
-        <section className={"mt-6 rounded-[22px] border p-4 sm:p-5 " + surface} aria-label="Search vehicle makes and models">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="text-base font-bold">Find a vehicle by make or model</h3>
-              <p className={"mt-1 text-xs leading-5 " + muted}>Search for a truck, bakkie, van or commercial vehicle. Results update as you type.</p>
+        {makeModelVisible ? (
+          <section data-loadlink-vehicle-make-search="category-only"
+            className={"loadlink-glass mt-6 rounded-[24px] border p-4 shadow-[0_20px_60px_rgba(0,0,0,.12)] backdrop-blur-xl md:p-5 " +
+              (darkMode ? "border-white/20 bg-black/72 text-white" : "border-white/55 bg-[#b7b4ab]/85 text-black")}>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="block min-w-0">
+                <span className={"mb-2 block text-[10px] font-black uppercase tracking-[.15em] " +
+                  (darkMode ? "text-white/70" : "text-[#70716f]")}>Make / manufacturer</span>
+                <button type="button" onClick={() => { setPickerPanel("makes"); setMakePickerOpen(true); }}
+                  className="flex h-12 w-full items-center justify-between gap-3 rounded-xl border border-[#dedede] bg-white px-4 text-left text-base font-semibold text-[#171717]">
+                  <span className={makeQuery ? "truncate" : "truncate text-[#929292]"}>{makeQuery || "Select a make"}</span>
+                  <span aria-hidden="true">›</span>
+                </button>
+              </label>
+              <label className="block min-w-0">
+                <span className={"mb-2 block text-[10px] font-black uppercase tracking-[.15em] " +
+                  (darkMode ? "text-white/70" : "text-[#70716f]")}>Model or variant</span>
+                <button type="button" onClick={() => { setPickerPanel("models"); setMakePickerOpen(true); }}
+                  className="flex h-12 w-full items-center justify-between gap-3 rounded-xl border border-[#dedede] bg-white px-4 text-left text-base font-semibold text-[#171717]">
+                  <span className={modelQuery ? "truncate" : "truncate text-[#929292]"}>{modelQuery || "Select a model"}</span>
+                  <span aria-hidden="true">›</span>
+                </button>
+              </label>
             </div>
-            {(makeQuery || modelQuery) ? <button type="button" onClick={() => { setMakeQuery(""); setModelQuery(""); }}
-              className={"min-h-9 rounded-full border px-4 text-xs font-bold " + (darkMode ? "border-white/15" : "border-black/10")}>Clear search</button> : null}
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <label className="min-w-0">
-              <span className={"mb-2 block text-[11px] font-semibold " + muted}>Make / manufacturer</span>
-              <input type="search" list="loadlink-vehicle-make-suggestions" value={makeQuery}
-                onChange={event => setMakeQuery(event.target.value)}
-                placeholder="MAN, Volvo, Toyota, Ford..."
-                className={"h-12 w-full min-w-0 rounded-xl border px-4 text-base outline-none focus:border-[#f6b800] " + (darkMode ? "border-white/15 bg-[#1b1b1b] text-white placeholder:text-white/35" : "border-black/15 bg-[#fafafa] text-black placeholder:text-black/35")} />
-              <datalist id="loadlink-vehicle-make-suggestions">{brandOptions.map(option => <option key={option.name} value={option.name} />)}</datalist>
-            </label>
-            <label className="min-w-0">
-              <span className={"mb-2 block text-[11px] font-semibold " + muted}>Model or variant</span>
-              <input type="search" value={modelQuery} onChange={event => setModelQuery(event.target.value)}
-                placeholder="TGX, Hilux, Actros, Ranger..."
-                className={"h-12 w-full min-w-0 rounded-xl border px-4 text-base outline-none focus:border-[#f6b800] " + (darkMode ? "border-white/15 bg-[#1b1b1b] text-white placeholder:text-white/35" : "border-black/15 bg-[#fafafa] text-black placeholder:text-black/35")} />
-            </label>
-          </div>
-          {brandOptions.length > 0 ? <div className="mt-4 flex flex-wrap gap-2" aria-label="Popular makes in current listings">
-            {brandOptions.map(option => <button key={option.name} type="button"
-              onClick={() => setMakeQuery(current => current === option.name ? "" : option.name)}
-              aria-pressed={makeQuery === option.name}
-              className={"min-h-9 rounded-full border px-3 text-[11px] font-semibold " + (makeQuery === option.name ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/15 bg-white/[.04]" : "border-black/10 bg-[#f7f7f7]")}>
-              {option.name} <span className="opacity-55">{option.count}</span>
-            </button>)}
-          </div> : null}
-          <div className="mt-4 flex items-center justify-between gap-3">
-            <p className={"text-[11px] font-semibold " + muted}>{loading ? "Checking stock…" : String(visible.length) + " matching listing" + (visible.length === 1 ? "" : "s")}</p>
-            <button type="button" onClick={() => document.getElementById("loadlink-vehicle-results")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#f6b800] px-5 text-xs font-bold text-black">Search vehicles</button>
-          </div>
-        </section>
+            <button type="button"
+              onClick={() => document.getElementById("loadlink-vehicle-results")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="mt-4 min-h-12 w-full rounded-xl border border-[#f6b800] bg-[#f6b800] px-7 text-sm font-black uppercase tracking-wide text-black transition active:scale-[.99]">
+              Search {mode}
+            </button>
+            {makeQuery || modelQuery ? <button type="button" onClick={() => { setMakeQuery(""); setModelQuery(""); }}
+              className={"mt-2 min-h-9 w-full text-xs font-semibold " + (darkMode ? "text-white/70" : "text-black/60")}>Clear make and model</button> : null}
+          </section>
+        ) : null}
 
         <div className="mt-6 flex max-w-full gap-2 overflow-x-auto pb-1">
-          {([["all", "All equipment"], ["trucks", "Trucks"], ["vehicles", "Vehicles"], ["trailers_units", "Trailers & mobile units"]] as Array<[ViewMode, string]>).map(([value, label]) => (
-            <button key={value} type="button" onClick={() => setMode(value)} className={`shrink-0 rounded-full border px-4 py-2.5 text-xs font-black transition ${mode === value ? "border-[#f6b800] bg-[#f6b800] text-black" : surface}`}>{label}</button>
+          {([["all", "All equipment"], ["trucks", "Trucks"], ["vehicles", "Vehicles"], ["trailers_units", "Trailers, mobile units & equipment"]] as Array<[ViewMode, string]>).map(([value, label]) => (
+            <button key={value} type="button" onClick={() => onModeChange(value)} className={`shrink-0 rounded-full border px-4 py-2.5 text-xs font-black transition ${mode === value ? "border-[#f6b800] bg-[#f6b800] text-black" : surface}`}>{label}</button>
           ))}
         </div>
+
+        {mode === "trailers_units" ? (
+          <label className={"mt-5 flex min-h-12 max-w-xl flex-wrap items-center gap-3 rounded-xl border px-4 " +
+            (darkMode ? "border-white/15 bg-[#141414] text-white" : "border-black/10 bg-white text-black")}>
+            <span className={"shrink-0 text-xs font-bold " + muted}>Type</span>
+            <select value={unitType} onChange={event => setUnitType(event.target.value)}
+              aria-label="Choose trailer, mobile unit or equipment type"
+              className="min-h-11 min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none">
+              {MOBILE_EQUIPMENT_TYPES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+          </label>
+        ) : null}
+        {makePickerOpen && makeModelVisible ? (
+          <VehicleMakeModelPicker darkMode={darkMode} title={mode === "trucks" ? "Trucks" : "Vehicles"}
+            brands={brandOptions} currentMake={makeQuery} currentModel={modelQuery} initialPanel={pickerPanel}
+            onChoose={(make, model) => { setMakeQuery(make); setModelQuery(model); setMakePickerOpen(false); }}
+            onClose={() => setMakePickerOpen(false)} />
+        ) : null}
 
         <div id="loadlink-vehicle-results" className="scroll-mt-28" />
         {!loading && visible.length ? <div className={`mt-5 text-xs font-bold ${muted}`}>{visible.length} approved listing{visible.length === 1 ? "" : "s"}</div> : null}
@@ -432,7 +521,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
           <div className={`loadlink-glass mt-6 rounded-[24px] border p-8 text-center ${surface}`}>
             <h3 className="text-xl font-black">No approved listings in this category yet</h3>
             <p className={`mx-auto mt-2 max-w-md text-sm font-semibold leading-6 ${muted}`}>Try All equipment and All listings, or change your filters.</p>
-            {(mode !== "all" || intent !== "all" || makeQuery || modelQuery) ? <button type="button" onClick={() => {setMode("all");setIntent("all");setMakeQuery("");setModelQuery("");}} className="mt-4 min-h-10 rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">Clear filters</button> : null}
+            {(mode !== "all" || intent !== "all" || makeQuery || modelQuery || unitType !== "all") ? <button type="button" onClick={() => {onModeChange("all");setIntent("all");setUnitType("all");}} className="mt-4 min-h-10 rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">Clear filters</button> : null}
           </div>
         )}
       </div>
