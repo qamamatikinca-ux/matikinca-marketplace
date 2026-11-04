@@ -28,7 +28,7 @@ function write(key: string, value: unknown[], limit: number): void {
   if (typeof window === "undefined" || !key) return;
   try {
     window.sessionStorage.setItem(PREFIX + key, JSON.stringify({
-      updated: Date.now(), data: value.slice(-limit),
+      updated: Date.now(), data: key.startsWith("inbox:") ? value.slice(0, limit) : value.slice(-limit),
     }));
   } catch { /* browsers may deny or clear storage; online chat still works */ }
 }
