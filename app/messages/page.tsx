@@ -975,11 +975,12 @@ export default function MessagesPage() {
           .eq("id", user.id)
           .maybeSingle();
 
-        void Promise.allSettled(
-          Array.from(new Set([getBuyerKey(), ...getOwnerKeys()])).map((accessKey) =>
-            supabase.rpc("loadlink_register_chat_access_key", { p_access_key: accessKey }),
-          ),
-        );
+        // Only the current account's buyer key needs registration. Registering
+        // every historical owner/listing key could launch hundreds of RPCs and
+        // starve the two inbox queries, especially on mobile Safari.
+        void supabase.rpc("loadlink_register_chat_access_key", {
+          p_access_key: getBuyerKey(),
+        }).then(() => undefined);
         void syncAccountState().catch(() => undefined);
         void privacyPromise.then(({ data: privacyRow }) => {
           if (!privacyRow) return;
@@ -1048,7 +1049,8 @@ export default function MessagesPage() {
         }
 
         if (!active) return;
-        await loadConversations(openedId, true);
+        // Do not hold the inbox or polling setup behind a network response.
+        void loadConversations(openedId, true).catch(() => setInboxFetchError(true));
         refreshTimer = setInterval(
           () => { if (document.visibilityState === "visible" && navigator.onLine) void loadConversations().catch(() => setInboxFetchError(true)); },
           12000,
