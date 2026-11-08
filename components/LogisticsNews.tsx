@@ -53,7 +53,7 @@ export default function LogisticsNews({ darkMode }: { darkMode: boolean }) {
 
   const refresh = useCallback(async () => {
     try {
-      const response = await fetch("/api/logistics-news?edition=trucks-logistics-v4");
+      const response = await fetch("/api/logistics-news?edition=trucks-logistics-v5");
       if (!response.ok) throw new Error("News request failed");
       const data = await response.json();
       if (alive.current && Array.isArray(data.items)) {

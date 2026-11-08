@@ -13,7 +13,7 @@ const getNews=unstable_cache(async()=>{
   const items:NewsItem[]=freshLogisticsNews(enriched.flatMap(result=>result.status==="fulfilled"?[result.value]:[]),Date.now(),45).slice(0,8);
   if(!items.length)throw new Error("No publisher headlines available");
   return {items,updatedAt:new Date().toISOString(),partial:feeds.some(result=>result.status==="rejected" || !result.value.length)};
-},["loadlink-trucks-logistics-news-v4"],{revalidate:86400,tags:["logistics-news"]});
+},["loadlink-trucks-logistics-news-v5"],{revalidate:86400,tags:["logistics-news"]});
 export async function GET(request:Request){
   const limited=serverRateLimit(request,"logistics-news",60,60000);if(limited)return limited;
   try{return NextResponse.json({...await getNews(),refreshHours:24},{headers:{"Cache-Control":"public, max-age=300, s-maxage=3600, stale-while-revalidate=86400"}});}

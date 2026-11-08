@@ -18,8 +18,8 @@ export function isLogisticsNewsItem(item: { title?: unknown; url?: unknown; summ
   try { url = new URL(item.url); } catch { return false; }
   if (url.protocol !== "https:" || url.username || url.password || (url.port && url.port !== "443") || !newsFeeds.some(feed => feed.hosts.includes(url.hostname))) return false;
   const text = clean(`${item.title} ${typeof item.summary === "string" ? item.summary : ""} ${decodeNews(url.pathname).replace(/[-_/]/g, " ")} ${context}`).toLowerCase();
-  const crime = /\b(?:crim(?:e|es|inal|inals|inality)|hijack\w*|rob(?:bery|beries|bed|bers?)|theft|thieves|thief|stolen|stealing|arrest(?:ed|s)?|police|saps|hawks|murder\w*|shooting\w*|shot|gunmen|gunfire|assault\w*|kidnap\w*|abduct\w*|smuggl\w*|syndicat\w*|fraud\w*|brib\w*|corrupt\w*|dagga|cocaine|heroin|methamphetamine|drug(?:s| bust)?|seizure\w*|seized|contraband|suspects?|criminal charges|court appearance|sentenced|fatal\w*|killed|dead|deaths?)\b/;
-  if (crime.test(text)) return false;
+  const excludedContent = /\b(?:crim(?:e|es|inal|inals|inality)|hijack\w*|rob(?:bery|beries|bed|bers?)|theft|thieves|thief|stolen|stealing|arrest(?:ed|s)?|police|saps|hawks|murder\w*|shooting\w*|shot|gunmen|gunfire|assault\w*|kidnap\w*|abduct\w*|smuggl\w*|syndicat\w*|fraud\w*|brib\w*|corrupt\w*|dagga|cocaine|heroin|methamphetamine|drug(?:s| bust)?|seizure\w*|seized|contraband|suspects?|criminal charges|court appearance|sentenced|fatal\w*|killed|dead|deaths?|crash(?:es|ed)?|collisions?|near misses?|near miss|dashcam|disasters?)\b/;
+  if (excludedContent.test(text)) return false;
   return /\b(?:trucks?|trucking|truckers?|lorr(?:y|ies)|haulage|hauliers?|freight|logistics|cargo|supply chains?|warehous(?:e|es|ing)|fleet(?:s| management)?|commercial vehicles?|heavy vehicles?|semi trailers?|truck trailers?|container(?:s| terminal)?|ports? (?:operations?|congestion|delays?|terminals?|(?:and |& )?rail)|vessel rotation)\b/.test(text);
 }
 export function freshLogisticsNews(items: NewsItem[], now = Date.now(), maxAgeDays = 3) {
