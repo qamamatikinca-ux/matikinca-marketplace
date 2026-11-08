@@ -63,7 +63,7 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
   }, []);
 
   useEffect(() => {
-    let active = true; setLoading(true); setNotice("");
+    let active = true; queueMicrotask(() => { if (active) { setLoading(true); setNotice(""); } });
     const params = new URLSearchParams({ limit: fullPage ? "50" : "4", offset: "0" });
     fetch(`/api/phase2/public-drivers?${params.toString()}`, { cache: "no-store" })
       .then(async (response) => { const result = await response.json().catch(() => ({})); if (!response.ok) throw new Error(String(result.error || "Driver profiles could not be loaded.")); return result; })
@@ -116,8 +116,8 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
           return <article className={styles.card} key={driver.id} data-loadlink-driver-card="true">
             <div className="ll-driver-heading"><div className={styles.avatar} aria-hidden="true">{driver.profile_image_url ? <LoadLinkImage src={driver.profile_image_url} alt="" className="h-full w-full rounded-full object-cover" /> : initials(driver.full_name)}</div><div className="ll-driver-name"><h3>{driver.full_name}</h3><p className={styles.headline}>{driver.headline || "Professional driver"}</p></div><span className={styles.verified}>Approved</span></div>
             <div className="ll-driver-rating">{count ? `${rating.toFixed(1)} / 5 · ${count} review${count===1?"":"s"}` : "New to LoadLink · No reviews yet"}</div>
-            <dl className="ll-driver-facts"><div><dt>Based in</dt><dd>{location || "Location on request"}</dd></div><div><dt>Experience</dt><dd>{driver.years_experience} {Number(driver.years_experience) === 1 ? "year" : "years"}</dd></div><div><dt>Licence</dt><dd>{driver.licence_code || "On request"}</dd></div><div><dt>Availability</dt><dd>{driver.availability || "On request"}</dd></div></dl>
-            <p className={styles.bio}>{driver.bio || driver.vehicle_types?.slice(0, 3).join(" · ") || "Available for suitable logistics work."}</p>
+            <dl className="ll-driver-facts"><div><dt>Based in</dt><dd>{location || "Location on request"}</dd></div><div><dt>Experience</dt><dd>{driver.years_experience ?? 0} {Number(driver.years_experience) === 1 ? "year" : "years"}</dd></div><div><dt>Licence</dt><dd>{driver.licence_code || "On request"}</dd></div><div><dt>Availability</dt><dd>{driver.availability || "On request"}</dd></div><div className="ll-driver-vehicles"><dt>Vehicle experience</dt><dd>{driver.vehicle_types?.join(", ") || "On request"}</dd></div></dl>
+            <p className={styles.bio}>{driver.bio || "Available for suitable logistics work."}</p>
             <div className="ll-driver-actions"><button data-marketplace-action type="button" className={styles.contact} onClick={() => setContactTarget(driver)}>Contact driver</button>{driver.user_id ? <button type="button" onClick={()=>setReviewTarget(driver)}>Write a review</button>:null}</div>
           </article>;
         })}</div>}

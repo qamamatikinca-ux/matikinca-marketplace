@@ -687,3 +687,14 @@ html body main[data-loadlink-settings] .ll-settings-content :is(form,section:not
     min-height: 64px !important; padding: 12px 13px !important;
   }
 }
+
+/* Driver profiles: visible details and predictable controls in both themes. */
+html body [data-loadlink-driver-card] .ll-driver-heading{display:grid;grid-template-columns:66px minmax(0,1fr) auto;align-items:center;gap:14px}
+html body [data-loadlink-driver-card] .ll-driver-heading>div:first-child{border-radius:14px!important;border-color:#8884!important;background:#8881!important}
+html body [data-loadlink-driver-card] .ll-driver-vehicles{grid-column:1/-1}
+html body [data-loadlink-driver-card]>p{display:block!important;overflow:visible!important;-webkit-line-clamp:unset!important;white-space:pre-wrap;overflow-wrap:anywhere}
+html body [data-loadlink-driver-card] .ll-driver-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:auto}
+html body [data-loadlink-driver-card] .ll-driver-actions button{min-height:46px!important;height:auto!important;border-radius:999px!important;font-size:12px!important;line-height:1.5!important;padding:12px!important}
+html body [data-loadlink-driver-card] .ll-driver-actions button:only-child{grid-column:1/-1}
+html body :is([data-loadlink-driver-card],#your-driver-profile) :is(button,a):focus-visible{outline:2px solid #c99400!important;outline-offset:3px!important;box-shadow:none!important}
+@media(max-width:480px){html body [data-loadlink-driver-card] .ll-driver-heading{grid-template-columns:54px minmax(0,1fr);gap:12px}html body [data-loadlink-driver-card] .ll-driver-heading>div:first-child{width:54px!important;height:64px!important;min-width:54px!important;grid-row:1/3}html body [data-loadlink-driver-card] .ll-driver-heading>span{grid-column:2;justify-self:start}.ll-driver-facts{gap:16px}.ll-driver-actions{grid-template-columns:1fr}}
