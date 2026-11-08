@@ -1,6 +1,7 @@
 "use client";
 
 import LoadLinkImage from "@/components/LoadLinkImage";
+import { isLogisticsNewsItem } from "@/lib/logisticsNews";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -52,10 +53,13 @@ export default function LogisticsNews({ darkMode }: { darkMode: boolean }) {
 
   const refresh = useCallback(async () => {
     try {
-      const response = await fetch("/api/logistics-news");
+      const response = await fetch("/api/logistics-news?edition=trucks-logistics-v5");
       if (!response.ok) throw new Error("News request failed");
       const data = await response.json();
-      if (alive.current && Array.isArray(data.items) && data.items.length) setItems(data.items);
+      if (alive.current && Array.isArray(data.items)) {
+        setItems(data.items.filter((item: Item) => item && isLogisticsNewsItem(item)));
+        setActiveIndex(0);
+      }
     } catch {
       // Keep the last successful headlines on screen if a refresh briefly fails.
     } finally {
@@ -87,7 +91,8 @@ export default function LogisticsNews({ darkMode }: { darkMode: boolean }) {
       <div className="mx-auto max-w-6xl">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-4xl font-black">South African logistics news</h2>
+            <h2 className="text-4xl font-black">Truck &amp; logistics news</h2>
+            <p className="mt-2 text-sm opacity-55">Trucking, freight and logistics industry updates.</p>
           </div>
           <span className="hidden text-xs font-bold opacity-45 md:block">Publisher headlines · checked daily</span>
         </div>
