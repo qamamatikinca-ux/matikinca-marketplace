@@ -15,7 +15,10 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const target = event.notification.data?.url || "/messages";
+  const supplied = event.notification.data?.url;
+  const target = typeof supplied === "string" && supplied.startsWith("/") &&
+    !supplied.startsWith("//") && !/[\\\u0000-\u001f\u007f]/.test(supplied) &&
+    !/%(?:2f|5c|0[0-9a-f]|1[0-9a-f]|7f)/i.test(supplied) ? supplied : "/notifications";
   event.waitUntil((async () => {
     const clientsList = await clients.matchAll({ type: "window", includeUncontrolled: true });
     for (const client of clientsList) {
