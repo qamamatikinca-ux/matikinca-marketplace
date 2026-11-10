@@ -104,3 +104,38 @@ html[data-loadlink-theme="light"] .ll-call-active-sheet {color:#fff!important;ba
 [data-loadlink-call-incoming] .ll-call-decline { background: #dc454a !important; color: #fff !important; }
 [data-loadlink-call-incoming] .ll-call-accept { background: #f6b800 !important; color: #101010 !important; }
 html[data-loadlink-theme="light"] [data-loadlink-call-incoming] .ll-call-sheet {color:#fff!important;background:radial-gradient(circle at 50% 7%,rgba(246,184,0,.12),transparent 54%),#141714!important;}
+
+
+/* Call identity: precise circular crop at all phone sizes; restrained commercial styling. */
+[data-loadlink-call-avatar] {
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+}
+[data-loadlink-call-avatar] img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  border-radius: 50% !important;
+}
+.ll-call-active-sheet [data-loadlink-call-avatar] {
+  border: 2px solid rgba(246,184,0,.65) !important;
+  box-shadow: none !important;
+}
+[data-loadlink-call-incoming] [data-loadlink-call-avatar] {
+  border: 2px solid rgba(246,184,0,.7) !important;
+  box-shadow: none !important;
+}
+.ll-call-active-sheet {
+  background: #101210 !important;
+}
+.ll-call-active-sheet .ll-call-status {
+  color: #e5e7e4 !important;
+}
+.ll-call-active-sheet .ll-call-control {
+  border-radius: 50% !important;
+  box-shadow: none !important;
+}
