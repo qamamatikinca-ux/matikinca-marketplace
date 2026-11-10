@@ -63,7 +63,7 @@ export default function NotificationCenter() {
   }, [signedIn, user]);
 
   useEffect(() => {
-    if (!isSupabaseConfigured) { setAuthLoading(false); return; }
+    if (!isSupabaseConfigured) return;
     let active = true;
     const initialAuthVersion = authVersionRef.current;
     supabase.auth.getUser().then(({ data }) => {
