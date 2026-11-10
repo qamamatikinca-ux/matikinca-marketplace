@@ -10,7 +10,7 @@ test("truck model selector preserves high-contrast dark background and legible m
  assert.match(picker,/darkMode \? "bg-\[#141414\] text-white"/);
  assert.match(picker,/text-\[#fafafa\]/);
  assert.doesNotMatch(picker,/overflow-hidden bg-white shadow-\[0_24px/);
- assert.match(picker,/setActiveMake\\(option.name\\); setQuery\\(""\\);/);
+ assert.ok(picker.includes('setActiveMake(option.name); setQuery("");'));
 });
 
 test("public search progressively renders independent categories and reuses recent requests", () => {
