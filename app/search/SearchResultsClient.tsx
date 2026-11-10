@@ -32,6 +32,19 @@ import {
 
 const RESULTS_PER_PAGE = 7;
 
+// Reuse only public search data for 25 seconds; never cache personal account records.
+const publicSearchCache = new Map<string, { until: number; promise: Promise<unknown> }>();
+function cachedPublicSearch<T>(key: string, load: () => Promise<T>): Promise<T> {
+  const previous = publicSearchCache.get(key);
+  if (previous && previous.until > Date.now()) return previous.promise as Promise<T>;
+  const promise = load().catch(error => {
+    if (publicSearchCache.get(key)?.promise === promise) publicSearchCache.delete(key);
+    throw error;
+  });
+  publicSearchCache.set(key, { until: Date.now() + 25_000, promise });
+  return promise;
+}
+
 function searchResultsRoute(scope: SearchScope, query: string, location: string) {
   const params = new URLSearchParams();
   if (query.trim()) params.set("q", query.trim());
@@ -66,47 +79,56 @@ export default function SearchResultsClient() {
 
   useEffect(() => {
     if (query.trim()) rememberSearchInterest(query);
-    setInterests(readSearchInterests());
-    setInput(query);
-    setPlace(location);
-    setFiltersOpen(Boolean(location));
-    setCurrentPage(1);
+    let active = true;
+    // Run URL synchronisation after effect setup, avoiding cascading renders.
+    queueMicrotask(() => {
+      if (!active) return;
+      setInterests(readSearchInterests());
+      setInput(query);
+      setPlace(location);
+      setFiltersOpen(Boolean(location));
+      setCurrentPage(1);
+    });
+    return () => { active = false; };
   }, [location, query, scope]);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-
-    Promise.allSettled([
-      fetch(`/api/job-listings?t=${Date.now()}`, { cache: "no-store" }).then((response) => response.json()),
-      fetch("/api/phase2/public-drivers?limit=50&offset=0", { cache: "no-store" }).then((response) => response.json()),
-      isSupabaseConfigured
-        ? supabase
-            .from("dealership_profiles")
-            .select("id,slug,name,short_bio,business_description,physical_location,province,verification_status,is_public")
-            .eq("verification_status", "approved")
-            .eq("is_public", true)
-            .order("updated_at", { ascending: false })
-            .limit(50)
-        : Promise.resolve({ data: [], error: null }),
-    ]).then(([listingResult, driverResult, dealerResult]) => {
+    let settled = 0;
+    const done = () => { settled += 1; if (active && settled === 3) setLoading(false); };
+    // Do not block the first usable results on the slowest unrelated API.
+    void cachedPublicSearch("listings", async () => {
+      const response = await fetch("/api/job-listings", { cache: "no-store" });
+      if (!response.ok) throw new Error("Listings request failed");
+      return (await response.json()) as { rows?: ListingSearchRow[] };
+    }).then((data) => {
       if (!active) return;
-
-      if (listingResult.status === "fulfilled") {
-        setListings(((listingResult.value.rows || []) as ListingSearchRow[]).filter(isCurrentListing));
-      }
-      if (driverResult.status === "fulfilled") {
-        setDrivers((driverResult.value.drivers || []) as DriverSearchRow[]);
-      }
-      if (dealerResult.status === "fulfilled" && !dealerResult.value.error) {
-        setDealers((dealerResult.value.data || []) as unknown as DealerSearchRow[]);
-      }
+      setListings((data.rows || []).filter(isCurrentListing));
       setLoading(false);
-    });
-
-    return () => {
-      active = false;
-    };
+    }).catch(() => undefined).finally(done);
+    void cachedPublicSearch("drivers", async () => {
+      const response = await fetch("/api/phase2/public-drivers?limit=50&offset=0", { cache: "no-store" });
+      if (!response.ok) throw new Error("Driver search request failed");
+      return (await response.json()) as { drivers?: DriverSearchRow[] };
+    }).then((data) => {
+      if (!active) return;
+      setDrivers(data.drivers || []);
+      setLoading(false);
+    }).catch(() => undefined).finally(done);
+    void cachedPublicSearch("dealers", async () => {
+      if (!isSupabaseConfigured) return [] as DealerSearchRow[];
+      const { data, error } = await supabase.from("dealership_profiles")
+        .select("id,slug,name,short_bio,business_description,physical_location,province,verification_status,is_public")
+        .eq("verification_status", "approved").eq("is_public", true)
+        .order("updated_at", { ascending: false }).limit(50);
+      if (error) throw error;
+      return (data || []) as DealerSearchRow[];
+    }).then((data) => {
+      if (!active) return;
+      setDealers(data);
+      setLoading(false);
+    }).catch(() => undefined).finally(done);
+    return () => { active = false; };
   }, []);
 
   const includeSitePages = useMemo(
@@ -145,14 +167,11 @@ export default function SearchResultsClient() {
   }, [interests, listings, loading, query, scope]);
 
   const totalPages = Math.max(1, Math.ceil(results.length / RESULTS_PER_PAGE));
+  const visiblePage = Math.min(currentPage, totalPages);
   const paginatedResults = useMemo(() => {
-    const start = (currentPage - 1) * RESULTS_PER_PAGE;
+    const start = (visiblePage - 1) * RESULTS_PER_PAGE;
     return results.slice(start, start + RESULTS_PER_PAGE);
-  }, [currentPage, results]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(totalPages);
-  }, [currentPage, totalPages]);
+  }, [visiblePage, results]);
 
   const visibleScopes = useMemo(
     () => searchScopes.filter((item) => item.value !== "page"),
@@ -178,12 +197,12 @@ export default function SearchResultsClient() {
 
   const resultCountLabel = loading ? "Searching…" : `${results.length} ${results.length === 1 ? "result" : "results"}`;
   const surface = darkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white";
-  const muted = darkMode ? "text-white/52" : "text-black/52";
+  const muted = darkMode ? "text-[#c7c7c7]" : "text-[#585858]";
 
   return (
     <main
       data-loadlink-search-page="autotrader-results"
-      className={darkMode ? "min-h-screen overflow-x-hidden bg-black text-white" : "min-h-screen overflow-x-hidden bg-[#f6f2e8] text-black"}
+      className={darkMode ? "min-h-screen overflow-x-hidden bg-black text-white" : "min-h-screen overflow-x-hidden bg-[#f7f7f5] text-[#191919]"}
     >
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
 
@@ -192,7 +211,7 @@ export default function SearchResultsClient() {
           <div className="flex items-end justify-between gap-4">
             <div>
               <p className={`text-[11px] font-semibold uppercase tracking-[.1em] ${muted}`}>LoadLink marketplace</p>
-              <h1 className="mt-1 text-2xl font-black tracking-[-.035em] sm:text-3xl">Find what you need</h1>
+              <h1 className="mt-1 text-2xl font-bold tracking-[-.035em] sm:text-3xl">Search LoadLink</h1>
             </div>
             <Link href="/" className={`hidden text-[12px] font-semibold sm:inline ${muted}`}>Back home</Link>
           </div>
@@ -206,11 +225,11 @@ export default function SearchResultsClient() {
                   role="tab"
                   aria-selected={scope === item.value}
                   onClick={() => chooseScope(item.value)}
-                  className={`h-9 shrink-0 rounded-[11px] border px-3 text-[12px] font-semibold transition active:scale-[.98] ${
+                  className={`min-h-11 shrink-0 rounded-xl border px-4 text-[13px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-[#f6b800] ${
                     scope === item.value
                       ? "border-[#f6b800] bg-[#f6b800] text-black"
                       : darkMode
-                        ? "border-white/14 bg-white/[.025] text-white/72"
+                        ? "border-white/20 bg-[#181818] text-white/90 hover:border-white/35"
                         : "border-black/10 bg-white text-black/64"
                   }`}
                 >
@@ -220,7 +239,7 @@ export default function SearchResultsClient() {
             </div>
           </div>
 
-          <form onSubmit={submit} className={`mt-3 rounded-[18px] border p-2.5 ${surface}`}>
+          <form onSubmit={submit} className={`mt-3 rounded-[16px] border p-3 sm:p-4 ${surface}`}>
             <div className={`grid h-[52px] grid-cols-[44px_minmax(0,1fr)_44px] items-center overflow-hidden rounded-[13px] border ${darkMode ? "border-white/10 bg-[#171717]" : "border-black/10 bg-[#fafafa]"}`}>
               <span className={`flex h-full items-center justify-center ${darkMode ? "text-[#f6b800]" : "text-black/45"}`}><SearchIcon /></span>
               <label htmlFor="loadlink-results-search" className="sr-only">Search LoadLink</label>
@@ -250,13 +269,13 @@ export default function SearchResultsClient() {
                 type="button"
                 onClick={() => setFiltersOpen((value) => !value)}
                 aria-expanded={filtersOpen}
-                className={`flex h-11 min-w-0 items-center gap-2 rounded-[12px] border px-3 text-left text-[12px] font-semibold ${darkMode ? "border-white/10 bg-white/[.035] text-white/75" : "border-black/10 bg-white text-black/65"}`}
+                className={`flex h-11 min-w-0 items-center gap-2 rounded-[12px] border px-3 text-left text-[12px] font-semibold ${darkMode ? "border-white/20 bg-[#202020] text-white/90" : "border-black/10 bg-white text-black/65"}`}
               >
                 <FilterIcon />
                 <span className="truncate">{place || "Filters"}</span>
               </button>
               <button type="submit" className="h-11 shrink-0 rounded-[12px] bg-[#f6b800] px-4 text-[12px] font-semibold text-black transition active:scale-[.985] sm:px-5">
-                Search {loading ? "" : results.length}
+                Search
               </button>
             </div>
 
@@ -321,7 +340,7 @@ export default function SearchResultsClient() {
               ))}
             </div>
             {results.length > RESULTS_PER_PAGE ? (
-              <LoadLinkPagination current={currentPage} total={totalPages} onChange={changePage} darkMode={darkMode} label="Search result pages" />
+              <LoadLinkPagination current={visiblePage} total={totalPages} onChange={changePage} darkMode={darkMode} label="Search result pages" />
             ) : null}
           </>
         ) : (
