@@ -87,26 +87,6 @@ export default function AccountSettingsPage() {
   const [browserAlertBusy, setBrowserAlertBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const syncHash = () => {
-      const hash = window.location.hash;
-      if (hash === "#message-privacy") setSettingsView("messages");
-      else if (hash === "#notifications") setSettingsView("notifications");
-      else if (hash === "#work") setSettingsView("work");
-      else if (hash === "#billing") setSettingsView("billing");
-      else if (hash === "#security") setSettingsView("security");
-      else if (hash === "#team") setSettingsView("team");
-      else if (hash === "#profile") setSettingsView("profile");
-      else setSettingsView("overview");
-    };
-    syncHash();
-    window.addEventListener("hashchange", syncHash);
-    void load();
-    getLoadLinkPushState().then(setPushState).catch(() => undefined);
-    setBrowserAlertState(getBrowserAlertState());
-    return () => window.removeEventListener("hashchange", syncHash);
-  }, []);
-
   const dirty = useMemo(() => PROFILE_FIELDS.some((key) => form[key] !== savedForm[key]), [form, savedForm]);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => { if (dirty) { event.preventDefault(); event.returnValue = ""; } };
@@ -143,6 +123,26 @@ export default function AccountSettingsPage() {
     writeMessagePrivacy(profileRowToMessagePrivacy(next as unknown as Record<string, unknown>));
     setLoading(false);
   }
+
+  useEffect(() => {
+    const syncHash = () => {
+      const hash = window.location.hash;
+      if (hash === "#message-privacy") setSettingsView("messages");
+      else if (hash === "#notifications") setSettingsView("notifications");
+      else if (hash === "#work") setSettingsView("work");
+      else if (hash === "#billing") setSettingsView("billing");
+      else if (hash === "#security") setSettingsView("security");
+      else if (hash === "#team") setSettingsView("team");
+      else if (hash === "#profile") setSettingsView("profile");
+      else setSettingsView("overview");
+    };
+    const initialSync = window.setTimeout(syncHash, 0);
+    window.addEventListener("hashchange", syncHash);
+    void load();
+    getLoadLinkPushState().then(setPushState).catch(() => undefined);
+    const permissionSync = window.setTimeout(() => setBrowserAlertState(getBrowserAlertState()), 0);
+    return () => { window.clearTimeout(initialSync); window.clearTimeout(permissionSync); window.removeEventListener("hashchange", syncHash); };
+  }, []);
 
   function field<K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) { setForm((current) => ({ ...current, [key]: value })); }
 
