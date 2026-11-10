@@ -6,6 +6,7 @@ import LoadLinkImage from "@/components/LoadLinkImage";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { advertisedSalePrice } from "@/lib/vehicleMarketGuide";
+import { paymentForLoan, buyingPowerForBudget } from "@/lib/financeMath";
 import styles from "./FinanceCalculator.module.css";
 
 type VehicleRow = {
@@ -17,7 +18,8 @@ type FinanceMatch = VehicleRow & { price: number; monthly: number };
 const TERMS = [12, 24, 36, 48, 60, 72, 84];
 
 function numeric(value: string) {
-  const n = Number(value.replace(/[^0-9.]/g, ""));
+  const clean = value.replace(/[,\s]/g, "").replace(/[^0-9.]/g, "");
+  const n = clean && /^\d+(?:\.\d{0,2})?$/.test(clean) ? Number(clean) : NaN;
   return Number.isFinite(n) ? Math.max(0, n) : 0;
 }
 function money(value: number) {
@@ -30,23 +32,6 @@ function isVehicle(row: VehicleRow) {
   return ["vehicle", "asset", "truck_sale", "vehicle_listing"].includes(kind)
     || /^Listing type:\s*(Truck|Bakkie|Van|Trailer|Mobile Unit)/im.test(row.description || "");
 }
-function paymentForLoan(principal: number, annualRate: number, months: number, balloonAmount: number) {
-  if (principal <= 0 || months <= 0) return 0;
-  const balloon = Math.min(Math.max(0, balloonAmount), principal);
-  const r = annualRate / 1200;
-  return r === 0
-    ? (principal - balloon) / months
-    : (principal - balloon / Math.pow(1 + r, months)) * r / (1 - Math.pow(1 + r, -months));
-}
-function buyingPowerForBudget(monthly: number, rate: number, months: number, upfront: number, fees: number, balloonRatio: number) {
-  if (monthly <= 0 || months <= 0) return 0;
-  const r = rate / 1200;
-  const annuityFactor = r === 0 ? months : (1 - Math.pow(1 + r, -months)) / r;
-  const discountedBalloonRatio = r === 0 ? balloonRatio : balloonRatio / Math.pow(1 + r, months);
-  // Monthly budget = price minus deposit/trade-in plus fees, less the discounted balloon.
-  const price = (monthly * annuityFactor + upfront - fees) / (1 - discountedBalloonRatio);
-  return Number.isFinite(price) ? Math.max(0, price) : 0;
-}
 
 export default function TruckFinanceCalculatorPage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
@@ -58,14 +43,11 @@ export default function TruckFinanceCalculatorPage() {
   const [balloonPercent, setBalloonPercent] = useState("0");
   const [fees, setFees] = useState("0");
   const [rows, setRows] = useState<VehicleRow[]>([]);
-  const [selectedId, setSelectedId] = useState("");
+  const [selectedId] = useState(() => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("vehicle") || "");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const vehicle = params.get("vehicle") || "";
-    setSelectedId(vehicle);
     let active = true;
     fetch("/api/job-listings", { cache: "no-store" })
       .then((res) => { if (!res.ok) throw Error("Unable to load vehicles"); return res.json(); })
@@ -124,7 +106,7 @@ export default function TruckFinanceCalculatorPage() {
           <div className={styles.estimate} aria-live="polite">
             <strong>{money(buyingPower)}</strong>
             <span>Estimated buying power</span>
-            <small>Based on {annualRate}% annual interest over {term} months</small>
+            <small>Based on {annualRate}% nominal annual interest over {term} months</small>
           </div>
 
           <div className={styles.form} style={{ backgroundColor: surface }}>
@@ -188,7 +170,7 @@ export default function TruckFinanceCalculatorPage() {
           </div>
           {loading ? <p role="status" className={styles.empty}>Checking current LoadLink listings…</p>
             : loadError ? <p role="alert" className={styles.empty}>Vehicle listings could not be loaded. Your calculator still works; try reloading to see matches.</p>
-            : monthly <= 0 ? <p className={styles.empty}>"Enter a monthly budget above R0 to see matching vehicles."</p>
+            : monthly <= 0 ? <p className={styles.empty}>Enter a monthly budget above R0 to see matching vehicles.</p>
             : matches.length ? (
               <div className={styles.matchGrid}>
                 {matches.map((row) => (

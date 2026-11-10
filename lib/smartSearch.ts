@@ -24,10 +24,23 @@ export function normaliseSearch(value: string) {
   return value.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+// Only correct established high-confidence logistics misspellings; preserve other terms.
+const SEARCH_TERM_CORRECTIONS: Record<string, string> = {
+  mercedez: "mercedes",
+  mobille: "mobile",
+  tiper: "tipper",
+  joburg: "johannesburg",
+  jozi: "johannesburg",
+};
+
 export function searchTokens(value: string) {
-  return normaliseSearch(value)
+  const tokens = normaliseSearch(value)
     .split(/\s+/)
     .filter((token) => token && !SEARCH_STOP_WORDS.has(token));
+  const scaniaModelContext = tokens.some((token) => /^r\d{3,4}$/.test(token));
+  return tokens.map((token) =>
+    token === "scan" && scaniaModelContext ? "scania" : (SEARCH_TERM_CORRECTIONS[token] || token)
+  );
 }
 
 export function expandToken(token: string) {
@@ -62,8 +75,8 @@ export function detectIntent(query: string): "job" | "contract" | "asset" | "dri
 export function detectRegion(query: string) {
   const clean = normaliseSearch(query);
   const regions: Record<string, string[]> = {
-    gauteng: ["johannesburg", "pretoria", "centurion", "midrand", "sandton", "soweto", "kempton park", "boksburg", "benoni", "germiston", "alberton", "randburg", "roodepoort", "krugersdorp", "vereeniging", "vanderbijlpark"],
-    "kwazulu natal": ["durban", "pietermaritzburg", "richards bay", "pinetown", "umhlanga", "newcastle", "ladysmith"],
+    gauteng: ["johannesburg", "joburg", "jozi", "pretoria", "centurion", "midrand", "sandton", "soweto", "kempton park", "boksburg", "benoni", "germiston", "alberton", "randburg", "roodepoort", "krugersdorp", "vereeniging", "vanderbijlpark"],
+    "kwazulu natal": ["kzn", "durban", "pietermaritzburg", "richards bay", "pinetown", "umhlanga", "newcastle", "ladysmith"],
     "western cape": ["cape town", "bellville", "stellenbosch", "paarl", "worcester", "george", "mossel bay"],
     "eastern cape": ["gqeberha", "port elizabeth", "east london", "mthatha", "komani", "queenstown", "kariega"],
     mpumalanga: ["mbombela", "nelspruit", "emalahleni", "witbank", "middelburg", "secunda", "ermelo"],
@@ -72,5 +85,10 @@ export function detectRegion(query: string) {
     "free state": ["bloemfontein", "welkom", "bethlehem", "sasolburg", "kroonstad"],
     "northern cape": ["kimberley", "upington", "kuruman", "springbok", "de aar"],
   };
-  return Object.entries(regions).find(([region]) => clean.includes(region)) || null;
+  // Match complete location phrases, not accidental substrings of model names.
+  // Keep the existing [province, aliases] return shape for callers.
+  const padded = ` ${clean} `;
+  return Object.entries(regions).find(([region, aliases]) =>
+    [region, ...aliases].some((alias) => padded.includes(` ${normaliseSearch(alias)} `))
+  ) || null;
 }
