@@ -4,7 +4,7 @@ import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { isAuthenticatedUser } from "@/lib/auth";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
@@ -20,6 +20,14 @@ type UserNotification = {
   created_at: string;
 };
 
+// Notifications are database data, not trusted navigation instructions.
+export function safeNotificationHref(value: string | null | undefined): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || /[\\\u0000-\u001f\u007f]/.test(value)) return null;
+  // Block encoded slashes, backslashes and control bytes that can obscure external URLs.
+  if (/%(?:2f|5c|0[0-9a-f]|1[0-9a-f]|7f)/i.test(value)) return null;
+  return value;
+}
+
 export default function NotificationCenter() {
   const pathname = usePathname();
   const { darkMode } = useLoadLinkTheme();
@@ -29,6 +37,10 @@ export default function NotificationCenter() {
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [notificationError, setNotificationError] = useState("");
+  const requestVersionRef = useRef(0);
+  const accountIdRef = useRef("");
+  const authVersionRef = useRef(0);
 
   const signedIn = isAuthenticatedUser(user);
   const unread = useMemo(() => notifications.filter((item) => !item.is_read).length, [notifications]);
@@ -38,13 +50,20 @@ export default function NotificationCenter() {
       setNotifications([]);
       return;
     }
+    const requestId = ++requestVersionRef.current;
+    const ownerId = user.id;
     setLoading(true);
     const result = await supabase.from("user_notifications")
       .select("id,type,title,message,action_url,is_read,created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(40);
-    if (!result.error) {
+    // Never render a previous account's pending notification response.
+    if (requestId !== requestVersionRef.current || accountIdRef.current !== ownerId) return;
+    if (result.error) {
+      setNotificationError("Notifications could not refresh. Try again.");
+    } else {
+      setNotificationError("");
       setNotifications((result.data || []) as UserNotification[]);
       setHasLoadedOnce(true);
     }
@@ -52,20 +71,32 @@ export default function NotificationCenter() {
   }, [signedIn, user]);
 
   useEffect(() => {
-    if (!isSupabaseConfigured) { setAuthLoading(false); return; }
+    if (!isSupabaseConfigured) return;
     let active = true;
+    const initialAuthVersion = authVersionRef.current;
     supabase.auth.getUser().then(({ data }) => {
-      if (!active) return;
+      if (!active || initialAuthVersion !== authVersionRef.current) return;
+      accountIdRef.current = isAuthenticatedUser(data.user) ? data.user.id : "";
       setUser(data.user);
+      setAuthLoading(false);
+    }).catch(() => {
+      if (!active || initialAuthVersion !== authVersionRef.current) return;
+      setNotificationError("Account information is temporarily unavailable.");
       setAuthLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
-      setAuthLoading(false);
-      if (!isAuthenticatedUser(session?.user)) {
+      authVersionRef.current += 1;
+      const nextId = isAuthenticatedUser(session?.user) ? session!.user.id : "";
+      if (accountIdRef.current !== nextId) {
+        requestVersionRef.current += 1;
+        accountIdRef.current = nextId;
         setNotifications([]);
+        setHasLoadedOnce(false);
+        setNotificationError("");
         setOpen(false);
       }
+      setUser(session?.user || null);
+      setAuthLoading(false);
     });
     return () => { active = false; subscription.unsubscribe(); };
   }, []);
@@ -88,16 +119,33 @@ export default function NotificationCenter() {
   }, [loadNotifications, signedIn, user]);
 
   async function markRead(id: string) {
+    if (!user || accountIdRef.current !== user.id) return;
+    const ownerId = user.id;
     setNotifications((current) => current.map((item) => item.id === id ? { ...item, is_read: true } : item));
-    await supabase.from("user_notifications").update({ is_read: true, read_at: new Date().toISOString() }).eq("id", id);
+    const { error } = await supabase.from("user_notifications").update({ is_read: true, read_at: new Date().toISOString() }).eq("id", id).eq("user_id", ownerId);
+    if (accountIdRef.current !== ownerId) return;
+    if (error) {
+      setNotifications((current) => current.map((item) => item.id === id ? { ...item, is_read: false } : item));
+      setNotificationError("Could not mark notification as read.");
+      return;
+    }
     window.dispatchEvent(new Event("loadlink-notifications-updated"));
   }
 
   async function markAllRead() {
+    if (!user || accountIdRef.current !== user.id) return;
+    const ownerId = user.id;
     const ids = notifications.filter((item) => !item.is_read).map((item) => item.id);
     if (!ids.length) return;
-    setNotifications((current) => current.map((item) => ({ ...item, is_read: true })));
-    await supabase.from("user_notifications").update({ is_read: true, read_at: new Date().toISOString() }).in("id", ids);
+    const targetIds = new Set(ids);
+    setNotifications((current) => current.map((item) => targetIds.has(item.id) ? { ...item, is_read: true } : item));
+    const { error } = await supabase.from("user_notifications").update({ is_read: true, read_at: new Date().toISOString() }).eq("user_id", ownerId).in("id", ids);
+    if (accountIdRef.current !== ownerId) return;
+    if (error) {
+      setNotifications((current) => current.map((item) => targetIds.has(item.id) ? { ...item, is_read: false } : item));
+      setNotificationError("Could not mark notifications as read.");
+      return;
+    }
     window.dispatchEvent(new Event("loadlink-notifications-updated"));
   }
 
@@ -125,6 +173,7 @@ export default function NotificationCenter() {
             </div>
           </header>
 
+          {notificationError ? <p role="alert" className="mx-3 mt-3 rounded-xl border border-current/15 px-3 py-2 text-xs font-medium">{notificationError} <button type="button" onClick={() => void loadNotifications()} className="ml-1 font-bold underline underline-offset-2">Retry</button></p> : null}
           <div className="max-h-[58dvh] overflow-y-auto p-2">
             {loading && notifications.length === 0 ? (
               <div className={`p-5 text-sm ${muted}`}>Loading updates…</div>
@@ -141,8 +190,9 @@ export default function NotificationCenter() {
                   </div>
                 </div>
               );
-              return item.action_url ? (
-                <Link key={item.id} href={item.action_url} onClick={() => { void markRead(item.id); setOpen(false); }} className="block">{content}</Link>
+              const safeHref = safeNotificationHref(item.action_url);
+              return safeHref ? (
+                <Link key={item.id} href={safeHref} onClick={() => { void markRead(item.id); setOpen(false); }} className="block">{content}</Link>
               ) : (
                 <button key={item.id} type="button" onClick={() => void markRead(item.id)} className="block w-full text-left">{content}</button>
               );
