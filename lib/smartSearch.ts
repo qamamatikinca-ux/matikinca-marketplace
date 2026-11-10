@@ -9,15 +9,8 @@ const synonymGroups: string[][] = [
   ["driver", "drivers", "ownerdriver", "owner-driver"],
   ["dealer", "dealership", "dealerships", "showroom"],
   ["hire", "rental", "rent"],
-  ["gauteng", "johannesburg", "pretoria", "centurion", "midrand", "sandton", "soweto", "kempton", "boksburg", "benoni", "germiston", "alberton", "randburg", "roodepoort", "krugersdorp", "vereeniging", "vanderbijlpark"],
-  ["kwazulu natal", "kwazulu-natal", "kzn", "durban", "pietermaritzburg", "richards bay", "pinetown", "umhlanga"],
-  ["western cape", "cape town", "stellenbosch", "paarl", "george", "bellville"],
-  ["eastern cape", "gqeberha", "port elizabeth", "east london", "mthatha", "komani"],
-  ["mpumalanga", "mbombela", "nelspruit", "emalahleni", "witbank", "middelburg", "secunda"],
-  ["limpopo", "polokwane", "tzaneen", "mokopane", "musina", "lephalale"],
-  ["north west", "rustenburg", "klerksdorp", "potchefstroom", "mahikeng", "brits"],
-  ["free state", "bloemfontein", "welkom", "bethlehem", "sasolburg"],
-  ["northern cape", "kimberley", "upington", "kuruman", "springbok"],
+  // Place names must not be synonyms of other cities in the same province.
+  // Province-level matching is handled by the location parser, not token expansion.
 ];
 
 export function normaliseSearch(value: string) {

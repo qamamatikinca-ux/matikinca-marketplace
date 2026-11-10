@@ -43,3 +43,10 @@ test("search corrections do not make unrelated listings qualify", () => {
   assert.deepEqual(search.searchTokens("Scania R500"), ["scania", "r500"]);
   assert.deepEqual(search.searchTokens("scan r500"), ["scania", "r500"]);
 });
+
+test("search keeps cities distinct rather than treating every city in a province as a synonym", () => {
+  assert.equal(search.flexibleMatch("Truck in Durban", "truck Pretoria"), false);
+  assert.equal(search.flexibleMatch("Bakkie in Johannesburg", "bakkie Durban"), false);
+  assert.equal(search.flexibleMatch("Side tipper in Pretoria", "side tipper Pretoria"), true);
+  assert.equal(search.flexibleMatch("Mercedes Actros in Gauteng", "Mercedes Actros"), true);
+});
