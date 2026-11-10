@@ -82,6 +82,8 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ ok: true, delivered });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Push delivery failed." }, { status: 500 });
+    // The exception may contain storage, provider or database details; do not return it to callers.
+    console.error("[LoadLink push] Delivery failed", error instanceof Error ? error.name : "unknown");
+    return NextResponse.json({ error: "Push delivery could not be completed." }, { status: 500 });
   }
 }
