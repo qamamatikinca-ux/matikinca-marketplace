@@ -19,6 +19,7 @@ export default function DriverPortalPage() {
   return (
     <main className={`min-h-screen ${page}`}>
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
+      <div className="mx-auto max-w-6xl px-5"><OwnDriverProfileCard darkMode={darkMode} /></div>
 
       <section className="relative min-h-[520px] overflow-hidden md:min-h-[620px]">
         <LoadLinkImage
@@ -57,7 +58,6 @@ export default function DriverPortalPage() {
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl px-5"><OwnDriverProfileCard darkMode={darkMode} /></div>
       <div id="available-drivers" className="scroll-mt-24"><DriversAvailableForWork darkMode={darkMode} showHero={false} fullPage /></div>
     </main>
   );
