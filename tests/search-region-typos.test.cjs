@@ -10,9 +10,9 @@ function searchModule() {
   const js = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
-  const module = { exports: {} };
-  new Function("exports", "module", js)(module.exports, module);
-  return module.exports;
+  const moduleRef = { exports: {} };
+  new Function("exports", "module", js)(moduleRef.exports, moduleRef);
+  return moduleRef.exports;
 }
 
 const search = searchModule();
