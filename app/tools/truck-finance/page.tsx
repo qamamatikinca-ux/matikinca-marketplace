@@ -43,14 +43,11 @@ export default function TruckFinanceCalculatorPage() {
   const [balloonPercent, setBalloonPercent] = useState("0");
   const [fees, setFees] = useState("0");
   const [rows, setRows] = useState<VehicleRow[]>([]);
-  const [selectedId, setSelectedId] = useState("");
+  const [selectedId] = useState(() => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("vehicle") || "");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const vehicle = params.get("vehicle") || "";
-    setSelectedId(vehicle);
     let active = true;
     fetch("/api/job-listings", { cache: "no-store" })
       .then((res) => { if (!res.ok) throw Error("Unable to load vehicles"); return res.json(); })
@@ -173,7 +170,7 @@ export default function TruckFinanceCalculatorPage() {
           </div>
           {loading ? <p role="status" className={styles.empty}>Checking current LoadLink listings…</p>
             : loadError ? <p role="alert" className={styles.empty}>Vehicle listings could not be loaded. Your calculator still works; try reloading to see matches.</p>
-            : monthly <= 0 ? <p className={styles.empty}>"Enter a monthly budget above R0 to see matching vehicles."</p>
+            : monthly <= 0 ? <p className={styles.empty}>Enter a monthly budget above R0 to see matching vehicles.</p>
             : matches.length ? (
               <div className={styles.matchGrid}>
                 {matches.map((row) => (
