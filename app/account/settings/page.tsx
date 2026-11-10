@@ -21,6 +21,7 @@ import { SOUTH_AFRICAN_PROVINCES } from "@/lib/southAfricaLocations";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { profileRowToMessagePrivacy, writeMessagePrivacy } from "@/lib/messagePrivacy";
 import { enableLoadLinkPush, getLoadLinkPushState, type PushState } from "@/lib/pushNotifications";
+import { enableBrowserAlerts, getBrowserAlertState, type BrowserAlertState } from "@/lib/browserAlerts";
 
 type SettingsView = "overview" | "profile" | "work" | "notifications" | "messages" | "security" | "billing" | "team";
 
@@ -82,26 +83,9 @@ export default function AccountSettingsPage() {
 
   const [pushState, setPushState] = useState<PushState>("disabled");
   const [pushBusy, setPushBusy] = useState(false);
+  const [browserAlertState, setBrowserAlertState] = useState<BrowserAlertState>("disabled");
+  const [browserAlertBusy, setBrowserAlertBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const syncHash = () => {
-      const hash = window.location.hash;
-      if (hash === "#message-privacy") setSettingsView("messages");
-      else if (hash === "#notifications") setSettingsView("notifications");
-      else if (hash === "#work") setSettingsView("work");
-      else if (hash === "#billing") setSettingsView("billing");
-      else if (hash === "#security") setSettingsView("security");
-      else if (hash === "#team") setSettingsView("team");
-      else if (hash === "#profile") setSettingsView("profile");
-      else setSettingsView("overview");
-    };
-    syncHash();
-    window.addEventListener("hashchange", syncHash);
-    void load();
-    getLoadLinkPushState().then(setPushState).catch(() => undefined);
-    return () => window.removeEventListener("hashchange", syncHash);
-  }, []);
 
   const dirty = useMemo(() => PROFILE_FIELDS.some((key) => form[key] !== savedForm[key]), [form, savedForm]);
   useEffect(() => {
@@ -139,6 +123,26 @@ export default function AccountSettingsPage() {
     writeMessagePrivacy(profileRowToMessagePrivacy(next as unknown as Record<string, unknown>));
     setLoading(false);
   }
+
+  useEffect(() => {
+    const syncHash = () => {
+      const hash = window.location.hash;
+      if (hash === "#message-privacy") setSettingsView("messages");
+      else if (hash === "#notifications") setSettingsView("notifications");
+      else if (hash === "#work") setSettingsView("work");
+      else if (hash === "#billing") setSettingsView("billing");
+      else if (hash === "#security") setSettingsView("security");
+      else if (hash === "#team") setSettingsView("team");
+      else if (hash === "#profile") setSettingsView("profile");
+      else setSettingsView("overview");
+    };
+    const initialSync = window.setTimeout(syncHash, 0);
+    window.addEventListener("hashchange", syncHash);
+    const initialLoad = window.setTimeout(() => void load(), 0);
+    getLoadLinkPushState().then(setPushState).catch(() => undefined);
+    const permissionSync = window.setTimeout(() => setBrowserAlertState(getBrowserAlertState()), 0);
+    return () => { window.clearTimeout(initialSync); window.clearTimeout(initialLoad); window.clearTimeout(permissionSync); window.removeEventListener("hashchange", syncHash); };
+  }, []);
 
   function field<K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) { setForm((current) => ({ ...current, [key]: value })); }
 
@@ -193,6 +197,22 @@ export default function AccountSettingsPage() {
     } catch (error) {
       setMessage(friendlyError(error, "Push notifications could not be enabled."));
     } finally { setPushBusy(false); }
+  }
+
+  async function activateBrowserAlerts() {
+    if (browserAlertBusy || browserAlertState === "enabled") return;
+    setBrowserAlertBusy(true);
+    try {
+      const next = await enableBrowserAlerts();
+      setBrowserAlertState(next);
+      if (next === "enabled") setMessage("Browser alerts enabled while LoadLink is open. Alerts when the browser is closed require phone push delivery.");
+      else if (next === "blocked") setMessage("Allow notifications in your browser or phone settings.");
+      else setMessage("Browser alerts are not available in this browser.");
+    } catch {
+      setMessage("Browser alerts could not be enabled. Check notification permissions.");
+    } finally {
+      setBrowserAlertBusy(false);
+    }
   }
 
   async function saveProfile(event: FormEvent) {
@@ -418,9 +438,24 @@ export default function AccountSettingsPage() {
               <Toggle label="Listing and review updates" checked={form.listing_notifications} busy={preferenceSaving === "listing_notifications"} onChange={(value) => void savePreference("listing_notifications", value)} darkMode={darkMode} />
               <Toggle label="Product news" checked={form.marketing_notifications} busy={preferenceSaving === "marketing_notifications"} onChange={(value) => void savePreference("marketing_notifications", value)} darkMode={darkMode} />
             </div>
+            <div data-loadlink-browser-alerts="true" className={`mt-5 flex flex-col gap-3 rounded-xl border px-4 py-4 sm:flex-row sm:items-center sm:justify-between ${darkMode ? "border-white/20 bg-[#1a1a1a]" : "border-black/10 bg-[#faf9f5]"}`}>
+              <div className="min-w-0">
+                <strong className="block text-sm font-semibold">Browser notifications</strong>
+                <p className={`mt-1 text-xs leading-5 ${muted}`}>
+                  {browserAlertState === "enabled" ? "Enabled. Receive new alerts while LoadLink is open, including background tabs."
+                    : browserAlertState === "blocked" ? "Blocked by your browser or device. Change notification permissions in Settings."
+                    : browserAlertState === "unsupported" ? "Not supported by this browser. On iPhone, try adding LoadLink to your Home Screen."
+                    : "Receive notifications for new LoadLink activity when the browser is open."}
+                </p>
+              </div>
+              <button type="button" onClick={() => void activateBrowserAlerts()} disabled={browserAlertBusy || browserAlertState !== "disabled"}
+                className="min-h-11 shrink-0 rounded-xl bg-[#f6b800] px-5 text-xs font-semibold text-black disabled:cursor-not-allowed disabled:bg-black/10 disabled:text-current disabled:opacity-60">
+                {browserAlertBusy ? "Enabling…" : browserAlertState === "enabled" ? "Enabled" : browserAlertState === "disabled" ? "Enable alerts" : "Unavailable"}
+              </button>
+            </div>
             <div data-loadlink-push-status="true" className={`mt-5 flex flex-col gap-3 rounded-xl border px-4 py-4 sm:flex-row sm:items-center sm:justify-between ${darkMode ? "border-white/15 bg-white/[.03]" : "border-black/10 bg-[#faf9f5]"}`}>
               <div className="min-w-0">
-                <strong className="block text-sm font-semibold">Phone and browser alerts</strong>
+                <strong className="block text-sm font-semibold">Phone push notifications</strong>
                 <p role="status" className={`mt-1 text-xs leading-5 ${muted}`}>
                   {pushState === "enabled" ? "This device is subscribed. Delivery is not guaranteed until the notification service is verified."
                     : pushState === "blocked" ? "Notifications are blocked. Allow them in your browser or device settings."

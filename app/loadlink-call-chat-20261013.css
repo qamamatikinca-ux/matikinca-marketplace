@@ -139,3 +139,10 @@ html[data-loadlink-theme="light"] [data-loadlink-call-incoming] .ll-call-sheet {
   border-radius: 50% !important;
   box-shadow: none !important;
 }
+
+
+/* A quiet and accessible Standard-call allowance display. */
+.ll-standard-call-countdown { width: min(330px,100%); margin: 8px auto 16px; }
+.ll-standard-call-countdown-track { height: 5px; width: 100%; overflow: hidden; border-radius: 20px; background: rgba(255,255,255,.18); }
+.ll-standard-call-countdown-track > span { display: block; height: 100%; border-radius: inherit; background: #f6b800; transition: width 800ms linear; }
+.ll-standard-call-warning { display: block; margin-top: 8px; font-size: 12px; font-weight: 600; color: #ffd470; text-align: center; }
