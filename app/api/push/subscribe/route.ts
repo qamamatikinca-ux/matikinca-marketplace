@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
     return NextResponse.json({ ok: true });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Push subscription failed." }, { status: 500 });
+    console.error("[LoadLink push subscribe] Subscription failed", error instanceof Error ? error.name : "unknown");
+    return NextResponse.json({ error: "Phone alerts could not be enabled. Please try again." }, { status: 503 });
   }
 }
