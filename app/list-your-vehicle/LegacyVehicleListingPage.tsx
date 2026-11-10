@@ -41,6 +41,8 @@ import { findTruckReference, truckReferenceResponse } from "@/lib/truckModelRefe
 import { getTruckModel, getTruckModels, truckCatalog, truckYears, validateTruckTransmission } from "@/lib/truckCatalog";
 import { getLightCommercialModels, getLightCommercialModelYearStatus, lightCommercialCatalog, lightCommercialYears } from "@/lib/southAfricanLightCommercialCatalog";
 import { storedLightCommercialPhotos, type LightCommercialPhoto } from "@/lib/lightCommercialModelPhotos";
+import { modelFamilyPhoto } from "@/lib/modelFamilyPhoto";
+import ModelFamilyPhotoCard from "@/components/ModelFamilyPhotoCard";
 
 
 const truckBodyTypes = [
@@ -229,6 +231,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const lightCommercialYearStatus = useMemo(() => vehicleCategory === "bakkie_van" ? getLightCommercialModelYearStatus(brand, modelName, year) : null, [brand, modelName, year, vehicleCategory]);
   const bakkieVanModels = useMemo(() => vehicleCategory === "bakkie_van" ? getLightCommercialModels(brand, year) : [], [brand, vehicleCategory, year]);
   const selectedModel = useMemo(() => vehicleCategory === "truck" ? getTruckModel(brand, modelName, year) : null, [brand, modelName, vehicleCategory, year]);
+  const curatedModelPhoto = useMemo(() => (vehicleCategory === "truck" || vehicleCategory === "bakkie_van")
+    ? modelFamilyPhoto(vehicleCategory === "truck" ? "truck" : "bakkie", brand, modelName, year) : null,
+  [vehicleCategory, brand, modelName, year]);
   const transmissionCheck = useMemo(() => vehicleCategory === "truck" && transmission ? validateTruckTransmission(brand, modelName, year, transmission) : null, [brand, modelName, transmission, vehicleCategory, year]);
   const smartChecks = useMemo(() => assessVehicleListing({
     category:vehicleCategory||"",year,make:brand,model:modelName,bodyType,condition,
@@ -362,7 +367,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
 
 
   useEffect(() => {
-    if(vehicleCategory!=="truck" || !brand.trim() || !modelName.trim() || !selectedModel || referenceImage?.imageUrl){
+    if(vehicleCategory!=="truck" || !brand.trim() || !modelName.trim() || !selectedModel || referenceImage?.imageUrl || curatedModelPhoto){
       setTruckYearPhotos([]);setTruckPhotoUnavailable(false);setImageLoading(false);return;
     }
     const controller=new AbortController();
@@ -380,7 +385,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       finally{if(!controller.signal.aborted)setImageLoading(false);}
     },400);
     return ()=>{window.clearTimeout(timer);controller.abort();};
-  },[vehicleCategory,brand,modelName,year,selectedModel,referenceImage?.imageUrl]);
+  },[vehicleCategory,brand,modelName,year,selectedModel,referenceImage?.imageUrl,curatedModelPhoto]);
 
   function choosePlan(plan: BusinessPlanId) {
     setSelectedPlan(plan);
@@ -880,6 +885,12 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
 
               {vehicleCategory==="bakkie_van" ? <Field label="Cab / van body type"><select value={bodyType} onChange={event=>{setBodyType(event.target.value);setModelConfirmed(false);}} required className={inputClass}><option value="">Choose the actual body type</option>{bakkieVanTypes.map(item=><option key={item}>{item}</option>)}</select></Field> : null}
             </div>
+            {curatedModelPhoto && (vehicleCategory === "truck" || vehicleCategory === "bakkie_van") ? (
+              <div className="border-t border-current/10 px-5 py-4 md:px-7">
+                <ModelFamilyPhotoCard kind={vehicleCategory === "truck" ? "truck" : "bakkie"}
+                  make={brand} model={modelName} year={year} darkMode={darkMode} compact />
+              </div>
+            ) : null}
             {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7">
               <button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>
               {selectedModel ? <div className={`mt-4 rounded-xl border px-4 py-3 ${darkMode ? "border-white/12 bg-white/[.03]" : "border-black/10 bg-black/[.02]"}`}>
@@ -893,15 +904,15 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 {referenceImage?.specSourceUrl ? <a href={referenceImage.specSourceUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex text-xs font-semibold text-[#b98900] underline underline-offset-4">Manufacturer specification source</a> : null}
               </div> : null}
               {imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Finding a model-year reference…</p> : null}
-              {referenceImage?.imageUrl ? <div className="mt-4 max-w-xl"><VehicleModelReferencePhoto photo={{url:referenceImage.imageUrl,title:referenceImage.title,credit:"",license:"",matchKind:"generation"}} year={year}/></div> : null}
-              {!referenceImage?.imageUrl && truckYearPhotos.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2">{truckYearPhotos.map(photo=><VehicleModelReferencePhoto key={photo.url} photo={photo} year={year}/>)}</div> : null}
-              {!referenceImage?.imageUrl && !imageLoading && truckPhotoUnavailable ? <p role="status" className={`mt-3 text-xs ${muted}`}>No year-verified photo is available for this truck model. Please check the manufacturer's specifications and upload photos of your actual truck.</p> : null}
+              {!curatedModelPhoto && referenceImage?.imageUrl ? <div className="mt-4 max-w-xl"><VehicleModelReferencePhoto photo={{url:referenceImage.imageUrl,title:referenceImage.title,credit:"",license:"",matchKind:"generation"}} year={year}/></div> : null}
+              {!curatedModelPhoto && !referenceImage?.imageUrl && truckYearPhotos.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2">{truckYearPhotos.map(photo=><VehicleModelReferencePhoto key={photo.url} photo={photo} year={year}/>)}</div> : null}
+              {!curatedModelPhoto && !referenceImage?.imageUrl && !imageLoading && truckPhotoUnavailable ? <p role="status" className={`mt-3 text-xs ${muted}`}>No year-verified photo is available for this truck model. Please check the manufacturer's specifications and upload photos of your actual truck.</p> : null}
               {referenceImage?.specSourceUrl ? <p className={`mt-3 text-xs ${muted}`}>Model specifications can vary by year and trim. Confirm gearbox and fuel type against your vehicle.</p> : null}
             </div> : vehicleCategory === "bakkie_van" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmBakkieVanModel} className="inline-flex min-h-12 max-w-full items-center justify-center whitespace-nowrap rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase text-black transition-transform duration-150 active:scale-[.98]">Confirm vehicle</button><p className={`mt-2 text-xs ${muted}`}>Verify the exact make, model and year against the registration papers.</p>
               {lightCommercialYearStatus && !lightCommercialYearStatus.valid ? <p role="alert" className="mt-3 rounded-xl border border-amber-500/40 p-3 text-sm font-semibold text-amber-500">This {brand} {lightCommercialYearStatus.model} is not listed as produced in {year}. Check the model variant or registration year before confirming.</p> : null}
-              {lightCommercialPhotoLoading ? <div className={`mt-4 flex min-h-32 items-center justify-center rounded-xl border text-sm font-semibold ${muted}`}>Looking for model-family photos…</div> : null}
-              {lightCommercialPhotos.length > 0 ? <div className="mt-4 grid gap-3 sm:grid-cols-2">{lightCommercialPhotos.map(photo => <VehicleModelReferencePhoto key={photo.url} photo={photo} year={year} />)}</div> : null}
-              {!lightCommercialPhotoLoading && lightCommercialPhotoUnavailable ? <p className={`mt-3 text-xs ${muted}`}>No year-matched reference picture is available for this make, model and year. Check the registration details and upload photos of the actual vehicle.</p> : null}
+              {!curatedModelPhoto && lightCommercialPhotoLoading ? <div className={`mt-4 flex min-h-32 items-center justify-center rounded-xl border text-sm font-semibold ${muted}`}>Looking for model-family photos…</div> : null}
+              {!curatedModelPhoto && lightCommercialPhotos.length > 0 ? <div className="mt-4 grid gap-3 sm:grid-cols-2">{lightCommercialPhotos.map(photo => <VehicleModelReferencePhoto key={photo.url} photo={photo} year={year} />)}</div> : null}
+              {!curatedModelPhoto && !lightCommercialPhotoLoading && lightCommercialPhotoUnavailable ? <p className={`mt-3 text-xs ${muted}`}>No year-matched reference picture is available for this make, model and year. Check the registration details and upload photos of the actual vehicle.</p> : null}
               </div> : <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={() => { setTitle(`${year} ${brand} ${modelName} ${vehicleSubtype}`.replace(/\s+/g, " ").trim()); setMessage(""); }} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm vehicle details</button></div>}
           </section>
 

@@ -139,7 +139,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
 
   const suggestions = useMemo(() => {
     if (!query.trim()) return [];
-    return filterAndRankResults(allSearchItems, scope, query, location).slice(0, 6);
+    return filterAndRankResults(allSearchItems, scope, query, location).slice(0, 4);
   }, [allSearchItems, location, query, scope]);
 
   function launchSearch(destination?: string) {
@@ -249,7 +249,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                 {showSuggestions ? (
                   <div
                     data-loadlink-home-search-suggestions
-                    className={`absolute inset-x-0 top-[58px] z-40 max-h-[300px] overflow-y-auto rounded-[14px] border shadow-[0_20px_50px_rgba(0,0,0,.20)] ${
+                    className={`absolute inset-x-0 top-[56px] z-40 max-h-[280px] overflow-y-auto rounded-[16px] border p-1 shadow-[0_16px_38px_rgba(0,0,0,.16)] ${
                       darkMode ? "border-white/12 bg-[#111] text-white" : "border-black/10 bg-white text-black"
                     }`}
                   >
@@ -260,13 +260,13 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                             key={item.id}
                             type="button"
                             onClick={() => launchSearch(item.href)}
-                            className={`flex w-full items-center justify-between gap-4 border-b px-4 py-3 text-left last:border-b-0 ${
+                            className={`flex min-h-[54px] w-full items-center justify-between gap-2 rounded-xl border-b px-3 py-2 text-left last:border-b-0 ${
                               darkMode ? "border-white/[.07] hover:bg-white/[.05]" : "border-black/[.05] hover:bg-black/[.025]"
                             }`}
                           >
                             <span className="min-w-0">
-                              <span className="block truncate text-[13px] font-semibold">{item.label}</span>
-                              <span className={`mt-0.5 block truncate text-[11px] ${darkMode ? "text-white/48" : "text-black/48"}`}>{item.meta}</span>
+                              <span className="block truncate text-[13px] font-semibold leading-5">{item.label}</span>
+                              <span className={`mt-0.5 block truncate text-[10px] leading-4 ${darkMode ? "text-white/48" : "text-black/48"}`}>{item.meta}</span>
                             </span>
                             <ArrowIcon />
                           </button>
@@ -274,7 +274,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
                         <button
                           type="button"
                           onClick={() => launchSearch()}
-                          className={`flex w-full items-center justify-between px-4 py-3 text-left text-[12px] font-semibold ${darkMode ? "text-white/80" : "text-black/75"}`}
+                          className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-[11px] font-semibold ${darkMode ? "text-white/80" : "text-black/75"}`}
                         >
                           View all {resultLabel}
                           <ArrowIcon />

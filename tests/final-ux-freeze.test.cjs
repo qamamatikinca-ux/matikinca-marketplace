@@ -38,6 +38,6 @@ test("Above-the-fold search banners prioritize responsive image delivery", () =>
   const jobs = source("app/jobs/JobsPortalClient.tsx");
   const quick = source("app/quick-links/[scope]/page.tsx");
   assert.match(jobs, /jobs-hero-fleet\.jpg"[^>]*fetchPriority="high" sizes="100vw"/);
-  assert.match(quick, /fetchPriority="high"/);
+  assert.match(quick, /fetchPriority=\{item\.value === scope \? "high" : "low"\}/);
   assert.match(quick, /sizes="100vw"/);
 });
