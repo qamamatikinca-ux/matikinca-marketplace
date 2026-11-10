@@ -155,6 +155,7 @@ export default function QuickLinkPicturePage() {
                 type="button"
                 onClick={() => chooseScope(item.value)}
                 aria-pressed={item.value === scope}
+                aria-current={item.value === scope ? "page" : undefined}
                 className={`inline-flex min-h-10 shrink-0 items-center justify-center rounded-full border px-4 text-[12px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f6b800] ${item.value === scope
                   ? "border-[#f6b800] bg-[#f6b800] text-black"
                   : darkMode ? "border-white/15 bg-[#151615] text-white/85" : "border-black/10 bg-white text-black/75"}`}
