@@ -471,11 +471,13 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
                   >
                     <Link href={href} onClick={() => markSeen(String(row.id))} className="group relative block w-full overflow-hidden bg-black text-left">
                       <div className="aspect-[16/11] w-full overflow-hidden sm:aspect-[16/10]">
-                        <LoadLinkImage src={row.photos?.[0] || "/images/truck-1.jpg"} alt={row.title || "LoadLink vehicle"} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" />
+                        {row.photos?.[0]
+                          ? <LoadLinkImage src={row.photos[0]} alt={row.title || "Seller vehicle photograph"} className="h-full w-full object-cover transition duration-500 md:group-hover:scale-[1.02]" />
+                          : <div className="flex h-full w-full items-center justify-center bg-[#252725] px-4 text-center text-sm font-semibold text-white/80">Seller photo not provided</div>}
                       </div>
                       <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/45" />
                       <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.08em] text-black">{offer}</span>
-                      <span className="absolute bottom-3 left-3 rounded-full bg-black/75 px-3 py-1.5 text-[10px] font-black uppercase text-white backdrop-blur">{row.photos?.length || 1} photo{(row.photos?.length || 1) === 1 ? "" : "s"}</span>
+                      {row.photos?.length ? <span className="absolute bottom-3 left-3 rounded-full bg-black/75 px-3 py-1.5 text-[10px] font-semibold text-white">{row.photos.length} photo{row.photos.length === 1 ? "" : "s"}</span> : null}
                       {isActiveVehiclePromotion(row) ? <span className="absolute right-3 top-3 rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase text-black">Promoted</span> : null}
                       {wasSeen ? <span className="absolute bottom-3 right-3 rounded-full bg-black/75 px-3 py-1.5 text-[10px] font-black text-white backdrop-blur">Seen</span> : null}
                     </Link>
