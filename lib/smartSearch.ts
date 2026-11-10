@@ -10,7 +10,8 @@ const synonymGroups: string[][] = [
   ["dealer", "dealership", "dealerships", "showroom"],
   ["hire", "rental", "rent"],
   // Place names must not be synonyms of other cities in the same province.
-  // Province-level matching is handled by the location parser, not token expansion.];
+  // Province-level matching is handled by the location parser, not token expansion.
+];
 
 export function normaliseSearch(value: string) {
   return value.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").trim();
