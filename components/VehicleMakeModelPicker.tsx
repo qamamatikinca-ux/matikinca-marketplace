@@ -49,13 +49,13 @@ export default function VehicleMakeModelPicker({
 
   const text = darkMode ? "text-white" : "text-[#161616]";
   const border = darkMode ? "border-white/10" : "border-black/10";
-  const subdued = darkMode ? "text-white/45" : "text-black/45";
+  const subdued = darkMode ? "text-[#c6c8ca]" : "text-[#575c63]";
 
   return (
     <div className="fixed inset-0 z-[2147483580] flex items-end justify-center bg-black/50 backdrop-blur-[4px] sm:items-center sm:p-5"
       role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
       <section role="dialog" aria-modal="true" aria-label={activeMake ? "Select model" : "Select make"}
-        className={"flex h-[100dvh] w-full max-w-[560px] flex-col overflow-hidden bg-white shadow-[0_24px_70px_rgba(0,0,0,.2)] sm:h-[min(90dvh,850px)] sm:rounded-[24px] " + (darkMode ? "bg-[#141414] " : "") + text}>
+        className={"flex h-[100dvh] w-full max-w-[560px] flex-col overflow-hidden shadow-[0_24px_70px_rgba(0,0,0,.2)] sm:h-[min(90dvh,850px)] sm:rounded-[24px] " + (darkMode ? "bg-[#141414] text-white" : "bg-white text-[#161616]")}>
         <header className={"flex min-h-[72px] shrink-0 items-center gap-3 border-b px-4 sm:px-5 " + border}>
           <button type="button" aria-label={activeMake ? "Back to manufacturers" : "Close make and model selector"}
             onClick={() => { if (activeMake) { setActiveMake(""); setQuery(""); } else onClose(); }}
@@ -75,13 +75,13 @@ export default function VehicleMakeModelPicker({
             placeholder={activeMake ? "Search " + activeMake + " models" : "Enter make, model, variant"}
             value={query} onChange={event => setQuery(event.target.value)}
             className={"h-12 w-full rounded-xl border px-4 text-base outline-none focus:border-[#f6b800] " +
-              (darkMode ? "border-white/15 bg-[#242424] text-white placeholder:text-white/40" : "border-black/15 bg-[#fafafa] text-black placeholder:text-black/40")} />
+              (darkMode ? "border-white/25 bg-[#202020] text-white placeholder:text-white/65" : "border-black/15 bg-[#fafafa] text-black placeholder:text-black/40")} />
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain" role="list">
           {!normalized ? (
             <button type="button" onClick={() => onChoose(activeMake, "")}
-              className={"flex min-h-[68px] w-full items-center gap-4 border-b px-5 text-left " + border}>
+              className={"flex min-h-[68px] w-full items-center gap-4 border-b px-5 text-left " + border + (darkMode ? " text-white hover:bg-white/[.055]" : " hover:bg-black/[.025]")}>
               <span className={"flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 " +
                 ((!activeMake && !currentMake) || (activeMake && !currentModel) ? "border-[#f6b800] bg-[#f6b800] text-black" : border)}>
                 {(!activeMake && !currentMake) || (activeMake && !currentModel) ? "✓" : ""}
@@ -94,22 +94,22 @@ export default function VehicleMakeModelPicker({
             const selected = isMake ? currentMake === option.name : currentMake === activeMake && currentModel === option.name;
             return (
               <div key={option.name} role="listitem"
-                className={"flex min-h-[70px] items-center gap-2 border-b px-4 " + border}>
-                <button type="button" onClick={() => onChoose(isMake ? option.name : activeMake, isMake ? "" : option.name)}
+                className={"flex min-h-[70px] items-center gap-2 border-b px-4 transition-colors " + border + (darkMode ? " hover:bg-white/[.055]" : " hover:bg-black/[.025]")}>
+                <button type="button" onClick={() => { if (isMake) { setActiveMake(option.name); setQuery(""); } else { onChoose(activeMake, option.name); } }}
                   className="flex min-h-[65px] min-w-0 flex-1 items-center gap-3 text-left">
                   <span className={"flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 text-xs font-bold " +
                     (selected ? "border-[#f6b800] bg-[#f6b800] text-black" : darkMode ? "border-white/40" : "border-[#687082]")}>
                     {selected ? "✓" : ""}
                   </span>
-                  <span className="min-w-0 truncate text-[15px] font-medium">{option.name}</span>
+                  <span className={"min-w-0 truncate text-[15px] font-semibold " + (darkMode ? "text-[#fafafa]" : "text-[#171717]")}>{option.name}</span>
                   <span className={"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold " +
-                    (darkMode ? "bg-white/10 text-white/60" : "bg-[#f2f3f5] text-[#657080]")}>{option.count}</span>
+                    (darkMode ? "bg-white/10 text-[#ededed]" : "bg-[#f2f3f5] text-[#4d5663]")}>{option.count}</span>
                 </button>
                 {isMake ? (
                   <button type="button" aria-label={"Show " + option.name + " models"}
                     onClick={() => { setActiveMake(option.name); setQuery(""); searchRef.current?.focus(); }}
                     className={"min-h-10 shrink-0 rounded-full border px-3 text-[12px] font-semibold " +
-                      (darkMode ? "border-white/15 text-[#f6b800]" : "border-black/10 text-[#ab7b00]")}>
+                      (darkMode ? "border-white/25 text-[#f6b800]" : "border-black/10 text-[#926b00]")}>
                     Models <span aria-hidden="true">›</span>
                   </button>
                 ) : null}
