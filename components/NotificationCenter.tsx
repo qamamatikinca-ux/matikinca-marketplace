@@ -20,6 +20,14 @@ type UserNotification = {
   created_at: string;
 };
 
+// Notifications are database data, not trusted navigation instructions.
+export function safeNotificationHref(value: string | null | undefined): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || /[\\\u0000-\u001f\u007f]/.test(value)) return null;
+  // Block encoded slashes, backslashes and control bytes that can obscure external URLs.
+  if (/%(?:2f|5c|0[0-9a-f]|1[0-9a-f]|7f)/i.test(value)) return null;
+  return value;
+}
+
 export default function NotificationCenter() {
   const pathname = usePathname();
   const { darkMode } = useLoadLinkTheme();
@@ -182,8 +190,9 @@ export default function NotificationCenter() {
                   </div>
                 </div>
               );
-              return item.action_url ? (
-                <Link key={item.id} href={item.action_url} onClick={() => { void markRead(item.id); setOpen(false); }} className="block">{content}</Link>
+              const safeHref = safeNotificationHref(item.action_url);
+              return safeHref ? (
+                <Link key={item.id} href={safeHref} onClick={() => { void markRead(item.id); setOpen(false); }} className="block">{content}</Link>
               ) : (
                 <button key={item.id} type="button" onClick={() => void markRead(item.id)} className="block w-full text-left">{content}</button>
               );
