@@ -70,6 +70,8 @@ export default function SearchResultsClient() {
   const [place, setPlace] = useState(location);
   const [filtersOpen, setFiltersOpen] = useState(Boolean(location));
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(true);
+  const [sourceFailures, setSourceFailures] = useState(0);
   const [listings, setListings] = useState<ListingSearchRow[]>([]);
   const [drivers, setDrivers] = useState<DriverSearchRow[]>([]);
   const [dealers, setDealers] = useState<DealerSearchRow[]>([]);
@@ -95,7 +97,8 @@ export default function SearchResultsClient() {
   useEffect(() => {
     let active = true;
     let settled = 0;
-    const done = () => { settled += 1; if (active && settled === 3) setLoading(false); };
+    const done = () => { settled += 1; if (active && settled === 3) { setLoading(false); setLoadingMore(false); } };
+    const failed = () => { if (active) setSourceFailures(count => count + 1); };
     // Do not block the first usable results on the slowest unrelated API.
     void cachedPublicSearch("listings", async () => {
       const response = await fetch("/api/job-listings", { cache: "no-store" });
@@ -105,7 +108,7 @@ export default function SearchResultsClient() {
       if (!active) return;
       setListings((data.rows || []).filter(isCurrentListing));
       setLoading(false);
-    }).catch(() => undefined).finally(done);
+    }).catch(failed).finally(done);
     void cachedPublicSearch("drivers", async () => {
       const response = await fetch("/api/phase2/public-drivers?limit=50&offset=0", { cache: "no-store" });
       if (!response.ok) throw new Error("Driver search request failed");
@@ -114,7 +117,7 @@ export default function SearchResultsClient() {
       if (!active) return;
       setDrivers(data.drivers || []);
       setLoading(false);
-    }).catch(() => undefined).finally(done);
+    }).catch(failed).finally(done);
     void cachedPublicSearch("dealers", async () => {
       if (!isSupabaseConfigured) return [] as DealerSearchRow[];
       const { data, error } = await supabase.from("dealership_profiles")
@@ -127,7 +130,7 @@ export default function SearchResultsClient() {
       if (!active) return;
       setDealers(data);
       setLoading(false);
-    }).catch(() => undefined).finally(done);
+    }).catch(failed).finally(done);
     return () => { active = false; };
   }, []);
 
@@ -195,7 +198,7 @@ export default function SearchResultsClient() {
     });
   }
 
-  const resultCountLabel = loading ? "Searching…" : `${results.length} ${results.length === 1 ? "result" : "results"}`;
+  const resultCountLabel = loading ? "Searching…" : `${results.length} ${results.length === 1 ? "result" : "results"}${loadingMore ? " so far" : ""}`;
   const surface = darkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white";
   const muted = darkMode ? "text-[#c7c7c7]" : "text-[#585858]";
 
@@ -308,7 +311,8 @@ export default function SearchResultsClient() {
           </div>
         </div>
 
-        {loading ? (
+        {sourceFailures > 0 && !loadingMore ? <p role="status" className={`mt-4 rounded-xl border px-4 py-3 text-xs font-medium ${darkMode ? "border-white/20 bg-[#191919] text-white/80" : "border-black/10 bg-white text-black/75"}`}>Some results could not be loaded. Refresh to try again.</p> : null}
+        {loading || (!results.length && loadingMore) ? (
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {[0, 1, 2, 3].map((item) => <div key={item} className={`h-28 animate-pulse rounded-[16px] border ${surface}`} />)}
           </div>
