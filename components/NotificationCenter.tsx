@@ -4,11 +4,12 @@ import LoadLinkIcon from "@/components/LoadLinkIcon";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { isAuthenticatedUser } from "@/lib/auth";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
+import { showLoadLinkBrowserAlert } from "@/lib/browserAlerts";
 
 type UserNotification = {
   id: string;
@@ -29,6 +30,7 @@ export default function NotificationCenter() {
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const seenBrowserNotifications = useRef(new Set<string>());
 
   const signedIn = isAuthenticatedUser(user);
   const unread = useMemo(() => notifications.filter((item) => !item.is_read).length, [notifications]);
@@ -64,6 +66,7 @@ export default function NotificationCenter() {
       setAuthLoading(false);
       if (!isAuthenticatedUser(session?.user)) {
         setNotifications([]);
+        seenBrowserNotifications.current.clear();
         setOpen(false);
       }
     });
@@ -77,7 +80,23 @@ export default function NotificationCenter() {
     const onFocus = () => void loadNotifications();
     window.addEventListener("focus", onFocus);
     const channel = supabase.channel(`loadlink-user-notifications-${user.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "user_notifications", filter: `user_id=eq.${user.id}` }, () => void loadNotifications())
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_notifications", filter: `user_id=eq.${user.id}` }, (payload) => {
+        if (payload.eventType === "INSERT" && payload.new && typeof payload.new === "object") {
+          const row = payload.new as Record<string, unknown>;
+          const id = String(row.id || "");
+          if (id && row.user_id === user.id && !seenBrowserNotifications.current.has(id)) {
+            seenBrowserNotifications.current.add(id);
+            if (seenBrowserNotifications.current.size > 100) seenBrowserNotifications.current.clear();
+            void showLoadLinkBrowserAlert({
+              id,
+              title: String(row.title || "LoadLink").slice(0, 100),
+              body: String(row.message || "You have a new LoadLink notification.").slice(0, 200),
+              href: typeof row.action_url === "string" ? row.action_url : "/notifications",
+            });
+          }
+        }
+        void loadNotifications();
+      })
       .subscribe();
     return () => {
       window.clearTimeout(firstLoad);
