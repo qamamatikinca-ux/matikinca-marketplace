@@ -361,8 +361,10 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
                 <Link key={row.id} href={`/vehicles/${row.id}`} onClick={() => markSeen(String(row.id))}
                   className={`group overflow-hidden rounded-2xl border ${darkMode ? "border-white/12 bg-[#101010]" : "border-black/10 bg-white"}`}>
                   <div className="relative aspect-[16/9] overflow-hidden bg-black">
-                    <LoadLinkImage src={row.photos?.[0] || "/images/truck-1.jpg"} alt={row.title || "Commercial vehicle"}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025]" />
+                    {row.photos?.[0]
+                      ? <LoadLinkImage src={row.photos[0]} alt={row.title || "Seller vehicle photograph"}
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025]" />
+                      : <div className="flex h-full w-full items-center justify-center bg-[#252725] p-4 text-center text-sm font-semibold text-white/80">Seller photo not provided</div>}
                     <span className="absolute left-3 top-3 rounded-full bg-[#f6b800] px-3 py-1 text-[10px] font-black uppercase text-black">Promoted</span>
                   </div>
                   <div className="p-4">
