@@ -47,7 +47,6 @@ export default function VehicleMakeModelPicker({
     };
   }, [onClose]);
 
-  const text = darkMode ? "text-white" : "text-[#161616]";
   const border = darkMode ? "border-white/10" : "border-black/10";
   const subdued = darkMode ? "text-[#c6c8ca]" : "text-[#575c63]";
 
