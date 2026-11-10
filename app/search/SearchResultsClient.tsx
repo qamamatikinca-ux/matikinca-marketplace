@@ -79,11 +79,17 @@ export default function SearchResultsClient() {
 
   useEffect(() => {
     if (query.trim()) rememberSearchInterest(query);
-    setInterests(readSearchInterests());
-    setInput(query);
-    setPlace(location);
-    setFiltersOpen(Boolean(location));
-    setCurrentPage(1);
+    let active = true;
+    // Run URL synchronisation after effect setup, avoiding cascading renders.
+    queueMicrotask(() => {
+      if (!active) return;
+      setInterests(readSearchInterests());
+      setInput(query);
+      setPlace(location);
+      setFiltersOpen(Boolean(location));
+      setCurrentPage(1);
+    });
+    return () => { active = false; };
   }, [location, query, scope]);
 
   useEffect(() => {
@@ -161,14 +167,11 @@ export default function SearchResultsClient() {
   }, [interests, listings, loading, query, scope]);
 
   const totalPages = Math.max(1, Math.ceil(results.length / RESULTS_PER_PAGE));
+  const visiblePage = Math.min(currentPage, totalPages);
   const paginatedResults = useMemo(() => {
-    const start = (currentPage - 1) * RESULTS_PER_PAGE;
+    const start = (visiblePage - 1) * RESULTS_PER_PAGE;
     return results.slice(start, start + RESULTS_PER_PAGE);
-  }, [currentPage, results]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(totalPages);
-  }, [currentPage, totalPages]);
+  }, [visiblePage, results]);
 
   const visibleScopes = useMemo(
     () => searchScopes.filter((item) => item.value !== "page"),
@@ -337,7 +340,7 @@ export default function SearchResultsClient() {
               ))}
             </div>
             {results.length > RESULTS_PER_PAGE ? (
-              <LoadLinkPagination current={currentPage} total={totalPages} onChange={changePage} darkMode={darkMode} label="Search result pages" />
+              <LoadLinkPagination current={visiblePage} total={totalPages} onChange={changePage} darkMode={darkMode} label="Search result pages" />
             ) : null}
           </>
         ) : (
