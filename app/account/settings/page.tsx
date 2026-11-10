@@ -138,10 +138,10 @@ export default function AccountSettingsPage() {
     };
     const initialSync = window.setTimeout(syncHash, 0);
     window.addEventListener("hashchange", syncHash);
-    void load();
+    const initialLoad = window.setTimeout(() => void load(), 0);
     getLoadLinkPushState().then(setPushState).catch(() => undefined);
     const permissionSync = window.setTimeout(() => setBrowserAlertState(getBrowserAlertState()), 0);
-    return () => { window.clearTimeout(initialSync); window.clearTimeout(permissionSync); window.removeEventListener("hashchange", syncHash); };
+    return () => { window.clearTimeout(initialSync); window.clearTimeout(initialLoad); window.clearTimeout(permissionSync); window.removeEventListener("hashchange", syncHash); };
   }, []);
 
   function field<K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) { setForm((current) => ({ ...current, [key]: value })); }
