@@ -186,7 +186,7 @@ export default function AccountSettingsPage() {
     try {
       const next = await enableLoadLinkPush();
       setPushState(next);
-      if (next === "enabled") setMessage("Push notifications are enabled on this device.");
+      if (next === "enabled") setMessage("This device is subscribed to push notifications. Actual delivery depends on the LoadLink notification service.");
       else if (next === "blocked") setMessage("Push notifications are blocked in this browser's notification settings.");
       else if (next === "unconfigured") setMessage("Push notifications are temporarily unavailable. Please try again later.");
       else if (next === "unsupported") setMessage("This browser does not support web push notifications.");
@@ -418,9 +418,26 @@ export default function AccountSettingsPage() {
               <Toggle label="Listing and review updates" checked={form.listing_notifications} busy={preferenceSaving === "listing_notifications"} onChange={(value) => void savePreference("listing_notifications", value)} darkMode={darkMode} />
               <Toggle label="Product news" checked={form.marketing_notifications} busy={preferenceSaving === "marketing_notifications"} onChange={(value) => void savePreference("marketing_notifications", value)} darkMode={darkMode} />
             </div>
+            <div data-loadlink-push-status="true" className={`mt-5 flex flex-col gap-3 rounded-xl border px-4 py-4 sm:flex-row sm:items-center sm:justify-between ${darkMode ? "border-white/15 bg-white/[.03]" : "border-black/10 bg-[#faf9f5]"}`}>
+              <div className="min-w-0">
+                <strong className="block text-sm font-semibold">Phone and browser alerts</strong>
+                <p role="status" className={`mt-1 text-xs leading-5 ${muted}`}>
+                  {pushState === "enabled" ? "This device is subscribed. Delivery is not guaranteed until the notification service is verified."
+                    : pushState === "blocked" ? "Notifications are blocked. Allow them in your browser or device settings."
+                    : pushState === "unconfigured" ? "Phone alerts are unavailable while the notification service is not configured."
+                    : pushState === "unsupported" ? "This browser cannot receive LoadLink push notifications."
+                    : "Enable supported phone alerts for messages and account activity."}
+                </p>
+              </div>
+              <button type="button" onClick={() => void enablePush()}
+                disabled={pushBusy || pushState === "enabled" || pushState === "unsupported" || pushState === "unconfigured" || pushState === "blocked"}
+                className={`min-h-11 shrink-0 rounded-xl px-5 text-xs font-semibold ${pushState === "disabled" ? "bg-[#f6b800] text-black" : darkMode ? "bg-white/10 text-white" : "bg-black/5 text-black"} disabled:cursor-not-allowed disabled:opacity-60`}>
+                {pushBusy ? "Enabling…" : pushState === "enabled" ? "Subscribed" : pushState === "disabled" ? "Enable alerts" : "Unavailable"}
+              </button>
+            </div>
             <div className="mt-5 grid gap-2">
               <SettingsRoute href="/notifications" title="Notification inbox" description="See notifications and mark them read." darkMode={darkMode} />
-              <SettingsRoute href="/account/settings#message-privacy" title="Messages and push alerts" description="Manage notification previews and mobile push permissions." darkMode={darkMode} onClick={() => setSettingsView("messages")} />
+              <SettingsRoute href="/account/settings#message-privacy" title="Message privacy" description="Manage typing, activity and notification preview settings." darkMode={darkMode} onClick={() => setSettingsView("messages")} />
             </div>
           </section>
         ) : null}
@@ -454,10 +471,7 @@ export default function AccountSettingsPage() {
               <Toggle label="Allow potential deals" description="Let new people contact you about your listings. New enquiries appear in Potential Deals before you accept them." checked={form.message_requests_enabled} busy={preferenceSaving === "message_requests_enabled"} onChange={(value) => void savePreference("message_requests_enabled", value)} darkMode={darkMode} />
               <Toggle label="Show notification previews" description="Show sender and message text in supported notifications." checked={form.message_notification_previews} busy={preferenceSaving === "message_notification_previews"} onChange={(value) => void savePreference("message_notification_previews", value)} darkMode={darkMode} />
             </div>
-            <div className={`mt-3 flex items-center justify-between gap-4 rounded-xl border px-4 py-3 ${darkMode ? "border-white/10 bg-white/[.02]" : "border-black/10 bg-black/[.015]"}`}>
-              <span className="min-w-0"><strong className="block text-sm font-bold">Push notifications</strong><span className={`mt-1 block text-xs font-semibold ${muted}`}>{pushState === "enabled" ? "Enabled on this device." : pushState === "blocked" ? "Blocked in browser settings." : pushState === "unconfigured" ? "Temporarily unavailable." : pushState === "unsupported" ? "Not supported by this browser." : "Receive new messages when LoadLink is closed."}</span></span>
-              <button type="button" onClick={() => void enablePush()} disabled={pushBusy || pushState === "enabled" || pushState === "unsupported"} className={`h-9 shrink-0 rounded-xl px-3 text-[10px] font-semibold ${pushState === "enabled" ? (darkMode ? "bg-white/10 text-white/55" : "bg-black/5 text-black/55") : "bg-[#f6b800] text-black"} disabled:opacity-60`}>{pushBusy ? "Enabling…" : pushState === "enabled" ? "Enabled" : "Enable"}</button>
-            </div>
+
           </section>
         ) : null}
 
