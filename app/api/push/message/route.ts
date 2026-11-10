@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
     const privateKey = process.env.VAPID_PRIVATE_KEY || "";
     const subject = process.env.VAPID_SUBJECT || "mailto:loadlinksouthafrica@gmail.com";
-    if (!url || !anon || !service || !publicKey || !privateKey) return NextResponse.json({ ok: false, disabled: true });
+    if (!url || !anon || !service || !publicKey || !privateKey) return NextResponse.json({ error: "Phone notifications are currently unavailable." }, { status: 503 });
 
     const bearer = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || "";
     if (!bearer) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
