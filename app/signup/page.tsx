@@ -27,6 +27,8 @@ export default function SignUpPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [sent, setSent] = useState(false);
+  const [verificationCode,setVerificationCode] = useState("");
+  const [verifying,setVerifying] = useState(false);
   const [busy, setBusy] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [captchaToken, setCaptchaToken] = useState("");
@@ -70,7 +72,7 @@ export default function SignUpPage() {
       if (data.session) { router.replace("/complete-profile"); return; }
       setSent(true);
       setResendCooldown(60);
-      setMessage("Your verification email has been requested. Check your inbox and spam folder, then confirm your address to finish setting up LoadLink.");
+      setMessage("Your verification code has been requested. Check your inbox and enter the code below to activate your account.");
     } catch (error) {
       setMessage(friendlyAuthError(error, "signup"));
     } finally {
@@ -93,7 +95,7 @@ export default function SignUpPage() {
       });
       if (error) throw error;
       setResendCooldown(60);
-      setMessage("Another verification email has been requested. Check your inbox and spam folder.");
+      setMessage("Another verification code has been requested. Use the newest code from your inbox.");
     } catch (error) {
       setMessage(friendlyAuthError(error, "signup"));
     } finally {
@@ -101,6 +103,24 @@ export default function SignUpPage() {
       setCaptchaToken("");
       setCaptchaResetKey((value) => value + 1);
     }
+  }
+
+  async function verifyEmailCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if(verifying || busy || !/^\\d{6,8}$/.test(verificationCode))return;
+    setVerifying(true);setMessage("");
+    try {
+      const {data,error}=await supabase.auth.verifyOtp({
+        email:email.trim().toLowerCase(),
+        token:verificationCode,
+        type:"signup",
+      });
+      if(error)throw error;
+      if(!data.session)throw new Error("Verification succeeded but the session was not returned. Please sign in.");
+      router.replace("/complete-profile");
+    }catch(error){
+      setMessage(friendlyAuthError(error,"signup"));
+    }finally{setVerifying(false);}
   }
 
   async function continueWithGoogle() {
@@ -131,12 +151,19 @@ export default function SignUpPage() {
       {sent ? (
         <div className={`rounded-[20px] border p-5 backdrop-blur-xl ${darkMode ? "border-emerald-500/25 bg-emerald-500/[.06]" : "border-emerald-600/20 bg-emerald-50/70"}`}>
           <p className="text-lg font-black">Check your email</p>
-          <p className="mt-2 text-sm font-semibold leading-6 opacity-65">We requested a verification link for <strong>{email.trim().toLowerCase()}</strong>. Open the email and confirm your address to finish creating your account.</p>
-          <p className="mt-3 text-xs font-semibold leading-5 opacity-60">Nothing in your inbox? Check your spam folder or request another link after the short security cooldown.</p>
+          <p className="mt-2 text-sm font-semibold leading-6 opacity-65">We requested a one-time verification code for <strong>{email.trim().toLowerCase()}</strong>. Enter the code below to finish creating your account.</p>
+          <p className="mt-3 text-xs font-semibold leading-5 opacity-60">The code expires automatically. Do not share it with anyone. Check spam if needed; you can request a new code after the security cooldown.</p>
+          <form onSubmit={(event)=>void verifyEmailCode(event)} className="mt-4 grid gap-2.5">
+            <label className="grid gap-2"><span className="text-xs font-black">Verification code</span>
+              <input type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6,8}" maxLength={8} required
+                value={verificationCode} onChange={event=>setVerificationCode(event.target.value.replace(/\\D/g,"").slice(0,8))}
+                placeholder="Enter code" className={input+" text-center text-xl tracking-[.2em]"} /></label>
+            <button type="submit" disabled={verifying||verificationCode.length<6||busy} className="h-12 rounded-full bg-[#f6b800] px-5 text-sm font-black text-black disabled:opacity-45">{verifying?"Verifying…":"Verify email and continue"}</button>
+          </form>
           <div className="mt-4 grid gap-2.5">
             <TurnstileChallenge onToken={setCaptchaToken} resetKey={captchaResetKey} darkMode={darkMode} />
             <button type="button" onClick={() => void resendConfirmation()} disabled={busy || resendCooldown > 0 || !captchaToken} className="h-12 rounded-full bg-[#f6b800] px-5 text-sm font-black text-black disabled:opacity-45">
-              {busy ? "Requesting…" : resendCooldown > 0 ? `Resend available in ${resendCooldown}s` : "Resend verification email"}
+              {busy ? "Requesting…" : resendCooldown > 0 ? `Resend available in ${resendCooldown}s` : "Resend verification code"}
             </button>
             <button type="button" onClick={() => { setSent(false); setMessage(""); setCaptchaToken(""); setCaptchaResetKey((value) => value + 1); }} className="h-10 text-xs font-black underline underline-offset-4">Use a different email</button>
           </div>
