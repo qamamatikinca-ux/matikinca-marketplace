@@ -1,27 +1,21 @@
-# LoadLink confirmation email setup
+# LoadLink account verification code — activation checklist
 
-The branded email for **Confirm signup** is in `supabase/email-templates/confirm-signup.html`.
+The website now accepts the Supabase Auth one-time verification code at signup. 
+Source HTML: `supabase/email-templates/confirm-signup.html`.
+The template follows the approved LoadLink email layout and inserts `{{ .Token }}` from Supabase (never from browser code).
 
-The email header uses the **official LoadLink logo image**, not a text imitation: `https://matikinca-marketplace.vercel.app/images/loadlink-logo-dark.png`. The URL is publicly accessible over HTTPS and matches the version used by the website's dark header. Email clients may initially block remote images; the image has readable alt text. Do not use a relative `/images/...` path in email HTML.
+## Activate email sending (production configuration still required)
 
-**Subject:** Welcome to LoadLink — confirm your email address
+1. Sign in to the **correct** hosted Supabase project `cqmjgulfbbwxyecsnzed` and open Authentication → Email Templates → **Confirm signup**.
+2. Set subject to **Your LoadLink verification code** and paste the exact HTML from the source file. Save. GitHub commits do not update hosted Auth templates automatically.
+3. Go to Authentication → SMTP settings. Connect a **separately authorised, deliverability-tested SMTP sender**. Set From to `noreplyloadlink@gmail.com` only after verifying ownership and SMTP authorization. Do not reuse the marketing Gmail OAuth access token or password. For reliable production volumes, prefer a domain-verified transactional SMTP sender on a LoadLink-owned domain if the proposed Gmail account cannot send reliably.
+4. Leave **Confirm email** enabled. Do not bypass verification or send codes to Google identities that already arrive verified through trusted OAuth. Google login still requires the real Google provider.
+5. Keep Supabase server-side one-time code expiration, rate limits and CAPTCHA. Existing UI requires Turnstile and uses a 60-second resend cooldown. Verify OTP using Supabase Auth; no code is stored in LoadLink tables or logs.
+6. Run end-to-end tests with an authorised new email account: signup → receive code → enter code → navigate to `/complete-profile`; invalid/replayed/expired code rejects; resend cooldown works; Google OAuth creates a verified account without a redundant email challenge.
+7. Confirm SMTP SPF/DKIM/DMARC, inbox delivery, mail branding and Gmail's outbound daily limits. Never claim sender is ready until a genuine message was received.
 
-## Activate in hosted Supabase
-
-1. Open [Supabase Authentication > Email Templates](https://supabase.com/dashboard/project/cqmjgulfbbwxyecsnzed/auth/templates).
-2. Select **Confirm sign up**, set the subject above, and paste the full HTML from `confirm-signup.html`. Save.
-3. In **Authentication > SMTP settings**, configure a verified transactional sender (for example Resend, Postmark, or AWS SES). Set the sender display name to `LoadLink`; use a verified address on your own domain. Keep sign-up email confirmation **enabled**.
-4. Configure domain SPF, DKIM, and DMARC according to the sender's instructions. Disable link rewriting/tracking on authentication emails to protect confirmation links.
-5. Confirm your Auth Site URL and redirect allowlist include the canonical production domain and `https://matikinca-marketplace.vercel.app/auth/callback`, as this page is the app's current callback target.
-6. Check Auth email rate limits for realistic demand. Do not eliminate abuse throttles or CAPTCHA to chase speed.
-7. Test signup with a new test address outside the Supabase organisation, confirm deliverability and timing, open the confirmation link, and verify it returns to the proper LoadLink profile flow. Test the protected resend action after its cooldown.
-
-## Important
-
-- The repository HTML file is a **source template**. Hosting it in GitHub does not change Supabase-hosted Auth emails. Step 2 is required for the new email to go live.
-- After any subsequent repository edit (including updating the logo), **paste the latest HTML into Supabase's hosted Confirm sign up editor and save it again**; previously saved hosted templates do not automatically sync. Check the new logo by sending a verification email to an authorised test inbox.
-- The UI requests the initial email as part of Supabase `auth.signUp`; it cannot guarantee instant inbox delivery. SMTP provider performance, verification records, spam filtering, and rate limiting control delivery time.
-- The resend form is guarded by Turnstile and a 60-second client cooldown; the server's own rate limits remain authoritative.
-- **Do not change** `components/LogisticsNews.tsx`, the logistics news API, or the homepage news presentation as part of this email rollout.
-
-Reference: https://supabase.com/docs/guides/auth/auth-email-templates and https://supabase.com/docs/guides/auth/auth-smtp
+### Important limitations
+- Supabase's built-in email provider is not production-ready and sends only to pre-authorized project member addresses; a custom SMTP provider is required for real customer emails.
+- Email delivery speed depends on the SMTP service and recipient mailbox and cannot be guaranteed.
+- The email logo uses a public HTTPS image, so some recipient email apps may block images until permitted.
+- Native Android Google OAuth must launch a secure external browser (Chrome Custom Tabs / Android Credential Manager), not an embedded WebView. The native shell must handle the redirect. A website-only change cannot override the Android WebView's navigation policy.
