@@ -1,13 +1,16 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><title>Verify your LoadLink email</title></head>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark"><style>
+.logo-dark{display:none!important;max-height:0!important;overflow:hidden!important}
+@media(prefers-color-scheme:dark){body,.outer{background:#101010!important}.paper{background:#171717!important}.brandtext,.copy{color:#f4f4f4!important}.logo-light{display:none!important;max-height:0!important;overflow:hidden!important}.logo-dark{display:block!important;max-height:none!important}}
+</style><title>Verify your LoadLink email</title></head>
 <body style="margin:0;padding:0;background:#f4f4f4;color:#191919;font-family:Arial,Helvetica,sans-serif">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f4f4"><tr><td align="center" style="padding:30px 14px">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:540px;background:#ffffff;border-collapse:collapse">
+<table class="outer" role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f4f4"><tr><td align="center" style="padding:30px 14px">
+<table class="paper" role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:540px;background:#ffffff;border-collapse:collapse">
 <tr><td style="height:5px;background:#efa21f;font-size:1px;line-height:5px">&nbsp;</td></tr>
-<tr><td align="center" style="padding:36px 24px 18px"><img src="https://matikinca-marketplace.vercel.app/images/loadlink-logo-light.png" alt="LoadLink" width="255" style="display:block;width:255px;max-width:90%;height:auto;border:0;color:#111;font:bold italic 28px Arial,sans-serif"></td></tr>
-<tr><td align="center" style="padding:0 28px 26px"><p style="font:700 11px Arial,sans-serif;letter-spacing:1.4px;color:#99650c;margin:0 0 14px">SECURE ACCOUNT VERIFICATION</p><h1 style="font:bold 29px/1.25 Arial,sans-serif;color:#111;margin:0">Your verification code.</h1><div style="height:3px;width:37px;background:#ed9b18;margin:22px auto 0"></div></td></tr>
+<tr><td align="center" style="padding:36px 24px 18px"><img class="logo-light" src="https://matikinca-marketplace.vercel.app/images/loadlink-logo-light.png" alt="LoadLink" width="255" style="display:block;width:255px;max-width:90%;height:auto;border:0;color:#111;font:bold italic 28px Arial,sans-serif"><img class="logo-dark" src="https://matikinca-marketplace.vercel.app/images/loadlink-logo-dark.png" alt="LoadLink" width="255" style="display:none;max-height:0;overflow:hidden;width:255px;max-width:90%;height:auto;border:0;color:#fff;font:bold italic 28px Arial,sans-serif"></td></tr>
+<tr><td align="center" style="padding:0 28px 26px"><p style="font:700 11px Arial,sans-serif;letter-spacing:1.4px;color:#99650c;margin:0 0 14px">SECURE ACCOUNT VERIFICATION</p><h1 class="brandtext" style="font:bold 29px/1.25 Arial,sans-serif;color:#111;margin:0">Your verification code.</h1><div style="height:3px;width:37px;background:#ed9b18;margin:22px auto 0"></div></td></tr>
 <tr><td style="padding:12px 37px 28px">
-<p style="font:15px/1.7 Arial,sans-serif;color:#333;margin:0 0 18px">Welcome to LoadLink. Enter the code below on the sign-up screen to verify your email and finish creating your account.</p>
+<p class="copy" style="font:15px/1.7 Arial,sans-serif;color:#333;margin:0 0 18px">Welcome to LoadLink. Enter the code below on the sign-up screen to verify your email and finish creating your account.</p>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:23px 10px;background:#fff8e9;border:1px solid #eacb8a;border-radius:7px"><span style="font:bold 36px/1.2 Arial,sans-serif;letter-spacing:8px;color:#191919">{{ .Token }}</span></td></tr></table>
 <p style="font:13px/1.6 Arial,sans-serif;color:#555;margin:21px 0 10px">This code is temporary and can only be used once. Never share it with anyone, including LoadLink staff.</p>
 <p style="font:13px/1.6 Arial,sans-serif;color:#555;margin:0">If you did not create a LoadLink account, you can safely ignore this message.</p>
