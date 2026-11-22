@@ -1,6 +1,8 @@
 "use client";
 
 import LoadLinkImage from "@/components/LoadLinkImage";
+import Link from "next/link";
+import PostingIntentCards, { type PostingIntent } from "@/components/PostingIntentCards";
 
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -57,6 +59,7 @@ export default function ListJobPage() {
 
   const [ready, setReady] = useState(false);
   const [step, setStep] = useState(1);
+  const [postingIntent, setPostingIntent] = useState<PostingIntent>("transport");
   const [group, setGroup] = useState<VehicleGroup>("Trucks / Trailers");
   const [vehicleNeeded, setVehicleNeeded] = useState("");
   const [neededOn, setNeededOn] = useState(today());
@@ -112,6 +115,7 @@ export default function ListJobPage() {
         if (draft) {
           try {
             const data = JSON.parse(draft);
+            setPostingIntent(data.postingIntent === "specialist" || data.postingIntent === "driver" ? data.postingIntent : "transport");
             setGroup(data.group || "Trucks / Trailers");
             setVehicleNeeded(data.vehicleNeeded || "");
             setNeededOn(data.neededOn || today());
@@ -139,6 +143,7 @@ export default function ListJobPage() {
     void supabase.auth.getUser().then(({ data }) => {
       if (!active || !data.user) return;
       localStorage.setItem(`${draftVersion}:${data.user.id}`, JSON.stringify({
+        postingIntent,
         group,
         vehicleNeeded,
         neededOn,
@@ -156,7 +161,7 @@ export default function ListJobPage() {
       }));
     });
     return () => { active = false; };
-  }, [ready, draftVersion, group, vehicleNeeded, neededOn, city, locationLabel, province, latitude, longitude, title, rate, description, postedBy, contact, step]);
+  }, [ready, draftVersion, postingIntent, group, vehicleNeeded, neededOn, city, locationLabel, province, latitude, longitude, title, rate, description, postedBy, contact, step]);
 
   async function photos(event: ChangeEvent<HTMLInputElement>) {
     const selectedFiles = Array.from(event.target.files || []).slice(0, 5);
@@ -203,6 +208,10 @@ export default function ListJobPage() {
 
   function next() {
     setMessage("");
+    if (step === 1 && postingIntent === "driver") {
+      setMessage("Driver vacancy posting needs the dedicated recruitment and application service. It is not available in this release. You can contact drivers through the existing directory.");
+      return;
+    }
     if (step === 1 && !vehicleNeeded.trim()) {
       setMessage("Tell LoadLink what vehicle or mobile unit is needed.");
       return;
@@ -242,6 +251,7 @@ export default function ListJobPage() {
     setMessage("");
     window.dispatchEvent(new CustomEvent("loadlink:toast", { detail: { id: "loadlink-post-submit", kind: "progress", title: `Submitting ${postName}`, message: "LoadLink is publishing your details securely.", progress: 42 } }));
     try {
+      if (postingIntent === "driver") throw new Error("Driver vacancies cannot be submitted until the recruitment application process is available.");
       const intelligence = await getLoadLinkIntelligence();
       if (!intelligence.authenticated) throw new Error(`Sign in to post this ${postName}.`);
       if (["blocked", "suspended"].includes(intelligence.account_status)) throw new Error(intelligence.account_reason || "You cannot post while this account is restricted.");
@@ -304,12 +314,23 @@ export default function ListJobPage() {
           <section className={`rounded-[30px] border p-5 sm:p-7 ${surface}`}>
             {step === 1 ? (
               <>
-                <h2 className="text-2xl font-black tracking-[-.035em]">What do you need?</h2>
-                <p className={`mt-2 text-xs font-semibold ${muted}`}>Choose the category and tell operators what vehicle or mobile unit is required.</p>
-                <div className="mt-5 grid gap-4">
-                  <Field label="Category"><select value={group} onChange={(event) => setGroup(event.target.value as VehicleGroup)} className={input}>{groups.map((item) => <option key={item}>{item}</option>)}</select></Field>
-                  <Field label="Vehicle or unit needed"><input value={vehicleNeeded} onChange={(event) => setVehicleNeeded(event.target.value)} placeholder="e.g. Side tipper, lowbed, mobile fridge" className={input} /></Field>
+                <h2 className="text-2xl font-black tracking-[-.035em]">Choose your opportunity</h2>
+                <p className={`mt-2 text-xs font-semibold ${muted}`}>Tell LoadLink what you need so the right people understand your post.</p>
+                <div className="mt-5">
+                  <PostingIntentCards value={postingIntent} darkMode={darkMode} onChange={(next) => { setPostingIntent(next); setMessage(""); if (next === "transport") setGroup("Trucks / Trailers"); if (next === "specialist") setGroup("Farming / Mining"); }} />
                 </div>
+                {postingIntent === "driver" ? (
+                  <div className={`mt-5 rounded-[18px] border p-4 ${darkMode ? "border-white/15 bg-white/[.04]" : "border-black/10 bg-white/60"}`}>
+                    <p className="text-sm font-black">Looking for a driver?</p>
+                    <p className={`mt-2 text-xs font-medium leading-6 ${muted}`}>You can browse and contact professional drivers now. Posting driver vacancies with formal applications will be enabled once the recruitment service is ready. This form cannot publish a driver vacancy yet.</p>
+                    <Link href="/drivers" className="mt-4 inline-flex min-h-11 items-center rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">Find professional drivers</Link>
+                  </div>
+                ) : (
+                  <div className="mt-5 grid gap-4">
+                    <Field label="Equipment category"><select value={group} onChange={(event) => setGroup(event.target.value as VehicleGroup)} className={input}>{groups.map((item) => <option key={item}>{item}</option>)}</select></Field>
+                    <Field label={postingIntent === "transport" ? "Truck or trailer required" : "Equipment or service needed"}><input value={vehicleNeeded} onChange={(event) => setVehicleNeeded(event.target.value)} placeholder={postingIntent === "transport" ? "e.g. Side tipper or tautliner" : "e.g. Lowbed, forklift or mobile fridge"} className={input} /></Field>
+                  </div>
+                )}
               </>
             ) : null}
 
