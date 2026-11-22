@@ -302,7 +302,7 @@ export default function ListJobPage() {
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
       <section className="mx-auto max-w-3xl px-4 pb-16 pt-7 sm:px-5 sm:pt-10">
         <div className="mb-6">
-          <p className={`text-[10px] font-black uppercase tracking-[.14em] ${darkMode ? "text-[#f6b800]" : "text-[#9a7000]"}`}>{isContract ? "Contract opportunity" : "LoadLink jobs"}</p>
+          <p className={`text-[10px] font-black uppercase tracking-[.14em] ${muted}`}>{isContract ? "Contract opportunity" : "LoadLink jobs"}</p>
           <h1 className="mt-2 text-[38px] font-black tracking-[-.055em] sm:text-[44px]">Post a {postName}</h1>
           <p className={`mt-2 max-w-xl text-sm font-semibold leading-6 ${muted}`}>{isContract ? "Add the opportunity in five clear steps." : "Job posting is free. Add what you need and when you need it."}</p>
         </div>
@@ -314,11 +314,7 @@ export default function ListJobPage() {
           <section className={`rounded-[30px] border p-5 sm:p-7 ${surface}`}>
             {step === 1 ? (
               <>
-                <h2 className="text-2xl font-black tracking-[-.035em]">Choose your opportunity</h2>
-                <p className={`mt-2 text-xs font-semibold ${muted}`}>Tell LoadLink what you need so the right people understand your post.</p>
-                <div className="mt-5">
-                  <PostingIntentCards value={postingIntent} darkMode={darkMode} onChange={(next) => { setPostingIntent(next); setMessage(""); if (next === "transport") setGroup("Trucks / Trailers"); if (next === "specialist") setGroup("Farming / Mining"); }} />
-                </div>
+                <PostingIntentCards value={postingIntent} darkMode={darkMode} onChange={(next) => { setPostingIntent(next); setMessage(""); }} />
                 {postingIntent === "driver" ? (
                   <div className={`mt-5 rounded-[18px] border p-4 ${darkMode ? "border-white/15 bg-white/[.04]" : "border-black/10 bg-white/60"}`}>
                     <p className="text-sm font-black">Looking for a driver?</p>
