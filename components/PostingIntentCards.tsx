@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import LoadLinkImage from "@/components/LoadLinkImage";
 
 export type PostingIntent = "transport" | "driver" | "specialist";
@@ -10,7 +11,35 @@ type Props = {
   darkMode: boolean;
 };
 
-const OPTIONS: Array<{
+/** Match the vehicle-type choices on List Your Vehicle, including image loading. */
+function PostingCategoryPhoto({ src, alt }: { src: string; alt: string }) {
+  const [loaded, setLoaded] = useState(false);
+  const photoRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    const image = photoRef.current;
+    setLoaded(Boolean(image?.complete && image.naturalWidth > 0));
+  }, [src]);
+
+  return (
+    <span className="relative mb-4 block h-36 w-full overflow-hidden rounded-[16px] bg-white/[.045] sm:h-40">
+      {!loaded ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 animate-pulse bg-current/[.045]" /> : null}
+      <LoadLinkImage
+        ref={photoRef}
+        src={src}
+        alt={alt}
+        loading="eager"
+        decoding="async"
+        sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 440px"
+        onLoad={() => setLoaded(true)}
+        className={`h-full w-full object-cover object-center transition-[opacity,transform] duration-700 ease-out ${loaded ? "scale-100 opacity-100" : "scale-[1.025] opacity-0"}`}
+      />
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+    </span>
+  );
+}
+
+const OPTIONS: ReadonlyArray<{
   id: PostingIntent;
   title: string;
   description: string;
@@ -19,35 +48,34 @@ const OPTIONS: Array<{
 }> = [
   {
     id: "transport",
-    title: "Move goods with a truck",
-    description: "Find a transporter with the right truck to collect and deliver your goods.",
-    image: "/images/jobs/jobs-hero-fleet.jpg",
-    alt: "Commercial freight trucks ready for transport work",
+    title: "Transporter / Truck",
+    description: "Need goods moved? Find a transport company with a truck to collect and deliver your load.",
+    image: "/images/vehicle-types/truck.webp",
+    alt: "Commercial freight truck",
   },
   {
     id: "driver",
-    title: "Find a professional driver",
-    description: "Find a qualified driver to operate a vehicle. You do not need to hire a truck.",
+    title: "Professional Driver",
+    description: "Need someone to drive? Find a qualified driver to operate your own truck or fleet vehicle.",
     image: "/images/driver-profile-hero.jpg",
-    alt: "Professional truck driver seated inside a truck cabin",
+    alt: "Professional driver in a commercial truck cabin",
   },
   {
     id: "specialist",
-    title: "Find equipment or a service",
-    description: "Request specialist equipment or services for your operation.",
+    title: "Equipment / Specialist Service",
+    description: "Need machinery or specialist equipment? Describe the equipment or service your business needs.",
     image: "/images/jobs/list-job-forklift.jpg",
-    alt: "Forklift loading a transport trailer at an industrial yard",
+    alt: "Industrial handling equipment at a loading area",
   },
 ];
 
 export default function PostingIntentCards({ value, onChange, darkMode }: Props) {
+  const muted = darkMode ? "text-white/55" : "text-black/55";
   return (
     <fieldset className="min-w-0">
-      <legend className="mb-3 text-sm font-black">What do you need?</legend>
-      <p className={`mb-4 text-xs font-medium leading-5 ${darkMode ? "text-white/70" : "text-black/65"}`}>
-        Select one option to see the right questions. You can change your selection before posting.
-      </p>
-      <div className="grid min-w-0 gap-3 sm:grid-cols-3" data-loadlink-posting-intent-cards="true">
+      <legend className="text-3xl font-black tracking-[-.04em]">What are you looking for?</legend>
+      <p className={`mt-2 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Choose what you need. Each option has different posting requirements.</p>
+      <div className="ll-vehicle-type-choices mt-6 grid max-w-3xl gap-3 sm:grid-cols-2" data-loadlink-posting-intent-cards="true">
         {OPTIONS.map((option) => {
           const selected = value === option.id;
           return (
@@ -56,22 +84,14 @@ export default function PostingIntentCards({ value, onChange, darkMode }: Props)
               type="button"
               aria-pressed={selected}
               onClick={() => onChange(option.id)}
-              className={`group min-w-0 overflow-hidden rounded-[20px] border text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f6b800] ${selected ? "border-[#f6b800] ring-2 ring-[#f6b800]/60" : darkMode ? "border-white/20 hover:border-white/45" : "border-black/10 hover:border-black/25"} ${darkMode ? "bg-[#141414]" : "bg-white"}`}
+              className={`ll-vehicle-type-card min-h-28 rounded-[24px] border px-6 py-5 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${darkMode ? "bg-black text-white" : "bg-[#faf8f2] text-black"} ${selected ? darkMode ? "border-white ring-1 ring-white" : "border-black ring-1 ring-black" : darkMode ? "border-white/15" : "border-black/10"}`}
             >
-              <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#292929]">
-                <LoadLinkImage
-                  src={option.image}
-                  alt={option.alt}
-                  loading="eager"
-                  sizes="(max-width: 639px) 100vw, (max-width: 1023px) 33vw, 260px"
-                  className="block h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.025]"
-                />
-              </div>
-              <div className="min-h-[122px] p-3 sm:p-3.5">
-                <p className="text-[13px] font-black leading-5">{option.title}</p>
-                <p className={`mt-1.5 text-[11px] font-medium leading-[1.55] ${darkMode ? "text-white/70" : "text-black/65"}`}>{option.description}</p>
-                {selected ? <p className="mt-2 text-[11px] font-black text-[#b68500] dark:text-[#f6b800]">Selected</p> : null}
-              </div>
+              <PostingCategoryPhoto src={option.image} alt={option.alt} />
+              <span className="flex items-center justify-between gap-2">
+                <span className="block text-xl font-black">{option.title}</span>
+                {selected ? <span className="text-xs font-semibold opacity-65" aria-label="Selected">✓</span> : null}
+              </span>
+              <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>{option.description}</span>
             </button>
           );
         })}
