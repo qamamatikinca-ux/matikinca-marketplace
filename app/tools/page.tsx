@@ -6,6 +6,7 @@ import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
 import LogisticsDocumentEditor from "@/components/LogisticsDocumentEditor";
+import TripProfitabilityTool from "@/components/TripProfitabilityTool";
 import LoadLinkDocumentPreview from "@/components/LoadLinkDocumentPreview";
 import Link from "next/link";
 
@@ -15,12 +16,13 @@ import { parsePostedRate, rateUnitLabel, type RateUnit } from "@/lib/logisticsQu
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 type Category = "All" | "Planning" | "Money" | "Operations";
-type ToolId = "quote" | "trip" | "checklist" | "documents" | "handover" | "costs" | "payment" | "pod" | "incident" | "collection" | "delivery" | "eta";
+type ToolId = "profit" | "quote" | "trip" | "checklist" | "documents" | "handover" | "costs" | "payment" | "pod" | "incident" | "collection" | "delivery" | "eta";
 type Tool = { id: ToolId; name: string; description: string; category: Exclude<Category,"All">; template?: string };
 type QuoteField = "rate" | "vehicle" | "route";
 type PostRow = { id:string; title:string; city:string|null; vehicle_group:string|null; rate:string|null; description:string|null; status:string|null; moderation_status:string|null };
 
 const TOOLS: Tool[] = [
+  { id:"profit", name:"Trip profitability & rate guide", description:"Calculate your costs, break-even and a suggested transport price", category:"Money" },
   { id:"quote", name:"Rate quote", description:"Build a clean transport quote", category:"Money" },
   { id:"trip", name:"Trip brief", description:"Collection, delivery and cargo", category:"Planning", template:"TRIP BRIEF\n\nCollection\nAddress: \nContact: \nTime: \n\nDelivery\nAddress: \nContact: \nTime: \n\nCargo\nDescription: \nWeight / quantity: \n\nVehicle\nType / registration: \n\nSpecial instructions:\n" },
   { id:"checklist", name:"Load checklist", description:"Pre-dispatch checks", category:"Planning", template:"LOAD CHECKLIST\n\n[ ] Vehicle and driver confirmed\n[ ] Cargo and weight confirmed\n[ ] Collection contact confirmed\n[ ] Delivery contact confirmed\n[ ] Load restraints / equipment confirmed\n[ ] PPE / site access confirmed\n[ ] POD requirements confirmed\n\nNotes:\n" },
@@ -197,7 +199,7 @@ export default function ToolsPage() {
           <button ref={closeToolRef} type="button" onClick={()=>setSelected(null)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-current/10 text-xl" aria-label="Close"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
         </div>
 
-        <div className="mx-4 mt-4 grid grid-cols-2 rounded-full border border-current/15 p-1 md:hidden">{(["details", "preview"] as const).map(tab => <button key={tab} type="button" aria-pressed={workspaceTab === tab} onClick={() => setWorkspaceTab(tab)} className={`rounded-full px-4 py-3 text-sm font-bold ${workspaceTab === tab ? "bg-[#f6b800] text-black" : ""}`}>{tab === "details" ? "Details" : "Preview"}</button>)}</div>{tool.id==="quote" ? <><div className="grid items-start gap-5 p-4 md:grid-cols-[.9fr_1.1fr] md:p-6">
+        <div className="mx-4 mt-4 grid grid-cols-2 rounded-full border border-current/15 p-1 md:hidden">{(["details", "preview"] as const).map(tab => <button key={tab} type="button" aria-pressed={workspaceTab === tab} onClick={() => setWorkspaceTab(tab)} className={`rounded-full px-4 py-3 text-sm font-bold ${workspaceTab === tab ? "bg-[#f6b800] text-black" : ""}`}>{tab === "details" ? "Details" : "Preview"}</button>)}</div>{tool.id==="profit" ? <TripProfitabilityTool darkMode={darkMode} workspaceTab={workspaceTab} /> : tool.id==="quote" ? <><div className="grid items-start gap-5 p-4 md:grid-cols-[.9fr_1.1fr] md:p-6">
           <div className={`${workspaceTab === "details" ? "grid" : "hidden"} gap-4 md:grid`}>
             {activePosts.length ? <div className={`rounded-2xl border p-4 ${darkMode?"border-white/10 bg-white/[.02]":"border-black/10 bg-[#faf9f5]"}`}>
               <h3 className="text-sm font-black">Reuse from one of your posts</h3>
@@ -242,7 +244,7 @@ function ToolIcon({id,active=false}:{id:ToolId;active?:boolean}){
   :id==="trip"||id==="collection"||id==="delivery"?<svg {...common}><path d="M4 17h16M6 17V8h8l4 4v5M8 20h.01M17 20h.01M14 8v4h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
   :id==="checklist"?<svg {...common}><path d="M9 6h10M9 12h10M9 18h10M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
   :id==="documents"||id==="pod"?<svg {...common}><path d="M6 3h9l3 3v15H6V3Zm9 0v4h4M9 11h6M9 15h6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/></svg>
-  :id==="costs"||id==="payment"?<svg {...common}><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M3 9h18M7 15h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+  :id==="profit"||id==="costs"||id==="payment"?<svg {...common}><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M3 9h18M7 15h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
   :id==="incident"?<svg {...common}><path d="M12 3 2.8 20h18.4L12 3Zm0 6v5m0 3h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
   :id==="eta"?<svg {...common}><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/><path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
   :<svg {...common}><circle cx="8" cy="7" r="3" stroke="currentColor" strokeWidth="2"/><path d="M3 20a5 5 0 0 1 10 0M15 8h6M18 5v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>}</span>
