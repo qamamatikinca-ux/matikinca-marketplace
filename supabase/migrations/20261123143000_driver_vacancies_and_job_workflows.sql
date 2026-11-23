@@ -247,3 +247,36 @@ revoke all on function public.loadlink_record_accepted_transport_quote() from pu
 create trigger loadlink_record_accepted_transport_quote
  after update of structured_payload on public.listing_guest_messages
  for each row execute function public.loadlink_record_accepted_transport_quote();
+
+-- A restricted, identity-bound check for signed-in members of the existing listing conversations.
+create or replace function public.loadlink_is_listing_thread_participant(
+  p_listing_id uuid,p_thread_id uuid,p_user_id uuid
+) returns boolean language sql stable security definer set search_path=public,pg_temp as $$
+ select p_user_id=auth.uid() and (
+   exists (select 1 from public.job_listings j where j.id=p_listing_id and j.user_id=p_user_id)
+   or exists (select 1 from public.listing_guest_threads t
+      where t.id=p_thread_id and t.listing_id=p_listing_id and t.buyer_user_id=p_user_id)
+   or exists (select 1 from public.job_interests i where i.listing_id=p_listing_id and i.applicant_user_id=p_user_id)
+ );
+$$;
+revoke all on function public.loadlink_is_listing_thread_participant(uuid,uuid,uuid) from public;
+grant execute on function public.loadlink_is_listing_thread_participant(uuid,uuid,uuid) to authenticated;
+drop policy "Users record their own job discussion outcome" on public.job_chat_status_updates;
+create policy "Job conversation parties record their own outcome" on public.job_chat_status_updates for insert to authenticated
+ with check (user_id=(select auth.uid()) and public.loadlink_is_listing_thread_participant(listing_id,thread_id,user_id));
+drop policy "Users read their own chat status history" on public.job_chat_status_updates;
+create policy "Conversation participants read shared status timeline" on public.job_chat_status_updates for select to authenticated
+ using(user_id=(select auth.uid()) or
+   (thread_id is not null and public.loadlink_is_listing_thread_participant(listing_id,thread_id,(select auth.uid()))));
+alter table public.job_tool_records
+ add column thread_id uuid references public.listing_guest_threads(id) on delete set null,
+ add column shared_with_counterparty boolean not null default false;
+drop policy "Author reads linked job tool records" on public.job_tool_records;
+create policy "Participants read permitted job documents" on public.job_tool_records for select to authenticated
+ using (user_id=(select auth.uid()) or
+   (shared_with_counterparty and thread_id is not null and
+     public.loadlink_is_listing_thread_participant(listing_id,thread_id,(select auth.uid()))));
+drop policy "Author saves own job tool records" on public.job_tool_records;
+create policy "Participants add their own job documents" on public.job_tool_records for insert to authenticated
+ with check (user_id=(select auth.uid()) and
+   public.loadlink_is_listing_thread_participant(listing_id,thread_id,user_id));
