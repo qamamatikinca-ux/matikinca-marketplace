@@ -14,9 +14,11 @@ export default function HistoryPage(){
     <h1 className="text-4xl font-black tracking-[-.05em] sm:text-5xl">History</h1>
     <p className="mt-2 text-sm font-medium opacity-65">Your driver records, documents, jobs, contracts and saved agreements.</p>
    </header>
-   <DriverHistory/>
-   <DriverAssignmentRecords/>
-   <div className="mt-10 border-t border-current/15"><JobContractHistory/></div>
+   <section aria-label="Driver History & Documents">
+    <DriverHistory/>
+    <DriverAssignmentRecords/>
+   </section>
+   <section aria-label="Jobs & Contracts History" className="mt-10 border-t border-current/15"><JobContractHistory/></section>
   </div>
  </main>;
 }
