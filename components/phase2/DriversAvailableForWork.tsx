@@ -31,6 +31,30 @@ type Driver = {
 };
 
 type SortOption = "recommended" | "experience" | "name" | "location" | "available";
+type DriverNeed = "" | "long_distance" | "local_delivery" | "heavy_vehicle" | "mining" | "refrigerated" | "tanker" | "passenger";
+const NEEDS: {value:DriverNeed;label:string}[]=[
+ {value:"",label:"Any type of work"},
+ {value:"long_distance",label:"Long-distance transport"},
+ {value:"local_delivery",label:"Local deliveries"},
+ {value:"heavy_vehicle",label:"Heavy vehicles"},
+ {value:"mining",label:"Mining / construction"},
+ {value:"refrigerated",label:"Refrigerated transport"},
+ {value:"tanker",label:"Tankers"},
+ {value:"passenger",label:"Passenger transport"}
+];
+function needScore(row:Driver, need:DriverNeed){
+ if(!need)return 0;
+ const detail=[row.headline,row.bio,...(row.vehicle_types||[])].join(" ").toLowerCase();
+ const licence=(row.licence_code||"").toUpperCase();
+ const match=(pattern:RegExp)=>pattern.test(detail);
+ if(need==="long_distance")return (match(/long.?distance|cross.?border|line.?haul|national|inter.?provincial/)?6:0)+(/\bEC\b|CODE 14/.test(licence)?3:0)+(match(/truck|super.?link/)?1:0);
+ if(need==="local_delivery")return (match(/courier|local|last.?mile|deliver|distribution|urban/)?5:0)+(match(/van|bakkie/)?2:0);
+ if(need==="heavy_vehicle")return (match(/truck|heavy|articulated|rigid|super.?link/)?5:0)+(/\bEC\b|\bC\b|CODE 14|CODE 10/.test(licence)?2:0);
+ if(need==="mining")return match(/mining|tipper|construction|quarry|side.?tipper/)?6:0;
+ if(need==="refrigerated")return match(/refrigerat|cold.?chain|reefer|fridge/)?6:0;
+ if(need==="tanker")return match(/tanker|fuel|hazchem|bulk.?liquid/)?6:0;
+ return match(/passenger|bus|coach|shuttle/)?6:0;
+}
 const PAGE_SIZE = 7;
 
 export default function DriversAvailableForWork({ darkMode = false, fullPage = false, showHero = true }: { darkMode?: boolean; fullPage?: boolean; showHero?: boolean }) {
@@ -40,6 +64,12 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
   const [notice, setNotice] = useState("");
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<SortOption>("recommended");
+  const [need,setNeed]=useState<DriverNeed>("");
+  const [location,setLocation]=useState("");
+  const [licence,setLicence]=useState("");
+  const [vehicle,setVehicle]=useState("");
+  const [minExperience,setMinExperience]=useState(0);
+  const [availableOnly,setAvailableOnly]=useState(false);
   const [reviewTarget, setReviewTarget] = useState<Driver | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewBody, setReviewBody] = useState("");
@@ -64,23 +94,53 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
 
   useEffect(() => {
     let active = true; queueMicrotask(() => { if (active) { setLoading(true); setNotice(""); } });
-    const params = new URLSearchParams({ limit: fullPage ? "50" : "4", offset: "0" });
-    fetch(`/api/phase2/public-drivers?${params.toString()}`, { cache: "no-store" })
-      .then(async (response) => { const result = await response.json().catch(() => ({})); if (!response.ok) throw new Error(String(result.error || "Driver profiles could not be loaded.")); return result; })
-      .then((result) => { if (!active) return; setAllDrivers((result.drivers ?? []) as Driver[]); setPage(1); })
-      .catch((error) => { if (!active) return; setAllDrivers([]); setNotice(error instanceof Error ? error.message : "Driver profiles could not be loaded."); })
-      .finally(() => { if (active) setLoading(false); });
+    const pageSize=fullPage?50:4;
+    async function fetchDrivers(offset:number){
+      const params=new URLSearchParams({limit:String(pageSize),offset:String(offset)});
+      const response=await fetch(`/api/phase2/public-drivers?${params.toString()}`,{cache:"no-store"});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(String(data.error||"Driver profiles could not be loaded."));
+      return data;
+    }
+    void (async()=>{
+      try{
+        const first=await fetchDrivers(0);
+        let results=(first.drivers||[]) as Driver[];
+        const total=Number(first.total||results[0]?.total_count||0);
+        if(fullPage&&total>pageSize){
+          const offsets=Array.from({length:Math.min(5,Math.ceil(total/pageSize))-1},(_,i)=>(i+1)*pageSize);
+          const next=await Promise.all(offsets.map(offset=>fetchDrivers(offset)));
+          results=[...results,...next.flatMap(r=>(r.drivers||[]) as Driver[])];
+        }
+        if(active){setAllDrivers(results);setPage(1);}
+      }catch(error){if(active){setAllDrivers([]);setNotice(error instanceof Error?error.message:"Driver profiles could not be loaded.");}}
+      finally{if(active)setLoading(false);}
+    })();
     return () => { active = false; };
   }, [fullPage]);
 
-  const sortedDrivers = useMemo(() => {
-    const rows = [...allDrivers];
-    if (sort === "experience") return rows.sort((a, b) => Number(b.years_experience || 0) - Number(a.years_experience || 0));
-    if (sort === "name") return rows.sort((a, b) => String(a.full_name || "").localeCompare(String(b.full_name || "")));
-    if (sort === "location") return rows.sort((a, b) => `${a.province || ""} ${a.city || ""}`.localeCompare(`${b.province || ""} ${b.city || ""}`));
-    if (sort === "available") return rows.sort((a, b) => availabilityScore(b.availability) - availabilityScore(a.availability));
-    return rows.sort((a,b) => Number(b.average_rating || 0)-Number(a.average_rating || 0));
-  }, [allDrivers, sort]);
+  const sortedDrivers=useMemo(()=>{
+    const rows=allDrivers.filter(row=>{
+      if(location.trim()&&!([row.city,row.province].join(" ").toLowerCase().includes(location.trim().toLowerCase())))return false;
+      if(licence && !String(row.licence_code||"").toUpperCase().includes(licence))return false;
+      if(vehicle && !(row.vehicle_types||[]).some(x=>x.toLowerCase().includes(vehicle.toLowerCase())))return false;
+      if(Number(row.years_experience||0)<minExperience)return false;
+      if(availableOnly && availabilityScore(row.availability)<2)return false;
+      if(need&&needScore(row,need)===0)return false;
+      return true;
+    });
+    if(sort==="experience")return rows.sort((a,b)=>Number(b.years_experience||0)-Number(a.years_experience||0));
+    if(sort==="name")return rows.sort((a,b)=>a.full_name.localeCompare(b.full_name));
+    if(sort==="location")return rows.sort((a,b)=>`${a.province} ${a.city}`.localeCompare(`${b.province} ${b.city}`));
+    if(sort==="available")return rows.sort((a,b)=>availabilityScore(b.availability)-availabilityScore(a.availability));
+    return rows.sort((a,b)=>
+      needScore(b,need)-needScore(a,need)
+      ||availabilityScore(b.availability)-availabilityScore(a.availability)
+      ||Number(b.average_rating||0)-Number(a.average_rating||0)
+      ||Number(b.years_experience||0)-Number(a.years_experience||0)
+    );
+  },[allDrivers,need,location,licence,vehicle,minExperience,availableOnly,sort]);
+  useEffect(()=>{setPage(1)},[need,location,licence,vehicle,minExperience,availableOnly,sort]);
 
   const drivers = fullPage ? sortedDrivers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : sortedDrivers.slice(0, 4);
   const pageCount = Math.max(1, Math.ceil(sortedDrivers.length / PAGE_SIZE));
@@ -109,16 +169,55 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
       <div className={styles.content}>
         <div className={styles.resultsHeader}>{!showHero ? <div><h2 className={styles.embeddedHeading}>Approved drivers ready for work</h2></div> : <div><h2 className={styles.resultsTitle}>Available drivers</h2></div>}<LoadLinkSortControl darkMode={darkMode} value={sort} onChange={(value) => { setSort(value as SortOption); setPage(1); }} options={[{value:"recommended",label:"Recommended"},{value:"available",label:"Available first"},{value:"experience",label:"Most experience"},{value:"name",label:"Name A–Z"},{value:"location",label:"Location A–Z"}]} /></div>
 
+        {fullPage?<div className={styles.hiringFilters} aria-label="Find a driver by your requirements">
+          <div className={styles.filterBar}>
+            <label className={styles.filterField}><span>Work needed</span><select value={need} onChange={e=>setNeed(e.target.value as DriverNeed)}>
+              {NEEDS.map(x=><option value={x.value} key={x.value}>{x.label}</option>)}
+            </select></label>
+            <label className={styles.filterField}><span>Location</span><input value={location} onChange={e=>setLocation(e.target.value)} placeholder="City or province" /></label>
+            <label className={styles.filterField}><span>Licence</span><select value={licence} onChange={e=>setLicence(e.target.value)}>
+              <option value="">All licences</option>
+              <option value="EC">EC · Code 14</option><option value="C1">C1 · Code 10</option><option value="C">C · Heavy</option><option value="EB">EB</option><option value="B">B</option>
+            </select></label>
+          </div>
+          <details className={styles.moreFilters}><summary>More filters</summary>
+            <div className={styles.filterBar}>
+              <label className={styles.filterField}><span>Vehicle</span><select value={vehicle} onChange={e=>setVehicle(e.target.value)}><option value="">All vehicles</option>{["Truck","Tipper","Tanker","Bus","Van","Bakkie"].map(x=><option value={x} key={x}>{x}</option>)}</select></label>
+              <label className={styles.filterField}><span>Experience</span><select value={minExperience} onChange={e=>setMinExperience(Number(e.target.value))}>{[0,1,3,5,10].map(x=><option key={x} value={x}>{x===0?"Any experience":`${x}+ years`}</option>)}</select></label>
+              <label className={styles.filterCheck}><input type="checkbox" checked={availableOnly} onChange={e=>setAvailableOnly(e.target.checked)}/> Available now</label>
+            </div>
+          </details>
+          <div className={styles.filterResults}><span>{loading?"Finding drivers…":`${sortedDrivers.length} matching driver${sortedDrivers.length===1?"":"s"}`}</span>
+          {(need||location||licence||vehicle||minExperience||availableOnly)?<button type="button" onClick={()=>{setNeed("");setLocation("");setLicence("");setVehicle("");setMinExperience(0);setAvailableOnly(false)}}>Clear filters</button>:null}</div>
+        </div>:null}
+
         {notice ? <p role="alert" className={styles.empty}>{notice}</p> : null}
-        {loading ? <div className={styles.empty}>Loading approved drivers…</div> : drivers.length === 0 ? <div className={styles.empty}>No approved drivers available yet.</div> : <div className={styles.grid}>{drivers.map((driver) => {
+        {loading ? <div className={styles.empty}>Loading approved drivers…</div> : drivers.length === 0 ? <div className={styles.empty}>No drivers match these requirements. Try broader filters.</div> : <div className={styles.grid}>{drivers.map((driver) => {
           const rating=Number(driver.average_rating||0), count=Number(driver.review_count||0);
           const location = [...new Set([driver.city, driver.province].filter(Boolean).map(value => value.trim()))].join(", ");
-          return <article className={styles.card} key={driver.id} data-loadlink-driver-card="true">
-            <div className="ll-driver-heading"><div className={styles.avatar} aria-hidden="true">{driver.profile_image_url ? <LoadLinkImage src={driver.profile_image_url} alt="" className="h-full w-full rounded-full object-cover" /> : initials(driver.full_name)}</div><div className="ll-driver-name"><h3>{driver.full_name}</h3><p className={styles.headline}>{driver.headline || "Professional driver"}</p></div><span className={styles.verified}>Approved</span></div>
-            <div className="ll-driver-rating">{count ? `${rating.toFixed(1)} / 5 · ${count} review${count===1?"":"s"}` : "New to LoadLink · No reviews yet"}</div>
-            <dl className="ll-driver-facts"><div><dt>Based in</dt><dd>{location || "Location on request"}</dd></div><div><dt>Experience</dt><dd>{driver.years_experience ?? 0} {Number(driver.years_experience) === 1 ? "year" : "years"}</dd></div><div><dt>Licence</dt><dd>{driver.licence_code || "On request"}</dd></div><div><dt>Availability</dt><dd>{driver.availability || "On request"}</dd></div><div className="ll-driver-vehicles"><dt>Vehicle experience</dt><dd>{driver.vehicle_types?.join(", ") || "On request"}</dd></div></dl>
-            <p className={styles.bio}>{driver.bio || "Available for suitable logistics work."}</p>
-            <div className="ll-driver-actions"><button data-marketplace-action type="button" className={styles.contact} onClick={() => setContactTarget(driver)}>Contact driver</button>{driver.user_id ? <button type="button" onClick={()=>setReviewTarget(driver)}>Write a review</button>:null}</div>
+          return <article className={`${styles.card} ${styles.compactCard}`} key={driver.id} data-loadlink-driver-card="true">
+            <div className={styles.compactHeading}>
+              <div className={styles.avatar} aria-hidden="true">{driver.profile_image_url?<LoadLinkImage src={driver.profile_image_url} alt="" className="h-full w-full rounded-full object-cover" />:initials(driver.full_name)}</div>
+              <div className={styles.compactIdentity}>
+                <div className={styles.compactName}><h3>{driver.full_name}</h3><span className={styles.verified}>Approved</span></div>
+                <p className={styles.compactSubtitle}>{driver.headline||"Professional driver"}</p>
+                <p className={styles.compactFacts}>{location||"Location on request"} · {driver.years_experience||0} yrs · {driver.licence_code||"Licence on request"}</p>
+              </div>
+            </div>
+            <div className={styles.compactMeta}>
+              <span>{driver.availability||"Availability on request"}</span>
+              <span>{count?`${rating.toFixed(1)}/5 · ${count} review${count===1?"":"s"}`:"No reviews yet"}</span>
+            </div>
+            <div className={styles.compactActions}>
+              <button data-marketplace-action type="button" className={styles.contact} onClick={()=>setContactTarget(driver)}>Contact driver</button>
+              <details className={styles.compactDetails}><summary>Details</summary>
+                <div className={styles.compactExpanded}>
+                  <p><strong>Vehicle experience:</strong> {driver.vehicle_types?.join(", ")||"On request"}</p>
+                  {driver.bio?<p className="mt-2 whitespace-pre-wrap">{driver.bio}</p>:null}
+                  {driver.user_id?<button type="button" onClick={()=>setReviewTarget(driver)} className={styles.reviewButton}>Write a review</button>:null}
+                </div>
+              </details>
+            </div>
           </article>;
         })}</div>}
 

@@ -64,3 +64,38 @@
 .filterField > input:focus,.locationInput:focus { border-color:#f6b800; }
 .dark .filterField > input,.dark .locationInput { border-color:rgba(255,255,255,.18); background:#080808; color:#fff; }
 @media (max-width:640px){.filterBar{grid-template-columns:1fr}.filterField > input,.locationInput{height:50px}}
+
+/* Compact driver directory and hiring filters */
+.hiringFilters { margin:0 0 22px; border:1px solid rgba(17,17,17,.11); border-radius:20px; background:#fff; padding:17px; }
+.dark .hiringFilters { background:#101010; border-color:rgba(255,255,255,.14); }
+.hiringFilters .filterBar { grid-template-columns:repeat(3,minmax(0,1fr)); margin-bottom:12px; }
+.filterField > select { width:100%; min-width:0; height:46px; border:1px solid rgba(17,17,17,.15); border-radius:12px; background:#fff; color:#111; padding:0 12px; font-size:.82rem; font-weight:700; text-transform:none; letter-spacing:0; }
+.dark .filterField > select { background:#080808; border-color:rgba(255,255,255,.18); color:#fff; }
+.moreFilters { border-top:1px solid rgba(127,127,127,.14); padding-top:12px; }
+.moreFilters > summary { cursor:pointer; width:max-content; font-size:.76rem; font-weight:800; }
+.moreFilters .filterBar { margin:13px 0 0; }
+.filterCheck { display:flex; align-items:center; gap:9px; font-size:.8rem; font-weight:750; }
+.filterCheck input { accent-color:#f6b800; }
+.filterResults { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; font-size:.75rem; font-weight:750; color:rgba(17,17,17,.63); }
+.dark .filterResults { color:rgba(255,255,255,.65); }
+.filterResults button { text-decoration:underline; font-size:.74rem; font-weight:850; }
+.card.compactCard { display:block; border-radius:18px; padding:18px; }
+.compactHeading { display:flex; align-items:center; gap:12px; }
+.compactIdentity { flex:1; min-width:0; }
+.compactName { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.compactName h3 { font-size:1rem; }
+.compactName .verified { margin:0; padding:4px 7px; border-radius:99px; font-size:.6rem; }
+.compactSubtitle { margin:3px 0 0; color:rgba(17,17,17,.65); font-size:.79rem; font-weight:750; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dark .compactSubtitle { color:rgba(255,255,255,.65); }
+.compactFacts { margin:6px 0 0; font-size:.73rem; color:rgba(17,17,17,.6); line-height:1.5; }
+.dark .compactFacts { color:rgba(255,255,255,.6); }
+.compactMeta { display:flex; justify-content:space-between; align-items:center; gap:10px; margin:13px 0; padding-top:11px; border-top:1px solid rgba(127,127,127,.15); font-size:.7rem; font-weight:700; color:rgba(17,17,17,.64); }
+.dark .compactMeta { color:rgba(255,255,255,.65); }
+.compactActions { display:flex; align-items:center; gap:9px; }
+.compactActions .contact { margin:0; flex:1; min-height:42px; font-size:.72rem; }
+.compactDetails { flex:0 0 auto; }
+.compactDetails > summary { display:flex; align-items:center; justify-content:center; cursor:pointer; min-height:42px; border:1px solid rgba(127,127,127,.27); border-radius:99px; padding:0 14px; font-size:.72rem; font-weight:850; list-style:none; }
+.compactDetails > summary::-webkit-details-marker { display:none; }
+.compactExpanded { position:relative; margin-top:12px; border-radius:12px; border:1px solid rgba(127,127,127,.2); padding:12px; font-size:.77rem; line-height:1.6; }
+.reviewButton { margin-top:10px; text-decoration:underline; font-weight:850; }
+@media(max-width:640px){ .hiringFilters .filterBar,.moreFilters .filterBar {grid-template-columns:1fr 1fr;gap:10px;} .hiringFilters .filterBar label:first-child{grid-column:span 2} .compactMeta{flex-wrap:wrap}.card.compactCard{padding:14px}.compactFacts{font-size:.72rem} }
