@@ -335,8 +335,7 @@ begin
   update public.listing_guest_threads set updated_at = now() where id = p_thread_id;
   return v_message_id;
 end;
-$function$
-
+$function$;
 
 -- Only the authenticated job poster can accept or decline job or contract offers.
 CREATE OR REPLACE FUNCTION public.respond_listing_guest_quote(p_message_id uuid, p_access_key text, p_status text)
@@ -375,5 +374,4 @@ begin
   update public.listing_guest_threads set updated_at = now() where id = v_thread;
   return true;
 end;
-$function$
-
+$function$;
