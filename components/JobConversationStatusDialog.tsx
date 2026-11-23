@@ -7,6 +7,9 @@ const STATES=[
  {value:"in_progress",label:"Transport is in progress"},
  {value:"completed_reported",label:"Work has been completed"},
  {value:"pending_confirmation",label:"Awaiting confirmation"},
+ {value:"invoice_sent",label:"Invoice sent"},
+ {value:"payment_pending",label:"Payment outstanding"},
+ {value:"payment_reported",label:"Payment reported — awaiting confirmation"},
  {value:"no_agreement",label:"No agreement reached"},
  {value:"cancelled",label:"Arrangement cancelled"},
  {value:"disputed",label:"There's a disagreement"}
