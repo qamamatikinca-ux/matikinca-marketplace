@@ -22,7 +22,7 @@ function nearestCard(node: HTMLElement | null) {
 function applyMessagePolish() {
   const root = document.querySelector<HTMLElement>(".loadlink-messages") || document.querySelector<HTMLElement>("[data-loadlink-messages]");
   if (!root) return;
-  root.dataset.loadlinkSmartGlass = "true";
+  // Glass styling is applied declaratively by the Messages component.
   root.querySelectorAll<HTMLImageElement>(".loadlink-chat-header img, [data-loadlink-contact-avatar] img, [data-loadlink-call-avatar] img").forEach((image) => {
     image.dataset.loadlinkRoundAvatar = "true";
   });
