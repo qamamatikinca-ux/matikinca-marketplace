@@ -24,7 +24,7 @@ create index if not exists driver_vacancies_discovery on public.driver_vacancies
 create index if not exists driver_vacancies_owner on public.driver_vacancies(user_id,created_at desc);
 alter table public.driver_vacancies enable row level security;
 create policy "Driver vacancies open or owned" on public.driver_vacancies for select to anon, authenticated
-  using (status='open' or (auth.uid() is not null and status in ('closed','cancelled')) or user_id=(select auth.uid()));
+  using (status='open' or user_id=(select auth.uid()));
 create policy "Owners create driver vacancies" on public.driver_vacancies for insert to authenticated
   with check (user_id=(select auth.uid()) and not public.loadlink_marketplace_is_restricted((select auth.uid())));
 create policy "Owners edit driver vacancies" on public.driver_vacancies for update to authenticated
@@ -402,8 +402,14 @@ grant execute on function public.loadlink_my_transport_threads() to authenticate
 
 
 create or replace function public.loadlink_guard_job_tool_record()
-returns trigger language plpgsql security invoker set search_path=public,pg_temp as $$
+returns trigger language plpgsql security definer set search_path=public,pg_temp as $
 begin
+ if auth.uid() is null or auth.uid() is distinct from new.user_id then
+   raise exception 'A signed-in author is required to save this document';
+ end if;
+ if not public.loadlink_is_listing_thread_participant(new.listing_id,new.thread_id,new.user_id) then
+   raise exception 'You are not permitted to attach a document to this opportunity';
+ end if;
   if new.thread_id is not null and not exists(
     select 1 from public.listing_guest_threads t
     where t.id=new.thread_id and t.listing_id=new.listing_id
@@ -412,7 +418,7 @@ begin
     raise exception 'Choose a valid job conversation before sharing'; end if;
   return new;
 end $$;
-revoke all on function public.loadlink_guard_job_tool_record() from public;
+revoke all on function public.loadlink_guard_job_tool_record() from public,anon,authenticated;
 create trigger loadlink_guard_job_tool_record
 before insert on public.job_tool_records
 for each row execute function public.loadlink_guard_job_tool_record();
