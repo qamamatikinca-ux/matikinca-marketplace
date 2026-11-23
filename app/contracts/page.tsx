@@ -1,6 +1,7 @@
 "use client";
 
 import LoadLinkSortControl from "@/components/LoadLinkSortControl";
+import DriverVacancyResults from "@/components/DriverVacancyResults";
 
 
 import LoadLinkImage from "@/components/LoadLinkImage";
@@ -216,6 +217,7 @@ export default function ContractsPage() {
                   aria-label="Contract category" style={{ colorScheme: "light" }}>
                   <option value={ALL}>All contract types</option>
                   {categories.map(item => <option value={item} key={item}>{item}</option>)}
+                  <option value="Professional Driver">Professional Driver</option>
                 </select>
               </label>
             </div>
@@ -236,14 +238,16 @@ export default function ContractsPage() {
         <div className="mb-6 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
           <div>
             <h2 className="text-4xl font-black tracking-[-.05em]">Available contracts</h2>
-            <p className={`mt-2 text-xs font-semibold ${muted}`}>{loading ? "Loading current contracts…" : `${filtered.length} current ${filtered.length === 1 ? "contract" : "contracts"}`}</p>
+            <p className={`mt-2 text-xs font-semibold ${muted}`}>{group==="Professional Driver" ? "Professional driver contract opportunities" : loading ? "Loading current contracts…" : `${filtered.length} current ${filtered.length === 1 ? "contract" : "contracts"}`}</p>
           </div>
           <LoadLinkSortControl darkMode={darkMode} value={sortMode} onChange={(value) => setSortMode(value as SortMode)} options={[{ value: "newest", label: "Newest first" }, { value: "starting", label: "Starting soonest" }, { value: "oldest", label: "Oldest first" }]} />
         </div>
 
         {error ? <div className="mb-5 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm font-bold text-red-600">{error}</div> : null}
 
-        {loading ? (
+        {group==="Professional Driver" ? (
+          <DriverVacancyResults term="contract" keyword={query} city={city} darkMode={darkMode} />
+        ) : loading ? (
           <div className="grid gap-5">{Array.from({ length: 3 }).map((_, index) => <div key={index} className={`h-56 animate-pulse rounded-[22px] border ${surface}`} />)}</div>
         ) : visible.length ? (
           <div className="grid gap-5">
@@ -279,7 +283,7 @@ export default function ContractsPage() {
           <section className={`rounded-[22px] border p-8 text-center ${surface}`}><h2 className="text-xl font-black">No matching contracts</h2><p className={`mt-2 text-sm font-semibold ${muted}`}>Try a broader scope, vehicle category or location. Ordinary jobs remain in the Jobs marketplace.</p>{hasFilters ? <button type="button" onClick={clearFilters} className="mt-5 rounded-xl bg-[#f6b800] px-5 py-3 text-xs font-black text-black">Clear filters</button> : null}</section>
         )}
 
-        {totalPages > 1 ? <LoadLinkPagination current={page} total={totalPages} onChange={setPage} darkMode={darkMode} label="Contract pages" /> : null}
+        {group!=="Professional Driver" && totalPages > 1 ? <LoadLinkPagination current={page} total={totalPages} onChange={setPage} darkMode={darkMode} label="Contract pages" /> : null}
       </section>
     </main>
   );

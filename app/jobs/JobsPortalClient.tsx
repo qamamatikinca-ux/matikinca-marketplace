@@ -1,6 +1,7 @@
 "use client";
 
 import LoadLinkSortControl from "@/components/LoadLinkSortControl";
+import DriverVacancyResults from "@/components/DriverVacancyResults";
 
 
 import LoadLinkImage from "@/components/LoadLinkImage";
@@ -367,6 +368,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
   const [keyword, setKeyword] = useState(initialQuery.search);
   const [city, setCity] = useState("");
   const [group, setGroup] = useState<VehicleGroup | "">("");
+  const [driverCategory,setDriverCategory]=useState(initialQuery.category==="professional-driver");
   const [hasSearched, setHasSearched] = useState(Boolean(initialQuery.search || initialQuery.category || initialQuery.portal));
   const [sharedJobs, setSharedJobs] = useState<JobListing[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -700,12 +702,13 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
               <label className="block min-w-0 md:col-span-2">
                 <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-white/70" : "text-[#70716f]"}`}>Category</span>
                 <select
-                  value={group}
-                  onChange={(e) => setGroup(e.target.value as VehicleGroup | "")}
+                  value={driverCategory?"Professional Driver":group}
+                  onChange={(e) => {const value=e.target.value;if(value==="Professional Driver"){setDriverCategory(true);setGroup("");}else{setDriverCategory(false);setGroup(value as VehicleGroup|"");}}}
                   className="h-12 w-full min-w-0 rounded-xl border border-[#dedede] bg-white px-4 text-base font-semibold text-[#171717] outline-none focus:border-[#f6b800]"
                 >
                   <option value="">All categories</option>
                   {vehicleGroups.map((item) => <option key={item} value={item}>{item}</option>)}
+                  <option value="Professional Driver">Professional Driver</option>
                 </select>
               </label>
             </div>
@@ -730,7 +733,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
         </div>
       </section>
 
-      {portalRailJobs.length ? <FeaturedJobsRail jobs={portalRailJobs} darkMode={darkMode} onOpen={openGallery} /> : null}
+      {!driverCategory && portalRailJobs.length ? <FeaturedJobsRail jobs={portalRailJobs} darkMode={darkMode} onOpen={openGallery} /> : null}
 
       <section id="matching-jobs" className="mx-auto max-w-5xl px-5 pb-12 pt-4">
         <div className="mb-6 grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
@@ -744,10 +747,10 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
           </div>
         </div>
 
-        {loadError ? <div className="mb-5 border border-red-500/40 bg-red-500/10 p-4 text-sm font-bold text-red-600">{loadError}</div> : null}
+        {!driverCategory && loadError ? <div className="mb-5 border border-red-500/40 bg-red-500/10 p-4 text-sm font-bold text-red-600">{loadError}</div> : null}
 
         <div className="grid gap-5">
-          {loadingJobs ? <ListingSkeletons darkMode={darkMode} /> : matchingJobs.length > 0 ? (
+          {driverCategory ? <DriverVacancyResults term="job" keyword={keyword} city={city} darkMode={darkMode} /> : loadingJobs ? <ListingSkeletons darkMode={darkMode} /> : matchingJobs.length > 0 ? (
             paginatedJobs.map((job) => (
               <JobCard
                 key={job.id}
@@ -773,7 +776,7 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
           )}
         </div>
 
-        {!loadingJobs && matchingJobs.length > LISTINGS_PER_PAGE ? (
+        {!driverCategory && !loadingJobs && matchingJobs.length > LISTINGS_PER_PAGE ? (
           <LoadLinkPagination current={currentPage} total={totalPages} onChange={changePage} darkMode={darkMode} label="Listing pages" />
         ) : null}
       </section>

@@ -27,6 +27,7 @@ import JobTimingToast from "@/components/JobTimingToast";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import LogisticsMessageTools, { type QuoteAutofillDefaults, type QuoteVehicleOption, type StructuredQuote } from "@/components/LogisticsMessageTools";
+import JobConversationStatusDialog from "@/components/JobConversationStatusDialog";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
@@ -434,11 +435,20 @@ export default function MessagesPage() {
     };
   }, []);
 
+  // Announce hydration before legacy global chat enhancements attach portals.
+  useEffect(()=>{
+    document.documentElement.dataset.loadlinkMessagesHydrated="true";
+    window.dispatchEvent(new Event("loadlink-messages-hydrated"));
+    return()=>{delete document.documentElement.dataset.loadlinkMessagesHydrated};
+  },[]);
+
   const router = useRouter();
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [starterPost, setStarterPost] = useState<(PostContext & { id: string }) | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState("");
+  const [quotePermissions,setQuotePermissions]=useState<Record<string,boolean>>({});
+  const [chatExitPrompt,setChatExitPrompt]=useState<{listingId:string;threadId:string;title:string}|null>(null);
   const chatCalls = useChatCalls(selectedId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
@@ -559,6 +569,18 @@ export default function MessagesPage() {
       null,
     [conversations, selectedId],
   );
+
+  const isTransportConversation=Boolean(selectedConversation && starterPost?.id===selectedConversation.listing_id &&
+    ["job","contract"].includes(String(starterPost.listing_kind||"").toLowerCase()));
+  const formalQuotesAvailable=!isTransportConversation || (
+    selectedConversation?.role==="buyer" && Boolean(quotePermissions[selectedConversation.listing_id])
+  );
+  useEffect(()=>{if(!starterPost?.id || !["job","contract"].includes(String(starterPost.listing_kind||"").toLowerCase()))return;
+    let active=true;
+    void supabase.from("job_offer_preferences").select("accepts_offers").eq("listing_id",starterPost.id).maybeSingle()
+      .then(({data})=>{if(active)setQuotePermissions(old=>({...old,[starterPost.id]:Boolean(data?.accepts_offers)}))});
+    return()=>{active=false};
+  },[starterPost?.id,starterPost?.listing_kind]);
 
   function starterMessages(conversation: Conversation) {
     const post = starterPost?.id === conversation.listing_id ? starterPost : null;
@@ -1245,6 +1267,10 @@ export default function MessagesPage() {
   }
 
   async function sendStructuredQuote(quote: StructuredQuote) {
+    if (isTransportConversation && !formalQuotesAvailable) {
+      setError("The poster has not enabled formal transport quotations for this listing.");
+      return;
+    }
     if (!selectedConversation || sending || uploading || conversationBlocked || dailyLimitReached || potentialDealPending || potentialDealDeclined) return;
     setSending(true);
     setError("");
@@ -1704,6 +1730,16 @@ export default function MessagesPage() {
   }
 
   function returnToInbox() {
+    if(selectedConversation && isTransportConversation && messages.filter(m=>!m.deleted_at && m.message_kind!=="system").length>=2){
+      const key=`loadlink-status-exit-prompt:${selectedConversation.id}`;
+      let already=false;
+      try{already=sessionStorage.getItem(key)==="shown";if(!already)sessionStorage.setItem(key,"shown")}catch{}
+      if(!already){setChatExitPrompt({listingId:selectedConversation.listing_id,threadId:selectedConversation.id,title:selectedConversation.listing_title});return}
+    }
+    returnToInboxNow();
+  }
+
+  function returnToInboxNow() {
     selectedIdRef.current = "";
     setSelectedId("");
     setMessages([]);
@@ -1727,6 +1763,7 @@ export default function MessagesPage() {
         forceOpen
         onClose={() => setLogisticsWorkspaceOpen(false)}
         onSendQuote={sendStructuredQuote}
+        allowStructuredQuotes={formalQuotesAvailable}
         quoteDefaults={quoteDefaults}
         savedVehicles={quoteVehicles}
         onInsert={(message) => updateTyping(text.trim() ? `${text.trim()}
@@ -1738,6 +1775,7 @@ ${message}` : message)}
 
   return (
     <main
+      data-loadlink-smart-glass="true"
       data-theme={darkMode ? "dark" : "light"}
       style={{ height: "var(--loadlink-message-vh, 100dvh)", minHeight: "var(--loadlink-message-vh, 100svh)" }}
       className={`${styles.messageApp} loadlink-messages flex flex-col overflow-hidden ${
@@ -2219,6 +2257,7 @@ ${message}` : message)}
           ) : null}
         </aside>
       </div>
+      {chatExitPrompt ? <JobConversationStatusDialog listingId={chatExitPrompt.listingId} threadId={chatExitPrompt.threadId} listingTitle={chatExitPrompt.title} onExit={()=>{setChatExitPrompt(null);returnToInboxNow()}}/> : null}
     </main>
   );
 }

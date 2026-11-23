@@ -1,12 +1,12 @@
 "use client";
 
 import LoadLinkImage from "@/components/LoadLinkImage";
-import Link from "next/link";
 import PostingIntentCards, { type PostingIntent } from "@/components/PostingIntentCards";
 
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+import PosterTransportPriceGuide from "@/components/PosterTransportPriceGuide";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import LoadLinkDatePicker from "@/components/LoadLinkDatePicker";
 import ExactListingLocationField, { type ListingCoordinates } from "@/components/ExactListingLocationField";
@@ -42,6 +42,7 @@ export default function PostContractPage() {
   const [duration, setDuration] = useState("");
   const [frequency, setFrequency] = useState("");
   const [rate, setRate] = useState("");
+  const [acceptOffers, setAcceptOffers] = useState(false);
   const [applicationDeadline, setApplicationDeadline] = useState("");
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -88,7 +89,7 @@ export default function PostContractPage() {
             setContact(draft.contact || defaultPhone);
             setTitle(draft.title || ""); setGroup(draft.group || "Trucks / Trailers"); setContractType(CONTRACT_TYPES.find((type) => type === draft.contractType) || "");
             setCity(draft.city || ""); setStartDate(draft.startDate || today()); setDuration(draft.duration || ""); setFrequency(draft.frequency || "");
-            setRate(draft.rate || ""); setApplicationDeadline(draft.applicationDeadline || ""); setDescription(draft.description || "");
+            setRate(draft.rate || ""); setAcceptOffers(Boolean(draft.acceptOffers)); setApplicationDeadline(draft.applicationDeadline || ""); setDescription(draft.description || "");
             setStep(Math.min(5, Math.max(1, Number(draft.step || 1))));
           } catch {}
         }
@@ -101,9 +102,9 @@ export default function PostContractPage() {
     if (!ready) return;
     void supabase.auth.getUser().then(({ data }) => {
       if (!data.user) return;
-      localStorage.setItem(`${DRAFT}:${data.user.id}`, JSON.stringify({ postingIntent, companyName, contactName, contact, title, group, contractType, city, startDate, duration, frequency, rate, applicationDeadline, description, step }));
+      localStorage.setItem(`${DRAFT}:${data.user.id}`, JSON.stringify({ postingIntent, companyName, contactName, contact, title, group, contractType, city, startDate, duration, frequency, rate, acceptOffers, applicationDeadline, description, step }));
     });
-  }, [ready, postingIntent, companyName, contactName, contact, title, group, contractType, city, startDate, duration, frequency, rate, applicationDeadline, description, step]);
+  }, [ready, postingIntent, companyName, contactName, contact, title, group, contractType, city, startDate, duration, frequency, rate, acceptOffers, applicationDeadline, description, step]);
 
   async function choosePhotos(event: ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(event.target.files || []).slice(0, 5);
@@ -129,7 +130,7 @@ export default function PostContractPage() {
   function next() {
     setMessage("");
     if (postingIntent === "driver") {
-      setMessage("Driver-contract posting needs the dedicated recruitment and application service. It is not available in this release. You can contact drivers through the existing directory.");
+      router.push("/jobs/driver/post?term=contract");
       return;
     }
     if (step === 1 && (!companyName.trim() || !contactName.trim() || !validPhone(contact))) {
@@ -173,7 +174,7 @@ export default function PostContractPage() {
       if (!intelligence.authenticated) throw new Error("Sign in to post this contract.");
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) throw new Error("Your sign-in session needs to be refreshed.");
-      if (postingIntent === "driver") throw new Error("Driver contracts cannot be submitted until the recruitment application process is available.");
+      if (postingIntent === "driver") throw new Error("Choose the transport option to use this contract form.");
       if (!contractType) throw new Error("Choose a contract type before submitting.");
       const photos = await upload(auth.user.id);
       const structuredDescription = [
@@ -201,6 +202,12 @@ export default function PostContractPage() {
       });
       if (result.error) throw result.error;
       const listingId = result.data && typeof result.data === "object" && "id" in result.data ? String(result.data.id || "") : "";
+      if(listingId){
+        const {error:offerError}=await supabase.from("job_offer_preferences").upsert({
+          listing_id:listingId,owner_user_id:auth.user.id,accepts_offers:acceptOffers
+        },{onConflict:"listing_id"});
+        if(offerError)throw new Error("The contract was saved but its offer setting did not save. Please retry.");
+      }
       if (listingId && coordinates) {
         const locationUpdate = await supabase.from("job_listings").update({ latitude: coordinates.latitude, longitude: coordinates.longitude }).eq("id", listingId).eq("user_id", auth.user.id);
         if (locationUpdate.error) console.warn("LoadLink location coordinates could not be attached", locationUpdate.error.message);
@@ -230,11 +237,11 @@ export default function PostContractPage() {
           <div className={`mb-3 flex items-center justify-between text-[10px] font-black ${muted}`}><span>Step {step} of 5</span><span>{labels[step - 1]}</span></div>
           <div className={`mb-5 h-1 overflow-hidden rounded-full ${darkMode ? "bg-white/10" : "bg-black/8"}`}><div className={darkMode ? "h-full rounded-full bg-white transition-[width]" : "h-full rounded-full bg-black transition-[width]"} style={{ width: `${step * 20}%` }} /></div>
           <section className={`rounded-[30px] border p-5 sm:p-7 ${surface}`}>
-            {step === 1 ? <><PostingIntentCards value={postingIntent} darkMode={darkMode} onChange={(next) => { setPostingIntent(next); setMessage(""); }}/>{postingIntent === "driver" ? <div className={`mt-5 rounded-[18px] border p-4 ${darkMode ? "border-white/15 bg-white/[.04]" : "border-black/10 bg-white/60"}`}><p className="text-sm font-black">Looking for a driver for a longer-term contract?</p><p className={`mt-2 text-xs font-medium leading-6 ${muted}`}>You can find and contact qualified drivers now. Formal driver-contract posting will be available when the recruitment application workflow is ready; this form cannot submit a driver vacancy yet.</p><Link href="/drivers" className="mt-4 inline-flex min-h-11 items-center rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">Find professional drivers</Link></div> : <div className="mt-5 grid gap-4"><h3 className="text-lg font-black">Who is offering the contract?</h3><p className={`text-xs font-semibold ${muted}`}>Enter the company or contracting business name.</p><Field label="Company name"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Company or contracting business" className={input} /></Field><div className="grid gap-4 sm:grid-cols-2"><Field label="Contact person"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Full name" className={input} /></Field><Field label="Contact number"><input value={contact} onChange={(e) => setContact(e.target.value)} inputMode="tel" autoComplete="tel" placeholder="0821234567" className={input} /></Field></div></div>}</> : null}
+            {step === 1 ? <><PostingIntentCards value={postingIntent} darkMode={darkMode} onChange={(next) => { setPostingIntent(next); setMessage(""); }}/>{postingIntent === "driver" ? null : <div className="mt-5 grid gap-4"><h3 className="text-lg font-black">Who is offering the contract?</h3><p className={`text-xs font-semibold ${muted}`}>Enter the company or contracting business name.</p><Field label="Company name"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Company or contracting business" className={input} /></Field><div className="grid gap-4 sm:grid-cols-2"><Field label="Contact person"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Full name" className={input} /></Field><Field label="Contact number"><input value={contact} onChange={(e) => setContact(e.target.value)} inputMode="tel" autoComplete="tel" placeholder="0821234567" className={input} /></Field></div></div>}</> : null}
             {step === 2 ? <><h2 className="text-2xl font-black">Contract scope</h2><p className={`mt-2 text-xs font-semibold ${muted}`}>Describe the transport work, vehicles and other requirements in the scope below.</p><div className="mt-5 grid gap-4"><Field label="Contract title"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. 12-month side tipper transport contract" className={input} /></Field><Field label="Type of contract"><select value={contractType} onChange={(e) => setContractType(e.target.value as ContractType | "")} className={input} aria-label="Type of contract" required style={{ colorScheme: darkMode ? "dark" : "light" }}><option value="">Select a contract type</option>{CONTRACT_TYPES.map((item) => <option value={item} key={item}>{item}</option>)}</select></Field><Field label="Scope and requirements"><textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Routes, cargo/service, capacity, compliance requirements, number of units and what operators need to deliver" className={`${input} min-h-36 resize-y py-4`} /></Field></div></> : null}
             {step === 3 ? <><h2 className="text-2xl font-black">Timeline and location</h2><p className={`mt-2 text-xs font-semibold ${muted}`}>Set the operating area and how long/frequently the contract will run.</p><div className="mt-5 grid gap-4 sm:grid-cols-2"><Field label="Operating location"><ExactListingLocationField value={city} onChange={setCity} onCoordinatesChange={setCoordinates} darkMode={darkMode} className={input} id="loadlink-contract-operating-location" /></Field><Field label="Contract starts"><LoadLinkDatePicker value={startDate} onChange={setStartDate} min={today()} darkMode={darkMode} ariaLabel="Contract start date" /></Field><Field label="Duration"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="e.g. 12 months" className={input} /></Field><Field label="Frequency"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={frequency} onChange={(e) => setFrequency(e.target.value)} placeholder="e.g. 5 trips per week" className={input} /></Field></div></> : null}
-            {step === 4 ? <><h2 className="text-2xl font-black">Commercial details</h2><p className={`mt-2 text-xs font-semibold ${muted}`}>Give operators enough information to decide whether the opportunity fits.</p><div className="mt-5 grid gap-4"><Field label="Rate / budget / tender terms"><input value={rate} onChange={(e) => setRate(e.target.value)} inputMode="decimal" placeholder="e.g. R28/km, R180 000/month or tender terms" className={input} /></Field><Field label="Application or decision deadline — optional"><LoadLinkDatePicker value={applicationDeadline} onChange={setApplicationDeadline} min={today()} darkMode={darkMode} ariaLabel="Application or decision deadline" /></Field><label className={`block rounded-[20px] border p-4 ${darkMode ? "border-white/12" : "border-black/8"}`}><span className="text-xs font-black">Supporting photos — optional</span><span className={`mt-1 block text-[10px] font-semibold ${muted}`}>Up to 5 relevant images.</span><input type="file" accept="image/*" multiple onChange={choosePhotos} className="mt-3 block w-full text-xs" /></label>{previews.length ? <div className="grid grid-cols-3 gap-2">{previews.map((url, index) => <LoadLinkImage key={url} src={url} alt={`Selected contract photo ${index + 1}`} className="aspect-square w-full rounded-[16px] object-cover" />)}</div> : null}</div></> : null}
-            {step === 5 ? <><h2 className="text-2xl font-black">Review contract</h2><p className={`mt-2 text-xs font-semibold ${muted}`}>Check the opportunity before submitting it to LoadLink.</p><div className={`mt-5 divide-y rounded-[20px] border ${darkMode ? "divide-white/10 border-white/10" : "divide-black/8 border-black/8"}`}><Review label="Company" value={companyName} /><Review label="Contact" value={`${contactName} · ${contact}`} /><Review label="Contract" value={title} /><Review label="Type" value={contractType} /><Review label="Start" value={`${startDate} · ${duration}`} /><Review label="Frequency" value={frequency} /><Review label="Location" value={city} /><Review label="Distance" value={coordinates ? "Exact coordinates enabled" : "City / province only"} /><Review label="Terms" value={rate || "Not specified"} /></div></> : null}
+            {step === 4 ? <><h2 className="text-2xl font-black">Commercial details</h2><p className={`mt-2 text-xs font-semibold ${muted}`}>Give operators enough information to decide whether the opportunity fits.</p><div className="mt-5 grid gap-4"><Field label="Rate / budget / tender terms"><input value={rate} onChange={(e) => setRate(e.target.value)} inputMode="decimal" placeholder="e.g. R28/km, R180 000/month or tender terms" className={input} /></Field><label className="flex items-start gap-3 rounded-xl border border-current/15 p-3 text-sm font-semibold"><input type="checkbox" className="mt-1" checked={acceptOffers} onChange={e=>setAcceptOffers(e.target.checked)}/><span>Accept formal transport offers<span className="mt-1 block text-xs font-normal opacity-65">Transporters can quote through LoadLink Messages.</span></span></label><PosterTransportPriceGuide darkMode={darkMode} contract onUseRate={setRate}/><Field label="Application or decision deadline — optional"><LoadLinkDatePicker value={applicationDeadline} onChange={setApplicationDeadline} min={today()} darkMode={darkMode} ariaLabel="Application or decision deadline" /></Field><label className={`block rounded-[20px] border p-4 ${darkMode ? "border-white/12" : "border-black/8"}`}><span className="text-xs font-black">Supporting photos — optional</span><span className={`mt-1 block text-[10px] font-semibold ${muted}`}>Up to 5 relevant images.</span><input type="file" accept="image/*" multiple onChange={choosePhotos} className="mt-3 block w-full text-xs" /></label>{previews.length ? <div className="grid grid-cols-3 gap-2">{previews.map((url, index) => <LoadLinkImage key={url} src={url} alt={`Selected contract photo ${index + 1}`} className="aspect-square w-full rounded-[16px] object-cover" />)}</div> : null}</div></> : null}
+            {step === 5 ? <><h2 className="text-2xl font-black">Review contract</h2><p className={`mt-2 text-xs font-semibold ${muted}`}>Check the opportunity before submitting it to LoadLink.</p><div className={`mt-5 divide-y rounded-[20px] border ${darkMode ? "divide-white/10 border-white/10" : "divide-black/8 border-black/8"}`}><Review label="Company" value={companyName} /><Review label="Contact" value={`${contactName} · ${contact}`} /><Review label="Contract" value={title} /><Review label="Type" value={contractType} /><Review label="Start" value={`${startDate} · ${duration}`} /><Review label="Frequency" value={frequency} /><Review label="Location" value={city} /><Review label="Distance" value={coordinates ? "Exact coordinates enabled" : "City / province only"} /><Review label="Terms" value={rate || "Not specified"} /><Review label="Formal offers" value={acceptOffers?"Accepting offers":"Not accepting offers"}/></div></> : null}
             {message ? <div role="status" className={`mt-5 rounded-[17px] border px-4 py-3 text-xs font-bold ${darkMode ? "border-white/14 bg-white/[.05]" : "border-black/10 bg-black/[.035]"}`}>{message}</div> : null}
             <div className="mt-6 flex gap-2">{step > 1 ? <button type="button" onClick={() => { setMessage(""); setStep((value) => value - 1); }} className={`h-12 rounded-[16px] border px-5 text-xs font-black ${darkMode ? "border-white/14" : "border-black/10"}`}>Back</button> : null}{step < 5 ? <button type="button" onClick={next} className={darkMode ? "h-12 flex-1 rounded-[16px] bg-white text-sm font-black text-black" : "h-12 flex-1 rounded-[16px] bg-black text-sm font-black text-white"}>Continue</button> : <button type="submit" disabled={saving || submitted} className={darkMode ? "h-12 flex-1 rounded-[16px] bg-white text-sm font-black text-black disabled:opacity-45" : "h-12 flex-1 rounded-[16px] bg-black text-sm font-black text-white disabled:opacity-45"}>{submitted ? "Submitted" : saving ? "Submitting…" : "Submit contract"}</button>}</div>
           </section>
