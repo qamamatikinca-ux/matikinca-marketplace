@@ -130,7 +130,7 @@ create table if not exists public.job_chat_status_updates (
   listing_id uuid not null references public.job_listings(id) on delete cascade,
   thread_id uuid references public.listing_guest_threads(id) on delete set null,
   user_id uuid not null references auth.users(id),
-  status text not null check (status in ('still_discussing','agreement_reached','in_progress','completed_reported','pending_confirmation','no_agreement','cancelled','disputed')),
+  status text not null check (status in ('still_discussing','agreement_reached','in_progress','completed_reported','pending_confirmation','invoice_sent','payment_pending','payment_reported','no_agreement','cancelled','disputed')),
   note text not null default '' check (char_length(note)<=1500),
   created_at timestamptz not null default now()
 );
