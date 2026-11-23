@@ -197,7 +197,7 @@ export default function LoadLinkSmartUxPass20260826() {
     // These legacy enhancements rewrite DOM nodes owned by React.
     // Defer until the initial hydration window has passed to avoid
     // mismatches in Jobs, Contracts and Messages on slow devices.
-    const timer = window.setTimeout(() => {
+    const initialise = () => {
       if (cancelled) return;
       applyAll();
       cleanupDriver = rememberDriverSetup();
@@ -213,10 +213,13 @@ export default function LoadLinkSmartUxPass20260826() {
         });
       });
       observer.observe(document.body, { childList: true, subtree: true });
-    }, 4200);
+    };
+    // In SSR-safe test environments timers may be intentionally absent.
+    const timer = typeof window.setTimeout === "function" ? window.setTimeout(initialise, 4200) : null;
+    if (timer === null) initialise();
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
+      if (timer !== null) window.clearTimeout(timer);
       observer?.disconnect();
       cleanupDriver?.();
       delete document.documentElement.dataset.loadlinkContractGoldProgress;
