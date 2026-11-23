@@ -12,16 +12,6 @@ const QUICK_SCOPE: Record<string, string> = {
   dealerships: "dealer",
 };
 
-function sortJobSearchTerms() {
-  const datalist = document.querySelector<HTMLDataListElement>("#loadlink-job-search-terms");
-  if (!datalist || datalist.dataset.loadlinkSorted === "true") return;
-  const options = Array.from(datalist.querySelectorAll("option"));
-  options
-    .sort((a, b) => String(a.value || a.label).localeCompare(String(b.value || b.label), "en-ZA", { sensitivity: "base", numeric: true }))
-    .forEach((option) => datalist.appendChild(option));
-  datalist.dataset.loadlinkSorted = "true";
-}
-
 export default function LoadLinkMobileUxCorrection20260822() {
   const pathname = usePathname();
 
@@ -43,7 +33,6 @@ export default function LoadLinkMobileUxCorrection20260822() {
         if (main) main.dataset.loadlinkPublicShowroom = "true";
       }
 
-      if (pathname.startsWith("/jobs")) sortJobSearchTerms();
     }
 
     function onHomeQuickLink(event: MouseEvent) {
