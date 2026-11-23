@@ -60,7 +60,6 @@ export default function ListJobPage() {
   const [step, setStep] = useState(1);
   const [postingIntent, setPostingIntent] = useState<PostingIntent>("transport");
   const [group, setGroup] = useState<VehicleGroup>("Trucks / Trailers");
-  const [vehicleNeeded, setVehicleNeeded] = useState("");
   const [neededOn, setNeededOn] = useState(today());
   const [city, setCity] = useState("Johannesburg");
   const [locationLabel, setLocationLabel] = useState("Johannesburg");
@@ -116,7 +115,6 @@ export default function ListJobPage() {
             const data = JSON.parse(draft);
             setPostingIntent(data.postingIntent === "driver" ? "driver" : "transport");
             setGroup(data.group || "Trucks / Trailers");
-            setVehicleNeeded(data.vehicleNeeded || "");
             setNeededOn(data.neededOn || today());
             setCity(data.city || "Johannesburg");
             setLocationLabel(data.locationLabel || data.city || "Johannesburg");
@@ -144,7 +142,6 @@ export default function ListJobPage() {
       localStorage.setItem(`${draftVersion}:${data.user.id}`, JSON.stringify({
         postingIntent,
         group,
-        vehicleNeeded,
         neededOn,
         city,
         locationLabel,
@@ -160,7 +157,7 @@ export default function ListJobPage() {
       }));
     });
     return () => { active = false; };
-  }, [ready, draftVersion, postingIntent, group, vehicleNeeded, neededOn, city, locationLabel, province, latitude, longitude, title, rate, description, postedBy, contact, step]);
+  }, [ready, draftVersion, postingIntent, group, neededOn, city, locationLabel, province, latitude, longitude, title, rate, description, postedBy, contact, step]);
 
   async function photos(event: ChangeEvent<HTMLInputElement>) {
     const selectedFiles = Array.from(event.target.files || []).slice(0, 5);
@@ -209,10 +206,6 @@ export default function ListJobPage() {
     setMessage("");
     if (step === 1 && postingIntent === "driver") {
       setMessage("Driver vacancy posting needs the dedicated recruitment and application service. It is not available in this release. You can contact drivers through the existing directory.");
-      return;
-    }
-    if (step === 1 && !vehicleNeeded.trim()) {
-      setMessage("Tell LoadLink what vehicle or mobile unit is needed.");
       return;
     }
     if (step === 2 && (!neededOn || neededOn < today() || !locationLabel.trim())) {
@@ -264,7 +257,7 @@ export default function ListJobPage() {
         p_title: title.trim(),
         p_city: city.trim() || locationLabel.trim(),
         p_vehicle_group: group,
-        p_vehicle_needed: vehicleNeeded.trim(),
+        p_vehicle_needed: "See job details",
         p_needed_on: neededOn,
         p_rate: rate.trim(),
         p_posted_by: postedBy.trim(),
@@ -320,11 +313,7 @@ export default function ListJobPage() {
                     <p className={`mt-2 text-xs font-medium leading-6 ${muted}`}>You can browse and contact professional drivers now. Posting driver vacancies with formal applications will be enabled once the recruitment service is ready. This form cannot publish a driver vacancy yet.</p>
                     <Link href="/drivers" className="mt-4 inline-flex min-h-11 items-center rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">Find professional drivers</Link>
                   </div>
-                ) : (
-                  <div className="mt-5 grid gap-4">
-                    <Field label="Truck or trailer required"><input value={vehicleNeeded} onChange={(event) => setVehicleNeeded(event.target.value)} placeholder="e.g. Side tipper or tautliner" className={input} /></Field>
-                  </div>
-                )}
+                ) : null}
               </>
             ) : null}
 
@@ -368,7 +357,7 @@ export default function ListJobPage() {
                 <div className="mt-5 grid gap-4">
                   <Field label={`${postNameTitle} title`}><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={`Short ${postName} title`} className={input} /></Field>
                   <Field label="Rate or budget — optional"><input value={rate} onChange={(event) => setRate(event.target.value)} inputMode="decimal" placeholder="e.g. R18 000 or R28/km" className={input} /></Field>
-                  <Field label="Details"><textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder={isContract ? "Scope, route, duration, requirements and anything an operator should know" : "Route, load, requirements and anything an operator should know"} className={`${input} min-h-36 resize-y py-4`} /></Field>
+                  <Field label="Details"><textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder={isContract ? "Describe the transport scope, suitable vehicles, route, duration and requirements" : "Describe the goods, pickup and delivery route, suitable vehicle and any requirements"} className={`${input} min-h-36 resize-y py-4`} /></Field>
                 </div>
               </>
             ) : null}
@@ -394,7 +383,7 @@ export default function ListJobPage() {
               <>
                 <div className="flex items-end justify-between gap-3"><div><h2 className="text-2xl font-black tracking-[-.035em]">Review</h2><p className={`mt-2 text-xs font-semibold ${muted}`}>Check everything before submitting.</p></div></div>
                 <div className={`mt-5 divide-y rounded-[20px] border ${darkMode ? "divide-white/10 border-white/10 bg-white/[.02]" : "divide-black/8 border-black/8 bg-white/[.26]"}`}>
-                  <Review label="Need" value={vehicleNeeded} onEdit={() => setStep(1)} />
+                  <Review label="Requirements" value={description.trim()} onEdit={() => setStep(3)} />
                   <Review label="Date" value={neededOn ? new Date(`${neededOn}T12:00:00`).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" }) : "Not selected"} onEdit={() => setStep(2)} />
                   <Review label="Location" value={locationLabel || city} onEdit={() => setStep(2)} />
                   <Review label={postNameTitle} value={title} onEdit={() => setStep(3)} />
