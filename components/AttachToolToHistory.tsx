@@ -5,7 +5,7 @@ import {supabase} from "@/lib/supabaseClient";
 type Post={id:string;title:string};
 export default function AttachToolToHistory({toolKey,title,body,darkMode}:{toolKey:string;title:string;body:string;darkMode:boolean}){
  const [posts,setPosts]=useState<Post[]>([]);const [listingId,setListingId]=useState("");
- const [threadId,setThreadId]=useState<string|null>(null);const [userId,setUserId]=useState("");
+ const [threadId,setThreadId]=useState<string|null>(null);const [threadByListing,setThreadByListing]=useState<Record<string,string>>({});const [userId,setUserId]=useState("");
  const [share,setShare]=useState(false);const [busy,setBusy]=useState(false);const [notice,setNotice]=useState("");
  useEffect(()=>{let active=true;(async()=>{
   const {data:{user}}=await supabase.auth.getUser();if(!user||!active)return;setUserId(user.id);
@@ -26,7 +26,11 @@ export default function AttachToolToHistory({toolKey,title,body,darkMode}:{toolK
   const query=new URLSearchParams(window.location.search);
   const selected=query.get("listing")||"";const valid=options.some(x=>x.id===selected);
   setListingId(valid?selected:options[0]?.id||"");
-  setThreadId(query.get("thread")||awardRows.find(x=>x.listing_id===selected)?.thread_id||discussionRows.find(x=>x.listing_id===selected)?.thread_id||null);
+  const pairs=[...awardRows,...discussionRows].filter(x=>Boolean(x.listing_id&&x.thread_id));
+  const threadLookup=Object.fromEntries(pairs.map(x=>[x.listing_id,x.thread_id]));
+  setThreadByListing(threadLookup);
+  const validThread=pairs.some(x=>x.listing_id===selected && x.thread_id===query.get("thread"));
+  setThreadId(validThread?query.get("thread"):threadLookup[valid?selected:options[0]?.id||""]||null);
  })();return()=>{active=false}},[]);
  async function save(){if(!userId||!listingId||!body.trim()||busy)return;
   setBusy(true);setNotice("");
@@ -41,7 +45,7 @@ export default function AttachToolToHistory({toolKey,title,body,darkMode}:{toolK
   <h3 className="text-sm font-black">Attach this tool to a job</h3>
   <p className="mt-1 text-xs opacity-65">Save this exact document to your in-app Job & Contract History. Private by default.</p>
   <div className="mt-3 flex flex-wrap gap-2">
-   <select aria-label="Choose a job" className={`min-h-11 min-w-0 flex-1 rounded-xl border px-3 text-xs ${darkMode?"border-white/15 bg-[#111] text-white":"border-black/10 bg-white text-black"}`} value={listingId} onChange={e=>setListingId(e.target.value)}>
+   <select aria-label="Choose a job" className={`min-h-11 min-w-0 flex-1 rounded-xl border px-3 text-xs ${darkMode?"border-white/15 bg-[#111] text-white":"border-black/10 bg-white text-black"}`} value={listingId} onChange={e=>{setListingId(e.target.value);setThreadId(threadByListing[e.target.value]||null);setShare(false)}}>
     {!posts.length?<option value="">No available jobs</option>:null}
     {posts.map(x=><option key={x.id} value={x.id}>{x.title}</option>)}
    </select>
