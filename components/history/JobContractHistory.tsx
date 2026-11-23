@@ -10,7 +10,7 @@ type DiscussedThread={listing_id:string;thread_id:string};
 type StatusEvent={id:string;listing_id:string;thread_id:string|null;user_id:string;status:string;note:string;created_at:string};
 type Document={id:string;listing_id:string;title:string;tool_key:string;document_text:string;shared_with_counterparty:boolean;created_at:string};
 type Award={id:string;listing_id:string;thread_id:string;poster_user_id:string;transporter_user_id:string|null;quote_snapshot:{amount?:string;unit?:string;vehicle?:string;route?:string;terms?:string;vat?:string};status:string;accepted_at:string;transporter_confirmed_at:string|null};
-const STATUSES=[["still_discussing","Still discussing"],["agreement_reached","Agreement reached"],["in_progress","Work in progress"],["completed_reported","Completed — awaiting confirmation"],["pending_confirmation","Awaiting confirmation"],["no_agreement","No agreement"],["cancelled","Cancelled"],["disputed","Disputed"]] as const;
+const STATUSES=[["still_discussing","Still discussing"],["agreement_reached","Agreement reached"],["in_progress","Work in progress"],["completed_reported","Completed — awaiting confirmation"],["pending_confirmation","Awaiting confirmation"],["invoice_sent","Invoice sent"],["payment_pending","Payment outstanding"],["payment_reported","Payment reported — not independently verified"],["no_agreement","No agreement"],["cancelled","Cancelled"],["disputed","Disputed"]] as const;
 export default function JobContractHistory(){
  const {darkMode}=useLoadLinkTheme();
  const [userId,setUserId]=useState("");const [owned,setOwned]=useState<Listing[]>([]);const [working,setWorking]=useState<Listing[]>([]);
