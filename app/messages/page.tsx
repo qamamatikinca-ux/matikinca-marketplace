@@ -1768,6 +1768,7 @@ ${message}` : message)}
 
   return (
     <main
+      data-loadlink-smart-glass="true"
       data-theme={darkMode ? "dark" : "light"}
       style={{ height: "var(--loadlink-message-vh, 100dvh)", minHeight: "var(--loadlink-message-vh, 100svh)" }}
       className={`${styles.messageApp} loadlink-messages flex flex-col overflow-hidden ${
