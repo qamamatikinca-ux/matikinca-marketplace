@@ -2,6 +2,7 @@
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import {useLoadLinkTheme} from "@/lib/useLoadLinkTheme";
 import DriverHistory from "@/components/history/DriverHistory";
+import DriverAssignmentRecords from "@/components/history/DriverAssignmentRecords";
 import JobContractHistory from "@/components/history/JobContractHistory";
 
 export default function HistoryPage(){
@@ -14,6 +15,7 @@ export default function HistoryPage(){
     <p className="mt-2 text-sm font-medium opacity-65">Your driver records, documents, jobs, contracts and saved agreements.</p>
    </header>
    <DriverHistory/>
+   <DriverAssignmentRecords/>
    <div className="mt-10 border-t border-current/15"><JobContractHistory/></div>
   </div>
  </main>;
