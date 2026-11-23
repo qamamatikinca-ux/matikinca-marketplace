@@ -93,8 +93,8 @@
 .dark .compactMeta { color:rgba(255,255,255,.65); }
 .compactActions { display:flex; align-items:center; gap:9px; }
 .compactActions .contact { margin:0; flex:1; min-height:42px; font-size:.72rem; }
-.compactDetails { flex:0 0 auto; }
-.compactDetails > summary { display:flex; align-items:center; justify-content:center; cursor:pointer; min-height:42px; border:1px solid rgba(127,127,127,.27); border-radius:99px; padding:0 14px; font-size:.72rem; font-weight:850; list-style:none; }
+.compactDetails { display:block; width:100%; margin-top:8px; }
+.compactDetails > summary { display:inline-flex; align-items:center; justify-content:center; cursor:pointer; min-height:36px; border:1px solid rgba(127,127,127,.27); border-radius:99px; padding:0 14px; font-size:.72rem; font-weight:850; list-style:none; }
 .compactDetails > summary::-webkit-details-marker { display:none; }
 .compactExpanded { position:relative; margin-top:12px; border-radius:12px; border:1px solid rgba(127,127,127,.2); padding:12px; font-size:.77rem; line-height:1.6; }
 .reviewButton { margin-top:10px; text-decoration:underline; font-weight:850; }

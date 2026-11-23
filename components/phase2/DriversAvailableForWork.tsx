@@ -210,14 +210,14 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
             </div>
             <div className={styles.compactActions}>
               <button data-marketplace-action type="button" className={styles.contact} onClick={()=>setContactTarget(driver)}>Contact driver</button>
-              <details className={styles.compactDetails}><summary>Details</summary>
-                <div className={styles.compactExpanded}>
-                  <p><strong>Vehicle experience:</strong> {driver.vehicle_types?.join(", ")||"On request"}</p>
-                  {driver.bio?<p className="mt-2 whitespace-pre-wrap">{driver.bio}</p>:null}
-                  {driver.user_id?<button type="button" onClick={()=>setReviewTarget(driver)} className={styles.reviewButton}>Write a review</button>:null}
-                </div>
-              </details>
             </div>
+            <details className={styles.compactDetails}><summary>View driver details</summary>
+              <div className={styles.compactExpanded}>
+                <p><strong>Vehicle experience:</strong> {driver.vehicle_types?.join(", ")||"On request"}</p>
+                {driver.bio?<p className="mt-2 whitespace-pre-wrap">{driver.bio}</p>:null}
+                {driver.user_id?<button type="button" onClick={()=>setReviewTarget(driver)} className={styles.reviewButton}>Write a review</button>:null}
+              </div>
+            </details>
           </article>;
         })}</div>}
 
