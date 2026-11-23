@@ -1,7 +1,6 @@
 "use client";
 
 import LoadLinkImage from "@/components/LoadLinkImage";
-import Link from "next/link";
 import PostingIntentCards, { type PostingIntent } from "@/components/PostingIntentCards";
 
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
