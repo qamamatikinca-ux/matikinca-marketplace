@@ -1892,7 +1892,7 @@ ${message}` : message)}
                   type="button"
                   onClick={()=>{
                     const key="loadlink-chat-status-prompt:"+selectedConversation.id+":"+(messages.at(-1)?.id||"");
-                    if(messages.length && !sessionStorage.getItem(key)){
+                    if(messages.length && starterPost?.id===selectedConversation.listing_id && ["job","contract"].includes(String(starterPost.listing_kind||"").toLowerCase()) && !sessionStorage.getItem(key)){
                       sessionStorage.setItem(key,"1");setStatusPromptOpen(true);
                     }else returnToInbox();
                   }}
@@ -1953,6 +1953,7 @@ ${message}` : message)}
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black text-[#f6b800]"><BriefcaseIcon /></span>
                 <p className="min-w-0 flex-1 truncate text-[11px] font-semibold">{selectedConversation.listing_title}</p>
                 <Link href={`/listing/${selectedConversation.listing_id}`} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[9px] font-semibold uppercase ${darkMode ? "border-white/15 text-white/75" : "border-black/10 text-black/70"}`}>View</Link>
+                {starterPost?.id===selectedConversation.listing_id && ["job","contract"].includes(String(starterPost.listing_kind||"").toLowerCase()) ? <button type="button" onClick={()=>setStatusPromptOpen(true)} className="shrink-0 rounded-lg border border-black/15 px-2.5 py-1.5 text-[9px] font-bold">Update status</button>:null}
               </div>
 
               {potentialDealPending ? (
