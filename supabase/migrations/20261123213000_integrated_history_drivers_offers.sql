@@ -402,7 +402,7 @@ grant execute on function public.loadlink_my_transport_threads() to authenticate
 
 
 create or replace function public.loadlink_guard_job_tool_record()
-returns trigger language plpgsql security definer set search_path=public,pg_temp as $
+returns trigger language plpgsql security definer set search_path=public,pg_temp as $job_doc_guard$
 begin
  if auth.uid() is null or auth.uid() is distinct from new.user_id then
    raise exception 'A signed-in author is required to save this document';
@@ -417,7 +417,7 @@ begin
   if new.shared_with_counterparty and new.thread_id is null then
     raise exception 'Choose a valid job conversation before sharing'; end if;
   return new;
-end $$;
+end $job_doc_guard$;
 revoke all on function public.loadlink_guard_job_tool_record() from public,anon,authenticated;
 create trigger loadlink_guard_job_tool_record
 before insert on public.job_tool_records
