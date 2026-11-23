@@ -9,14 +9,16 @@ export default function AttachToolToHistory({toolKey,title,body,darkMode}:{toolK
  const [share,setShare]=useState(false);const [busy,setBusy]=useState(false);const [notice,setNotice]=useState("");
  useEffect(()=>{let active=true;(async()=>{
   const {data:{user}}=await supabase.auth.getUser();if(!user||!active)return;setUserId(user.id);
-  const [owned,interests,awards]=await Promise.all([
+  const [owned,interests,awards,discussions]=await Promise.all([
    supabase.from("job_listings").select("id,title").eq("user_id",user.id).in("listing_kind",["job","contract"]).limit(80),
    supabase.from("job_interests").select("listing_id").eq("applicant_user_id",user.id).limit(80),
-   supabase.from("job_offer_awards").select("listing_id,thread_id").eq("transporter_user_id",user.id).limit(80)
+   supabase.from("job_offer_awards").select("listing_id,thread_id").eq("transporter_user_id",user.id).limit(80),
+   supabase.rpc("loadlink_my_transport_threads")
   ]);
   if(!active)return;
   const awardRows=awards.data||[];
-  const jobIds=[...new Set([...(interests.data||[]).map(x=>x.listing_id),...awardRows.map(x=>x.listing_id)])];
+  const discussionRows=(discussions.data||[]) as {listing_id:string;thread_id:string}[];
+  const jobIds=[...new Set([...(interests.data||[]).map(x=>x.listing_id),...awardRows.map(x=>x.listing_id),...discussionRows.map(x=>x.listing_id)])];
   const joined=jobIds.length?await supabase.from("job_listings").select("id,title").in("id",jobIds):{data:[],error:null};
   if(!active)return;
   const options=[...(owned.data||[]) as Post[],...(joined.data||[]) as Post[]];
@@ -24,7 +26,7 @@ export default function AttachToolToHistory({toolKey,title,body,darkMode}:{toolK
   const query=new URLSearchParams(window.location.search);
   const selected=query.get("listing")||"";const valid=options.some(x=>x.id===selected);
   setListingId(valid?selected:options[0]?.id||"");
-  setThreadId(query.get("thread")||awardRows.find(x=>x.listing_id===selected)?.thread_id||null);
+  setThreadId(query.get("thread")||awardRows.find(x=>x.listing_id===selected)?.thread_id||discussionRows.find(x=>x.listing_id===selected)?.thread_id||null);
  })();return()=>{active=false}},[]);
  async function save(){if(!userId||!listingId||!body.trim()||busy)return;
   setBusy(true);setNotice("");
