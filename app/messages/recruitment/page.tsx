@@ -49,7 +49,7 @@ export default function RecruitmentMessagesPage(){
     if(dbError){setError(dbError.message);return;}
     setMsgs((data||[]) as Msg[]);
   },[selected]);
-  useEffect(()=>{void refreshMessages()},[refreshMessages]);
+  useEffect(()=>{const timer=window.setTimeout(()=>{void refreshMessages()},0);return()=>window.clearTimeout(timer)},[refreshMessages]);
   async function send(e:FormEvent){e.preventDefault();if(!selected||!draft.trim()||busy)return;setBusy(true);setError("");
     const{error:dbError}=await supabase.from("driver_application_messages").insert({application_id:selected,sender_user_id:userId,body:draft.trim()});
     if(dbError)setError(dbError.message);else{setDraft("");await refreshMessages()}setBusy(false);
