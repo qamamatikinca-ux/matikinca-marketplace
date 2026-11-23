@@ -120,42 +120,11 @@ function ensureVehicleReviewHosts() {
   });
 }
 
-function ensurePageLimitNote() {
-  const path = currentPath();
-  let host: HTMLElement | null = null;
-  let text = "";
-
-  if (path === "/search") {
-    host = document.querySelector<HTMLElement>('[data-loadlink-search-results="true"]');
-    text = "7 results per page";
-  } else if (path === "/jobs" || path === "/contracts") {
-    const headings = Array.from(document.querySelectorAll<HTMLElement>("h2,h3"));
-    const heading = headings.find((node) => /available (jobs|contracts|vehicles|listings)|results/i.test((node.textContent || "").trim()));
-    host = heading?.parentElement || null;
-    text = "7 posts per page";
-  } else if (path === "/list-your-vehicle" || path === "/list-your-truck") {
-    const heading = document.querySelector<HTMLElement>("#vehicle-marketplace h2");
-    host = heading?.parentElement || null;
-    text = "7 posts per page";
-  }
-
-  if (!host || !text) return;
-  let note = host.querySelector<HTMLElement>(':scope > [data-ll-page-limit-note="true"]');
-  if (!note) {
-    note = document.createElement("span");
-    note.dataset.llPageLimitNote = "true";
-    note.className = "ll-release-page-limit";
-    host.appendChild(note);
-  }
-  note.textContent = text;
-}
-
 function markLiveSurfaces() {
   const theme = liveTheme();
   document.documentElement.dataset.llFinalTheme = theme;
   document.body.dataset.llFinalTheme = theme;
 
-  ensurePageLimitNote();
   ensureVehicleReviewHosts();
 
   document.querySelectorAll<HTMLElement>('[data-loadlink-analytics-modal="true"]').forEach((node) => {
