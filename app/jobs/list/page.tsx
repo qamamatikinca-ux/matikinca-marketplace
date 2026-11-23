@@ -115,7 +115,7 @@ export default function ListJobPage() {
         if (draft) {
           try {
             const data = JSON.parse(draft);
-            setPostingIntent(data.postingIntent === "specialist" || data.postingIntent === "driver" ? data.postingIntent : "transport");
+            setPostingIntent(data.postingIntent === "driver" ? "driver" : "transport");
             setGroup(data.group || "Trucks / Trailers");
             setVehicleNeeded(data.vehicleNeeded || "");
             setNeededOn(data.neededOn || today());
@@ -323,8 +323,7 @@ export default function ListJobPage() {
                   </div>
                 ) : (
                   <div className="mt-5 grid gap-4">
-                    <Field label="Equipment category"><select value={group} onChange={(event) => setGroup(event.target.value as VehicleGroup)} className={input}>{groups.map((item) => <option key={item}>{item}</option>)}</select></Field>
-                    <Field label={postingIntent === "transport" ? "Truck or trailer required" : "Equipment or service needed"}><input value={vehicleNeeded} onChange={(event) => setVehicleNeeded(event.target.value)} placeholder={postingIntent === "transport" ? "e.g. Side tipper or tautliner" : "e.g. Lowbed, forklift or mobile fridge"} className={input} /></Field>
+                    <Field label="Truck or trailer required"><input value={vehicleNeeded} onChange={(event) => setVehicleNeeded(event.target.value)} placeholder="e.g. Side tipper or tautliner" className={input} /></Field>
                   </div>
                 )}
               </>
