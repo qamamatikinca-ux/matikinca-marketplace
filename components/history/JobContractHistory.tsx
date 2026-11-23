@@ -101,7 +101,7 @@ export default function JobContractHistory(){
       <p className="mt-4 whitespace-pre-wrap text-sm leading-7">{selected.description}</p>
       <div className="mt-5 flex flex-wrap gap-2">
         <Link className="rounded-xl border border-current/15 px-4 py-2.5 text-xs font-bold" href={`/messages?listing=${selected.id}`}>Open Messages</Link>
-        <Link className="rounded-xl border border-current/15 px-4 py-2.5 text-xs font-bold" href={`/tools?listing=${selected.id}`}>Open Logistics Tools</Link><Link className="rounded-xl border border-current/15 px-4 py-2.5 text-xs font-bold" href={`/driver-assignments?listing=${selected.id}`}>Assign a driver</Link>
+        <Link className="rounded-xl border border-current/15 px-4 py-2.5 text-xs font-bold" href={`/tools?listing=${selected.id}`}>Open Logistics Tools</Link><Link className="rounded-xl border border-current/15 px-4 py-2.5 text-xs font-bold" href="/history#driver-assignments">Assign a driver</Link>
         <button className="rounded-xl border border-current/15 px-4 py-2.5 text-xs font-bold" type="button" onClick={()=>void copyRecord()}>Copy job record</button>
       </div>
       {selected.user_id===userId?<div className="mt-5 rounded-xl border border-current/15 p-4">
