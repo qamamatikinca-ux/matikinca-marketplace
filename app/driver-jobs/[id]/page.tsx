@@ -77,7 +77,7 @@ export default function DriverVacancyDetail(){
       :!userId?<Link className="mt-3 inline-flex rounded-xl bg-[#f6b800] px-4 py-3 text-sm font-bold text-black" href={loginHref(`/driver-jobs/${id}`)}>Sign in to apply</Link>
       :!profile?<div><p className="mt-2 text-sm">Complete your existing Driver Profile to apply.</p><Link className="mt-3 inline-flex rounded-xl bg-[#f6b800] px-4 py-3 text-sm font-bold text-black" href="/driver-profile">Complete Driver Profile</Link></div>
       :<form onSubmit={apply} className="mt-4 space-y-3">
-        <p className="text-sm">You're submitting your saved driver details. Review these before applying.</p>
+        <p className="text-sm">You are submitting your saved driver details. Review these before applying.</p>
         <div className="grid gap-2 rounded-xl border border-current/15 p-4 text-sm">
          <p><strong>Name:</strong> {profile.full_name}</p><p><strong>Licence:</strong> {profile.licence_code} {exactLicence?"(corresponds)":"(different to requested)"}</p>
          <p><strong>Experience:</strong> {profile.years_experience} years {exp?"(meets minimum)":"(below stated minimum)"}</p>
