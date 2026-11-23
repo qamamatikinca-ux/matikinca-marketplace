@@ -425,3 +425,24 @@ revoke all on function public.loadlink_guard_job_tool_record() from public;
 create trigger loadlink_guard_job_tool_record
 before insert on public.job_tool_records
 for each row execute function public.loadlink_guard_job_tool_record();
+
+-- Supabase's project default privileges can grant anon direct table/function
+-- permissions even when a PUBLIC revoke is present. Explicitly narrow all ACLs.
+revoke all on table public.driver_vacancies, public.driver_vacancy_applications,
+  public.driver_application_messages, public.job_offer_preferences,
+  public.job_chat_status_updates, public.job_tool_records,
+  public.job_offer_awards from anon, authenticated;
+grant select on public.driver_vacancies to anon, authenticated;
+grant insert,update on public.driver_vacancies to authenticated;
+grant select on public.job_offer_preferences to anon, authenticated;
+grant insert,update on public.job_offer_preferences to authenticated;
+grant select,insert,update on public.driver_vacancy_applications to authenticated;
+grant select,insert on public.driver_application_messages to authenticated;
+grant select,insert on public.job_chat_status_updates to authenticated;
+grant select,insert on public.job_tool_records to authenticated;
+grant select,update on public.job_offer_awards to authenticated;
+revoke all on function public.loadlink_my_transport_threads() from anon;
+revoke all on function public.loadlink_is_listing_thread_participant(uuid,uuid,uuid) from anon;
+revoke all on function public.loadlink_guard_driver_application() from anon, authenticated;
+revoke all on function public.loadlink_guard_offer_award() from anon, authenticated;
+revoke all on function public.loadlink_record_accepted_transport_quote() from anon, authenticated;
