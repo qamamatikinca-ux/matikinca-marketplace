@@ -435,6 +435,13 @@ export default function MessagesPage() {
     };
   }, []);
 
+  // Announce hydration before legacy global chat enhancements attach portals.
+  useEffect(()=>{
+    document.documentElement.dataset.loadlinkMessagesHydrated="true";
+    window.dispatchEvent(new Event("loadlink-messages-hydrated"));
+    return()=>{delete document.documentElement.dataset.loadlinkMessagesHydrated};
+  },[]);
+
   const router = useRouter();
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [starterPost, setStarterPost] = useState<(PostContext & { id: string }) | null>(null);
