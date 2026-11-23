@@ -24,7 +24,7 @@ create index if not exists driver_vacancies_discovery on public.driver_vacancies
 create index if not exists driver_vacancies_owner on public.driver_vacancies(user_id,created_at desc);
 alter table public.driver_vacancies enable row level security;
 create policy "Driver vacancies open or owned" on public.driver_vacancies for select to anon, authenticated
-  using (status='open' or user_id=(select auth.uid()));
+  using (status='open' or (auth.uid() is not null and status in ('closed','cancelled')) or user_id=(select auth.uid()));
 create policy "Owners create driver vacancies" on public.driver_vacancies for insert to authenticated
   with check (user_id=(select auth.uid()) and not public.loadlink_marketplace_is_restricted((select auth.uid())));
 create policy "Owners edit driver vacancies" on public.driver_vacancies for update to authenticated
@@ -117,6 +117,13 @@ create policy "Listing owner updates offer preference" on public.job_offer_prefe
  with check(owner_user_id=(select auth.uid()) and exists(select 1 from public.job_listings j where j.id=listing_id and j.user_id=(select auth.uid())));
 grant select on public.job_offer_preferences to anon,authenticated;
 grant insert,update on public.job_offer_preferences to authenticated;
+
+-- Preserve the quote feature for pre-existing posts that never had this choice.
+-- Owners can turn it off in Job History; new posts must explicitly set the preference.
+insert into public.job_offer_preferences(listing_id,owner_user_id,accepts_offers)
+select j.id,j.user_id,true from public.job_listings j
+where j.listing_kind in ('job','contract') and j.user_id is not null
+on conflict(listing_id) do nothing;
 
 create table if not exists public.job_chat_status_updates (
   id uuid primary key default gen_random_uuid(),
