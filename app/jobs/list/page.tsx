@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import GoogleLocationPicker, { type GoogleLocationSelection } from "@/components/GoogleLocationPicker";
 import GoogleMapPreview from "@/components/GoogleMapPreview";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
+import PosterTransportPriceGuide from "@/components/PosterTransportPriceGuide";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import { loginHref } from "@/lib/auth";
@@ -67,6 +68,7 @@ export default function ListJobPage() {
   const [longitude, setLongitude] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [rate, setRate] = useState("");
+  const [acceptOffers, setAcceptOffers] = useState(false);
   const [description, setDescription] = useState("");
   const [postedBy, setPostedBy] = useState("");
   const [contact, setContact] = useState("");
@@ -122,6 +124,7 @@ export default function ListJobPage() {
             setLongitude(typeof data.longitude === "number" ? data.longitude : null);
             setTitle(data.title || "");
             setRate(data.rate || "");
+            setAcceptOffers(Boolean(data.acceptOffers));
             setDescription(data.description || "");
             setPostedBy(data.postedBy || name);
             setContact(data.contact || phone);
@@ -149,6 +152,7 @@ export default function ListJobPage() {
         longitude,
         title,
         rate,
+        acceptOffers,
         description,
         postedBy,
         contact,
@@ -156,7 +160,7 @@ export default function ListJobPage() {
       }));
     });
     return () => { active = false; };
-  }, [ready, draftVersion, postingIntent, group, neededOn, city, locationLabel, province, latitude, longitude, title, rate, description, postedBy, contact, step]);
+  }, [ready, draftVersion, postingIntent, group, neededOn, city, locationLabel, province, latitude, longitude, title, rate, acceptOffers, description, postedBy, contact, step]);
 
   async function photos(event: ChangeEvent<HTMLInputElement>) {
     const selectedFiles = Array.from(event.target.files || []).slice(0, 5);
@@ -269,6 +273,12 @@ export default function ListJobPage() {
         p_longitude: longitude,
       });
       if (result.error) throw result.error;
+      const listingId=result.data && typeof result.data === "object" && "id" in result.data ? String(result.data.id||"") : "";
+      if(!listingId)throw new Error("This listing was received, but no reference was returned for its offer settings.");
+      const {error:offerError}=await supabase.from("job_offer_preferences").upsert({
+        listing_id:listingId,owner_user_id:auth.user.id,accepts_offers:acceptOffers
+      },{onConflict:"listing_id"});
+      if(offerError)throw new Error("The listing was saved but its offer setting did not save. Please retry.");
       localStorage.removeItem(`${draftVersion}:${auth.user.id}`);
       localStorage.removeItem(`${submissionKeyPrefix}:${auth.user.id}`);
       setSubmitted(true);
@@ -350,7 +360,9 @@ export default function ListJobPage() {
                 <div className="mt-5 grid gap-4">
                   <Field label={`${postNameTitle} title`}><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={`Short ${postName} title`} className={input} /></Field>
                   <Field label="Rate or budget — optional"><input value={rate} onChange={(event) => setRate(event.target.value)} inputMode="decimal" placeholder="e.g. R18 000 or R28/km" className={input} /></Field>
-                  <Field label="Details"><textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder={isContract ? "Describe the transport scope, suitable vehicles, route, duration and requirements" : "Describe the goods, pickup and delivery route, suitable vehicle and any requirements"} className={`${input} min-h-36 resize-y py-4`} /></Field>
+                  <label className="flex items-start gap-3 rounded-xl border border-current/15 p-3 text-sm font-semibold"><input type="checkbox" className="mt-1" checked={acceptOffers} onChange={e=>setAcceptOffers(e.target.checked)}/><span>Accept formal transport offers<span className="mt-1 block text-xs font-normal opacity-65">Transporters can send a structured quotation through LoadLink Messages. You can accept or decline.</span></span></label>
+                   <PosterTransportPriceGuide darkMode={darkMode} onUseRate={setRate}/>
+                   <Field label="Details"><textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder={isContract ? "Describe the transport scope, suitable vehicles, route, duration and requirements" : "Describe the goods, pickup and delivery route, suitable vehicle and any requirements"} className={`${input} min-h-36 resize-y py-4`} /></Field>
                 </div>
               </>
             ) : null}
@@ -381,6 +393,7 @@ export default function ListJobPage() {
                   <Review label="Location" value={locationLabel || city} onEdit={() => setStep(2)} />
                   <Review label={postNameTitle} value={title} onEdit={() => setStep(3)} />
                   <Review label="Rate" value={rate.trim() || "Negotiable"} onEdit={() => setStep(3)} />
+                   <Review label="Formal offers" value={acceptOffers?"Accepting offers":"Not accepting offers"} onEdit={() => setStep(3)}/>
                   <Review label="Contact" value={`${postedBy} · ${contact}`} onEdit={() => setStep(4)} />
                   <Review label="Photos" value={files.length ? `${files.length} selected` : "No photos"} onEdit={() => setStep(4)} />
                 </div>
