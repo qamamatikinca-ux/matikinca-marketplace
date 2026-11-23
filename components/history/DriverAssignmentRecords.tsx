@@ -62,7 +62,7 @@ export default function DriverAssignmentRecords(){
     if(a.operator_user_id===uid)return a.status==="delivery_reported"?["completed","cancelled"]:["offered","accepted","in_transit"].includes(a.status)?["cancelled"]:[];
     return [];
  }
- return <section aria-label="Driver assignments and trip records" className="mt-4 scroll-mt-24">
+ return <section id="driver-assignments" aria-label="Driver assignments and trip records" className="mt-4 scroll-mt-24">
    <div><h3 className="text-lg font-black">Driver Assignments & Trip Records</h3><p className="mt-2 text-sm opacity-65">Assign a qualified driver to transport jobs, acknowledge work and record completion.</p></div>
    {error?<p role="alert" className="mt-5 rounded-xl border border-red-500/25 p-3 text-sm text-red-600">{error}</p>:null}
    {notice?<p role="status" className="mt-5 rounded-xl border border-current/15 p-3 text-sm">{notice}</p>:null}
