@@ -375,3 +375,20 @@ begin
   return true;
 end;
 $function$;
+
+-- Let authenticated drivers recover previously discussed transport jobs in their history.
+-- No phone numbers, guest keys or private messages are exposed by this result.
+create or replace function public.loadlink_my_transport_threads()
+returns table(listing_id uuid,thread_id uuid)
+language sql stable security definer set search_path=public,pg_temp as $$
+  select distinct t.listing_id,t.id as thread_id
+  from public.listing_guest_threads t
+  join public.job_listings j on j.id=t.listing_id
+  where auth.uid() is not null
+    and t.buyer_user_id=auth.uid()
+    and j.listing_kind in ('job','contract')
+  order by t.listing_id,t.id
+  limit 150;
+$$;
+revoke all on function public.loadlink_my_transport_threads() from public;
+grant execute on function public.loadlink_my_transport_threads() to authenticated;
