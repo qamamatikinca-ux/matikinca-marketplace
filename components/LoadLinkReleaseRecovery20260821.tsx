@@ -120,11 +120,42 @@ function ensureVehicleReviewHosts() {
   });
 }
 
+function ensurePageLimitNote() {
+  const path = currentPath();
+  let host: HTMLElement | null = null;
+  let text = "";
+
+  if (path === "/search") {
+    host = document.querySelector<HTMLElement>('[data-loadlink-search-results="true"]');
+    text = "7 results per page";
+  } else if (path === "/jobs" || path === "/contracts") {
+    const headings = Array.from(document.querySelectorAll<HTMLElement>("h2,h3"));
+    const heading = headings.find((node) => /available (jobs|contracts|vehicles|listings)|results/i.test((node.textContent || "").trim()));
+    host = heading?.parentElement || null;
+    text = "7 posts per page";
+  } else if (path === "/list-your-vehicle" || path === "/list-your-truck") {
+    const heading = document.querySelector<HTMLElement>("#vehicle-marketplace h2");
+    host = heading?.parentElement || null;
+    text = "7 posts per page";
+  }
+
+  if (!host || !text) return;
+  let note = host.querySelector<HTMLElement>(':scope > [data-ll-page-limit-note="true"]');
+  if (!note) {
+    note = document.createElement("span");
+    note.dataset.llPageLimitNote = "true";
+    note.className = "ll-release-page-limit";
+    host.appendChild(note);
+  }
+  note.textContent = text;
+}
+
 function markLiveSurfaces() {
   const theme = liveTheme();
   document.documentElement.dataset.llFinalTheme = theme;
   document.body.dataset.llFinalTheme = theme;
 
+  ensurePageLimitNote();
   ensureVehicleReviewHosts();
 
   document.querySelectorAll<HTMLElement>('[data-loadlink-analytics-modal="true"]').forEach((node) => {
@@ -178,28 +209,22 @@ export default function LoadLinkReleaseRecovery20260821() {
 
   useEffect(() => {
     let frame = 0;
-    let observer: MutationObserver | null = null;
-    let interval = 0;
     const scan = () => {
       window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(markLiveSurfaces);
     };
-    // Legacy DOM decorations must not edit a page while React is hydrating.
-    const boot = window.setTimeout(() => {
-      scan();
-      observer = new MutationObserver(scan);
-      observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "data-loadlink-theme"] });
-      interval = window.setInterval(scan, 1000);
-      window.addEventListener("loadlink-theme-changed", scan as EventListener);
-      window.addEventListener("loadlink-theme-change", scan as EventListener);
-      window.addEventListener("popstate", scan);
-      window.addEventListener("hashchange", scan);
-    }, 4200);
+    scan();
+    const observer = new MutationObserver(scan);
+    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "data-loadlink-theme"] });
+    const timer = window.setInterval(scan, 1000);
+    window.addEventListener("loadlink-theme-changed", scan as EventListener);
+    window.addEventListener("loadlink-theme-change", scan as EventListener);
+    window.addEventListener("popstate", scan);
+    window.addEventListener("hashchange", scan);
     return () => {
-      window.clearTimeout(boot);
       window.cancelAnimationFrame(frame);
-      window.clearInterval(interval);
-      observer?.disconnect();
+      window.clearInterval(timer);
+      observer.disconnect();
       window.removeEventListener("loadlink-theme-changed", scan as EventListener);
       window.removeEventListener("loadlink-theme-change", scan as EventListener);
       window.removeEventListener("popstate", scan);

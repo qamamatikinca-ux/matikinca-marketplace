@@ -6,7 +6,6 @@ import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
 import LogisticsDocumentEditor from "@/components/LogisticsDocumentEditor";
-import AttachToolToHistory from "@/components/AttachToolToHistory";
 import TripProfitabilityTool from "@/components/TripProfitabilityTool";
 import LoadLinkDocumentPreview from "@/components/LoadLinkDocumentPreview";
 import Link from "next/link";
@@ -226,7 +225,6 @@ export default function ToolsPage() {
           <div className={`${workspaceTab === "details" ? "block" : "hidden"} md:block`}><LogisticsDocumentEditor value={text} template={tool.template || ""} title={tool.name} darkMode={darkMode} onChange={setText} /></div>
           <div className={`${workspaceTab === "preview" ? "block" : "hidden"} md:block min-w-0 space-y-3`}><LoadLinkDocumentPreview darkMode={darkMode} documentType={tool.name} body={text} /><ToolOutput value={text} showText={false} darkMode={darkMode} onCopy={()=>void copy(text)} onShare={()=>void share(text)}/><button type="button" onClick={save} className="mt-3 h-11 w-full rounded-xl border border-current/10 text-xs font-black">Save draft on this device</button></div>
         </div>}
-        {tool.id!=="profit"?<AttachToolToHistory toolKey={tool.id} title={tool.name} body={tool.id==="quote"?quoteText:text} darkMode={darkMode}/>:null}
 
         {notice ? <p role="status" className={`border-t px-5 py-3 text-xs font-bold md:px-6 ${darkMode?"border-white/10 text-white/55":"border-black/10 text-black/55"}`}>{notice}</p> : null}
         </section>

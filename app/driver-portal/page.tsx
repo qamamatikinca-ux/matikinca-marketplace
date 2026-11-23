@@ -58,13 +58,6 @@ export default function DriverPortalPage() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-6xl gap-3 px-5 py-8 sm:grid-cols-3">
-        <RequireAuthLink href="/driver-jobs" className="flex min-h-14 items-center justify-center rounded-xl bg-[#f6b800] px-4 text-center text-sm font-black text-black">Find driving jobs</RequireAuthLink>
-        <RequireAuthLink href="/messages/recruitment" className={`flex min-h-14 items-center justify-center rounded-xl border px-4 text-center text-sm font-black ${darkMode?"border-white/20":"border-black/15"}`}>My driver applications</RequireAuthLink>
-        <RequireAuthLink href="/driver-assignments" className={`flex min-h-14 items-center justify-center rounded-xl border px-4 text-center text-sm font-black ${darkMode?"border-white/20":"border-black/15"}`}>My assignments</RequireAuthLink>
-          <RequireAuthLink href="/driver-career-passport" className={`flex min-h-14 items-center justify-center rounded-xl border px-4 text-center text-sm font-black ${darkMode?"border-white/20":"border-black/15"}`}>Career Passport</RequireAuthLink>
-          <RequireAuthLink href="/job-history" className={`flex min-h-14 items-center justify-center rounded-xl border px-4 text-center text-sm font-black ${darkMode?"border-white/20":"border-black/15"}`}>Work history</RequireAuthLink>
-      </section>
       <div id="available-drivers" className="scroll-mt-24"><DriversAvailableForWork darkMode={darkMode} showHero={false} fullPage /></div>
     </main>
   );

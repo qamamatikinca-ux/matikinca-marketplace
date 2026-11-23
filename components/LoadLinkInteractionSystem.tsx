@@ -205,8 +205,14 @@ export default function LoadLinkInteractionSystem() {
   }, [choiceTarget, dateTarget]);
 
   useEffect(() => {
-    // Enhance date and suggestion controls only when the user interacts.
-    // Pre-hydration DOM rewrites cause React to discard server-rendered forms.
+    const prepareVisibleControls = () => {
+      document
+        .querySelectorAll<HTMLInputElement>('input[type="date"],input[data-loadlink-future-date="true"],input[data-loadlink-custom-date="true"]')
+        .forEach(prepareDateControl);
+      document
+        .querySelectorAll<HTMLInputElement>('input[list],input[data-loadlink-datalist]')
+        .forEach(prepareDatalistControl);
+    };
 
     const openSuggestion = (input: HTMLInputElement) => {
       const listId = prepareDatalistControl(input);
@@ -243,6 +249,8 @@ export default function LoadLinkInteractionSystem() {
       });
     };
 
+    prepareVisibleControls();
+    const delayed = window.setTimeout(prepareVisibleControls, 250);
 
     const openDate = (input: HTMLInputElement) => {
       if (!prepareDateControl(input)) return;
@@ -393,6 +401,7 @@ export default function LoadLinkInteractionSystem() {
     window.addEventListener("scroll", closeSuggestionOnViewportMove, true);
 
     return () => {
+      window.clearTimeout(delayed);
       document.removeEventListener("touchstart", intercept, true);
       document.removeEventListener("pointerdown", intercept, true);
       document.removeEventListener("mousedown", intercept, true);
