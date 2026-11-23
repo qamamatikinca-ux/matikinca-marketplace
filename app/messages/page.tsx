@@ -1730,7 +1730,7 @@ export default function MessagesPage() {
   }
 
   function returnToInbox() {
-    if(selectedConversation && isTransportConversation && messages.filter(m=>!m.deleted_at && m.message_kind!=="system").length>=2){
+    if(selectedConversation && selectedConversation.role==="owner" && isTransportConversation && messages.filter(m=>!m.deleted_at && m.message_kind!=="system").length>=2){
       const key=`loadlink-status-exit-prompt:${selectedConversation.id}`;
       let already=false;
       try{already=sessionStorage.getItem(key)==="shown";if(!already)sessionStorage.setItem(key,"shown")}catch{}

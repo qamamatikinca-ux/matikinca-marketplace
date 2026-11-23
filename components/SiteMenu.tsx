@@ -14,7 +14,7 @@ import LoadLinkGearIcon from "@/components/LoadLinkGearIcon";
 import LoadLinkLogo from "@/components/LoadLinkLogo";
 import { readLoadLinkSimpleMode, setLoadLinkSimpleMode } from "@/components/SimpleModeCoordinator";
 
-type IconName = "home" | "briefcase" | "contract" | "drivers" | "help" | "messages" | "notifications" | "posts" | "settings" | "driver" | "dealer" | "packages" | "tools" | "activity" | "simple";
+type IconName = "history" | "home" | "briefcase" | "contract" | "drivers" | "help" | "messages" | "notifications" | "posts" | "settings" | "driver" | "dealer" | "packages" | "tools" | "activity" | "simple";
 type MenuLink = { label: string; href: string; description: string; icon: IconName };
 
 const marketplaceLinks: MenuLink[] = [
@@ -183,7 +183,7 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
     const essential: MenuLink[] = [
       { label: "Messages", href: "/messages", description: "Your conversations", icon: "messages" },
       { label: "My posts", href: "/my-posts", description: "Manage your listings", icon: "posts" },
-       { label: "History", href: "/history", description: "Driver and job/contract records", icon: "activity" },
+       { label: "History", href: "/history", description: "Jobs, contracts and driver records", icon: "history" },
       { label: "Activity & access", href: "/account/activity", description: "Logins, devices and payments", icon: "activity" },
       { label: "Profile settings", href: "/account/settings", description: "Profile, account and alerts", icon: "settings" },
     ];
@@ -192,7 +192,7 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
       { label: "Messages", href: "/messages", description: "Your conversations", icon: "messages" },
       { label: "Notifications", href: "/notifications", description: "Reviews, messages and account updates", icon: "notifications" },
       { label: "My posts", href: "/my-posts", description: "Manage your listings", icon: "posts" },
-       { label: "History", href: "/history", description: "Driver and job/contract records", icon: "activity" },
+       { label: "History", href: "/history", description: "Jobs, contracts and driver records", icon: "history" },
       { label: "Packages", href: "/packages", description: "Manual, Pro and Dealer plans", icon: "packages" },
       ...(account.driverProfile ? [{ label: "Driver profile", href: "/driver-profile", description: "Manage your driver profile", icon: "driver" as const }] : []),
       ...(dealerLink ? [dealerLink] : []),
@@ -304,6 +304,8 @@ function MenuItemIcon({ name }: { name: IconName }) {
       return <svg {...common}><path d="M3 9h18l-2-5H5L3 9Zm2 0v11h14V9M8 20v-6h8v6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>;
     case "tools":
       return <svg {...common}><path d="m14 6 4-4 4 4-4 4m-6 1-8 8m3-11 9 9M4 4l16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case "history":
+      return <svg {...common}><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.8"/><path d="M12 7v5l3 2M5.5 4.5 3 6.5m0 0V3m0 3.5h3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>;
     case "activity":
       return <svg {...common}><path d="M4 19V5m0 14h16M7 15l3-4 3 2 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
     case "simple":
