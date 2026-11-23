@@ -473,6 +473,7 @@ export default function MessagesPage() {
   const [potentialDealReviewOpen, setPotentialDealReviewOpen] = useState(false);
   const [quoteBranding, setQuoteBranding] = useState<QuoteBranding>({ name: "", logo: null });
   const [quoteDefaults, setQuoteDefaults] = useState<QuoteAutofillDefaults | null>(null);
+  const [quoteAllowed, setQuoteAllowed] = useState(true);
   const [quoteVehicles, setQuoteVehicles] = useState<QuoteVehicleOption[]>([]);
   const [showStarterSuggestions, setShowStarterSuggestions] = useState(false);
   const [messagePrivacy, setMessagePrivacy] = useState<MessagePrivacyPreferences>(
@@ -571,6 +572,7 @@ export default function MessagesPage() {
   useEffect(() => {
     let cancelled = false;
     setQuoteDefaults(null);
+    setQuoteAllowed(false);
     setStarterPost(null);
     setQuoteVehicles([]);
     if (!selectedConversation?.listing_id) return;
@@ -586,6 +588,14 @@ export default function MessagesPage() {
 
         if (!listingResult.error && listingResult.data) listingData = listingResult.data;
         if (cancelled || !listingData) return;
+        if (["job","contract"].includes(String(listingData.listing_kind||"").toLowerCase())) {
+          const {data:pref}=await supabase.from("job_offer_preferences")
+            .select("accepts_offers").eq("listing_id",selectedConversation.listing_id).maybeSingle();
+          if (cancelled) return;
+          setQuoteAllowed(Boolean(pref?.accepts_offers) && selectedConversation.role==="buyer");
+        } else {
+          setQuoteAllowed(true);
+        }
 
         setStarterPost({ ...listingData, id: selectedConversation.listing_id });
         const parsedRate = parseQuoteRate(String(listingData.rate || ""));
@@ -1736,6 +1746,7 @@ export default function MessagesPage() {
         forceOpen
         onClose={() => setLogisticsWorkspaceOpen(false)}
         onSendQuote={sendStructuredQuote}
+        allowQuote={quoteAllowed}
         quoteDefaults={quoteDefaults}
         savedVehicles={quoteVehicles}
         onInsert={(message) => updateTyping(text.trim() ? `${text.trim()}
