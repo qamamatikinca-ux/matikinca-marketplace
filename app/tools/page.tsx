@@ -17,7 +17,7 @@ import { parsePostedRate, rateUnitLabel, type RateUnit } from "@/lib/logisticsQu
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 type Category = "All" | "Planning" | "Money" | "Operations";
-type ToolId = "profit" | "quote" | "trip" | "checklist" | "documents" | "handover" | "costs" | "payment" | "pod" | "incident" | "collection" | "delivery" | "eta";
+type ToolId = "profit" | "quote" | "trip" | "checklist" | "documents" | "handover" | "costs" | "payment" | "detention" | "pod" | "incident" | "collection" | "delivery" | "eta";
 type Tool = { id: ToolId; name: string; description: string; category: Exclude<Category,"All">; template?: string };
 type QuoteField = "rate" | "vehicle" | "route";
 type PostRow = { id:string; title:string; city:string|null; vehicle_group:string|null; rate:string|null; description:string|null; status:string|null; moderation_status:string|null };
@@ -31,6 +31,7 @@ const TOOLS: Tool[] = [
   { id:"handover", name:"Driver handover", description:"Driver, vehicle and ETA", category:"Operations", template:"DRIVER HANDOVER\n\nDriver: \nCell: \nVehicle registration: \nTrailer registration: \nCollection ETA: \nDelivery ETA: \nNotes:\n" },
   { id:"costs", name:"Cost breakdown", description:"Clarify all charges", category:"Money", template:"COST BREAKDOWN\n\nBase transport rate: \nVAT: \nTolls: \nFuel surcharge: \nWaiting / detention: \nLoading / offloading: \nOther charges: \n\nFinal total:\n" },
   { id:"payment", name:"Payment terms", description:"Invoice, POD and payment", category:"Money", template:"PAYMENT TERMS\n\nPayment period: \nInvoice requirements: \nPOD requirements: \nPayment reference: \nPayment contact: \nOther terms:\n" },
+  { id:"detention", name:"Waiting time & detention", description:"Record waiting times and agreed charges", category:"Operations", template:"LOADLINK WAITING-TIME RECORD\n\nLoad or contract reference: \nPickup / delivery site: \nArrival date and time: \nLoading or offloading started: \nLoading or offloading finished: \nDeparture date and time: \nTotal waiting time (hours): \nAgreed free waiting time (hours): \nChargeable waiting time (hours): \nAgreed detention rate (R/hour): \nCalculated charge (R): \nContact and supporting evidence: \nNotes / reason for waiting: \n\nThis is a factual record. Confirm both parties agreed to the rate before invoicing.\n" },
   { id:"pod", name:"POD request", description:"Request proof of delivery", category:"Operations", template:"POD REQUEST\n\nPlease send the signed proof of delivery.\nLoad / reference: \nDelivery date: \nReceiving contact: \n\nPlease confirm the invoice/payment reference once received." },
   { id:"incident", name:"Incident update", description:"Structured operational issue", category:"Operations", template:"INCIDENT UPDATE\n\nTime: \nLocation: \nIssue: \nCargo status: \nDriver status: \nAction being taken: \nRevised ETA: \nNext update:\n" },
   { id:"collection", name:"Collection brief", description:"Pickup details before dispatch", category:"Planning", template:"COLLECTION BRIEF\n\nAddress: \nDate / time: \nContact: \nCargo / quantity: \nLoading method: \nReference: \nSite requirements:\n" },
@@ -246,7 +247,7 @@ function ToolIcon({id,active=false}:{id:ToolId;active?:boolean}){
   :id==="trip"||id==="collection"||id==="delivery"?<svg {...common}><path d="M4 17h16M6 17V8h8l4 4v5M8 20h.01M17 20h.01M14 8v4h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
   :id==="checklist"?<svg {...common}><path d="M9 6h10M9 12h10M9 18h10M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
   :id==="documents"||id==="pod"?<svg {...common}><path d="M6 3h9l3 3v15H6V3Zm9 0v4h4M9 11h6M9 15h6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/></svg>
-  :id==="profit"||id==="costs"||id==="payment"?<svg {...common}><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M3 9h18M7 15h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+  :id==="profit"||id==="costs"||id==="payment"||id==="detention"?<svg {...common}><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M3 9h18M7 15h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
   :id==="incident"?<svg {...common}><path d="M12 3 2.8 20h18.4L12 3Zm0 6v5m0 3h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
   :id==="eta"?<svg {...common}><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/><path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
   :<svg {...common}><circle cx="8" cy="7" r="3" stroke="currentColor" strokeWidth="2"/><path d="M3 20a5 5 0 0 1 10 0M15 8h6M18 5v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>}</span>
