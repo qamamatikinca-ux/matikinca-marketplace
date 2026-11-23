@@ -392,3 +392,36 @@ language sql stable security definer set search_path=public,pg_temp as $$
 $$;
 revoke all on function public.loadlink_my_transport_threads() from public;
 grant execute on function public.loadlink_my_transport_threads() to authenticated;
+
+
+-- Return only transport threads involving the authenticated person.
+create or replace function public.loadlink_my_transport_threads()
+returns table(listing_id uuid, thread_id uuid)
+language sql stable security definer set search_path=public,pg_temp as $$
+  select t.listing_id,t.id
+  from public.listing_guest_threads t
+  join public.job_listings j on j.id=t.listing_id
+  where auth.uid() is not null
+    and j.listing_kind in ('job','contract')
+    and (t.buyer_user_id=auth.uid() or j.user_id=auth.uid())
+  order by t.updated_at desc limit 200;
+$$;
+revoke all on function public.loadlink_my_transport_threads() from public;
+grant execute on function public.loadlink_my_transport_threads() to authenticated;
+
+-- A shared document must refer to the same actual job conversation.
+create or replace function public.loadlink_guard_job_tool_record()
+returns trigger language plpgsql security invoker set search_path=public,pg_temp as $$
+begin
+  if new.thread_id is not null and not exists(
+    select 1 from public.listing_guest_threads t
+    where t.id=new.thread_id and t.listing_id=new.listing_id
+  ) then raise exception 'The selected conversation does not belong to this job'; end if;
+  if new.shared_with_counterparty and new.thread_id is null then
+    raise exception 'Choose a valid job conversation before sharing'; end if;
+  return new;
+end $$;
+revoke all on function public.loadlink_guard_job_tool_record() from public;
+create trigger loadlink_guard_job_tool_record
+before insert on public.job_tool_records
+for each row execute function public.loadlink_guard_job_tool_record();
