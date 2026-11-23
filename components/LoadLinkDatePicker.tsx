@@ -2,7 +2,8 @@
 
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 function toLocalDate(value: string) {
   const [year, month, day] = value.split("-").map(Number);
@@ -19,6 +20,9 @@ function dateValue(date: Date) {
 export default function LoadLinkDatePicker({ value, onChange, min, darkMode, ariaLabel }: { value: string; onChange: (value: string) => void; min?: string; darkMode: boolean; ariaLabel: string }) {
   const initial = value ? toLocalDate(value) : new Date();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(()=>{setMounted(true);},[]);
+
   const [month, setMonth] = useState(() => new Date(initial.getFullYear(), initial.getMonth(), 1));
   const minValue = min || "0000-01-01";
 
@@ -38,24 +42,27 @@ export default function LoadLinkDatePicker({ value, onChange, min, darkMode, ari
       <button type="button" onClick={() => { setMonth(new Date(initial.getFullYear(), initial.getMonth(), 1)); setOpen(true); }} aria-label={ariaLabel} className={`flex h-12 w-full items-center justify-between rounded-[15px] border px-4 text-left text-sm font-semibold outline-none ${darkMode ? "border-white/12 bg-white/[.045] text-white" : "border-black/10 bg-white/[.62] text-black"}`}>
         <span>{label}</span><CalendarIcon />
       </button>
-      {open ? (
-        <div className="fixed inset-0 z-[2147483200] flex items-center justify-center bg-black/58 p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm" role="presentation">
+      {mounted && open ? createPortal(
+        <div className="fixed inset-0 z-[2147483200] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/65 px-3 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-[max(.75rem,env(safe-area-inset-top))] backdrop-blur-sm sm:items-center" role="presentation">
           <button type="button" aria-label="Close date picker" className="absolute inset-0" onClick={() => setOpen(false)} />
-          <section role="dialog" aria-modal="true" aria-label={ariaLabel} className={`relative z-10 max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[28px] border p-5 shadow-2xl ${panel}`}>
+          <section role="dialog" aria-modal="true" aria-label={ariaLabel} className={`relative z-10 max-h-[min(92dvh,650px)] w-full max-w-md overflow-y-auto overscroll-contain rounded-[24px] border p-4 shadow-2xl sm:p-5 ${panel}`}>
             <div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-[#b78300]">Date</p><h2 className="mt-1 text-2xl font-black tracking-[-.04em]">Choose a date</h2></div><button type="button" onClick={() => setOpen(false)} className={`flex h-10 w-10 items-center justify-center rounded-full border text-xl ${soft}`} aria-label="Close"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button></div>
-            <div className="mt-5 flex items-center justify-between gap-3"><button type="button" onClick={() => setMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))} className={`h-10 w-10 rounded-full border ${soft}`} aria-label="Previous month"><LoadLinkIcon name="chevronLeft" size={18} className="inline-block shrink-0 align-middle" /></button><strong className="text-base font-black">{new Intl.DateTimeFormat("en-ZA", { month: "long", year: "numeric" }).format(month)}</strong><button type="button" onClick={() => setMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))} className={`h-10 w-10 rounded-full border ${soft}`} aria-label="Next month"><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></button></div>
-            <div className="mt-5 grid grid-cols-7 text-center text-[9px] font-black uppercase opacity-45">{["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((item) => <span key={item} className="py-2">{item}</span>)}</div>
-            <div className="grid grid-cols-7 gap-1.5">{days.map((date, index) => {
-              if (!date) return <span key={`empty-${index}`} className="aspect-square" />;
+            <div className="mt-3 flex items-center justify-between gap-3"><button type="button" onClick={() => setMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))} className={`h-10 w-10 rounded-full border ${soft}`} aria-label="Previous month"><LoadLinkIcon name="chevronLeft" size={18} className="inline-block shrink-0 align-middle" /></button><strong className="text-base font-black">{new Intl.DateTimeFormat("en-ZA", { month: "long", year: "numeric" }).format(month)}</strong><button type="button" onClick={() => setMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))} className={`h-10 w-10 rounded-full border ${soft}`} aria-label="Next month"><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></button></div>
+            <div className="mt-3 grid grid-cols-7 text-center text-[9px] font-black uppercase opacity-45">{["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((item) => <span key={item} className="py-2">{item}</span>)}</div>
+            <div className="grid grid-cols-7 gap-1">{days.map((date, index) => {
+              if (!date) return <span key={`empty-${index}`} className="h-9" />;
               const next = dateValue(date);
               const disabled = next < minValue;
               const selected = next === value;
-              return <button key={next} type="button" disabled={disabled} onClick={() => { onChange(next); setOpen(false); }} className={`aspect-square rounded-xl text-sm font-bold transition disabled:opacity-20 ${selected ? "bg-[#f6b800] text-black" : darkMode ? "bg-white/[.035] hover:bg-white/[.08]" : "bg-black/[.025] hover:bg-black/[.06]"}`}>{date.getDate()}</button>;
+              return <button key={next} type="button" disabled={disabled} onClick={() => { onChange(next); setOpen(false); }} className={`h-9 rounded-lg text-sm font-bold transition disabled:opacity-20 ${selected ? "bg-[#f6b800] text-black" : darkMode ? "bg-white/[.035] hover:bg-white/[.08]" : "bg-black/[.025] hover:bg-black/[.06]"}`}>{date.getDate()}</button>;
             })}</div>
-            <p className={`mt-4 text-center text-[10px] font-semibold ${darkMode ? "text-white/45" : "text-black/48"}`}>Tap a date to select it. No extra confirmation panel is required.</p>
+            <div className="sticky bottom-0 mt-3 flex gap-2 bg-inherit pt-2">
+              <button type="button" onClick={() => {setMonth(new Date()); onChange(dateValue(new Date())); setOpen(false);}} className={`h-11 flex-1 rounded-xl border text-sm font-bold ${soft}`}>Today</button>
+              <button type="button" disabled={!value || value < minValue} onClick={() => setOpen(false)} className="h-11 flex-[1.5] rounded-xl bg-[#f6b800] text-sm font-black text-black disabled:opacity-40">Choose date</button>
+            </div>
           </section>
         </div>
-      ) : null}
+        , document.body) : null}
     </>
   );
 }

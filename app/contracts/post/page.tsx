@@ -30,6 +30,7 @@ export default function PostContractPage() {
   const [ready, setReady] = useState(false);
   const [step, setStep] = useState(1);
   const [postingIntent, setPostingIntent] = useState<PostingIntent>("transport");
+  const [intentChosen, setIntentChosen] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [contactName, setContactName] = useState("");
   const [contact, setContact] = useState("");
@@ -84,6 +85,7 @@ export default function PostContractPage() {
           try {
             const draft = JSON.parse(stored);
             setPostingIntent(draft.postingIntent === "driver" ? "driver" : "transport");
+            setIntentChosen(Boolean(draft.intentChosen) || Number(draft.step || 1) > 1);
             setCompanyName(draft.companyName || defaultCompany);
             setContactName(draft.contactName || defaultName);
             setContact(draft.contact || defaultPhone);
@@ -102,9 +104,9 @@ export default function PostContractPage() {
     if (!ready) return;
     void supabase.auth.getUser().then(({ data }) => {
       if (!data.user) return;
-      localStorage.setItem(`${DRAFT}:${data.user.id}`, JSON.stringify({ postingIntent, companyName, contactName, contact, title, group, contractType, city, startDate, duration, frequency, rate, acceptOffers, applicationDeadline, description, step }));
+      localStorage.setItem(`${DRAFT}:${data.user.id}`, JSON.stringify({ postingIntent, intentChosen, companyName, contactName, contact, title, group, contractType, city, startDate, duration, frequency, rate, acceptOffers, applicationDeadline, description, step }));
     });
-  }, [ready, postingIntent, companyName, contactName, contact, title, group, contractType, city, startDate, duration, frequency, rate, acceptOffers, applicationDeadline, description, step]);
+  }, [ready, postingIntent, intentChosen, companyName, contactName, contact, title, group, contractType, city, startDate, duration, frequency, rate, acceptOffers, applicationDeadline, description, step]);
 
   async function choosePhotos(event: ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(event.target.files || []).slice(0, 5);
@@ -129,6 +131,10 @@ export default function PostContractPage() {
 
   function next() {
     setMessage("");
+    if(step===1 && !intentChosen){
+      setMessage("Choose Transporter / Truck or Professional Driver to continue.");
+      return;
+    }
     if (postingIntent === "driver") {
       router.push("/jobs/driver/post?term=contract");
       return;
@@ -237,7 +243,7 @@ export default function PostContractPage() {
           <div className={`mb-3 flex items-center justify-between text-[10px] font-black ${muted}`}><span>Step {step} of 5</span><span>{labels[step - 1]}</span></div>
           <div className={`mb-5 h-1 overflow-hidden rounded-full ${darkMode ? "bg-white/10" : "bg-black/8"}`}><div className={darkMode ? "h-full rounded-full bg-white transition-[width]" : "h-full rounded-full bg-black transition-[width]"} style={{ width: `${step * 20}%` }} /></div>
           <section className={`rounded-[30px] border p-5 sm:p-7 ${surface}`}>
-            {step === 1 ? <><PostingIntentCards value={postingIntent} darkMode={darkMode} onChange={(next) => { setPostingIntent(next); setMessage(""); }}/>{postingIntent === "driver" ? null : <div className="mt-5 grid gap-4"><h3 className="text-lg font-black">Who is offering the contract?</h3><p className={`text-xs font-semibold ${muted}`}>Enter the company or contracting business name.</p><Field label="Company name"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Company or contracting business" className={input} /></Field><div className="grid gap-4 sm:grid-cols-2"><Field label="Contact person"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Full name" className={input} /></Field><Field label="Contact number"><input value={contact} onChange={(e) => setContact(e.target.value)} inputMode="tel" autoComplete="tel" placeholder="0821234567" className={input} /></Field></div></div>}</> : null}
+            {step === 1 ? <><PostingIntentCards value={intentChosen?postingIntent:null} darkMode={darkMode} onChange={(next) => { setPostingIntent(next); setIntentChosen(true); setMessage(""); }}/>{!intentChosen || postingIntent === "driver" ? null : <div className="mt-5 grid gap-4"><h3 className="text-lg font-black">Who is offering the contract?</h3><p className={`text-xs font-semibold ${muted}`}>Enter the company or contracting business name.</p><Field label="Company name"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Company or contracting business" className={input} /></Field><div className="grid gap-4 sm:grid-cols-2"><Field label="Contact person"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Full name" className={input} /></Field><Field label="Contact number"><input value={contact} onChange={(e) => setContact(e.target.value)} inputMode="tel" autoComplete="tel" placeholder="0821234567" className={input} /></Field></div></div>}</> : null}
             {step === 2 ? <><h2 className="text-2xl font-black">Contract scope</h2><p className={`mt-2 text-xs font-semibold ${muted}`}>Describe the transport work, vehicles and other requirements in the scope below.</p><div className="mt-5 grid gap-4"><Field label="Contract title"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. 12-month side tipper transport contract" className={input} /></Field><Field label="Type of contract"><select value={contractType} onChange={(e) => setContractType(e.target.value as ContractType | "")} className={input} aria-label="Type of contract" required style={{ colorScheme: darkMode ? "dark" : "light" }}><option value="">Select a contract type</option>{CONTRACT_TYPES.map((item) => <option value={item} key={item}>{item}</option>)}</select></Field><Field label="Scope and requirements"><textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Routes, cargo/service, capacity, compliance requirements, number of units and what operators need to deliver" className={`${input} min-h-36 resize-y py-4`} /></Field></div></> : null}
             {step === 3 ? <><h2 className="text-2xl font-black">Timeline and location</h2><p className={`mt-2 text-xs font-semibold ${muted}`}>Set the operating area and how long/frequently the contract will run.</p><div className="mt-5 grid gap-4 sm:grid-cols-2"><Field label="Operating location"><ExactListingLocationField value={city} onChange={setCity} onCoordinatesChange={setCoordinates} darkMode={darkMode} className={input} id="loadlink-contract-operating-location" /></Field><Field label="Contract starts"><LoadLinkDatePicker value={startDate} onChange={setStartDate} min={today()} darkMode={darkMode} ariaLabel="Contract start date" /></Field><Field label="Duration"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="e.g. 12 months" className={input} /></Field><Field label="Frequency"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={frequency} onChange={(e) => setFrequency(e.target.value)} placeholder="e.g. 5 trips per week" className={input} /></Field></div></> : null}
             {step === 4 ? <><h2 className="text-2xl font-black">Commercial details</h2><p className={`mt-2 text-xs font-semibold ${muted}`}>Give operators enough information to decide whether the opportunity fits.</p><div className="mt-5 grid gap-4"><Field label="Rate / budget / tender terms"><input value={rate} onChange={(e) => setRate(e.target.value)} inputMode="decimal" placeholder="e.g. R28/km, R180 000/month or tender terms" className={input} /></Field><label className="flex items-start gap-3 rounded-xl border border-current/15 p-3 text-sm font-semibold"><input type="checkbox" className="mt-1" checked={acceptOffers} onChange={e=>setAcceptOffers(e.target.checked)}/><span>Accept formal transport offers<span className="mt-1 block text-xs font-normal opacity-65">Transporters can quote through LoadLink Messages.</span></span></label><PosterTransportPriceGuide darkMode={darkMode} contract onUseRate={setRate}/><Field label="Application or decision deadline — optional"><LoadLinkDatePicker value={applicationDeadline} onChange={setApplicationDeadline} min={today()} darkMode={darkMode} ariaLabel="Application or decision deadline" /></Field><label className={`block rounded-[20px] border p-4 ${darkMode ? "border-white/12" : "border-black/8"}`}><span className="text-xs font-black">Supporting photos — optional</span><span className={`mt-1 block text-[10px] font-semibold ${muted}`}>Up to 5 relevant images.</span><input type="file" accept="image/*" multiple onChange={choosePhotos} className="mt-3 block w-full text-xs" /></label>{previews.length ? <div className="grid grid-cols-3 gap-2">{previews.map((url, index) => <LoadLinkImage key={url} src={url} alt={`Selected contract photo ${index + 1}`} className="aspect-square w-full rounded-[16px] object-cover" />)}</div> : null}</div></> : null}

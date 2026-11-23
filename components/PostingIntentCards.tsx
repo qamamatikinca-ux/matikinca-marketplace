@@ -6,7 +6,7 @@ import LoadLinkImage from "@/components/LoadLinkImage";
 export type PostingIntent = "transport" | "driver";
 
 type Props = {
-  value: PostingIntent;
+  value: PostingIntent | null;
   onChange: (value: PostingIntent) => void;
   darkMode: boolean;
 };
