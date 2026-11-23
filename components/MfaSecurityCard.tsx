@@ -124,40 +124,40 @@ export default function MfaSecurityCard({ darkMode }: { darkMode: boolean }) {
   const statusLabel = status === null ? "Checking" : active ? "On" : "Off";
 
   return (
-    <section className={`overflow-hidden rounded-[28px] border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
-      <div className="p-5 md:p-6">
-        <div className="flex items-start gap-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-black text-[#f6b800]" aria-hidden="true">
+    <section className={`overflow-hidden rounded-[20px] border ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
+      <div className="p-4 sm:p-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black text-[#f6b800]" aria-hidden="true">
             <CodeIcon />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-black tracking-[-.02em]">Sign-in code</h2>
+              <h2 className="text-base font-black tracking-[-.02em]">Sign-in code</h2>
               <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[.08em] ${active ? "bg-[#f6b800] text-black" : darkMode ? "bg-white/10 text-white/55" : "bg-black/5 text-black/50"}`}>{statusLabel}</span>
             </div>
-            <p className={`mt-1.5 max-w-xl text-sm font-semibold leading-6 ${muted}`}>Add a private 4-digit code after sign-in. It is optional and separate from your password.</p>
+            <p className={`mt-1 max-w-xl text-xs font-medium leading-5 ${muted}`}>Optional 4-digit code for an extra sign-in step.</p>
           </div>
         </div>
 
         {mode === "closed" ? (
-          <div className={`mt-5 rounded-[20px] border p-3.5 ${soft}`}>
+          <div className="mt-4 border-t border-current/10 pt-4">
             {active ? (
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => { setMessage(""); resetEditor(); setMode("change"); }} className="h-11 rounded-xl bg-[#f6b800] px-4 text-xs font-black text-black">Change code</button>
-                <button type="button" onClick={() => { setMessage(""); resetEditor(); setMode("disable"); }} className={`h-11 rounded-xl border px-4 text-xs font-black ${darkMode ? "border-white/12 text-white/65" : "border-black/10 text-black/65"}`}>Turn off</button>
-                <button type="button" onClick={() => void sendRecovery()} disabled={busy} className={`col-span-2 h-10 rounded-xl text-xs font-bold disabled:opacity-45 ${muted}`}>Forgot code? <span className="underline underline-offset-4">Recover by email</span></button>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => { setMessage(""); resetEditor(); setMode("change"); }} className="h-10 rounded-xl bg-[#f6b800] px-4 text-xs font-black text-black">Change code</button>
+                <button type="button" onClick={() => { setMessage(""); resetEditor(); setMode("disable"); }} className={`h-10 rounded-xl border px-4 text-xs font-black ${darkMode ? "border-white/12 text-white/65" : "border-black/10 text-black/65"}`}>Turn off</button>
+                <button type="button" onClick={() => void sendRecovery()} disabled={busy} className={`min-h-10 px-2 text-xs font-bold disabled:opacity-45 ${muted}`}>Forgot code? <span className="underline underline-offset-4">Recover by email</span></button>
               </div>
             ) : (
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className={`text-xs font-semibold leading-5 ${muted}`}>No extra code is required on this account.</span>
-                <button type="button" onClick={() => { setMessage(""); resetEditor(); setMode("setup"); }} disabled={status === null || busy} className="h-10 rounded-xl bg-[#f6b800] px-4 text-xs font-black text-black disabled:opacity-45">Set up code</button>
+                <span className={`text-xs font-semibold leading-5 ${muted}`}>Currently off</span>
+                <button type="button" onClick={() => { setMessage(""); resetEditor(); setMode("setup"); }} disabled={status === null || busy} className="h-10 rounded-full bg-[#f6b800] px-5 text-xs font-black text-black disabled:opacity-45">Set up code</button>
               </div>
             )}
           </div>
         ) : null}
 
         {editingCode ? (
-          <div className={`mt-5 rounded-[20px] border p-3.5 md:p-5 ${soft}`}>
+          <div className={`mt-5 rounded-2xl border p-4 ${soft}`}>
             <div className="mb-4">
               <h3 className="text-sm font-black">{mode === "setup" ? "Create your code" : "Change your code"}</h3>
               <p className={`mt-1 text-xs font-semibold ${muted}`}>Use four numbers you can remember. Do not reuse a banking PIN.</p>
