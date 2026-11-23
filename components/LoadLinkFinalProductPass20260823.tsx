@@ -103,6 +103,8 @@ export default function LoadLinkFinalProductPass20260823() {
     let timer = 0;
     const syncPins = () => { if (alive) { setPinIds(readPinIds()); setPinMeta(readPinMeta()); } };
     const mount = () => {
+      // Never append a portal host before Messages hydrates on client navigation.
+      if (document.documentElement.dataset.loadlinkMessagesHydrated!=="true") return;
       document.querySelectorAll<HTMLElement>("[data-loadlink-chat-dealer-status-host]").forEach((node) => node.remove());
       const panel = document.querySelector<HTMLElement>(".loadlink-inbox-panel");
       const header = panel?.firstElementChild as HTMLElement | null;
@@ -137,7 +139,8 @@ export default function LoadLinkFinalProductPass20260823() {
     document.addEventListener("click", capturePinMeta);
     window.addEventListener("storage", syncPins);
     window.addEventListener("loadlink-pins-updated", syncPins);
-    return () => { alive = false; observer.disconnect(); window.clearTimeout(timer); document.removeEventListener("click", capturePinMeta); window.removeEventListener("storage", syncPins); window.removeEventListener("loadlink-pins-updated", syncPins); };
+    window.addEventListener("loadlink-messages-hydrated", mount);
+    return () => { alive = false; observer.disconnect(); window.clearTimeout(timer); document.removeEventListener("click", capturePinMeta); window.removeEventListener("storage", syncPins); window.removeEventListener("loadlink-pins-updated", syncPins); window.removeEventListener("loadlink-messages-hydrated", mount); };
   }, [pathname]);
 
   useEffect(() => {
