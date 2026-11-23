@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { supabase } from "@/lib/supabaseClient";
