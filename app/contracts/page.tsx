@@ -225,6 +225,9 @@ export default function ContractsPage() {
               className={`mt-2 min-h-10 rounded-xl border px-4 text-xs font-semibold ${darkMode ? "border-white/15 text-white" : "border-black/15 text-black"}`}>Clear search</button> : null}
           </div>
 
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link href="/driver-jobs?term=contract" className="rounded-xl border border-white/40 bg-black/70 px-4 py-2.5 text-xs font-bold text-white">Driver contracts</Link>
+          </div>
           <div className="mt-5 grid max-w-xl gap-3 sm:grid-cols-2">
             <RequireAuthLink href="/contracts/post" className="flex min-h-12 items-center justify-center rounded-xl bg-[#f6b800] px-4 text-xs font-black uppercase tracking-[.08em] text-black">Post contract</RequireAuthLink>
             <RequireAuthLink href="/my-posts" className="flex min-h-12 items-center justify-center rounded-xl border border-white/35 bg-black/80 px-4 text-xs font-black uppercase tracking-[.08em] text-white">My posts</RequireAuthLink>

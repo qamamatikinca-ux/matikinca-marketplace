@@ -120,10 +120,13 @@ export default function LoadLinkMajorUpdate20260823() {
     if (!hash) window.requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }));
     document.documentElement.dataset.loadlinkRoute = pathname.replace(/^\//, "") || "home";
     document.body.dataset.loadlinkRoute = pathname.replace(/^\//, "") || "home";
-    applyInputModes();
-    applyRoutingRepairs();
-    applyMessageUiHooks();
-    applyImageReliability();
+    const timer = window.setTimeout(() => {
+      applyInputModes();
+      applyRoutingRepairs();
+      applyMessageUiHooks();
+      applyImageReliability();
+    }, 4200);
+    return () => window.clearTimeout(timer);
   }, [pathname]);
 
   useEffect(() => {
@@ -145,18 +148,22 @@ export default function LoadLinkMajorUpdate20260823() {
       subscription = listener.data.subscription;
     }
 
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        mutation.addedNodes.forEach((node) => {
-          if (!(node instanceof HTMLElement)) return;
-          applyInputModes(node);
-          applyRoutingRepairs(node);
-          applyImageReliability(node);
-        });
-      }
-      applyMessageUiHooks();
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+    let observer: MutationObserver | null = null;
+    // DOM mutators run only after the app's initial React hydration interval.
+    const domTimer = window.setTimeout(() => {
+      observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          mutation.addedNodes.forEach((node) => {
+            if (!(node instanceof HTMLElement)) return;
+            applyInputModes(node);
+            applyRoutingRepairs(node);
+            applyImageReliability(node);
+          });
+        }
+        applyMessageUiHooks();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }, 4200);
 
     const themeSync = () => {
       const dark = document.documentElement.classList.contains("dark") || document.documentElement.dataset.loadlinkTheme === "dark";
@@ -169,7 +176,8 @@ export default function LoadLinkMajorUpdate20260823() {
     return () => {
       active = false;
       subscription?.unsubscribe();
-      observer.disconnect();
+      window.clearTimeout(domTimer);
+      observer?.disconnect();
       themeObserver.disconnect();
     };
   }, []);

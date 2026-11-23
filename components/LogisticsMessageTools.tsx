@@ -61,6 +61,7 @@ type Props = {
   role: "buyer" | "owner";
   darkMode: boolean;
   disabled?: boolean;
+  allowQuote?: boolean;
   onInsert: (message: string) => void;
   onSendQuote?: (quote: StructuredQuote) => Promise<void> | void;
   trigger?: "bar" | "menu" | "hidden";
@@ -117,6 +118,7 @@ export default function LogisticsMessageTools({
   role,
   darkMode,
   disabled = false,
+  allowQuote = true,
   onInsert,
   onSendQuote,
   trigger = "bar",
@@ -415,10 +417,10 @@ export default function LogisticsMessageTools({
               </div>
 
               <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <button type="button" disabled={disabled} onClick={() => { setEditorTool(null); setEditorText(""); setQuoteOpen((current) => !current); }} className={`group min-h-[128px] rounded-2xl border p-4 text-left transition disabled:opacity-40 ${quoteOpen ? "border-[#f6b800] bg-[#f6b800] text-black" : control}`}>
+                <button type="button" disabled={disabled || !allowQuote} onClick={() => { setEditorTool(null); setEditorText(""); setQuoteOpen((current) => !current); }} className={`group min-h-[128px] rounded-2xl border p-4 text-left transition disabled:opacity-40 ${quoteOpen ? "border-[#f6b800] bg-[#f6b800] text-black" : control}`}>
                   <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${quoteOpen ? "bg-black text-[#f6b800]" : "bg-black text-[#f6b800]"}`}><ToolGlyph type="quote" /></span>
                   <span className="mt-3 block text-base font-black tracking-[-.02em]">Rate quote</span>
-                  <span className={`mt-1 block text-xs font-semibold leading-5 ${quoteOpen ? "text-black/60" : muted}`}>Build a clean transport quote</span>
+                  <span className={`mt-1 block text-xs font-semibold leading-5 ${quoteOpen ? "text-black/60" : muted}`}>{allowQuote?"Build a clean transport quote":"Formal offers are not enabled for this opportunity"}</span>
                 </button>
                 {workflowTools.map((tool) => {
                   const glyph = tool.id === "trip-brief" ? "trip" : tool.id === "incident-update" ? "incident" : tool.id.includes("document") || tool.id.includes("pod") ? "documents" : tool.id.includes("checklist") || tool.id.includes("collection") || tool.id.includes("delivery") ? "planning" : "operations";
