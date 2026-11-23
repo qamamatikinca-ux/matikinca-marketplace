@@ -24,7 +24,7 @@ create index if not exists driver_vacancies_discovery on public.driver_vacancies
 create index if not exists driver_vacancies_owner on public.driver_vacancies(user_id,created_at desc);
 alter table public.driver_vacancies enable row level security;
 create policy "Driver vacancies open or owned" on public.driver_vacancies for select to anon, authenticated
-  using (status='open' or user_id=(select auth.uid()));
+  using (status='open' or (auth.uid() is not null and status in ('closed','cancelled')) or user_id=(select auth.uid()));
 create policy "Owners create driver vacancies" on public.driver_vacancies for insert to authenticated
   with check (user_id=(select auth.uid()) and not public.loadlink_marketplace_is_restricted((select auth.uid())));
 create policy "Owners edit driver vacancies" on public.driver_vacancies for update to authenticated
