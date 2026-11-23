@@ -205,7 +205,7 @@ export default function ListJobPage() {
   function next() {
     setMessage("");
     if (step === 1 && postingIntent === "driver") {
-      setMessage("Driver vacancy posting needs the dedicated recruitment and application service. It is not available in this release. You can contact drivers through the existing directory.");
+      router.push(`/driver-jobs/post?term=${isContract ? "contract" : "job"}`);
       return;
     }
     if (step === 2 && (!neededOn || neededOn < today() || !locationLabel.trim())) {
@@ -307,13 +307,7 @@ export default function ListJobPage() {
             {step === 1 ? (
               <>
                 <PostingIntentCards value={postingIntent} darkMode={darkMode} onChange={(next) => { setPostingIntent(next); setMessage(""); }} />
-                {postingIntent === "driver" ? (
-                  <div className={`mt-5 rounded-[18px] border p-4 ${darkMode ? "border-white/15 bg-white/[.04]" : "border-black/10 bg-white/60"}`}>
-                    <p className="text-sm font-black">Looking for a driver?</p>
-                    <p className={`mt-2 text-xs font-medium leading-6 ${muted}`}>You can browse and contact professional drivers now. Posting driver vacancies with formal applications will be enabled once the recruitment service is ready. This form cannot publish a driver vacancy yet.</p>
-                    <Link href="/drivers" className="mt-4 inline-flex min-h-11 items-center rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">Find professional drivers</Link>
-                  </div>
-                ) : null}
+
               </>
             ) : null}
 
