@@ -180,3 +180,70 @@ create policy "Recruitment parties send messages" on public.driver_application_m
   where a.id=application_id and (a.driver_user_id=(select auth.uid()) or v.user_id=(select auth.uid()))
  ));
 grant select,insert on public.driver_application_messages to authenticated;
+
+-- Accepted chat quotations are recorded as immutable terms under the original job.
+create table if not exists public.job_offer_awards (
+  id uuid primary key default gen_random_uuid(),
+  listing_id uuid not null references public.job_listings(id) on delete cascade,
+  thread_id uuid not null references public.listing_guest_threads(id) on delete cascade,
+  quote_message_id uuid not null unique references public.listing_guest_messages(id),
+  poster_user_id uuid references auth.users(id),
+  transporter_user_id uuid references auth.users(id),
+  quote_snapshot jsonb not null,
+  status text not null default 'pending_transporter' check(status in ('pending_transporter','confirmed')),
+  accepted_at timestamptz not null default now(),
+  transporter_confirmed_at timestamptz
+);
+create index if not exists job_offer_awards_poster on public.job_offer_awards(poster_user_id,accepted_at desc);
+create index if not exists job_offer_awards_transporter on public.job_offer_awards(transporter_user_id,accepted_at desc);
+alter table public.job_offer_awards enable row level security;
+create policy "Award parties read accepted terms" on public.job_offer_awards for select to authenticated
+  using(poster_user_id=(select auth.uid()) or transporter_user_id=(select auth.uid()));
+create policy "Transporter confirms awarded terms" on public.job_offer_awards for update to authenticated
+  using(transporter_user_id=(select auth.uid()) and status='pending_transporter')
+  with check(transporter_user_id=(select auth.uid()) and status='confirmed');
+grant select,update on public.job_offer_awards to authenticated;
+
+create or replace function public.loadlink_guard_offer_award()
+returns trigger language plpgsql security invoker set search_path=public,pg_temp as $$
+begin
+  if new.id is distinct from old.id or new.listing_id is distinct from old.listing_id
+     or new.thread_id is distinct from old.thread_id
+     or new.quote_message_id is distinct from old.quote_message_id
+     or new.poster_user_id is distinct from old.poster_user_id
+     or new.transporter_user_id is distinct from old.transporter_user_id
+     or new.quote_snapshot is distinct from old.quote_snapshot
+     or new.accepted_at is distinct from old.accepted_at
+  then raise exception 'Accepted quote details cannot be modified'; end if;
+  if auth.uid() is distinct from old.transporter_user_id or old.status<>'pending_transporter'
+     or new.status<>'confirmed' then raise exception 'Only the transport operator can confirm a pending award'; end if;
+  new.transporter_confirmed_at:=now();
+  return new;
+end $$;
+revoke all on function public.loadlink_guard_offer_award() from public;
+create trigger loadlink_guard_offer_award before update on public.job_offer_awards
+ for each row execute function public.loadlink_guard_offer_award();
+
+create or replace function public.loadlink_record_accepted_transport_quote()
+returns trigger language plpgsql security definer set search_path=public,pg_temp as $$
+declare rec record;
+begin
+  if new.message_kind<>'quote' or new.sender_role<>'buyer' then return new; end if;
+  if coalesce(new.structured_payload->>'status','')<>'accepted'
+    or coalesce(old.structured_payload->>'status','')='accepted' then return new; end if;
+  select j.id as listing_id,j.user_id as poster_user_id,j.listing_kind,t.buyer_user_id,
+       coalesce(p.accepts_offers,false) as accepts_offers into rec
+  from public.listing_guest_threads t
+  join public.job_listings j on j.id=t.listing_id
+  left join public.job_offer_preferences p on p.listing_id=j.id
+  where t.id=new.thread_id;
+  if rec.listing_id is null or rec.listing_kind not in ('job','contract') or not rec.accepts_offers then return new; end if;
+  insert into public.job_offer_awards(listing_id,thread_id,quote_message_id,poster_user_id,transporter_user_id,quote_snapshot)
+  values(rec.listing_id,new.thread_id,new.id,rec.poster_user_id,rec.buyer_user_id,new.structured_payload)
+  on conflict(quote_message_id) do nothing;
+  return new;
+end $$;
+revoke all on function public.loadlink_record_accepted_transport_quote() from public;
+create trigger loadlink_record_accepted_transport_quote
+ after update of structured_payload on public.listing_guest_messages
+ for each row execute function public.loadlink_record_accepted_transport_quote();
