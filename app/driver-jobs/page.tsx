@@ -15,7 +15,7 @@ function DriverJobSearch(){
  const [loading,setLoading]=useState(true);const [error,setError]=useState("");const [page,setPage]=useState(0);
  const pageClass=darkMode?"bg-black text-white":"bg-[#f4efe3] text-black",surface=darkMode?"border-white/15 bg-[#111]":"border-black/10 bg-white";
  useEffect(()=>{let alive=true;(async()=>{const {data:{user}}=await supabase.auth.getUser();if(!user)return;const{data}=await supabase.from("driver_profiles").select("licence_code,years_experience,prdp_expires_at,prdp_expiry,vehicle_types,status").eq("user_id",user.id).maybeSingle();if(alive)setProfile(data as Profile|null)})();return()=>{alive=false}},[]);
- useEffect(()=>{let alive=true;setLoading(true);setError("");const fetchRows=async()=>{
+ useEffect(()=>{let alive=true;const fetchRows=async()=>{
    let request=supabase.from("driver_vacancies").select("id,title,company_name,city,province,listing_term,employment_type,licence_code,requires_prdp,min_years_experience,vehicle_type,pay_terms,created_at",{count:"exact"}).eq("status","open").eq("listing_term",term).order("created_at",{ascending:false}).range(page*12,page*12+11);
    if(licence)request=request.eq("licence_code",licence);
    if(city.trim())request=request.ilike("city",`%${city.trim().replace(/[%_]/g,"")}%`);
