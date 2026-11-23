@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { loginHref } from "@/lib/auth";
 type Listing={id:string;title:string;listing_kind:string;city:string;rate:string;description:string;created_at:string;user_id:string|null;status:string;moderation_status:string;lifecycle_status:string};
 type Interest={listing_id:string;status:string};
+type DiscussedThread={listing_id:string;thread_id:string};
 type StatusEvent={id:string;listing_id:string;thread_id:string|null;user_id:string;status:string;note:string;created_at:string};
 type Document={id:string;listing_id:string;title:string;tool_key:string;document_text:string;shared_with_counterparty:boolean;created_at:string};
 type Award={id:string;listing_id:string;thread_id:string;poster_user_id:string;transporter_user_id:string|null;quote_snapshot:{amount?:string;unit?:string;vehicle?:string;route?:string;terms?:string;vat?:string};status:string;accepted_at:string;transporter_confirmed_at:string|null};
@@ -19,21 +20,25 @@ export default function JobHistoryPage(){
  const [selectedId,setSelectedId]=useState("");const [status,setStatus]=useState<(typeof STATUSES)[number][0]>("still_discussing");
  const [note,setNote]=useState("");const [notice,setNotice]=useState("");const [loading,setLoading]=useState(true);const [busy,setBusy]=useState(false);
  const [prefs,setPrefs]=useState<Record<string,boolean>>({});
+ const [discussedThreads,setDiscussedThreads]=useState<DiscussedThread[]>([]);
  const page=darkMode?"bg-black text-white":"bg-[#f4efe3] text-black",surface=darkMode?"border-white/15 bg-[#111]":"border-black/10 bg-white";
  useEffect(()=>{let mounted=true;(async()=>{
   const{data:{user}}=await supabase.auth.getUser();
   if(!mounted)return;if(!user){window.location.assign(loginHref("/job-history"));return}
   setUserId(user.id);
-  const [mine,applied,awarded]=await Promise.all([
+  const [mine,applied,awarded,discussed]=await Promise.all([
    supabase.from("job_listings").select("id,title,listing_kind,city,rate,description,created_at,user_id,status,moderation_status,lifecycle_status").eq("user_id",user.id).in("listing_kind",["job","contract"]).order("created_at",{ascending:false}).limit(100),
    supabase.from("job_interests").select("listing_id,status").eq("applicant_user_id",user.id).limit(100),
-   supabase.from("job_offer_awards").select("id,listing_id,thread_id,poster_user_id,transporter_user_id,quote_snapshot,status,accepted_at,transporter_confirmed_at").or(`poster_user_id.eq.${user.id},transporter_user_id.eq.${user.id}`).order("accepted_at",{ascending:false}).limit(150)
+   supabase.from("job_offer_awards").select("id,listing_id,thread_id,poster_user_id,transporter_user_id,quote_snapshot,status,accepted_at,transporter_confirmed_at").or(`poster_user_id.eq.${user.id},transporter_user_id.eq.${user.id}`).order("accepted_at",{ascending:false}).limit(150),
+    supabase.rpc("loadlink_my_transport_threads")
   ]);
   if(!mounted)return;
   const ownRows=(mine.data||[]) as Listing[];const interests=(applied.data||[]) as Interest[];
   const awardRows=(awarded.data||[]) as Award[];
+   const chatThreads=(discussed.data||[]) as DiscussedThread[];
+   setDiscussedThreads(chatThreads);
   setOwned(ownRows);setAwards(awardRows);
-  const activeIds=[...new Set([...ownRows.map(x=>x.id),...interests.map(x=>x.listing_id),...awardRows.map(x=>x.listing_id)])];
+  const activeIds=[...new Set([...ownRows.map(x=>x.id),...interests.map(x=>x.listing_id),...awardRows.map(x=>x.listing_id),...chatThreads.map(x=>x.listing_id)])];
   if(activeIds.length){
     const [other,events,documents,preference]=await Promise.all([
       supabase.from("job_listings").select("id,title,listing_kind,city,rate,description,created_at,user_id,status,moderation_status,lifecycle_status").in("id",activeIds).limit(200),
@@ -47,15 +52,15 @@ export default function JobHistoryPage(){
     setDocs((documents.data||[]) as Document[]);
     setPrefs(Object.fromEntries((preference.data||[]).map(x=>[x.listing_id,x.accepts_offers])));
   }
-  const first=ownRows[0]?.id||interests[0]?.listing_id||awardRows[0]?.listing_id||"";
-  if(mounted){setSelectedId(first);setLoading(false);if(mine.error||applied.error||awarded.error)setNotice("Some history records could not be loaded. Refresh to retry.");}
+  const first=ownRows[0]?.id||interests[0]?.listing_id||awardRows[0]?.listing_id||chatThreads[0]?.listing_id||"";
+  if(mounted){setSelectedId(first);setLoading(false);if(mine.error||applied.error||awarded.error||discussed.error)setNotice("Some history records could not be loaded. Refresh to retry.");}
  })();return()=>{mounted=false}},[]);
  const rows=tab==="posted"?owned:working;
  const selected=[...owned,...working].find(x=>x.id===selectedId)||null;
  const selectedEvents=statusEvents.filter(x=>x.listing_id===selectedId);
  const selectedDocs=docs.filter(x=>x.listing_id===selectedId);
  const selectedAwards=awards.filter(x=>x.listing_id===selectedId);
- const threadId=selectedAwards[0]?.thread_id||selectedEvents.find(x=>x.thread_id)?.thread_id||null;
+ const threadId=selectedAwards[0]?.thread_id||selectedEvents.find(x=>x.thread_id)?.thread_id||discussedThreads.find(t=>t.listing_id===selectedId)?.thread_id||null;
  async function saveStatus(e:FormEvent){e.preventDefault();if(!selected||!userId||busy)return;setBusy(true);setNotice("");
   const payload={listing_id:selected.id,thread_id:threadId,user_id:userId,status,note:note.trim()};
   const{data,error}=await supabase.from("job_chat_status_updates").insert(payload).select("id,listing_id,thread_id,user_id,status,note,created_at").single();
