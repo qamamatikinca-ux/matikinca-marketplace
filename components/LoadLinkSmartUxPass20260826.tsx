@@ -191,27 +191,34 @@ export default function LoadLinkSmartUxPass20260826() {
   const pathname = usePathname();
 
   useEffect(() => {
-    applyAll();
-    const cleanupDriver = rememberDriverSetup();
-    // Avoid whole-page scans in unrelated portals and on driver form keystrokes.
-    const dynamicRoute = pathname === "/" || /^\/(?:jobs|contracts|listing|packages|messages|vehicles)(?:\/|$)/.test(pathname);
-    if (!dynamicRoute) return () => {
-      cleanupDriver();
-      delete document.documentElement.dataset.loadlinkContractGoldProgress;
-    };
-    let queued = false;
-    const observer = new MutationObserver(() => {
-      if (queued) return;
-      queued = true;
-      window.requestAnimationFrame(() => {
-        queued = false;
-        applyAll();
+    let cancelled = false;
+    let observer: MutationObserver | null = null;
+    let cleanupDriver: (() => void) | null = null;
+    // These legacy enhancements rewrite DOM nodes owned by React.
+    // Defer until the initial hydration window has passed to avoid
+    // mismatches in Jobs, Contracts and Messages on slow devices.
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      applyAll();
+      cleanupDriver = rememberDriverSetup();
+      const dynamicRoute = pathname === "/" || /^\/(?:jobs|contracts|listing|packages|messages|vehicles)(?:\/|$)/.test(pathname);
+      if (!dynamicRoute) return;
+      let queued = false;
+      observer = new MutationObserver(() => {
+        if (queued) return;
+        queued = true;
+        window.requestAnimationFrame(() => {
+          queued = false;
+          if (!cancelled) applyAll();
+        });
       });
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }, 4200);
     return () => {
-      observer.disconnect();
-      cleanupDriver();
+      cancelled = true;
+      window.clearTimeout(timer);
+      observer?.disconnect();
+      cleanupDriver?.();
       delete document.documentElement.dataset.loadlinkContractGoldProgress;
     };
   }, [pathname]);
