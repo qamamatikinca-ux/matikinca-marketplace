@@ -22,7 +22,7 @@ export default function PosterTransportPriceGuide({darkMode,onUseRate,contract=f
       <span className="text-xl font-semibold" aria-hidden="true">{expanded?"−":"+"}</span>
     </button>
     {expanded?<div className="mt-4">
-      <p className="mb-3 text-xs opacity-70">Our cost guide estimates a selling rate for this trip. See exactly how the figure is calculated — no hidden AI or invented freight tariff.</p>
+      <p className="mb-3 text-xs opacity-70">Estimate a selling rate using your distance, fuel, operating costs and target margin. Review every calculation before using it.</p>
       <div className="grid gap-3 sm:grid-cols-2">
        {field("loadedKm","Loaded distance (km)","Required")}
        {field("emptyKm","Empty / return distance (km)","0")}
