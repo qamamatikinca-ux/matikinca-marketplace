@@ -45,7 +45,7 @@ export default function DriverAssignmentsPage(){
  })();return()=>{alive=false}},[reload]);
  useEffect(()=>{let alive=true;const fetchDrivers=async()=>{const{data,error:dbError}=await supabase.rpc("loadlink_public_driver_profiles",{p_limit:30,p_offset:0,p_search:search.trim()||null});if(!alive)return;
     if(dbError)setError(dbError.message);else{const list=(data||[]) as PublicDriver[];setDrivers(list);setDriverId(id=>list.find(x=>x.id===id)?.id||list[0]?.id||"");}
- };const timer=window.setTimeout(()=>{void fetchDrivers()},250);return()=>{alive=false;window.clearTimeout(timer)},[search]);
+ };const timer=window.setTimeout(()=>{void fetchDrivers()},250);return()=>{alive=false;window.clearTimeout(timer)}},[search]);
  async function create(e:FormEvent){e.preventDefault();if(!uid||!listingId||!driverId||busy)return;
     setBusy(true);setError("");setNotice("");
     const{error:dbError}=await supabase.from("job_driver_assignments").insert({
