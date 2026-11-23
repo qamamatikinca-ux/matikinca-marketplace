@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import LoadLinkImage from "@/components/LoadLinkImage";
 
-export type PostingIntent = "transport" | "driver" | "specialist";
+export type PostingIntent = "transport" | "driver";
 
 type Props = {
   value: PostingIntent;
@@ -60,13 +60,6 @@ const OPTIONS: ReadonlyArray<{
     image: "/images/driver-profile-hero.jpg",
     alt: "Professional driver in a commercial truck cabin",
   },
-  {
-    id: "specialist",
-    title: "Equipment / Specialist Service",
-    description: "Need machinery or specialist equipment? Describe the equipment or service your business needs.",
-    image: "/images/jobs/list-job-forklift.jpg",
-    alt: "Industrial handling equipment at a loading area",
-  },
 ];
 
 export default function PostingIntentCards({ value, onChange, darkMode }: Props) {
@@ -74,7 +67,6 @@ export default function PostingIntentCards({ value, onChange, darkMode }: Props)
   return (
     <fieldset className="min-w-0">
       <legend className="text-3xl font-black tracking-[-.04em]">What are you looking for?</legend>
-      <p className={`mt-2 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Choose what you need. Each option has different posting requirements.</p>
       <div className="ll-vehicle-type-choices mt-6 grid max-w-3xl gap-3 sm:grid-cols-2" data-loadlink-posting-intent-cards="true">
         {OPTIONS.map((option) => {
           const selected = value === option.id;
