@@ -446,3 +446,91 @@ revoke all on function public.loadlink_is_listing_thread_participant(uuid,uuid,u
 revoke all on function public.loadlink_guard_driver_application() from anon, authenticated;
 revoke all on function public.loadlink_guard_offer_award() from anon, authenticated;
 revoke all on function public.loadlink_record_accepted_transport_quote() from anon, authenticated;
+
+
+-- Drivers can be assigned to individual transport trips under one-off jobs or longer contracts.
+create table if not exists public.job_driver_assignments (
+  id uuid primary key default gen_random_uuid(),
+  listing_id uuid not null references public.job_listings(id) on delete cascade,
+  award_id uuid references public.job_offer_awards(id) on delete set null,
+  operator_user_id uuid not null references auth.users(id),
+  driver_profile_id uuid not null references public.driver_profiles(id),
+  driver_user_id uuid not null references auth.users(id),
+  driver_display_name text not null,
+  vehicle_registration text not null default '',
+  collection_instructions text not null default '',
+  delivery_instructions text not null default '',
+  assignment_date date,
+  status text not null default 'offered' check(status in ('offered','accepted','declined','in_transit','delivery_reported','completed','cancelled')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists job_driver_assignments_driver on public.job_driver_assignments(driver_user_id,created_at desc);
+create index if not exists job_driver_assignments_operator on public.job_driver_assignments(operator_user_id,created_at desc);
+create index if not exists job_driver_assignments_listing on public.job_driver_assignments(listing_id,created_at desc);
+alter table public.job_driver_assignments enable row level security;
+create policy "Assignment participant can read" on public.job_driver_assignments for select to authenticated
+ using(operator_user_id=(select auth.uid()) or driver_user_id=(select auth.uid())
+   or exists(select 1 from public.job_listings j where j.id=listing_id and j.user_id=(select auth.uid())));
+create policy "Authorised transporter can assign a driver" on public.job_driver_assignments for insert to authenticated
+ with check (operator_user_id=(select auth.uid()) and
+  (exists(select 1 from public.job_listings j where j.id=listing_id and j.user_id=(select auth.uid()))
+   or exists(select 1 from public.job_offer_awards a where a.listing_id=listing_id and a.transporter_user_id=(select auth.uid()) and a.status='confirmed')));
+create policy "Driver or operator update assignment progress" on public.job_driver_assignments for update to authenticated
+ using (operator_user_id=(select auth.uid()) or driver_user_id=(select auth.uid()))
+ with check (operator_user_id=(select auth.uid()) or driver_user_id=(select auth.uid()));
+grant select,insert,update on public.job_driver_assignments to authenticated;
+
+create or replace function public.loadlink_guard_driver_assignment()
+returns trigger language plpgsql security definer set search_path=public,pg_temp as $$
+declare v_driver record; v_authorised boolean;
+begin
+ if auth.uid() is null then raise exception 'Please sign in'; end if;
+ if tg_op='INSERT' then
+   select p.user_id,p.full_name,p.status,p.profile_expires_at into v_driver
+   from public.driver_profiles p where p.id=new.driver_profile_id;
+   if v_driver.user_id is null or v_driver.status<>'approved'
+      or (v_driver.profile_expires_at is not null and v_driver.profile_expires_at<=now())
+   then raise exception 'Choose an approved, current LoadLink Driver Profile'; end if;
+   if new.operator_user_id is distinct from auth.uid() then raise exception 'Only the assigned transport operator can create an assignment'; end if;
+   select exists(select 1 from public.job_listings j where j.id=new.listing_id and j.user_id=auth.uid())
+     or exists(select 1 from public.job_offer_awards a where a.listing_id=new.listing_id and a.transporter_user_id=auth.uid() and a.status='confirmed')
+     into v_authorised;
+   if not v_authorised then raise exception 'You are not authorised to assign a driver for this job'; end if;
+   if new.award_id is not null and not exists (
+      select 1 from public.job_offer_awards a where a.id=new.award_id and a.listing_id=new.listing_id
+        and a.status='confirmed' and (a.transporter_user_id=auth.uid() or a.poster_user_id=auth.uid())
+   ) then raise exception 'The award is not confirmed for this job'; end if;
+   new.driver_user_id:=v_driver.user_id;
+   new.driver_display_name:=left(v_driver.full_name,160);
+   new.status:='offered';
+ else
+   if new.id is distinct from old.id or new.listing_id is distinct from old.listing_id
+      or new.award_id is distinct from old.award_id or new.operator_user_id is distinct from old.operator_user_id
+      or new.driver_profile_id is distinct from old.driver_profile_id or new.driver_user_id is distinct from old.driver_user_id
+      or new.driver_display_name is distinct from old.driver_display_name
+      or new.vehicle_registration is distinct from old.vehicle_registration
+      or new.collection_instructions is distinct from old.collection_instructions
+      or new.delivery_instructions is distinct from old.delivery_instructions
+      or new.assignment_date is distinct from old.assignment_date
+      or new.created_at is distinct from old.created_at
+   then raise exception 'Assignment details are immutable; cancel and create a replacement instead'; end if;
+   if new.status=old.status then return new; end if;
+   if auth.uid()=old.driver_user_id then
+     if not ((old.status='offered' and new.status in ('accepted','declined'))
+        or (old.status='accepted' and new.status='in_transit')
+        or (old.status='in_transit' and new.status='delivery_reported'))
+     then raise exception 'The driver cannot make that status change'; end if;
+   elsif auth.uid()=old.operator_user_id then
+     if not ((old.status in ('offered','accepted','in_transit','delivery_reported') and new.status='cancelled')
+        or (old.status='delivery_reported' and new.status='completed'))
+     then raise exception 'The transport operator cannot make that status change'; end if;
+   else raise exception 'You do not have access to update this assignment'; end if;
+ end if;
+ new.updated_at:=now();
+ return new;
+end $$;
+revoke all on function public.loadlink_guard_driver_assignment() from public;
+create trigger loadlink_guard_driver_assignment
+before insert or update on public.job_driver_assignments
+for each row execute function public.loadlink_guard_driver_assignment();
