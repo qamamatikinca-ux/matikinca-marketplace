@@ -383,7 +383,7 @@ export default function ListJobPage() {
               <>
                 <div className="flex items-end justify-between gap-3"><div><h2 className="text-2xl font-black tracking-[-.035em]">Review</h2><p className={`mt-2 text-xs font-semibold ${muted}`}>Check everything before submitting.</p></div></div>
                 <div className={`mt-5 divide-y rounded-[20px] border ${darkMode ? "divide-white/10 border-white/10 bg-white/[.02]" : "divide-black/8 border-black/8 bg-white/[.26]"}`}>
-                  <Review label="Need" value={vehicleNeeded} onEdit={() => setStep(1)} />
+                  <Review label="Requirements" value={description.trim()} onEdit={() => setStep(3)} />
                   <Review label="Date" value={neededOn ? new Date(`${neededOn}T12:00:00`).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" }) : "Not selected"} onEdit={() => setStep(2)} />
                   <Review label="Location" value={locationLabel || city} onEdit={() => setStep(2)} />
                   <Review label={postNameTitle} value={title} onEdit={() => setStep(3)} />
