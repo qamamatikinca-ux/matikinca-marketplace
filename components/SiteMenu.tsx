@@ -183,6 +183,7 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
     const essential: MenuLink[] = [
       { label: "Messages", href: "/messages", description: "Your conversations", icon: "messages" },
       { label: "My posts", href: "/my-posts", description: "Manage your listings", icon: "posts" },
+       { label: "History", href: "/history", description: "Driver and job/contract records", icon: "activity" },
       { label: "Activity & access", href: "/account/activity", description: "Logins, devices and payments", icon: "activity" },
       { label: "Profile settings", href: "/account/settings", description: "Profile, account and alerts", icon: "settings" },
     ];
@@ -191,6 +192,7 @@ export default function SiteMenu({ darkMode, className = "" }: { darkMode: boole
       { label: "Messages", href: "/messages", description: "Your conversations", icon: "messages" },
       { label: "Notifications", href: "/notifications", description: "Reviews, messages and account updates", icon: "notifications" },
       { label: "My posts", href: "/my-posts", description: "Manage your listings", icon: "posts" },
+       { label: "History", href: "/history", description: "Driver and job/contract records", icon: "activity" },
       { label: "Packages", href: "/packages", description: "Manual, Pro and Dealer plans", icon: "packages" },
       ...(account.driverProfile ? [{ label: "Driver profile", href: "/driver-profile", description: "Manage your driver profile", icon: "driver" as const }] : []),
       ...(dealerLink ? [dealerLink] : []),
