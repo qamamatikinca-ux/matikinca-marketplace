@@ -90,7 +90,7 @@ export default function JobHistoryPage(){
  <section className="mx-auto max-w-6xl px-4 py-9">
   <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-3xl font-black tracking-tight sm:text-4xl">Job & Contract History</h1>
     <p className="mt-1 text-sm opacity-65">Your posted opportunities, discussions, agreements and saved tools in one place.</p></div>
-    <Link href="/my-posts" className={`rounded-xl border px-4 py-3 text-xs font-bold ${surface}`}>Manage live posts</Link>
+    <div className="flex flex-wrap gap-2"><Link href="/driver-assignments" className={`rounded-xl border px-4 py-3 text-xs font-bold ${surface}`}>Driver assignments</Link><Link href="/my-posts" className={`rounded-xl border px-4 py-3 text-xs font-bold ${surface}`}>Manage live posts</Link></div>
   </div>
   {notice?<p role="status" className="mt-4 rounded-xl border border-current/15 p-3 text-xs font-semibold">{notice}</p>:null}
   <div className="mt-6 flex gap-2"><button onClick={()=>{setTab("posted");setSelectedId(owned[0]?.id||"")}} className={`rounded-xl border px-5 py-3 text-sm font-bold ${tab==="posted"?"bg-[#f6b800] text-black":"border-current/20"}`}>My Posted Jobs & Contracts</button>
@@ -109,7 +109,7 @@ export default function JobHistoryPage(){
       <p className="mt-4 whitespace-pre-wrap text-sm leading-7">{selected.description}</p>
       <div className="mt-5 flex flex-wrap gap-2">
         <Link className="rounded-xl border border-current/15 px-4 py-2.5 text-xs font-bold" href={`/messages?listing=${selected.id}`}>Open Messages</Link>
-        <Link className="rounded-xl border border-current/15 px-4 py-2.5 text-xs font-bold" href={`/tools?listing=${selected.id}`}>Open Logistics Tools</Link>
+        <Link className="rounded-xl border border-current/15 px-4 py-2.5 text-xs font-bold" href={`/tools?listing=${selected.id}`}>Open Logistics Tools</Link><Link className="rounded-xl border border-current/15 px-4 py-2.5 text-xs font-bold" href={`/driver-assignments?listing=${selected.id}`}>Assign a driver</Link>
         <button className="rounded-xl border border-current/15 px-4 py-2.5 text-xs font-bold" type="button" onClick={()=>void copyRecord()}>Copy job record</button>
       </div>
       {selected.user_id===userId?<div className="mt-5 rounded-xl border border-current/15 p-4">
