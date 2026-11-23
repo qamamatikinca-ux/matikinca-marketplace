@@ -3,7 +3,7 @@ import {useState} from "react";
 import {supabase} from "@/lib/supabaseClient";
 
 type Outcome="completed"|"cancelled"|"no_agreement";
-export default function JobConversationStatusDialog({listingId,threadId,listingTitle,onExit}:{listingId:string;threadId:string;listingTitle:string;onExit:()=>void}){
+export default function JobConversationStatusDialog({listingId,threadId,listingTitle,listingKind="job",onExit}:{listingId:string;threadId:string;listingTitle:string;listingKind?:"job"|"contract";onExit:()=>void}){
  const [choice,setChoice]=useState<Outcome>("completed");
  const [note,setNote]=useState("");
  const [busy,setBusy]=useState(false);
@@ -26,7 +26,7 @@ export default function JobConversationStatusDialog({listingId,threadId,listingT
  return <div role="dialog" aria-modal="true" aria-labelledby="job-closure-title" className="fixed inset-0 z-[2147483600] flex items-center justify-center bg-black/65 px-3 py-4 backdrop-blur-sm">
   <section className="max-h-[min(90dvh,680px)] w-full max-w-sm overflow-y-auto rounded-[24px] border border-black/10 bg-white p-5 text-black shadow-2xl sm:p-6">
    <p className="text-[10px] font-black uppercase tracking-[.13em] text-[#9a7000]">LoadLink history</p>
-   <h2 id="job-closure-title" className="mt-1 text-2xl font-black tracking-[-.04em]">Is this job closed?</h2>
+   <h2 id="job-closure-title" className="mt-1 text-2xl font-black tracking-[-.04em]">Is this {listingKind} closed?</h2>
    <p className="mt-2 text-sm leading-6 text-black/60">Only the original poster can close <strong className="text-black">{listingTitle}</strong>. Closed work moves to History.</p>
    <fieldset className="mt-5 grid gap-2">
     <legend className="mb-2 text-xs font-black">Outcome</legend>
@@ -43,7 +43,7 @@ export default function JobConversationStatusDialog({listingId,threadId,listingT
    {error?<p role="alert" className="mt-3 text-xs font-bold text-red-600">{error}</p>:null}
    <div className="mt-4 flex gap-2">
     <button type="button" disabled={busy} onClick={onExit} className="min-h-11 flex-1 rounded-xl border border-black/15 text-sm font-bold">Still open</button>
-    <button type="button" disabled={busy} onClick={()=>void closeJob()} className="min-h-11 flex-1 rounded-xl bg-[#f6b800] text-sm font-black text-black disabled:opacity-50">{busy?"Saving…":"Close job"}</button>
+    <button type="button" disabled={busy} onClick={()=>void closeJob()} className="min-h-11 flex-1 rounded-xl bg-[#f6b800] text-sm font-black text-black disabled:opacity-50">{busy?"Saving…":`Close ${listingKind}`}</button>
    </div>
   </section>
  </div>;

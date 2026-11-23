@@ -48,7 +48,7 @@ export default function DriverHistoryOverview(){
    {profile?<Link href="/driver-profile" className="text-xs font-bold underline underline-offset-4">Driver profile</Link>:null}
    <button type="button" onClick={()=>setExpanded(x=>!x)} aria-expanded={expanded} className="text-xs font-bold underline underline-offset-4">{expanded?"Hide driver details":"Driver details & assignments"}</button>
   </div>
-  {expanded?<div id="driver-assignments" className="mt-6 border-t border-current/10 pt-6">
+  {expanded?<div className="mt-6 border-t border-current/10 pt-6">
    <DriverHistory/>
    <DriverAssignmentRecords/>
   </div>:null}

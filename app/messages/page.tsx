@@ -448,7 +448,7 @@ export default function MessagesPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [quotePermissions,setQuotePermissions]=useState<Record<string,boolean>>({});
-  const [chatExitPrompt,setChatExitPrompt]=useState<{listingId:string;threadId:string;title:string}|null>(null);
+  const [chatExitPrompt,setChatExitPrompt]=useState<{listingId:string;threadId:string;title:string;listingKind:"job"|"contract"}|null>(null);
   const chatCalls = useChatCalls(selectedId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
@@ -1734,7 +1734,7 @@ export default function MessagesPage() {
       const key=`loadlink-status-exit-prompt:${selectedConversation.id}`;
       let already=false;
       try{already=sessionStorage.getItem(key)==="shown";if(!already)sessionStorage.setItem(key,"shown")}catch{}
-      if(!already){setChatExitPrompt({listingId:selectedConversation.listing_id,threadId:selectedConversation.id,title:selectedConversation.listing_title});return}
+      if(!already){setChatExitPrompt({listingId:selectedConversation.listing_id,threadId:selectedConversation.id,title:selectedConversation.listing_title,listingKind:starterPost?.listing_kind==="contract"?"contract":"job"});return}
     }
     returnToInboxNow();
   }
@@ -2257,7 +2257,7 @@ ${message}` : message)}
           ) : null}
         </aside>
       </div>
-      {chatExitPrompt ? <JobConversationStatusDialog listingId={chatExitPrompt.listingId} threadId={chatExitPrompt.threadId} listingTitle={chatExitPrompt.title} onExit={()=>{setChatExitPrompt(null);returnToInboxNow()}}/> : null}
+      {chatExitPrompt ? <JobConversationStatusDialog listingId={chatExitPrompt.listingId} threadId={chatExitPrompt.threadId} listingTitle={chatExitPrompt.title} listingKind={chatExitPrompt.listingKind} onExit={()=>{setChatExitPrompt(null);returnToInboxNow()}}/> : null}
     </main>
   );
 }
