@@ -476,6 +476,7 @@ create policy "Authorised transporter can assign a driver" on public.job_driver_
 create policy "Driver or operator update assignment progress" on public.job_driver_assignments for update to authenticated
  using (operator_user_id=(select auth.uid()) or driver_user_id=(select auth.uid()))
  with check (operator_user_id=(select auth.uid()) or driver_user_id=(select auth.uid()));
+revoke all on public.job_driver_assignments from anon,authenticated;
 grant select,insert,update on public.job_driver_assignments to authenticated;
 
 create or replace function public.loadlink_guard_driver_assignment()
@@ -527,7 +528,7 @@ begin
  new.updated_at:=now();
  return new;
 end $$;
-revoke all on function public.loadlink_guard_driver_assignment() from public;
+revoke all on function public.loadlink_guard_driver_assignment() from public,anon,authenticated;
 create trigger loadlink_guard_driver_assignment
 before insert or update on public.job_driver_assignments
 for each row execute function public.loadlink_guard_driver_assignment();
