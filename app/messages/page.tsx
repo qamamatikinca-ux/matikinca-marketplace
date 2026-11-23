@@ -1766,6 +1766,10 @@ ${message}` : message)}
                 unread
               </span>
             </div>
+            <div className="mt-3 flex gap-2 text-xs font-bold">
+              <Link href="/messages/recruitment" className="rounded-xl border border-current/15 px-3 py-2">Driver applications</Link>
+              <Link href="/job-history" className="rounded-xl border border-current/15 px-3 py-2">Job history</Link>
+            </div>
             <label className="mt-5 block">
               <span className="sr-only">Search conversations</span>
               <input
