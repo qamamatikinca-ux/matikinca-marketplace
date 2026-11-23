@@ -209,9 +209,8 @@ export default function LoadLinkInteractionSystem() {
       document
         .querySelectorAll<HTMLInputElement>('input[type="date"],input[data-loadlink-future-date="true"],input[data-loadlink-custom-date="true"]')
         .forEach(prepareDateControl);
-      document
-        .querySelectorAll<HTMLInputElement>('input[list],input[data-loadlink-datalist]')
-        .forEach(prepareDatalistControl);
+      // Do not rewrite server-rendered datalist attributes before React hydrates.
+      // Datalist enhancements are prepared only when the user interacts.
     };
 
     const openSuggestion = (input: HTMLInputElement) => {
