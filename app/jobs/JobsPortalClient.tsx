@@ -719,6 +719,10 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
             </button>
           </div>
 
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link href="/driver-jobs?term=job" className="rounded-xl border border-white/40 bg-black/70 px-4 py-2.5 text-xs font-bold text-white">Driver jobs</Link>
+            <Link href="/driver-jobs?term=contract" className="rounded-xl border border-white/40 bg-black/70 px-4 py-2.5 text-xs font-bold text-white">Driver contracts</Link>
+          </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2 sm:max-w-xl">
             <RequireAuthLink href={portalCopy.listHref} className="flex min-h-12 w-full items-center justify-center rounded-xl bg-[#f6b800] px-4 text-center text-xs font-black uppercase tracking-[.08em] text-black transition active:scale-[0.98] whitespace-nowrap">
               {portalCopy.listLabel}
