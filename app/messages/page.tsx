@@ -24,6 +24,7 @@ import {
 
 import HomeLogoLink from "@/components/HomeLogoLink";
 import JobTimingToast from "@/components/JobTimingToast";
+import JobConversationStatusDialog from "@/components/JobConversationStatusDialog";
 import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import LogisticsMessageTools, { type QuoteAutofillDefaults, type QuoteVehicleOption, type StructuredQuote } from "@/components/LogisticsMessageTools";
@@ -468,6 +469,7 @@ export default function MessagesPage() {
   const [reportBusy, setReportBusy] = useState(false);
   const [composerActionsOpen, setComposerActionsOpen] = useState(false);
   const [logisticsWorkspaceOpen, setLogisticsWorkspaceOpen] = useState(false);
+  const [statusPromptOpen, setStatusPromptOpen] = useState(false);
   const [potentialDealReviewOpen, setPotentialDealReviewOpen] = useState(false);
   const [quoteBranding, setQuoteBranding] = useState<QuoteBranding>({ name: "", logo: null });
   const [quoteDefaults, setQuoteDefaults] = useState<QuoteAutofillDefaults | null>(null);
@@ -1249,6 +1251,13 @@ export default function MessagesPage() {
     setSending(true);
     setError("");
     try {
+      const {data:listingType,error:listingError}=await supabase.from("job_listings").select("listing_kind").eq("id",selectedConversation.listing_id).maybeSingle();
+      if(listingError)throw listingError;
+      if(listingType?.listing_kind==="job"||listingType?.listing_kind==="contract"){
+        const{data:preference,error:preferenceError}=await supabase.from("job_offer_preferences").select("accepts_offers").eq("listing_id",selectedConversation.listing_id).maybeSingle();
+        if(preferenceError)throw preferenceError;
+        if(!preference?.accepts_offers)throw new Error("The poster is not accepting formal offers for this job or contract.");
+      }
       const result = await supabase.rpc("send_listing_guest_structured_message", {
         p_thread_id: selectedConversation.id,
         p_access_key: selectedConversation.accessKey,
@@ -1745,6 +1754,12 @@ ${message}` : message)}
       }`}
     >
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} sticky={false} />
+      {statusPromptOpen && selectedConversation?<JobConversationStatusDialog
+        listingId={selectedConversation.listing_id}
+        threadId={selectedConversation.id}
+        listingTitle={selectedConversation.listing_title}
+        onExit={()=>{setStatusPromptOpen(false);returnToInbox();}}
+      />:null}
 
       <div className="mx-auto grid min-h-0 w-full max-w-[1500px] flex-1 md:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)_300px]">
         <aside
@@ -1875,7 +1890,12 @@ ${message}` : message)}
               <header className="loadlink-chat-header flex min-h-[78px] items-center gap-3 border-b border-black/10 bg-white px-3 py-3 md:px-5">
                 <button
                   type="button"
-                  onClick={returnToInbox}
+                  onClick={()=>{
+                    const key="loadlink-chat-status-prompt:"+selectedConversation.id+":"+(messages.at(-1)?.id||"");
+                    if(messages.length && !sessionStorage.getItem(key)){
+                      sessionStorage.setItem(key,"1");setStatusPromptOpen(true);
+                    }else returnToInbox();
+                  }}
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/10 text-xl font-black md:hidden"
                   aria-label="Back to conversations"
                 >
