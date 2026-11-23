@@ -158,3 +158,25 @@ create policy "Author saves own job tool records" on public.job_tool_records for
    or exists(select 1 from public.job_interests i where i.listing_id=listing_id and i.applicant_user_id=(select auth.uid()))
  ));
 grant select,insert on public.job_tool_records to authenticated;
+
+-- Recruitment messages live inside LoadLink's Messages workspace, separate from cargo chat.
+create table if not exists public.driver_application_messages (
+  id uuid primary key default gen_random_uuid(),
+  application_id uuid not null references public.driver_vacancy_applications(id) on delete cascade,
+  sender_user_id uuid not null references auth.users(id),
+  body text not null check (char_length(trim(body)) between 1 and 3000),
+  created_at timestamptz not null default now()
+);
+create index if not exists driver_application_messages_thread on public.driver_application_messages(application_id,created_at);
+alter table public.driver_application_messages enable row level security;
+create policy "Recruitment parties read messages" on public.driver_application_messages for select to authenticated
+ using(exists(
+  select 1 from public.driver_vacancy_applications a join public.driver_vacancies v on v.id=a.vacancy_id
+  where a.id=application_id and (a.driver_user_id=(select auth.uid()) or v.user_id=(select auth.uid()))
+ ));
+create policy "Recruitment parties send messages" on public.driver_application_messages for insert to authenticated
+ with check(sender_user_id=(select auth.uid()) and exists(
+  select 1 from public.driver_vacancy_applications a join public.driver_vacancies v on v.id=a.vacancy_id
+  where a.id=application_id and (a.driver_user_id=(select auth.uid()) or v.user_id=(select auth.uid()))
+ ));
+grant select,insert on public.driver_application_messages to authenticated;
