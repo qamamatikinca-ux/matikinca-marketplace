@@ -17,7 +17,6 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 type VehicleGroup = "Catering / Event" | "Trucks / Trailers" | "Farming / Mining";
-const groups: VehicleGroup[] = ["Trucks / Trailers", "Catering / Event", "Farming / Mining"];
 const today = () => {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
