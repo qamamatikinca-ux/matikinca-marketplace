@@ -420,11 +420,12 @@ export default function MessagesPage(){
     setDriverRoute(profile||thread||params.has("driverInbox")?{profile,thread}:null);
   },[]);
   function openDriverThread(id:string){setDriverRoute({profile:"",thread:id});window.history.replaceState({},"",`/messages?driverThread=${encodeURIComponent(id)}`)}
-  return driverRoute?<DriverMessagesInbox profileId={driverRoute.profile} threadId={driverRoute.thread}/>:<ListingMessagesPage onOpenDriverThread={openDriverThread}/>;
+  function closeDriverThread(){setDriverRoute(null);window.history.replaceState({},"","/messages")}
+  return <ListingMessagesPage driverRoute={driverRoute} onOpenDriverThread={openDriverThread} onCloseDriverThread={closeDriverThread}/>;
 }
 
 type DriverInboxRow={id:string;driver_profile_id:string;driver_user_id:string;enquirer_user_id:string;driver_name:string;enquirer_name:string;updated_at:string;blocked:boolean};
-function ListingMessagesPage({onOpenDriverThread}:{onOpenDriverThread:(id:string)=>void}) {
+function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread}:{driverRoute:{profile:string;thread:string}|null;onOpenDriverThread:(id:string)=>void;onCloseDriverThread:()=>void}) {
   // LOADLINK V2.5.4 SESSION WALLPAPER
   useEffect(() => {
     const count = 10;
@@ -1802,6 +1803,7 @@ function ListingMessagesPage({onOpenDriverThread}:{onOpenDriverThread:(id:string
   }
 
   function chooseConversation(conversation: Conversation) {
+    if(driverRoute)onCloseDriverThread();
     selectedIdRef.current = conversation.id;
     setSelectedId(conversation.id);
     setShowDetails(false);
@@ -1858,9 +1860,9 @@ ${message}` : message)}
     >
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} sticky={false} />
 
-      <div className="mx-auto grid min-h-0 w-full max-w-[1500px] flex-1 md:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)_300px]">
+      <div className={`mx-auto grid min-h-0 w-full max-w-[1500px] flex-1 md:grid-cols-[360px_minmax(0,1fr)] ${driverRoute?"xl:grid-cols-[380px_minmax(0,1fr)]":"xl:grid-cols-[380px_minmax(0,1fr)_300px]"}`}>
         <aside
-          className={`${selectedId ? "hidden md:flex" : "flex"} loadlink-inbox-panel min-h-0 flex-col border-r border-black/10 bg-white`}
+          className={`${selectedId||driverRoute ? "hidden md:flex" : "flex"} loadlink-inbox-panel min-h-0 flex-col border-r border-black/10 bg-white`}
         >
           {!selectedId ? (
             <></>
@@ -1900,7 +1902,7 @@ ${message}` : message)}
                 if(item.kind==="driver"){
                   const t=item.thread;
                   const other=t.driver_user_id===currentUserId?t.enquirer_name:t.driver_name;
-                  return <button key={`driver-${t.id}`} type="button" onClick={()=>onOpenDriverThread(t.id)}
+                  return <button key={`driver-${t.id}`} type="button" onClick={()=>{selectedIdRef.current="";setSelectedId("");setMessages([]);onOpenDriverThread(t.id)}}
                     className={`${styles.conversationRow} flex w-full items-center gap-3 border-b p-4 text-left transition ${darkMode?"border-white/10 bg-[#111] hover:bg-[#191919]":"border-black/5 bg-white hover:bg-[#f8f6f0]"}`}>
                     <Avatar name={other} photo={messageAvatars[`driver:${t.id}`]||null} size="h-12 w-12"/>
                     <span className="min-w-0 flex-1">
@@ -1991,9 +1993,9 @@ ${message}` : message)}
         </aside>
 
         <section
-          className={`${selectedId ? "flex" : "hidden md:flex"} loadlink-chat-panel min-h-0 flex-col bg-[#f3f0e8]`}
+          className={`${selectedId||driverRoute ? "flex" : "hidden md:flex"} loadlink-chat-panel min-h-0 flex-col bg-[#f3f0e8]`}
          data-loadlink-mobile-chat-fit="true">
-          {selectedConversation ? (
+          {driverRoute ? <DriverMessagesInbox key={driverRoute.thread||driverRoute.profile} profileId={driverRoute.profile} threadId={driverRoute.thread} onBack={onCloseDriverThread}/> : selectedConversation ? (
             <>
               <header className="loadlink-chat-header flex min-h-[78px] items-center gap-3 border-b border-black/10 bg-white px-3 py-3 md:px-5">
                 <button
@@ -2343,11 +2345,11 @@ ${message}` : message)}
           )}
         </section>
 
-        <aside className="loadlink-details-panel hidden min-h-0 overflow-y-auto border-l border-black/10 bg-white p-5 xl:block">
+        {!driverRoute ? <aside className="loadlink-details-panel hidden min-h-0 overflow-y-auto border-l border-black/10 bg-white p-5 xl:block">
           {selectedConversation ? (
             <ConversationDetails darkMode={darkMode} conversation={selectedConversation} blockState={blockState} blockBusy={blockBusy} reportBusy={reportBusy} archiveBusy={archiveBusy} onToggleArchive={toggleArchive} onToggleBlock={toggleBlock} onReport={reportConversation} />
           ) : null}
-        </aside>
+        </aside> : null}
       </div>
       {chatExitPrompt ? <JobConversationStatusDialog listingId={chatExitPrompt.listingId} threadId={chatExitPrompt.threadId} listingTitle={chatExitPrompt.title} listingKind={chatExitPrompt.listingKind} onCompleted={()=>setWorkCompleted(true)} onExit={()=>setChatExitPrompt(null)}/> : null}
     </main>
