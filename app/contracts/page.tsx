@@ -2,7 +2,7 @@
 
 import LoadLinkSortControl from "@/components/LoadLinkSortControl";
 import DriverVacancyResults from "@/components/DriverVacancyResults";
-import ContractApplicationDraft from "@/components/ContractApplicationDraft";
+import ContractListingCard from "@/components/ContractListingCard";
 import {formatListingRate} from "@/lib/formatCurrency";
 
 
@@ -106,7 +106,6 @@ export default function ContractsPage() {
   const [group, setGroup] = useState(ALL);
   const [sortMode, setSortMode] = useState<SortMode>("newest");
   const [page, setPage] = useState(1);
-  const [applyingTo,setApplyingTo] = useState<ContractRow|null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -251,41 +250,7 @@ export default function ContractsPage() {
           <div className="grid gap-5">{Array.from({ length: 3 }).map((_, index) => <div key={index} className={`h-56 animate-pulse rounded-[22px] border ${surface}`} />)}</div>
         ) : visible.length ? (
           <div className="grid gap-5">
-            {visible.map((row) => {
-              const image = row.photos?.[0] || "/images/contracts-1.jpg";
-              return (
-                <article id={`contract-${row.id}`} key={row.id} className={`overflow-hidden rounded-[22px] border shadow-[0_12px_34px_rgba(0,0,0,.045)] ${surface}`}>
-                  <Link href={`/contracts/${row.id}`} className="block aspect-[16/9] w-full overflow-hidden bg-[#111] sm:aspect-[21/9]" aria-label="Open contract">
-                    <LoadLinkImage src={image} alt="" className="h-full w-full object-cover" onError={event=>{event.currentTarget.style.display="none"}}/>
-                  </Link>
-                  <div className="p-4 sm:p-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="min-w-0 text-[26px] font-black tracking-[-.04em]">{row.rate?formatListingRate(row.rate):"Rate on request"}</p>
-                      <span className="shrink-0 rounded-full bg-[#e5f4e9] px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#237847]">Contract</span>
-                    </div>
-                    <Link href={`/contracts/${row.id}`} className="mt-3 block break-words text-[22px] font-black leading-[1.25] tracking-[-.035em] hover:underline sm:text-2xl">{(row.title||"Transport contract").replace(/^Contract Title:\s*/i,"")}</Link>
-                    <p className={`mt-2 text-[13px] font-semibold ${muted}`}>{[row.city,row.vehicle_group].filter(Boolean).join(" · ")||"South Africa"}</p>
-                    {startLabel(row)!=="Start date in details"?<p className={`mt-1 text-xs font-medium ${muted}`}>{startLabel(row)}</p>:null}
-                    <div className={`mt-4 flex min-w-0 items-center justify-between gap-3 border-t pt-3 text-xs ${darkMode?"border-white/10 text-white/55":"border-black/10 text-black/55"}`}>
-                      <span className="min-w-0 truncate">{row.posted_by||"LoadLink poster"}</span><span className="shrink-0">{posted(row.created_at)}</span>
-                    </div>
-                    <details className={`group mt-3 overflow-hidden rounded-xl border ${darkMode?"border-white/15":"border-black/10"}`}>
-                      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-bold">
-                        View full details<span className="text-lg font-medium opacity-55 group-open:rotate-45">+</span>
-                      </summary>
-                      <div className={`border-t px-4 pb-4 pt-3 ${darkMode?"border-white/10":"border-black/10"}`}>
-                        <p className={`whitespace-pre-line break-words text-sm leading-6 ${muted}`}>{cleanDescription(row.description)||"See the contract page for the full requirements."}</p>
-                        <Link href={`/contracts/${row.id}`} className="mt-3 inline-flex text-xs font-bold underline underline-offset-4">Open contract page</Link>
-                      </div>
-                    </details>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <button type="button" onClick={()=>setApplyingTo(row)} className="flex min-h-12 items-center justify-center rounded-xl bg-[#f6b800] px-2.5 text-center text-[13px] font-bold text-black">Apply with profile</button>
-                      <Link href={`/messages?listing=${encodeURIComponent(row.id)}`} className={`flex min-h-12 items-center justify-center rounded-xl border px-2.5 text-center text-[13px] font-bold ${darkMode?"border-white/15":"border-black/15"}`}>Message poster</Link>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
+            {visible.map(row=><ContractListingCard key={row.id} row={row} darkMode={darkMode}/>)}
           </div>
         ) : (
           <section className={`rounded-[22px] border p-8 text-center ${surface}`}><h2 className="text-xl font-black">No matching contracts</h2><p className={`mt-2 text-sm font-semibold ${muted}`}>Try a broader scope, vehicle category or location. Ordinary jobs remain in the Jobs marketplace.</p>{hasFilters ? <button type="button" onClick={clearFilters} className="mt-5 rounded-xl bg-[#f6b800] px-5 py-3 text-xs font-black text-black">Clear filters</button> : null}</section>
@@ -293,7 +258,6 @@ export default function ContractsPage() {
 
         {group!=="Professional Driver" && totalPages > 1 ? <LoadLinkPagination current={page} total={totalPages} onChange={setPage} darkMode={darkMode} label="Contract pages" /> : null}
       </section>
-      {applyingTo?<ContractApplicationDraft listingId={applyingTo.id} title={(applyingTo.title||"Transport contract").replace(/^Contract Title:\s*/i,"")} city={applyingTo.city||""} rate={applyingTo.rate||""} vehicle={vehicleNeeded(applyingTo)||applyingTo.vehicle_group||""} darkMode={darkMode} onClose={()=>setApplyingTo(null)}/>:null}
     </main>
   );
 }
