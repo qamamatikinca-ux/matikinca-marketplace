@@ -125,23 +125,22 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
       return;
     }
 
-    if (activeStep === 0 && sections.length < 2) {
-      const confirm = confirmationButton(section);
-      if (confirm) {
-        confirm.click();
-        window.setTimeout(() => {
-          const nextSections = getWizardSections().sections;
-          if (nextSections.length > 1) setActiveStep(1);
-          else confirm.scrollIntoView({ behavior: "smooth", block: "center" });
-        }, 120);
-      }
+    if (activeStep === 0 && confirmationButton(section) && !section.querySelector('[data-loadlink-model-confirmed="true"]')) {
+      confirmationButton(section)?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
+    if (activeStep === 0 && sections.length < 2) return;
 
     if (activeStep + 1 >= sections.length) return;
     setActiveStep((step) => Math.min(lastStep, step + 1));
   }
 
+  // The inline Next control and the sticky wizard footer use the same step transition.
+  useEffect(()=>{
+    const go=()=>goNext();
+    window.addEventListener("loadlink-vehicle-next-step",go);
+    return()=>window.removeEventListener("loadlink-vehicle-next-step",go);
+  });
   function goBack() {
     setActiveStep((step) => Math.max(0, step - 1));
   }

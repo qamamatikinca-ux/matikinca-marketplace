@@ -885,15 +885,19 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
 
               {vehicleCategory==="bakkie_van" ? <Field label="Cab / van body type"><select value={bodyType} onChange={event=>{setBodyType(event.target.value);setModelConfirmed(false);}} required className={inputClass}><option value="">Choose the actual body type</option>{bakkieVanTypes.map(item=><option key={item}>{item}</option>)}</select></Field> : null}
             </div>
-            {curatedModelPhoto && (vehicleCategory === "truck" || vehicleCategory === "bakkie_van") ? (
+            {curatedModelPhoto && !modelConfirmed && (vehicleCategory === "truck" || vehicleCategory === "bakkie_van") ? (
               <div className="border-t border-current/10 px-5 py-4 md:px-7">
                 <ModelFamilyPhotoCard kind={vehicleCategory === "truck" ? "truck" : "bakkie"}
                   make={brand} model={modelName} year={year} darkMode={darkMode} compact />
               </div>
             ) : null}
             {vehicleCategory === "truck" ? <div className="border-t border-current/10 p-5 md:p-7">
-              <button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>
-              {selectedModel ? <div className={`mt-4 rounded-xl border px-4 py-3 ${darkMode ? "border-white/12 bg-white/[.03]" : "border-black/10 bg-black/[.02]"}`}>
+              {!modelConfirmed?<button type="button" onClick={confirmSelectedModel} className="h-12 rounded-xl bg-[#f6b800] px-6 text-xs font-black uppercase text-black">Confirm truck model</button>:
+                <div data-loadlink-model-confirmed="true" className="flex flex-wrap items-center gap-3">
+                  <span className="rounded-full bg-[#eaf8ed] px-4 py-2 text-xs font-bold text-[#267648]">Model confirmed · {year} {brand} {modelName}</span>
+                  <button type="button" onClick={()=>window.dispatchEvent(new Event("loadlink-vehicle-next-step"))} className="min-h-12 rounded-xl bg-[#f6b800] px-5 text-xs font-black uppercase text-black">Next: Vehicle details</button>
+                </div>}
+              {selectedModel && !modelConfirmed ? <div className={`mt-4 rounded-xl border px-4 py-3 ${darkMode ? "border-white/12 bg-white/[.03]" : "border-black/10 bg-black/[.02]"}`}>
                 <h3 className="text-sm font-bold">Model reference · {year} {brand} {modelName}</h3>
                 <p className={`mt-1 text-xs leading-5 ${muted}`}>Loaded from the LoadLink make/model catalogue. Fields with one supported value are filled in automatically; choose the actual vehicle configuration when several exist.</p>
                 <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
