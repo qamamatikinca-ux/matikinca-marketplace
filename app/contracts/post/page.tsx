@@ -50,6 +50,8 @@ export default function PostContractPage() {
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [businessCover,setBusinessCover]=useState<File|null>(null);
+  const [businessCoverPreview,setBusinessCoverPreview]=useState("");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -110,6 +112,19 @@ export default function PostContractPage() {
     });
   }, [ready, postingIntent, intentChosen, companyName, contactName, contact, title, group, contractType, city, startDate, duration, frequency, rate, equipmentNeeded, acceptOffers, applicationDeadline, description, step]);
 
+  useEffect(()=>()=>{if(businessCoverPreview)URL.revokeObjectURL(businessCoverPreview)},[businessCoverPreview]);
+  async function chooseBusinessCover(event:ChangeEvent<HTMLInputElement>){
+    const source=event.target.files?.[0];event.target.value="";
+    if(!source){setBusinessCover(null);setBusinessCoverPreview("");return}
+    const issue=validateImageFile(source,source.name||"Business cover image");
+    if(issue){setMessage(issue);return}
+    try{
+      const prepared=await prepareImageFileForForm(source,{maxWidth:1500,maxHeight:900,quality:.8,namePrefix:"loadlink-business-cover"});
+      setBusinessCover(prepared.file);
+      setBusinessCoverPreview(prepared.previewUrl);
+      setMessage("");
+    }catch(e){setMessage(readableUploadError(e,"The business image could not be prepared."))}
+  }
   async function choosePhotos(event: ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(event.target.files || []).slice(0, 5);
     event.target.value = "";
@@ -217,6 +232,15 @@ export default function PostContractPage() {
         },{onConflict:"listing_id"});
         if(offerError)throw new Error("The contract was saved but its offer setting did not save. Please retry.");
       }
+      if(listingId&&businessCover){
+        const type=inferUploadContentType(businessCover);
+        const coverPath=`${auth.user.id}/contracts/${requestId.current}/business-cover.${imageExtension(type)}`;
+        const uploaded=await supabase.storage.from("job-photos").upload(coverPath,businessCover,{cacheControl:"3600",contentType:type,upsert:true});
+        if(uploaded.error)throw new Error("The contract was saved but the optional business image could not upload. Retry to attach it.");
+        const coverUrl=supabase.storage.from("job-photos").getPublicUrl(coverPath).data.publicUrl;
+        const updated=await supabase.from("job_listings").update({poster_photo:coverUrl}).eq("id",listingId).eq("user_id",auth.user.id);
+        if(updated.error)throw new Error("The contract was saved but the optional business image was not attached. Retry or edit the image in My Posts.");
+      }
       if (listingId && coordinates) {
         const locationUpdate = await supabase.from("job_listings").update({ latitude: coordinates.latitude, longitude: coordinates.longitude }).eq("id", listingId).eq("user_id", auth.user.id);
         if (locationUpdate.error) console.warn("LoadLink location coordinates could not be attached", locationUpdate.error.message);
@@ -255,13 +279,22 @@ export default function PostContractPage() {
                 <Field label="Contact person"><input type="text" value={contactName} onChange={e=>setContactName(e.target.value)} placeholder="Full name" className={input}/></Field>
                 <Field label="Contact number"><input value={contact} onChange={e=>setContact(e.target.value)} inputMode="tel" autoComplete="tel" placeholder="0821234567" className={input}/></Field>
               </div>
+              <div className={`rounded-[16px] border p-3 ${darkMode?"border-white/15":"border-black/10"}`}>
+                <label className="block text-xs font-bold">Business cover photo — optional
+                  <span className="mt-1 block text-[11px] font-normal opacity-60">Shown with your business details on this contract. No image is displayed if skipped.</span>
+                  <input type="file" accept="image/png,image/jpeg,image/webp" onChange={chooseBusinessCover} className="mt-3 block w-full text-xs"/>
+                </label>
+                {businessCoverPreview?<div className="mt-3"><LoadLinkImage src={businessCoverPreview} alt="Business cover preview" className="h-24 w-full rounded-lg object-cover"/>
+                  <button type="button" onClick={()=>{setBusinessCover(null);setBusinessCoverPreview("")}} className="mt-2 text-xs font-bold underline">Remove image</button>
+                </div>:null}
+              </div>
             </div>:null}
             {step === 3 ? <><h2 className="text-2xl font-black">Contract scope</h2><p className={`mt-2 text-xs font-semibold ${muted}`}>Describe the transport work, vehicles and other requirements in the scope below.</p><div className="mt-5 grid gap-4"><Field label="Contract title"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. 12-month side tipper transport contract" className={input} /></Field><Field label="Type of contract"><select value={contractType} onChange={(e) => setContractType(e.target.value as ContractType | "")} className={input} aria-label="Type of contract" required style={{ colorScheme: darkMode ? "dark" : "light" }}><option value="">Select a contract type</option>{CONTRACT_TYPES.map((item) => <option value={item} key={item}>{item}</option>)}</select></Field><Field label="Truck, trailer or specialist equipment needed — optional"><input value={equipmentNeeded} onChange={e=>setEquipmentNeeded(e.target.value)} placeholder="e.g. side tipper, flatbed trailer, refrigerated unit" className={input}/></Field>
               <p className={`text-xs leading-5 ${muted}`}>Specify equipment needed to carry out this contract, including trailers or mobile units. This is not a separate services listing.</p>
               <Field label="Scope and requirements"><textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Routes, cargo/service, capacity, compliance requirements, number of units and what operators need to deliver" className={`${input} min-h-36 resize-y py-4`} /></Field></div></> : null}
             {step === 4 ? <><h2 className="text-2xl font-black">Timeline and location</h2><p className={`mt-2 text-xs font-semibold ${muted}`}>Set the operating area and how long/frequently the contract will run.</p><div className="mt-5 grid gap-4 sm:grid-cols-2"><Field label="Operating location"><ExactListingLocationField value={city} onChange={setCity} onCoordinatesChange={setCoordinates} darkMode={darkMode} className={input} id="loadlink-contract-operating-location" /></Field><Field label="Contract starts"><LoadLinkDatePicker value={startDate} onChange={setStartDate} min={today()} darkMode={darkMode} ariaLabel="Contract start date" /></Field><Field label="Duration"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="e.g. 12 months" className={input} /></Field><Field label="Frequency"><input type="text" inputMode="text" data-loadlink-text-keyboard="true" value={frequency} onChange={(e) => setFrequency(e.target.value)} placeholder="e.g. 5 trips per week" className={input} /></Field></div></> : null}
             {step === 5 ? <><h2 className="text-2xl font-black">Commercial details</h2><p className={`mt-2 text-xs font-semibold ${muted}`}>Give operators enough information to decide whether the opportunity fits.</p><div className="mt-5 grid gap-4"><Field label="Rate / budget / tender terms"><input value={rate} onChange={(e) => setRate(e.target.value)} inputMode="decimal" placeholder="e.g. R28/km, R180 000/month or tender terms" className={input} /></Field><label className="flex items-start gap-3 rounded-xl border border-current/15 p-3 text-sm font-semibold"><input type="checkbox" className="mt-1" checked={acceptOffers} onChange={e=>setAcceptOffers(e.target.checked)}/><span>Accept formal transport offers<span className="mt-1 block text-xs font-normal opacity-65">Transporters can quote through LoadLink Messages.</span></span></label><PosterTransportPriceGuide darkMode={darkMode} contract onUseRate={setRate}/><Field label="Application or decision deadline — optional"><LoadLinkDatePicker value={applicationDeadline} onChange={setApplicationDeadline} min={today()} darkMode={darkMode} ariaLabel="Application or decision deadline" /></Field><label className={`block rounded-[20px] border p-4 ${darkMode ? "border-white/12" : "border-black/8"}`}><span className="text-xs font-black">Supporting photos — optional</span><span className={`mt-1 block text-[10px] font-semibold ${muted}`}>Up to 5 relevant images.</span><input type="file" accept="image/*" multiple onChange={choosePhotos} className="mt-3 block w-full text-xs" /></label>{previews.length ? <div className="grid grid-cols-3 gap-2">{previews.map((url, index) => <LoadLinkImage key={url} src={url} alt={`Selected contract photo ${index + 1}`} className="aspect-square w-full rounded-[16px] object-cover" />)}</div> : null}</div></> : null}
-            {step === 6 ? <><h2 className="text-2xl font-black">Review contract</h2><p className={`mt-2 text-xs font-semibold ${muted}`}>Check the opportunity before submitting it to LoadLink.</p><div className={`mt-5 divide-y rounded-[20px] border ${darkMode ? "divide-white/10 border-white/10" : "divide-black/8 border-black/8"}`}><Review label="Company" value={companyName} /><Review label="Contact" value={`${contactName} · ${contact}`} /><Review label="Contract" value={title} /><Review label="Type" value={contractType} /><Review label="Start" value={`${startDate} · ${duration}`} /><Review label="Frequency" value={frequency} /><Review label="Location" value={city} /><Review label="Distance" value={coordinates ? "Exact coordinates enabled" : "City / province only"} /><Review label="Terms" value={rate || "Not specified"} /><Review label="Equipment" value={equipmentNeeded || "Not specified"} /><Review label="Formal offers" value={acceptOffers?"Accepting offers":"Not accepting offers"}/></div></> : null}
+            {step === 6 ? <><h2 className="text-2xl font-black">Review contract</h2><p className={`mt-2 text-xs font-semibold ${muted}`}>Check the opportunity before submitting it to LoadLink.</p><div className={`mt-5 divide-y rounded-[20px] border ${darkMode ? "divide-white/10 border-white/10" : "divide-black/8 border-black/8"}`}><Review label="Company" value={companyName} /><Review label="Contact" value={`${contactName} · ${contact}`} /><Review label="Contract" value={title} /><Review label="Type" value={contractType} /><Review label="Start" value={`${startDate} · ${duration}`} /><Review label="Frequency" value={frequency} /><Review label="Location" value={city} /><Review label="Distance" value={coordinates ? "Exact coordinates enabled" : "City / province only"} /><Review label="Terms" value={rate || "Not specified"} /><Review label="Equipment" value={equipmentNeeded || "Not specified"} /><Review label="Formal offers" value={acceptOffers?"Accepting offers":"Not accepting offers"}/><Review label="Business photo" value={businessCover?"Included":"Not added"}/></div></> : null}
             {message ? <div role="status" className={`mt-5 rounded-[17px] border px-4 py-3 text-xs font-bold ${darkMode ? "border-white/14 bg-white/[.05]" : "border-black/10 bg-black/[.035]"}`}>{message}</div> : null}
             <div className="mt-6 flex flex-wrap gap-2">{intentChosen ? <LoadLinkContractCancel20260826 darkMode={darkMode} /> : null}{step > 1 ? <button type="button" onClick={() => { setMessage(""); setStep((value) => value - 1); }} className={`h-12 rounded-[16px] border px-5 text-xs font-black ${darkMode ? "border-white/14" : "border-black/10"}`}>Back</button> : null}{step < 6 ? <button type="button" onClick={next} className={darkMode ? "h-12 flex-1 rounded-[16px] bg-white text-sm font-black text-black" : "h-12 flex-1 rounded-[16px] bg-black text-sm font-black text-white"}>Continue</button> : <button type="submit" disabled={saving || submitted} className={darkMode ? "h-12 flex-1 rounded-[16px] bg-white text-sm font-black text-black disabled:opacity-45" : "h-12 flex-1 rounded-[16px] bg-black text-sm font-black text-white disabled:opacity-45"}>{submitted ? "Submitted" : saving ? "Submitting…" : "Submit contract"}</button>}</div>
           </section>
