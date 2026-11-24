@@ -2042,7 +2042,7 @@ ${message}` : message)}
                 <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black uppercase ${starterPost?.listing_kind==="contract"?"bg-[#ddf5e4] text-[#267849]":"bg-black text-white"}`}>{starterPost?.listing_kind==="contract"?"Contract":"Job"}</span>
                 <p className="min-w-0 flex-1 truncate text-[11px] font-semibold">{selectedConversation.listing_title}</p>
                 {dueForClosure?<button type="button" onClick={()=>setChatExitPrompt({listingId:selectedConversation.listing_id,threadId:selectedConversation.id,title:selectedConversation.listing_title,listingKind:starterPost?.listing_kind==="contract"?"contract":"job"})} className="shrink-0 rounded-lg border border-[#efb919] px-2 py-1.5 text-[10px] font-bold text-[#936b00]">Confirm completed</button>:null}
-                {workCompleted?<span className="shrink-0 rounded-full bg-[#daf3df] px-2 py-1 text-[10px] font-bold text-[#247c45]">Completed</span>:null>
+                {workCompleted?<span className="shrink-0 rounded-full bg-[#daf3df] px-2 py-1 text-[10px] font-bold text-[#247c45]">Completed</span>:null}
                 <Link href={`/listing/${selectedConversation.listing_id}`} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[9px] font-semibold uppercase ${darkMode ? "border-white/15 text-white/75" : "border-black/10 text-black/70"}`}>View</Link>
               </div>
 
