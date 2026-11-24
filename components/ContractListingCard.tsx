@@ -27,7 +27,7 @@ function relativeCreated(value:string|null|undefined){
  return days===0?"Posted today":days<30?`Posted ${days} day${days===1?"":"s"} ago`:new Date(ms).toLocaleDateString("en-ZA",{day:"numeric",month:"short",year:"numeric"});
 }
 function contractDescription(value:string|null|undefined){
- return String(value||"").split(/\r?\n/).filter(line=>!/^Listing type:|^Vehicle needed:|^Needed by:/i.test(line)).join("\n").trim();
+ return String(value||"").split(/\r?\n/).map(line=>line.trim()).filter(line=>line&&!/^(?:Listing type|Vehicle needed|Needed by|Priority|Company|Contact person|Contact number|Phone|Contract type|Contract duration|Duration|Frequency|Application \/ decision deadline):/i.test(line)).join("\n\n").trim();
 }
 function startLabel(value:string|null|undefined){
  if(!value)return "";
@@ -91,10 +91,7 @@ export default function ContractListingCard({row,darkMode,expandedDefault=false}
      {!expandedDefault?<Link href={`/contracts/${row.id}`} className="mt-4 inline-flex text-xs font-bold underline underline-offset-4">Open contract page</Link>:null}
     </div>
    </details>
-   <div className="mt-4 grid grid-cols-2 gap-2">
-    <button type="button" onClick={()=>setApplyOpen(true)} className="flex min-h-12 items-center justify-center bg-[#f6b800] px-2 text-center text-sm font-black text-black">Apply with profile</button>
-    <Link href={`/messages?listing=${encodeURIComponent(row.id)}`} className={`flex min-h-12 items-center justify-center border px-2 text-center text-sm font-bold ${darkMode?"border-white/15":"border-black/15"}`}>Message poster</Link>
-   </div>
+   <button type="button" onClick={()=>setApplyOpen(true)} className="mt-3 flex min-h-12 w-full items-center justify-center bg-[#f6b800] px-4 text-center text-sm font-black text-black">Apply with LoadLink profile</button>
    <div className={`mt-4 grid grid-cols-2 overflow-hidden border ${darkMode?"border-white/10":"border-black/10"}`}>
     <button type="button" onClick={()=>void share()} className={`flex min-h-12 items-center justify-center border-r text-xs font-black uppercase ${darkMode?"border-white/10":"border-black/10"}`}>Share</button>
     <button type="button" onClick={()=>setReportOpen(true)} className="min-h-12 text-xs font-black uppercase text-red-500">Report</button>
