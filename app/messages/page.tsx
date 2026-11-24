@@ -419,10 +419,12 @@ export default function MessagesPage(){
     const thread=params.get("driverThread")||"";
     setDriverRoute(profile||thread||params.has("driverInbox")?{profile,thread}:null);
   },[]);
-  return driverRoute?<DriverMessagesInbox profileId={driverRoute.profile} threadId={driverRoute.thread}/>:<ListingMessagesPage/>;
+  function openDriverThread(id:string){setDriverRoute({profile:"",thread:id});window.history.replaceState({},"",`/messages?driverThread=${encodeURIComponent(id)}`)}
+  return driverRoute?<DriverMessagesInbox profileId={driverRoute.profile} threadId={driverRoute.thread}/>:<ListingMessagesPage onOpenDriverThread={openDriverThread}/>;
 }
 
-function ListingMessagesPage() {
+type DriverInboxRow={id:string;driver_profile_id:string;driver_user_id:string;enquirer_user_id:string;driver_name:string;enquirer_name:string;updated_at:string;blocked:boolean};
+function ListingMessagesPage({onOpenDriverThread}:{onOpenDriverThread:(id:string)=>void}) {
   // LOADLINK V2.5.4 SESSION WALLPAPER
   useEffect(() => {
     const count = 10;
@@ -458,6 +460,9 @@ function ListingMessagesPage() {
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [starterPost, setStarterPost] = useState<(PostContext & { id: string }) | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [driverThreads,setDriverThreads]=useState<DriverInboxRow[]>([]);
+  const [currentUserId,setCurrentUserId]=useState("");
+  const [listingKinds,setListingKinds]=useState<Record<string,"job"|"contract">>({});
   const [selectedId, setSelectedId] = useState("");
   const [quotePermissions,setQuotePermissions]=useState<Record<string,boolean>>({});
   const [chatExitPrompt,setChatExitPrompt]=useState<{listingId:string;threadId:string;title:string;listingKind:"job"|"contract"}|null>(null);
@@ -805,6 +810,39 @@ function ListingMessagesPage() {
     });
   }, [conversations, folder, query]);
 
+  useEffect(()=>{
+    let active=true;
+    const refresh=async()=>{
+      const {data:{user}}=await supabase.auth.getUser();
+      if(!active||!user)return;
+      setCurrentUserId(user.id);
+      const {data}=await supabase.from("driver_message_threads").select("id,driver_profile_id,driver_user_id,enquirer_user_id,driver_name,enquirer_name,updated_at,blocked").order("updated_at",{ascending:false}).limit(100);
+      if(active&&data)setDriverThreads(data as DriverInboxRow[]);
+    };
+    void refresh();
+    const timer=window.setInterval(()=>{if(document.visibilityState==="visible")void refresh()},30000);
+    return()=>{active=false;window.clearInterval(timer)};
+  },[]);
+  useEffect(()=>{
+    let active=true;
+    const ids=[...new Set(conversations.map(x=>x.listing_id))].filter(Boolean).slice(0,120);
+    if(!ids.length)return;
+    void supabase.from("job_listings").select("id,listing_kind").in("id",ids).then(({data})=>{
+      if(!active||!data)return;
+      const kinds:Record<string,"job"|"contract">={};
+      for(const r of data){kinds[String(r.id)]=r.listing_kind==="contract"?"contract":"job"}
+      setListingKinds(kinds);
+    });
+    return()=>{active=false};
+  },[conversations]);
+  const unifiedInboxItems=useMemo(()=>{
+    const listingItems=visibleConversations.map(conversation=>({kind:"listing" as const,conversation,time:Date.parse(conversation.last_message_at||"")||0}));
+    const search=query.trim().toLowerCase();
+    const driverItems=folder==="inbox"?driverThreads.filter(t=>
+      !search||[t.driver_name,t.enquirer_name,"driver"].join(" ").toLowerCase().includes(search))
+      .map(thread=>({kind:"driver" as const,thread,time:Date.parse(thread.updated_at||"")||0})):[];
+    return [...listingItems,...driverItems].sort((a,b)=>b.time-a.time);
+  },[visibleConversations,driverThreads,folder,query]);
   const archivedCount = useMemo(
     () => conversations.filter((conversation) => Boolean(conversation.archived)).length,
     [conversations],
@@ -1825,7 +1863,6 @@ ${message}` : message)}
                 className={`${styles.inboxSearch} h-12 w-full min-w-0 rounded-full border border-current/10 bg-current/[.03] px-4 text-sm font-medium outline-none focus:border-[#f6b800]`}
               />
             </label>
-            <a href="/messages?driverInbox=1" className="mt-3 inline-flex min-h-9 items-center rounded-full border border-current/15 px-4 text-xs font-bold">Driver conversations</a>
             <div data-loadlink-folder-tabs="v2619-fixed" className="loadlink-folder-tabs mt-3 grid min-w-0 grid-cols-[0.8fr_1.35fr_0.9fr] gap-2" role="tablist" aria-label="Conversation folders">
               <button type="button" role="tab" aria-selected={folder === "inbox"} onClick={() => { setFolder("inbox"); setQuery(""); }} className={`min-w-0 whitespace-nowrap rounded-xl border px-2 py-2.5 text-[10px] font-black transition ${folder === "inbox" ? "border-[#f6b800] bg-[#f6b800] text-black shadow-sm" : darkMode ? "border-white/12 bg-[#0b0b0b] text-white/62" : "border-black/10 bg-white text-black/62"}`}>Inbox</button>
               <button type="button" role="tab" aria-selected={folder === "potential"} onClick={() => { setFolder("potential"); setQuery(""); }} className={`min-w-0 whitespace-nowrap rounded-xl border px-2 py-2.5 text-[10px] font-black transition ${folder === "potential" ? "border-[#f6b800] bg-[#f6b800] text-black shadow-sm" : darkMode ? "border-white/12 bg-[#0b0b0b] text-white/62" : "border-black/10 bg-white text-black/62"}`}>Potential Deals{potentialDealCount ? <span className="ml-1.5 opacity-65">{potentialDealCount}</span> : null}</button>
@@ -1834,8 +1871,22 @@ ${message}` : message)}
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto">
-            {visibleConversations.length ? (
-              visibleConversations.map((conversation) => {
+            {unifiedInboxItems.length ? (
+              unifiedInboxItems.map((item)=>{
+                if(item.kind==="driver"){
+                  const t=item.thread;
+                  const other=t.driver_user_id===currentUserId?t.enquirer_name:t.driver_name;
+                  return <button key={`driver-${t.id}`} type="button" onClick={()=>onOpenDriverThread(t.id)}
+                    className={`${styles.conversationRow} flex w-full items-center gap-3 border-b border-black/5 bg-white p-4 text-left transition hover:bg-[#f8f6f0]`}>
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-black text-base font-black text-[#f6b800]">{other.charAt(0).toUpperCase()}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center justify-between gap-2"><strong className="truncate text-sm font-semibold">{other}</strong><span className="text-[10px] text-black/40">{formatConversationDate(t.updated_at)}</span></span>
+                      <span className="mt-1 inline-flex rounded-full bg-[#fff0d5] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-[#915700]">Driver</span>
+                      <span className="mt-1 block truncate text-xs text-black/50">LoadLink driver conversation</span>
+                    </span>
+                  </button>
+                }
+                const conversation=item.conversation;
                 const active = conversation.id === selectedId;
                 return (
                   <button
@@ -1863,8 +1914,9 @@ ${message}` : message)}
                           {formatConversationDate(conversation.last_message_at)}
                         </span>
                       </span>
-                      <span className="mt-1 block truncate text-xs font-medium opacity-55">
-                        {conversation.listing_title}
+                      <span className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${(listingKinds[conversation.listing_id]==="contract"||/contract/i.test(conversation.listing_title))?"bg-[#dcf5e4] text-[#247e48]":"bg-black text-white"}`}>{(listingKinds[conversation.listing_id]==="contract"||/contract/i.test(conversation.listing_title))?"Contract":"Job"}</span>
+                        <span className="min-w-0 truncate text-xs font-medium opacity-55">{conversation.listing_title}</span>
                       </span>
                       <span className="mt-1 flex items-center justify-between gap-3">
                         <span
@@ -1978,7 +2030,7 @@ ${message}` : message)}
 
               <div className={`loadlink-listing-context flex min-h-[40px] items-center gap-2 border-b px-3 py-1.5 md:px-5 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black text-[#f6b800]"><BriefcaseIcon /></span>
-                <p className="min-w-0 flex-1 truncate text-[11px] font-semibold">{selectedConversation.listing_title}</p>
+                <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black uppercase ${starterPost?.listing_kind==="contract"?"bg-[#ddf5e4] text-[#267849]":"bg-black text-white"}`}>{starterPost?.listing_kind==="contract"?"Contract":"Job"}</span><p className="min-w-0 flex-1 truncate text-[11px] font-semibold">{selectedConversation.listing_title}</p>
                 <Link href={`/listing/${selectedConversation.listing_id}`} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[9px] font-semibold uppercase ${darkMode ? "border-white/15 text-white/75" : "border-black/10 text-black/70"}`}>View</Link>
               </div>
 
