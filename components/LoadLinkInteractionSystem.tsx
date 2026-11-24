@@ -156,6 +156,24 @@ export default function LoadLinkInteractionSystem() {
   const [suggestionTarget, setSuggestionTarget] = useState<SuggestionTarget | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [shownMonth, setShownMonth] = useState(() => monthStart(new Date()));
+  const [calendarViewportHeight,setCalendarViewportHeight] = useState(560);
+
+  useEffect(()=>{
+    if(!dateTarget)return;
+    const update=()=>{
+      const viewport=window.visualViewport;
+      setCalendarViewportHeight(Math.round(viewport?.height||window.innerHeight));
+    };
+    update();
+    window.addEventListener("resize",update);
+    window.visualViewport?.addEventListener("resize",update);
+    window.visualViewport?.addEventListener("scroll",update);
+    return()=>{
+      window.removeEventListener("resize",update);
+      window.visualViewport?.removeEventListener("resize",update);
+      window.visualViewport?.removeEventListener("scroll",update);
+    };
+  },[dateTarget]);
 
 
   useEffect(() => {
@@ -517,30 +535,41 @@ export default function LoadLinkInteractionSystem() {
       ) : null}
 
       {dateTarget ? (
-        <div data-loadlink-calendar-sheet="true" className="fixed inset-0 z-[2147483590] flex items-center justify-center bg-black/32 p-4 backdrop-blur-[12px]" role="dialog" aria-modal="true" aria-labelledby="loadlink-calendar-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setDateTarget(null); }}>
-          <section className={`w-full max-w-[520px] overflow-y-auto rounded-[30px] border p-5 ${darkMode ? "text-white" : "text-black"}`}>
-            <div className="flex items-start justify-between gap-4">
-              <div><p className={`text-[10px] font-black uppercase tracking-[.08em] ${darkMode ? "text-[#f6b800]" : "text-[#8f6900]"}`}>{dateTarget.label}</p><h2 id="loadlink-calendar-title" className="mt-1 text-[26px] font-black tracking-[-.035em]">Choose a date</h2></div>
-              <button type="button" onClick={() => setDateTarget(null)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-current/15" aria-label="Close calendar"><LoadLinkIcon name="close" size={16} /></button>
+        <div data-loadlink-calendar-readable="true"
+          className="fixed inset-0 z-[2147483590] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 backdrop-blur-[9px]"
+          role="dialog" aria-modal="true" aria-labelledby="loadlink-calendar-title"
+          onMouseDown={(event)=>{if(event.target===event.currentTarget)setDateTarget(null)}}>
+          <section className={`relative flex w-full max-w-[500px] min-h-0 flex-col overflow-hidden rounded-[24px] border shadow-[0_25px_75px_rgba(0,0,0,.22)] ${darkMode?"border-white/15 bg-[#151515] text-white":"border-white/85 bg-[#faf9f6] text-black"}`}
+            style={{maxHeight:Math.max(270,calendarViewportHeight-24)}}>
+            <div className="flex shrink-0 items-start justify-between gap-4 px-4 pb-2 pt-4 sm:px-5">
+              <div><p className={`text-[10px] font-black uppercase tracking-[.10em] ${darkMode?"text-[#f6b800]":"text-[#8f6900]"}`}>{dateTarget.label}</p><h2 id="loadlink-calendar-title" className="mt-1 text-[23px] font-black tracking-[-.03em]">Choose a date</h2></div>
+              <button type="button" onClick={()=>setDateTarget(null)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-current/15" aria-label="Close calendar"><LoadLinkIcon name="close" size={16}/></button>
             </div>
-            <div className="mt-5 flex items-center justify-between gap-3">
-              <button type="button" onClick={() => setShownMonth((current) => monthStart(new Date(current.getFullYear(), current.getMonth() - 1, 1)))} className="flex h-10 w-10 items-center justify-center rounded-full border border-current/15" aria-label="Previous month"><LoadLinkIcon name="chevronLeft" size={17} /></button>
-              <strong className="text-sm font-black">{shownMonth.toLocaleDateString("en-ZA", { month: "long", year: "numeric" })}</strong>
-              <button type="button" onClick={() => setShownMonth((current) => monthStart(new Date(current.getFullYear(), current.getMonth() + 1, 1)))} className="flex h-10 w-10 items-center justify-center rounded-full border border-current/15" aria-label="Next month"><LoadLinkIcon name="chevronRight" size={17} /></button>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2 sm:px-5">
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <button type="button" onClick={()=>setShownMonth(current=>monthStart(new Date(current.getFullYear(),current.getMonth()-1,1)))} className="flex h-9 w-9 items-center justify-center rounded-full border border-current/15" aria-label="Previous month"><LoadLinkIcon name="chevronLeft" size={17}/></button>
+                <strong className="text-[14px] font-black">{shownMonth.toLocaleDateString("en-ZA",{month:"long",year:"numeric"})}</strong>
+                <button type="button" onClick={()=>setShownMonth(current=>monthStart(new Date(current.getFullYear(),current.getMonth()+1,1)))} className="flex h-9 w-9 items-center justify-center rounded-full border border-current/15" aria-label="Next month"><LoadLinkIcon name="chevronRight" size={17}/></button>
+              </div>
+              <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[9px] font-black uppercase opacity-50">{["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(day=><span key={day} className="py-1">{day}</span>)}</div>
+              <div className="grid grid-cols-7 gap-1">
+                {days.map((date,index)=>{
+                  if(!date)return <span key={`blank-${index}`} className="h-9"/>;
+                  const value=isoDate(date);
+                  const disabled=Boolean((minDate&&date<minDate)||(maxDate&&date>maxDate));
+                  return <button key={value} type="button" aria-pressed={value===selectedDate} disabled={disabled}
+                    onClick={()=>setSelectedDate(value)}
+                    className={`h-9 min-w-0 rounded-[10px] text-xs font-bold focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#f6b800] disabled:opacity-20 ${selectedDate===value?"bg-[#f6b800] text-black":darkMode?"bg-white/[.06]":"bg-black/[.035]"}`}>{date.getDate()}</button>;
+                })}
+              </div>
             </div>
-            <div className="mt-5 grid grid-cols-7 gap-1 text-center text-[9px] font-black uppercase opacity-45">{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => <span key={day}>{day}</span>)}</div>
-            <div className="mt-2 grid grid-cols-7 gap-1">
-              {days.map((date, index) => {
-                if (!date) return <span key={`blank-${index}`} className="aspect-square" />;
-                const value = isoDate(date);
-                const disabled = Boolean((minDate && date < minDate) || (maxDate && date > maxDate));
-                const selected = value === selectedDate;
-                return <button key={value} type="button" disabled={disabled} onClick={() => setSelectedDate(value)} className={`aspect-square rounded-[13px] text-xs font-black disabled:opacity-20 ${selected ? "bg-[#f6b800] text-black" : darkMode ? "bg-white/[.04]" : "bg-white/[.32]"}`}>{date.getDate()}</button>;
-              })}
-            </div>
-            <div className="mt-5 flex gap-2">
-              <button type="button" onClick={() => { const now = new Date(); const value = isoDate(now); if ((!minDate || now >= minDate) && (!maxDate || now <= maxDate)) { setSelectedDate(value); setShownMonth(monthStart(now)); } }} className="h-11 rounded-[15px] border border-current/15 px-4 text-xs font-black uppercase">Today</button>
-              <button type="button" onClick={commitDate} disabled={!selectedDate} className="h-11 flex-1 rounded-[15px] bg-[#f6b800] px-4 text-xs font-black uppercase text-black disabled:opacity-40">Choose date</button>
+            <div className={`flex shrink-0 gap-2 border-t px-4 pb-4 pt-3 sm:px-5 ${darkMode?"border-white/10 bg-[#151515]":"border-black/10 bg-[#faf9f6]"}`}>
+              <button type="button"
+                onClick={()=>{const now=new Date();const value=isoDate(now);if((!minDate||value>=isoDate(minDate))&&(!maxDate||value<=isoDate(maxDate))){setSelectedDate(value);setShownMonth(monthStart(now));}}}
+                className="min-h-11 rounded-xl border border-current/15 px-4 text-xs font-bold">Today</button>
+              <button data-loadlink-calendar-confirm="true" type="button" onClick={commitDate}
+                disabled={!selectedDate||(!!dateTarget.min&&selectedDate<dateTarget.min)||(!!dateTarget.max&&selectedDate>dateTarget.max)}
+                className="min-h-11 flex-1 rounded-xl bg-[#f6b800] px-4 text-xs font-black text-black disabled:opacity-40">Choose date</button>
             </div>
           </section>
         </div>
