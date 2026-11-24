@@ -70,7 +70,6 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
   const [need,setNeed]=useState<DriverNeed>("");
   const [location,setLocation]=useState("");
   const [licence,setLicence]=useState("");
-  const [vehicle,setVehicle]=useState("");
   const [minExperience,setMinExperience]=useState(0);
   const [availableOnly,setAvailableOnly]=useState(false);
   const [reviewTarget, setReviewTarget] = useState<Driver | null>(null);
@@ -128,7 +127,6 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
       if(term && ![row.full_name,row.headline,row.bio,row.city,row.province,row.licence_code,...(row.vehicle_types||[])].join(" ").toLowerCase().includes(term))return false;
       if(location.trim()&&!([row.city,row.province].join(" ").toLowerCase().includes(location.trim().toLowerCase())))return false;
       if(licence && !String(row.licence_code||"").toUpperCase().includes(licence))return false;
-      if(vehicle && !(row.vehicle_types||[]).some(x=>x.toLowerCase().includes(vehicle.toLowerCase())))return false;
       if(Number(row.years_experience||0)<minExperience)return false;
       if(availableOnly && availabilityScore(row.availability)<2)return false;
       if(need&&needScore(row,need)===0)return false;
@@ -144,8 +142,8 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
       ||Number(b.average_rating||0)-Number(a.average_rating||0)
       ||Number(b.years_experience||0)-Number(a.years_experience||0)
     );
-  },[allDrivers,search,need,location,licence,vehicle,minExperience,availableOnly,sort]);
-  useEffect(()=>{setPage(1)},[search,need,location,licence,vehicle,minExperience,availableOnly,sort]);
+  },[allDrivers,search,need,location,licence,minExperience,availableOnly,sort]);
+  useEffect(()=>{setPage(1)},[search,need,location,licence,minExperience,availableOnly,sort]);
 
   const drivers = fullPage ? sortedDrivers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : sortedDrivers.slice(0, 4);
   const pageCount = Math.max(1, Math.ceil(sortedDrivers.length / PAGE_SIZE));
@@ -185,37 +183,31 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
             <div className={styles.searchControls}>
               <button type="button" aria-expanded={filtersOpen} onClick={()=>setFiltersOpen(v=>!v)} className={styles.filtersButton}>
                 <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M8 14v6"/></svg>
-                <span>Filters{need||location||licence||vehicle||minExperience||availableOnly?" · Active":""}</span>
+                <span>Filters{need||location||licence||minExperience||availableOnly?" · Active":""}</span>
               </button>
               <button type="submit" className={styles.searchButton}>Search drivers</button>
             </div>
           </form>
-          {filtersOpen?<div className={styles.filterPanel}>
+          {filtersOpen?<div className={styles.filterPanel} aria-label="Driver filters">
             <div className={styles.filterFields}>
               <label className={styles.filterField}><span>Work type</span><select value={need} onChange={e=>setNeed(e.target.value as DriverNeed)}>
-               {NEEDS.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}
+                {NEEDS.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}
               </select></label>
               <div className={styles.filterField}><label htmlFor="loadlink-driver-location">Location</label>
-                <SouthAfricaLocationInput id="loadlink-driver-location" value={location} onChange={setLocation} darkMode={darkMode}
-                  placeholder="City or province" ariaLabel="Search drivers by city or province" className={styles.locationInput}/>
+                <SouthAfricaLocationInput id="loadlink-driver-location" value={location} onChange={setLocation}
+                  darkMode={darkMode} placeholder="City or province" ariaLabel="Search drivers by location" className={styles.locationInput}/>
               </div>
               <label className={styles.filterField}><span>Licence</span><select value={licence} onChange={e=>setLicence(e.target.value)}>
-               <option value="">Any licence</option><option value="EC">EC / Code 14</option><option value="C1">C1</option><option value="C">C</option><option value="EB">EB</option><option value="B">B</option>
+                <option value="">All licences</option><option value="EC">Code 14 / EC</option>
+                <option value="C1">C1</option><option value="C">C</option><option value="EB">EB</option><option value="B">B</option>
               </select></label>
+              <label className={styles.filterField}><span>Experience</span><select value={minExperience} onChange={e=>setMinExperience(Number(e.target.value))}>
+                {[0,1,3,5,10].map(x=><option key={x} value={x}>{x===0?"Any experience":`${x}+ years`}</option>)}
+              </select></label>
+              <label className={styles.filterCheck}><input type="checkbox" checked={availableOnly} onChange={e=>setAvailableOnly(e.target.checked)}/> Available now</label>
             </div>
-            <details className={styles.moreFilters}><summary>More options</summary>
-              <div className={styles.filterFields}>
-                <label className={styles.filterField}><span>Vehicle type</span><select value={vehicle} onChange={e=>setVehicle(e.target.value)}>
-                 <option value="">Any vehicle</option>{["Truck","Tipper","Tanker","Bus","Van","Bakkie"].map(x=><option key={x} value={x}>{x}</option>)}
-                </select></label>
-                <label className={styles.filterField}><span>Experience</span><select value={minExperience} onChange={e=>setMinExperience(Number(e.target.value))}>
-                 {[0,1,3,5,10].map(x=><option key={x} value={x}>{x===0?"Any experience":`${x}+ years`}</option>)}
-                </select></label>
-                <label className={styles.filterCheck}><input type="checkbox" checked={availableOnly} onChange={e=>setAvailableOnly(e.target.checked)}/> Available now</label>
-              </div>
-            </details>
             <div className={styles.filterFooter}>
-              <button type="button" onClick={()=>{setNeed("");setLocation("");setLicence("");setVehicle("");setMinExperience(0);setAvailableOnly(false);setSearch("")}}>Clear filters</button>
+              <button type="button" onClick={()=>{setNeed("");setLocation("");setLicence("");setMinExperience(0);setAvailableOnly(false);setSearch("")}}>Clear all</button>
               <button type="button" onClick={()=>setFiltersOpen(false)}>Show {sortedDrivers.length} drivers</button>
             </div>
           </div>:null}
@@ -234,30 +226,35 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
           return <article className={styles.directoryCard} data-loadlink-refined-driver-card="true" key={driver.id}>
             <div className={styles.cardTop}>
               <div className={styles.portrait}>
-                {driver.profile_image_url?<LoadLinkImage src={driver.profile_image_url} alt={`${driver.full_name} profile photo`} className="h-full w-full object-cover"/>:<span>{initials(driver.full_name)}</span>}
+                {driver.profile_image_url?<LoadLinkImage src={driver.profile_image_url}
+                  alt={`${driver.full_name} profile photograph`} className="h-full w-full object-cover" />:<span>{initials(driver.full_name)}</span>}
               </div>
               <div className={styles.cardIdentity}>
-                <div className={styles.nameLine}>
-                  <h3>{driver.full_name}</h3>
-                  <span className={styles.approved}>Approved</span>
-                </div>
+                <span className={styles.approved}>APPROVED</span>
+                <h3 className={styles.driverName}>{driver.full_name}</h3>
                 <p className={styles.cardRole}>{driver.headline||"Professional driver"}</p>
-                <p className={styles.cardSummary}>{place||"Location on request"} · {driver.licence_code||"Licence on request"} · {Number(driver.years_experience||0)} yrs</p>
               </div>
+            </div>
+            <div className={styles.cardFacts}>
+              <span>{place||"South Africa"}</span>
+              <span>{driver.licence_code||"Licence on request"}</span>
+              <span>{Number(driver.years_experience||0)} {Number(driver.years_experience||0)===1?"year":"years"}</span>
             </div>
             <div className={styles.cardFoot}>
               <span className={styles.available}>{driver.availability||"Availability on request"}</span>
-              {count>0?<span className={styles.rating}>★ {rating.toFixed(1)} ({count})</span>:null}
+              {count>0?<span className={styles.rating}>★ {rating.toFixed(1)} · {count} review{count===1?"":"s"}</span>:null}
             </div>
             <div className={styles.cardActions}>
-              <button data-marketplace-action type="button" onClick={()=>setContactTarget(driver)} className={styles.cardContact}>Contact driver</button>
+              <button data-marketplace-action type="button" onClick={()=>setContactTarget(driver)}
+                className={styles.cardContact}>Contact driver</button>
             </div>
             <details className={styles.cardDetails}>
-              <summary>View details</summary>
+              <summary>View driver details</summary>
               <div className={styles.cardExpanded}>
                 <p><strong>Vehicle experience:</strong> {driver.vehicle_types?.join(", ")||"On request"}</p>
                 {driver.bio?<p className="mt-2 whitespace-pre-wrap">{driver.bio}</p>:null}
-                {driver.user_id?<button type="button" onClick={()=>setReviewTarget(driver)} className={styles.reviewButton}>Write a review</button>:null}
+                {driver.user_id?<button type="button" onClick={()=>setReviewTarget(driver)}
+                  className={styles.reviewButton}>Write a review</button>:null}
               </div>
             </details>
           </article>;
