@@ -8,6 +8,7 @@ import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import LoadLinkSiteFooter20260822 from "@/components/LoadLinkSiteFooter20260822";
 import LoadLinkHomepagePortalGrid20260822 from "@/components/LoadLinkHomepagePortalGrid20260822";
 import MarketplaceDiscovery from "@/components/MarketplaceDiscovery";
+import SmartPriceAssistant from "@/components/SmartPriceAssistant";
 import GoogleOneTap from "@/components/GoogleOneTap";
 import Link from "next/link";
 import { lazy, Suspense } from "react";
@@ -39,6 +40,7 @@ function HomeExperience() {
         </Suspense>
       </LoadLinkBoundary>
 
+      <LoadLinkBoundary name="smart price guide"><SmartPriceAssistant darkMode={darkMode}/></LoadLinkBoundary>
       <LoadLinkHomepagePortalGrid20260822 darkMode={darkMode} />
 
       <LoadLinkBoundary name="recent activity">

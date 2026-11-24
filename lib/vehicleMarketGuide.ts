@@ -96,3 +96,38 @@ export function comparableAskingPrices(
 export function formatZar(value: number): string {
   return new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(value).replace(/\u00a0/g, " ");
 }
+
+/** Uses only matching, publicly advertised LoadLink vehicle prices. No valuation is invented. */
+export type VehiclePriceSignal={label:"Underpriced"|"Good offer"|"Overpriced";median:number;expected:number;low:number;high:number;sampleSize:number;conditionAdjustment:number;mileageAdjustment:number};
+function normalisedMileage(description:string|null|undefined){
+ const source=fieldFromDescription(description,"Mileage").replace(/,/g,"").replace(/\s/g,"");
+ const match=source.match(/^\d{1,7}/);return match?Number(match[0]):null;
+}
+function conditionWeight(value:string){
+ const s=value.toLowerCase();
+ if(/new|excellent|immaculate/.test(s))return 1.07;
+ if(/very good/.test(s))return 1.045;
+ if(/needs|repair|damag|poor/.test(s))return .84;
+ if(/fair|average/.test(s))return .93;
+ return 1;
+}
+export function vehiclePriceSignal(rows:VehicleMarketRow[],row:VehicleMarketRow,override?:{condition?:string;mileage?:number|null;asking?:number|null}):VehiclePriceSignal|null{
+ const meta=vehicleMatchFields(row);
+ if(!meta.make||!meta.model)return null;
+ const comps=comparableAskingPrices(rows,meta.make,meta.model,meta.year?String(meta.year):"",row.id);
+ if(!comps||comps.sampleSize<3)return null;
+ const targetCondition=override?.condition||fieldFromDescription(row.description,"Condition");
+ const listedCondition=comps.listings.map(x=>conditionWeight(fieldFromDescription(x.description,"Condition")));
+ const baseline=listedCondition.reduce((a,b)=>a+b,0)/(listedCondition.length||1);
+ const conditionAdjustment=Math.max(.80,Math.min(1.13,conditionWeight(targetCondition)/baseline));
+ const targetMileage=override?.mileage??normalisedMileage(row.description);
+ const mileages=comps.listings.map(x=>normalisedMileage(x.description)).filter((v):v is number=>v!==null);
+ const medianKm=mileages.length>=3?mileages.sort((a,b)=>a-b)[Math.floor(mileages.length/2)]:null;
+ const mileageAdjustment=medianKm!==null&&targetMileage!==null?
+   Math.max(.89,Math.min(1.11,1+(medianKm-targetMileage)*0.00000022)):1;
+ const expected=comps.median*conditionAdjustment*mileageAdjustment;
+ const asking=override?.asking??advertisedSalePrice(row);
+ if(asking===null||asking<=0||!Number.isFinite(expected)||expected<=0)return null;
+ return {label:asking<expected*.85?"Underpriced":asking>expected*1.15?"Overpriced":"Good offer",
+ median:comps.median,expected,low:expected*.86,high:expected*1.14,sampleSize:comps.sampleSize,conditionAdjustment,mileageAdjustment};
+}

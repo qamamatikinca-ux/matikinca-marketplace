@@ -1,9 +1,9 @@
 "use client";
 import { useMemo, useState } from "react";
 import { estimateTrip,formatZar } from "@/lib/tripProfitability";
-type Props={darkMode:boolean;onUseRate:(value:string)=>void;contract?:boolean};
-export default function PosterTransportPriceGuide({darkMode,onUseRate,contract=false}:Props){
- const [expanded,setExpanded]=useState(false);
+type Props={darkMode:boolean;onUseRate:(value:string)=>void;contract?:boolean;initialExpanded?:boolean};
+export default function PosterTransportPriceGuide({darkMode,onUseRate,contract=false,initialExpanded=false}:Props){
+ const [expanded,setExpanded]=useState(initialExpanded);
  const [values,setValues]=useState({loadedKm:"",emptyKm:"",litresPer100Km:"",dieselRandPerLitre:"",tolls:"",driverExpenses:"",maintenanceRandPerKm:"",otherCosts:"",targetMarginPercent:"15"});
  const field=(key:keyof typeof values,label:string,placeholder:string)=><label className="block text-xs font-semibold">
    {label}<input className={`mt-1.5 h-11 w-full rounded-xl border px-3 text-sm focus:border-[#f6b800] ${darkMode?"border-white/20 bg-black text-white":"border-black/15 bg-white text-black"}`} type="number" inputMode="decimal" min="0" max={key==="targetMarginPercent"?"99":undefined} step="any" placeholder={placeholder} value={values[key]} onChange={e=>setValues(s=>({...s,[key]:e.target.value}))}/>

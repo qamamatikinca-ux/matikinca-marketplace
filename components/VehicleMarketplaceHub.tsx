@@ -1,6 +1,7 @@
 "use client";
 
 import LoadLinkSortControl from "@/components/LoadLinkSortControl";
+import {vehiclePriceSignal} from "@/lib/vehicleMarketGuide";
 
 
 import LoadLinkImage from "@/components/LoadLinkImage";
