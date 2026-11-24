@@ -29,7 +29,7 @@ export default function DriverContactDialog({ id, name, darkMode, onClose }: { i
   return <dialog ref={dialog} onCancel={onClose} onClose={onClose} aria-labelledby="driver-contact-title" className={`m-auto w-[calc(100%-2rem)] max-w-md rounded-3xl border p-6 shadow-2xl backdrop:bg-black/60 ${darkMode ? "border-white/15 bg-[#111] text-white" : "border-black/10 bg-white text-black"}`}>
     <h2 id="driver-contact-title" className="text-xl font-black">Contact {name}</h2>
     <p className="mt-2 text-sm opacity-65">Choose how you would like to get in touch about this driver profile.</p>
-    <Link href={`/messages?driver=${encodeURIComponent(id)}`} className="mt-5 block rounded-2xl bg-[#f6b800] p-4 text-center font-bold text-black">Text on LoadLink</Link>
+    <Link href={`/messages?driver=${encodeURIComponent(id)}`} className="loadlink-driver-contact-primary mt-5 block rounded-2xl bg-[#f6b800] p-4 text-center font-bold text-black">Text on LoadLink</Link>
     <button type="button" disabled={busy} onClick={() => void call()} className="mt-3 w-full rounded-2xl border border-current/20 p-4 font-bold disabled:opacity-50">{busy ? "Connecting…" : "Call driver"}</button>
     {error ? <p role="alert" className="mt-3 text-sm">{error}</p> : null}
     <button type="button" onClick={onClose} className="mt-4 w-full p-2 text-sm underline">Close</button>

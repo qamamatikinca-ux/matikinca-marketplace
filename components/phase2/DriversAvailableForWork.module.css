@@ -82,3 +82,10 @@
 .secondary{border-color:rgba(255,255,255,.4)}
 @media(max-width:850px){.grid{grid-template-columns:1fr}}
 @media(max-width:600px){.content{width:calc(100% - 32px);padding:24px 0 50px}.embedded .content{padding-top:26px}.embeddedHeading{font-size:26px}.filterFields{grid-template-columns:1fr;gap:12px}.driverName{font-size:17px}.portrait{width:62px;height:70px}.directoryCard{padding:15px}.resultsBar{flex-wrap:wrap}.resultsBar :global(.loadlink-sort-control){margin-left:auto}}
+
+.liveMatches{margin-top:5px;max-height:320px;overflow-y:auto;border:1px solid rgba(0,0,0,.1);border-radius:12px;background:inherit;padding:4px}
+.dark .liveMatches{border-color:rgba(255,255,255,.2)}
+.liveMatch{display:flex;width:100%;min-height:57px;align-items:center;gap:12px;padding:8px 11px;text-align:left;border-radius:9px;font-size:13px}
+.liveMatch:hover,.liveMatch:focus-visible{background:rgba(246,184,0,.12);outline:2px solid #f6b800;outline-offset:-2px}
+.matchAvatar,.matchInitials{width:39px;height:39px;flex:none;border-radius:10px;object-fit:cover}
+.matchInitials{display:flex;align-items:center;justify-content:center;background:#141414;color:#f6b800;font-weight:800}

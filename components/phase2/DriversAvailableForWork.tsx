@@ -66,6 +66,7 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<SortOption>("recommended");
   const [search,setSearch]=useState("");
+  const [showMatches,setShowMatches]=useState(false);
   const [filtersOpen,setFiltersOpen]=useState(false);
   const [need,setNeed]=useState<DriverNeed>("");
   const [location,setLocation]=useState("");
@@ -141,6 +142,13 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
   },[allDrivers,search,need,location,licence,minExperience,availableOnly,sort]);
   useEffect(()=>{setPage(1)},[search,need,location,licence,minExperience,availableOnly,sort]);
 
+  const nameMatches=useMemo(()=>{
+    const query=search.trim().toLowerCase();
+    if(!query)return [];
+    const starts=allDrivers.filter(row=>row.full_name.toLowerCase().split(/\s+/).some(word=>word.startsWith(query)));
+    const contains=allDrivers.filter(row=>!starts.includes(row)&&row.full_name.toLowerCase().includes(query));
+    return [...starts,...contains].slice(0,5);
+  },[allDrivers,search]);
   const drivers = fullPage ? sortedDrivers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : sortedDrivers.slice(0, 4);
   const pageCount = Math.max(1, Math.ceil(sortedDrivers.length / PAGE_SIZE));
 
@@ -155,12 +163,20 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
           <h2 className={styles.embeddedHeading}>{showHero?"Available drivers":"Approved drivers"}</h2>
         </div>
         {fullPage?<div data-loadlink-autotrader-search="true" className={styles.searchShell}>
-          <form onSubmit={e=>{e.preventDefault();document.getElementById("loadlink-driver-results")?.scrollIntoView({behavior:"smooth",block:"start"})}}>
+          <form onSubmit={e=>{e.preventDefault();setShowMatches(false);document.activeElement instanceof HTMLElement&&document.activeElement.blur();document.getElementById("loadlink-driver-results")?.scrollIntoView({behavior:"smooth",block:"start"})}}>
             <div className={styles.searchRow}>
               <span className={styles.searchSymbol}><svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.9"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.1 4.1" strokeLinecap="round"/></svg></span>
-              <input type="search" aria-label="Search professional drivers" value={search} onChange={e=>setSearch(e.target.value)}
+              <input type="search" aria-label="Search professional drivers" value={search} onChange={e=>{setSearch(e.target.value);setShowMatches(true)}} onFocus={()=>setShowMatches(true)} autoComplete="off"
                 placeholder="Search drivers, routes or vehicles" className={styles.searchInput} />
             </div>
+            {showMatches&&search.trim()&&nameMatches.length>0?<div role="listbox" aria-label="Matching drivers" className={styles.liveMatches}>
+              {nameMatches.map(match=><button role="option" aria-selected={false} type="button" key={match.id}
+                onClick={()=>{setSearch(match.full_name);setShowMatches(false);document.activeElement instanceof HTMLElement&&document.activeElement.blur();document.getElementById("loadlink-driver-results")?.scrollIntoView({behavior:"smooth",block:"start"})}}
+                className={styles.liveMatch}>
+                {match.profile_image_url?<LoadLinkImage src={match.profile_image_url} alt="" className={styles.matchAvatar}/>:<span className={styles.matchInitials}>{initials(match.full_name)}</span>}
+                <span className="min-w-0"><strong className="block truncate">{match.full_name}</strong><span className="block truncate text-[11px] opacity-60">{match.headline||match.licence_code}</span></span>
+              </button>)}
+            </div>:null}
             <div className={styles.searchControls}>
               <button type="button" aria-expanded={filtersOpen} onClick={()=>setFiltersOpen(v=>!v)} className={styles.filtersButton}>
                 <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M8 14v6"/></svg>

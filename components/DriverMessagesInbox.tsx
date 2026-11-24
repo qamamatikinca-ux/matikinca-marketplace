@@ -3,6 +3,7 @@ import Link from "next/link";
 import {useCallback,useEffect,useRef,useState,type FormEvent} from "react";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
+import LoadLinkImage from "@/components/LoadLinkImage";
 import {browserSupabase} from "@/lib/phase2/supabase";
 import {useLoadLinkTheme} from "@/lib/useLoadLinkTheme";
 import {isAuthenticatedUser} from "@/lib/auth";
@@ -14,6 +15,7 @@ export default function DriverMessagesInbox({profileId,threadId}:{profileId:stri
  const {darkMode,toggleTheme}=useLoadLinkTheme();
  const [userId,setUserId]=useState("");
  const [threads,setThreads]=useState<Thread[]>([]);
+ const [avatars,setAvatars]=useState<Record<string,string>>({});
  const [selected,setSelected]=useState(threadId);
  const [messages,setMessages]=useState<Message[]>([]);
  const [draft,setDraft]=useState("");
@@ -119,7 +121,21 @@ export default function DriverMessagesInbox({profileId,threadId}:{profileId:stri
   }catch{setError("Message wasn't sent. Check your connection and retry.")}
   finally{setBusy(false)}
  }
+ useEffect(()=>{
+  if(!userId)return;
+  let active=true;
+  const update=async()=>{
+   const {data}=await browserSupabase().rpc("loadlink_my_message_avatars");
+   if(!active||!data)return;
+   const images:Record<string,string>={};
+   for(const item of data){if(item.conversation_kind==="driver"&&item.avatar_url)images[String(item.thread_id)]=String(item.avatar_url)}
+   setAvatars(images);
+  };
+  void update();
+  return()=>{active=false};
+ },[userId]);
  const person=(t:Thread)=>t.driver_user_id===userId?t.enquirer_name:t.driver_name;
+ const profilePhoto=(t:Thread)=>avatars[t.id]||"";
  return <main data-loadlink-smart-glass="true" data-theme={darkMode?"dark":"light"}
   style={{height:"var(--loadlink-message-vh,100dvh)",minHeight:"var(--loadlink-message-vh,100svh)"}}
   className={`${styles.messageApp} loadlink-messages flex flex-col overflow-hidden ${darkMode?"bg-[#050505] text-white":"bg-[#eeeae0] text-black"}`}>
@@ -139,7 +155,7 @@ export default function DriverMessagesInbox({profileId,threadId}:{profileId:stri
        threads.map(t=><button key={t.id} type="button"
          onClick={()=>{setSelected(t.id);setMessages([]);setMobileChat(true);setError("")}}
          className={`flex w-full items-center gap-3 border-b border-black/5 p-4 text-left ${selected===t.id?"bg-[#fff4c7]":"bg-white"}`}>
-         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black text-sm font-black text-[#f6b800]">{person(t).charAt(0).toUpperCase()}</span>
+         <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-black text-sm font-black text-[#f6b800]">{profilePhoto(t)?<LoadLinkImage src={profilePhoto(t)} alt="" className="h-full w-full object-cover"/>:person(t).charAt(0).toUpperCase()}</span>
          <span className="min-w-0 flex-1"><strong className="block truncate text-sm">{person(t)}</strong>
           <span className="mt-1 block truncate text-xs text-black/50">Driver profile · {t.driver_name}</span></span>
        </button>)
@@ -150,7 +166,7 @@ export default function DriverMessagesInbox({profileId,threadId}:{profileId:stri
      {chosen?<>
        <header className="loadlink-chat-header flex min-h-[78px] items-center gap-3 border-b border-black/10 bg-white px-3 py-3 md:px-5">
         <button type="button" onClick={()=>setMobileChat(false)} aria-label="Back to conversations" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/10 md:hidden"><LoadLinkIcon name="chevronLeft" size={18}/></button>
-        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black text-lg font-black text-[#f6b800]">{person(chosen).charAt(0).toUpperCase()}</span>
+        <span className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-black text-lg font-black text-[#f6b800]">{profilePhoto(chosen)?<LoadLinkImage src={profilePhoto(chosen)} alt="" className="h-full w-full object-cover"/>:person(chosen).charAt(0).toUpperCase()}</span>
         <div className="min-w-0 flex-1"><h2 className="truncate text-base font-bold">{person(chosen)}</h2><p className="truncate text-xs text-black/50">LoadLink driver conversation</p></div>
        </header>
        <div className="loadlink-message-viewport min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-5" aria-live="polite">

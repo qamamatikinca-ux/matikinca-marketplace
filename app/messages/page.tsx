@@ -463,6 +463,7 @@ function ListingMessagesPage({onOpenDriverThread}:{onOpenDriverThread:(id:string
   const [driverThreads,setDriverThreads]=useState<DriverInboxRow[]>([]);
   const [currentUserId,setCurrentUserId]=useState("");
   const [listingKinds,setListingKinds]=useState<Record<string,"job"|"contract">>({});
+  const [messageAvatars,setMessageAvatars]=useState<Record<string,string>>({});
   const [selectedId, setSelectedId] = useState("");
   const [quotePermissions,setQuotePermissions]=useState<Record<string,boolean>>({});
   const [chatExitPrompt,setChatExitPrompt]=useState<{listingId:string;threadId:string;title:string;listingKind:"job"|"contract"}|null>(null);
@@ -845,6 +846,20 @@ function ListingMessagesPage({onOpenDriverThread}:{onOpenDriverThread:(id:string
     });
     return()=>{active=false};
   },[conversations]);
+  useEffect(()=>{
+    if(!currentUserId)return;
+    let active=true;
+    const refresh=async()=>{
+      const {data,error}=await supabase.rpc("loadlink_my_message_avatars");
+      if(error||!active)return;
+      const resolved:Record<string,string>={};
+      for(const row of data||[]){if(row.thread_id&&row.avatar_url)resolved[`${row.conversation_kind}:${row.thread_id}`]=row.avatar_url;}
+      setMessageAvatars(resolved);
+    };
+    void refresh();
+    const timer=window.setInterval(()=>{if(!document.hidden)void refresh()},60000);
+    return()=>{active=false;window.clearInterval(timer)};
+  },[currentUserId]);
   const unifiedInboxItems=useMemo(()=>{
     const listingItems=visibleConversations.map(conversation=>({kind:"listing" as const,conversation,time:Date.parse(conversation.last_message_at||"")||0}));
     const search=query.trim().toLowerCase();
@@ -1886,11 +1901,11 @@ ${message}` : message)}
                   const t=item.thread;
                   const other=t.driver_user_id===currentUserId?t.enquirer_name:t.driver_name;
                   return <button key={`driver-${t.id}`} type="button" onClick={()=>onOpenDriverThread(t.id)}
-                    className={`${styles.conversationRow} flex w-full items-center gap-3 border-b border-black/5 bg-white p-4 text-left transition hover:bg-[#f8f6f0]`}>
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-black text-base font-black text-[#f6b800]">{other.charAt(0).toUpperCase()}</span>
+                    className={`${styles.conversationRow} flex w-full items-center gap-3 border-b p-4 text-left transition ${darkMode?"border-white/10 bg-[#111] hover:bg-[#191919]":"border-black/5 bg-white hover:bg-[#f8f6f0]"}`}>
+                    <Avatar name={other} photo={messageAvatars[`driver:${t.id}`]||null} size="h-12 w-12"/>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2"><strong className="truncate text-sm font-semibold">{other}</strong><span className="text-[10px] text-black/40">{formatConversationDate(t.updated_at)}</span></span>
-                      <span className="mt-1 inline-flex rounded-full bg-[#fff0d5] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-[#915700]">Driver</span>
+                      <span className="mt-1 inline-flex rounded-full bg-[#f6b800] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-black">Driver</span>
                       <span className="mt-1 block truncate text-xs text-black/50">LoadLink driver conversation</span>
                     </span>
                   </button>
@@ -1908,7 +1923,7 @@ ${message}` : message)}
                   >
                     <Avatar
                       name={conversation.other_name}
-                      photo={conversation.other_photo}
+                      photo={messageAvatars[`listing:${conversation.id}`]||conversation.other_photo}
                       size="h-12 w-12"
                       online={Boolean(
                         isRecentlyActive(conversation.other_last_seen, presenceNow),
@@ -1924,7 +1939,7 @@ ${message}` : message)}
                         </span>
                       </span>
                       <span className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
-                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${(listingKinds[conversation.listing_id]==="contract"||/contract/i.test(conversation.listing_title))?"bg-[#dcf5e4] text-[#247e48]":"bg-black text-white"}`}>{(listingKinds[conversation.listing_id]==="contract"||/contract/i.test(conversation.listing_title))?"Contract":"Job"}</span>
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${(listingKinds[conversation.listing_id]==="contract"||/contract/i.test(conversation.listing_title))?"bg-[#269c58] text-white":"bg-[#2f9f5b] text-white"}`}>{(listingKinds[conversation.listing_id]==="contract"||/contract/i.test(conversation.listing_title))?"Contract":"Job"}</span>
                         <span className="min-w-0 truncate text-xs font-medium opacity-55">{conversation.listing_title}</span>
                       </span>
                       <span className="mt-1 flex items-center justify-between gap-3">
@@ -1992,7 +2007,7 @@ ${message}` : message)}
                 <DealerUpdateAvatar
                   listingId={selectedConversation.listing_id}
                   name={selectedConversation.other_name}
-                  photo={selectedConversation.other_photo}
+                  photo={messageAvatars[`listing:${selectedConversation.id}`]||selectedConversation.other_photo}
                   online={Boolean(isRecentlyActive(selectedConversation.other_last_seen, presenceNow))}
                   darkMode={darkMode}
                 />
@@ -2039,7 +2054,7 @@ ${message}` : message)}
 
               <div className={`loadlink-listing-context flex min-h-[40px] items-center gap-2 border-b px-3 py-1.5 md:px-5 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black text-[#f6b800]"><BriefcaseIcon /></span>
-                <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black uppercase ${starterPost?.listing_kind==="contract"?"bg-[#ddf5e4] text-[#267849]":"bg-black text-white"}`}>{starterPost?.listing_kind==="contract"?"Contract":"Job"}</span>
+                <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black uppercase ${starterPost?.listing_kind==="contract"?"bg-[#269c58] text-white":"bg-[#2f9f5b] text-white"}`}>{starterPost?.listing_kind==="contract"?"Contract":"Job"}</span>
                 <p className="min-w-0 flex-1 truncate text-[11px] font-semibold">{selectedConversation.listing_title}</p>
                 {dueForClosure?<button type="button" onClick={()=>setChatExitPrompt({listingId:selectedConversation.listing_id,threadId:selectedConversation.id,title:selectedConversation.listing_title,listingKind:starterPost?.listing_kind==="contract"?"contract":"job"})} className="shrink-0 rounded-lg border border-[#efb919] px-2 py-1.5 text-[10px] font-bold text-[#936b00]">Confirm completed</button>:null}
                 {workCompleted?<span className="shrink-0 rounded-full bg-[#daf3df] px-2 py-1 text-[10px] font-bold text-[#247c45]">Completed</span>:null}
@@ -2149,7 +2164,7 @@ ${message}` : message)}
                             {!mine ? (
                               <Avatar
                                 name={selectedConversation.other_name}
-                                photo={selectedConversation.other_photo}
+                                photo={messageAvatars[`listing:${selectedConversation.id}`]||selectedConversation.other_photo}
                                 size="h-8 w-8"
                                 online={isRecentlyActive(selectedConversation.other_last_seen, presenceNow)}
                               />
@@ -2191,7 +2206,7 @@ ${message}` : message)}
                     })}
                     {selectedConversation.other_typing ? (
                       <div className="flex items-end justify-start gap-2">
-                        <Avatar name={selectedConversation.other_name} photo={selectedConversation.other_photo} size="h-8 w-8" online />
+                        <Avatar name={selectedConversation.other_name} photo={messageAvatars[`listing:${selectedConversation.id}`]||selectedConversation.other_photo} size="h-8 w-8" online />
                         <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-black/5 bg-white px-4 py-3 shadow-sm">
                           <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-black/40 [animation-delay:-.2s]" />
                           <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-black/40 [animation-delay:-.1s]" />

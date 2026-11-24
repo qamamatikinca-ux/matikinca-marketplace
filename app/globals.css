@@ -745,3 +745,12 @@ html[data-loadlink-theme="light"] body:has(footer[data-loadlink-footer]) {
   border-color: #f6b800 !important;
   color: #101010 !important;
 }
+
+/* LoadLink visible keyboard focus, instead of the platform-blue contact ring. */
+a.loadlink-driver-contact-primary:focus,
+a.loadlink-driver-contact-primary:focus-visible {
+ outline:2px solid #e0a000!important;
+ outline-offset:3px!important;
+ box-shadow:0 0 0 3px rgba(246,184,0,.20)!important;
+ -webkit-tap-highlight-color:transparent!important;
+}
