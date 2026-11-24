@@ -251,15 +251,15 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
             </div>
             <div className={styles.cardActions}>
               <button data-marketplace-action type="button" onClick={()=>setContactTarget(driver)} className={styles.cardContact}>Contact driver</button>
-              <details className={styles.cardDetails}>
-                <summary>Details</summary>
-                <div className={styles.cardExpanded}>
-                  <p><strong>Vehicle experience:</strong> {driver.vehicle_types?.join(", ")||"On request"}</p>
-                  {driver.bio?<p className="mt-2 whitespace-pre-wrap">{driver.bio}</p>:null}
-                  {driver.user_id?<button type="button" onClick={()=>setReviewTarget(driver)} className={styles.reviewButton}>Write a review</button>:null}
-                </div>
-              </details>
             </div>
+            <details className={styles.cardDetails}>
+              <summary>View details</summary>
+              <div className={styles.cardExpanded}>
+                <p><strong>Vehicle experience:</strong> {driver.vehicle_types?.join(", ")||"On request"}</p>
+                {driver.bio?<p className="mt-2 whitespace-pre-wrap">{driver.bio}</p>:null}
+                {driver.user_id?<button type="button" onClick={()=>setReviewTarget(driver)} className={styles.reviewButton}>Write a review</button>:null}
+              </div>
+            </details>
           </article>;
         })}</div>}
         {fullPage&&pageCount>1?<LoadLinkPagination current={page} total={pageCount} onChange={setPage} darkMode={darkMode} label="Driver profile pages"/>:null}
