@@ -21,6 +21,7 @@ export default function DriverMessagesInbox({profileId,threadId,onBack}:{profile
  const [reopening,setReopening]=useState(false);
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
+ const [notice,setNotice]=useState("");
  const last=useRef<HTMLDivElement>(null);
  const pending=useRef<{thread:string;text:string;key:string}|null>(null);
  const chosen=threads.find(t=>t.id===selected)||null;
@@ -94,12 +95,13 @@ export default function DriverMessagesInbox({profileId,threadId,onBack}:{profile
  useEffect(()=>{if(!userId)return;const timer=window.setInterval(()=>{if(document.visibilityState==="visible")void reload().catch(()=>undefined)},12000);return()=>window.clearInterval(timer)},[userId,reload]);
  async function requestReopen(){
   if(!chosen||reopening)return;
-  setReopening(true);setError("");
+  setReopening(true);setError("");setNotice("");
   try{
     const {data,error:err}=await browserSupabase().rpc("loadlink_request_reopen_driver_chat",{p_thread_id:chosen.id});
     if(err)throw err;
     await reload();
-    if(data==="pending")setError("Request sent. The other participant must approve reopening.");
+    if(data==="pending")setNotice("Request sent. The other participant must approve reopening.");
+    else if(data==="reopened")setNotice("Conversation reopened.");
   }catch(e){setError(e instanceof Error?e.message:"Could not request reopening.")}
   finally{setReopening(false)}
  }
@@ -150,6 +152,7 @@ export default function DriverMessagesInbox({profileId,threadId,onBack}:{profile
         <div ref={last}/>
        </div>
        {error?<p role="alert" className="border-t border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700">{error}</p>:null}
+       {notice?<p role="status" className="border-t border-[#f6b800]/20 bg-[#fff8dc] px-4 py-2 text-xs font-semibold text-[#765800]">{notice}</p>:null}
        {chosen.blocked?<div className="border-t border-black/10 bg-white p-4">
         <p className="text-sm font-semibold text-black/70">This conversation is closed.</p>
         <p className="mt-1 text-xs text-black/50">Reopening requires both participants to agree.</p>
