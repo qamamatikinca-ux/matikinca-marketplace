@@ -881,7 +881,7 @@ function ContactSellerStack({ job, darkMode }: { job: JobListing; darkMode: bool
   return (
     <div className={`mt-5 overflow-hidden border ${darkMode ? "border-white/10 bg-black" : "border-black/10 bg-[#f8f9ff]"}`}>
       <div className="p-4">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b88900]">Contact poster</p>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b88900]">Contact poster</p><p className="mt-1 text-xs font-medium opacity-65">Send enquiries through LoadLink Messages. The poster receives them in their inbox.</p>
         <div className={`mt-3 flex items-center gap-3 border p-3 ${darkMode ? "border-white/10 bg-[#090909]" : "border-black/10 bg-white"}`}>
           <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden border border-[#f6b800]/50 bg-white">
             {job.posterPhoto ? <LoadLinkImage src={job.posterPhoto} alt={job.postedBy} className="h-full w-full object-cover" /> : <PosterUserIcon />}

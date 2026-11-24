@@ -116,7 +116,7 @@ export default function DriverMessagesInbox({profileId,threadId}:{profileId:stri
      <div className="border-b border-black/10 p-4">
       <h1 className="text-2xl font-bold tracking-tight">Messages</h1>
       <div className="mt-3 flex gap-2">
-       <Link href="/messages" className="rounded-xl border border-black/10 px-4 py-2.5 text-xs font-bold">All messages</Link>
+       <a href="/messages" className="rounded-xl border border-black/10 px-4 py-2.5 text-xs font-bold">All messages</a>
        <span className="rounded-xl bg-[#f6b800] px-4 py-2.5 text-xs font-bold text-black">Driver conversations</span>
       </div>
      </div>
