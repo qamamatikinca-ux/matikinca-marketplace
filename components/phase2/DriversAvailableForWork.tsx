@@ -72,10 +72,6 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
   const [licence,setLicence]=useState("");
   const [minExperience,setMinExperience]=useState(0);
   const [availableOnly,setAvailableOnly]=useState(false);
-  const [reviewTarget, setReviewTarget] = useState<Driver | null>(null);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewBody, setReviewBody] = useState("");
-  const [reviewBusy, setReviewBusy] = useState(false);
   const [ownsDriverProfile, setOwnsDriverProfile] = useState(false);
 
   useEffect(() => {
@@ -147,21 +143,6 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
 
   const drivers = fullPage ? sortedDrivers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : sortedDrivers.slice(0, 4);
   const pageCount = Math.max(1, Math.ceil(sortedDrivers.length / PAGE_SIZE));
-
-  async function submitReview() {
-    if (!reviewTarget?.user_id) return;
-    setReviewBusy(true); setNotice("");
-    try {
-      const sb = browserSupabase();
-      const { data: { session } } = await sb.auth.getSession();
-      if (!session) { window.location.href = `/login?next=${encodeURIComponent("/drivers")}`; return; }
-      const { error } = await sb.functions.invoke("loadlink-review-service", { body: { target_user_id: reviewTarget.user_id, rating: reviewRating, body: reviewBody } });
-      if (error) throw error;
-      setAllDrivers((rows) => rows.map((row) => row.id === reviewTarget.id ? { ...row, average_rating: reviewRating, review_count: Math.max(1, Number(row.review_count || 0)) } : row));
-      setReviewTarget(null); setReviewBody(""); setReviewRating(5); setNotice("Review saved. Thank you for keeping LoadLink profiles accountable.");
-    } catch (error) { setNotice(error instanceof Error ? error.message : "Review could not be saved."); }
-    finally { setReviewBusy(false); }
-  }
 
   const sectionClass = `${styles.section} ${darkMode ? styles.dark : styles.light} ${fullPage ? styles.fullPage : ""} ${showHero ? "" : styles.embedded}`;
 
@@ -242,7 +223,7 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
             </div>
             <div className={styles.cardFoot}>
               <span className={styles.available}>{driver.availability||"Availability on request"}</span>
-              {count>0?<span className={styles.rating}>★ {rating.toFixed(1)} · {count} review{count===1?"":"s"}</span>:null}
+              <span className={styles.rating}>{count} completed {count===1?"job":"jobs"}{rating>0?` · ★ ${rating.toFixed(1)}`:""}</span>
             </div>
             <div className={styles.cardActions}>
               <button data-marketplace-action type="button" onClick={()=>setContactTarget(driver)}
@@ -253,8 +234,7 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
               <div className={styles.cardExpanded}>
                 <p><strong>Vehicle experience:</strong> {driver.vehicle_types?.join(", ")||"On request"}</p>
                 {driver.bio?<p className="mt-2 whitespace-pre-wrap">{driver.bio}</p>:null}
-                {driver.user_id?<button type="button" onClick={()=>setReviewTarget(driver)}
-                  className={styles.reviewButton}>Write a review</button>:null}
+                <p className="mt-2 text-xs opacity-60">Driver credibility is based on completed LoadLink assignments confirmed by the original job poster.</p>
               </div>
             </details>
           </article>;
@@ -263,7 +243,7 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
       </div>
 
       {contactTarget ? <DriverContactDialog id={contactTarget.id} name={contactTarget.full_name} darkMode={darkMode} onClose={() => setContactTarget(null)} /> : null}
-      {reviewTarget ? <div className="fixed inset-0 z-[2147483000] flex items-end justify-center bg-black/65 p-3 sm:items-center"><button aria-label="Close review" className="absolute inset-0" onClick={()=>setReviewTarget(null)} /><section className={`relative z-10 w-full max-w-md rounded-[26px] border p-5 shadow-2xl ${darkMode?"border-white/12 bg-[#0b0b0b] text-white":"border-black/10 bg-white text-black"}`}><div className="flex items-start justify-between gap-4"><div><h3 className="text-xl font-black">Review {reviewTarget.full_name}</h3><p className="mt-1 text-xs opacity-50">Your rating appears on this approved LoadLink profile.</p></div><button className="h-9 w-9 rounded-full border border-current/15" onClick={()=>setReviewTarget(null)} aria-label="Close review"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button></div><div className="mt-5 flex gap-2" aria-label="Rating">{[1,2,3,4,5].map(star=><button key={star} type="button" aria-label={`${star} out of 5 stars`} aria-pressed={star<=reviewRating} onClick={()=>setReviewRating(star)} className={`h-10 w-10 rounded-full border text-lg ${star<=reviewRating?"border-[#f6b800] bg-[#f6b800] text-black":"border-current/15"}`}><LoadLinkIcon name="star" size={16} className="inline-block shrink-0 align-middle" /></button>)}</div><textarea maxLength={1200} value={reviewBody} onChange={e=>setReviewBody(e.target.value)} placeholder="Describe your experience (optional)" className={`mt-4 min-h-28 w-full rounded-2xl border p-3 text-sm outline-none ${darkMode?"border-white/12 bg-white/[.04]":"border-black/10 bg-[#fafafa]"}`} /><button type="button" disabled={reviewBusy} onClick={()=>void submitReview()} className="mt-4 h-12 w-full rounded-xl bg-[#f6b800] text-sm font-black text-black disabled:opacity-50">{reviewBusy?"Saving…":"Save review"}</button></section></div> : null}
+
     </section>
   );
 }

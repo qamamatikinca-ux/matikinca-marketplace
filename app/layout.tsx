@@ -52,6 +52,7 @@ import LoadLinkDeleteConfirmationLayer from "@/components/LoadLinkDeleteConfirma
 import LoadLinkToastCenter from "@/components/LoadLinkToastCenter";
 import LoadLinkSelectLabelFix from "@/components/LoadLinkSelectLabelFix";
 import LoadLinkInteractionSystem from "@/components/LoadLinkInteractionSystem";
+import JobCompletionReminder from "@/components/JobCompletionReminder";
 import LoadLinkTouchScrollGuard from "@/components/LoadLinkTouchScrollGuard";
 import LoadLinkShareEnhancer from "@/components/LoadLinkShareEnhancer";
 import DealerPostBenefitsEnhancer from "@/components/dealer/DealerPostBenefitsEnhancer";
@@ -107,7 +108,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body data-loadlink-release="20261021-workspace-r1">
         <ThemeCoordinator /><LoadLinkUiRepairV273 /><SimpleModeCoordinator /><AccountActivityTracker /><AuthMfaGate /><ProfileOnboardingGate /><MarketplaceRestrictionGuard /><LoadLinkSelectLabelFix /><LoadLinkInteractionSystem /><LoadLinkTouchScrollGuard /><LoadLinkShareEnhancer /><DealerPostBenefitsEnhancer /><MarketplaceUxPolishEnhancer /><PhotoGalleryModernizer /><LoadLinkUniversalUiGuard /><LoadLinkAuditUpdateBridge /><LoadLinkCriticalInteractionFixes /><LoadLinkFinalUxRepair20260820 /><LoadLinkFinalReleasePolishBootstrap20260821 /><LoadLinkReleaseCompletion20260821 /><LoadLinkReleaseRecovery20260821 /><LoadLinkProductRepair20260822 /><LoadLinkMobileUxCorrection20260822 /><ListingReportGuard /><ChatComposerActions /><DealerWorkspaceNavigationEnhancer /><DealerPackageDetailsEnhancer /><LoadLinkMajorUpdate20260823 /><LoadLinkCallBootstrap /><LoadLinkDealerChatStatus20260823 /><LoadLinkChatUiPolish20260823 /><LoadLinkChatMediaPreview20260823 /><LoadLinkChatInfoCompletion20260823 /><LoadLinkDealerStatusViewer20260823 /><LoadLinkLocationCompletion20260823 /><LoadLinkDistanceLayer20260823 /><LoadLinkDealershipOwnerEdit20260823 /><LoadLinkFinalProductPass20260823 /><LoadLinkFinalMarketplacePolish20260824 /><LoadLinkBrokenImageGuard20260826 /><LoadLinkBoundary name="marketplace enhancements"><LoadLinkSmartUxPass20260826 /></LoadLinkBoundary><LoadLinkCookieConsent20260822 />
-        <SwipeDotsEnhancer /><AuthBootstrap /><NotificationCenter /><ChatLauncher /><LoadLinkToastCenter /><VehicleDraftResumeToast /><LoadLinkDeleteConfirmationLayer /><NetworkRecovery />
+        <SwipeDotsEnhancer /><AuthBootstrap /><NotificationCenter /><JobCompletionReminder /><ChatLauncher /><LoadLinkToastCenter /><VehicleDraftResumeToast /><LoadLinkDeleteConfirmationLayer /><NetworkRecovery />
         {children}
         <Suspense fallback={null}><LoadLinkRuntimeBoundary /></Suspense>
       </body>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { loginHref } from "@/lib/auth";
+import CompletedDriverFeedback from "@/components/CompletedDriverFeedback";
 
 type ClosedItem = {
   listing_id: string; thread_id: string; closed_by: string;
@@ -21,6 +22,8 @@ export default function JobContractHistory() {
   const [rows,setRows]=useState<ClosedItem[]>([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
+  const [userId,setUserId]=useState("");
+  const [ratingListing,setRatingListing]=useState("");
   useEffect(()=>{
     let mounted=true;
     (async()=>{
@@ -29,6 +32,7 @@ export default function JobContractHistory() {
         if(!mounted)return;
         if(authError)throw authError;
         if(!user){window.location.assign(loginHref("/history"));return;}
+        if(mounted)setUserId(user.id);
         const result=await supabase.from("job_closures")
           .select("listing_id,thread_id,closed_by,title,listing_kind,city,rate,outcome,note,closed_at")
           .order("closed_at",{ascending:false}).limit(100);
@@ -67,7 +71,12 @@ export default function JobContractHistory() {
               <div className="mt-3 rounded-xl border border-current/10 p-3 text-xs leading-6">
                 {item.rate?<p><strong>Rate:</strong> {item.rate}</p>:null}
                 {item.note?<p className="mt-1 whitespace-pre-wrap">{item.note}</p>:null}
-                <Link className="mt-2 inline-block font-bold underline underline-offset-4" href={`/messages?listing=${encodeURIComponent(item.listing_id)}`}>View conversation</Link>
+                {item.thread_id?<Link className="mt-2 inline-block font-bold underline underline-offset-4" href={`/messages?listing=${encodeURIComponent(item.listing_id)}`}>View conversation</Link>:null}
+                {item.outcome==="completed"&&item.closed_by===userId?
+                  <div className="mt-3">
+                    <button type="button" onClick={()=>setRatingListing(old=>old===item.listing_id?"":item.listing_id)} className="font-black underline underline-offset-4">Rate assigned driver</button>
+                    {ratingListing===item.listing_id?<CompletedDriverFeedback listingId={item.listing_id} onDone={()=>setRatingListing("")}/>:null}
+                  </div>:null}
               </div>
             </details>
           )}</div>}

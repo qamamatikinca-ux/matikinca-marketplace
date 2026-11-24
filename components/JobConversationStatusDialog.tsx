@@ -1,6 +1,7 @@
 "use client";
 import {useState} from "react";
 import {supabase} from "@/lib/supabaseClient";
+import CompletedDriverFeedback from "@/components/CompletedDriverFeedback";
 
 type Outcome="completed"|"cancelled"|"no_agreement";
 export default function JobConversationStatusDialog({listingId,threadId,listingTitle,listingKind="job",onExit}:{listingId:string;threadId:string;listingTitle:string;listingKind?:"job"|"contract";onExit:()=>void}){
@@ -8,6 +9,7 @@ export default function JobConversationStatusDialog({listingId,threadId,listingT
  const [note,setNote]=useState("");
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
+ const [rateAfterClose,setRateAfterClose]=useState(false);
  async function closeJob(){
   if(busy)return;
   setBusy(true);setError("");
@@ -21,8 +23,16 @@ export default function JobConversationStatusDialog({listingId,threadId,listingT
    setError(writeError.message||"Could not close this listing.");
    setBusy(false);return;
   }
-  onExit();
+  if(choice==="completed")setRateAfterClose(true);
+  else onExit();
  }
+ if(rateAfterClose)return <div role="dialog" aria-modal="true" className="fixed inset-0 z-[2147483600] flex items-center justify-center bg-black/65 px-3 py-4">
+   <div className="max-h-[85dvh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-5 text-black">
+    <h2 className="text-xl font-black">Work completed</h2>
+    <CompletedDriverFeedback listingId={listingId} onDone={onExit}/>
+    <button type="button" onClick={onExit} className="mt-4 text-xs font-bold underline">Finish</button>
+   </div>
+ </div>;
  return <div role="dialog" aria-modal="true" aria-labelledby="job-closure-title" className="fixed inset-0 z-[2147483600] flex items-center justify-center bg-black/65 px-3 py-4 backdrop-blur-sm">
   <section className="max-h-[min(90dvh,680px)] w-full max-w-sm overflow-y-auto rounded-[24px] border border-black/10 bg-white p-5 text-black shadow-2xl sm:p-6">
    <p className="text-[10px] font-black uppercase tracking-[.13em] text-[#9a7000]">LoadLink history</p>
