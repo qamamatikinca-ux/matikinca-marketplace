@@ -73,10 +73,10 @@ export default function ContractListingCard({row,darkMode,expandedDefault=false}
     {requested?<span className={`rounded-full px-3 py-1.5 text-[10px] font-black uppercase ${darkMode?"bg-white/10 text-white":"bg-[#eef2f8] text-[#263246]"}`}>{requested}</span>:null}
     {start?<span className="rounded-full bg-[#fff2bf] px-3 py-1.5 text-[10px] font-black uppercase text-[#725300]">{start}</span>:null}
    </div>
-   <h2 className="mt-4 break-words text-[clamp(21px,4.6vw,27px)] font-black leading-[1.18] tracking-[-.03em]">{row.title||"Logistics contract"}</h2>
+   <h2 className="mt-4 break-words text-[clamp(21px,4.6vw,27px)] font-black leading-[1.18] tracking-[-.03em]">{(row.title||"Transport contract").replace(/^Contract Title:\s*/i,"")}</h2>
    <p className={`mt-2 text-sm font-semibold ${darkMode?"text-white/60":"text-black/60"}`}>{[row.city,row.vehicle_group].filter(Boolean).join(" · ")||"South Africa"}</p>
    <p className={`mt-3 text-sm ${darkMode?"text-white/55":"text-black/55"}`}>Posted by <strong className={darkMode?"text-white":"text-black"}>{row.posted_by||"LoadLink user"}</strong> · {relativeCreated(row.created_at)}</p>
-   <div className="mt-5 grid gap-2 sm:grid-cols-2"><button type="button" onClick={()=>setApplyOpen(true)} className="flex min-h-12 items-center justify-center rounded-xl bg-[#f6b800] px-4 text-sm font-black text-black">Apply with proposal</button><Link href={`/messages?listing=${encodeURIComponent(row.id)}`} className={`flex min-h-12 items-center justify-center rounded-xl border px-4 text-sm font-bold ${darkMode?"border-white/15":"border-black/15"}`}>Message poster</Link></div>
+   <div className="mt-5 grid grid-cols-2 gap-2"><button type="button" onClick={()=>setApplyOpen(true)} className="flex min-h-12 items-center justify-center rounded-xl bg-[#f6b800] px-4 text-sm font-black text-black">Apply with profile</button><Link href={`/messages?listing=${encodeURIComponent(row.id)}`} className={`flex min-h-12 items-center justify-center rounded-xl border px-4 text-sm font-bold ${darkMode?"border-white/15":"border-black/15"}`}>Message poster</Link></div>
    <details open={expandedDefault?true:undefined} className={`mt-5 border ${darkMode?"border-white/10":"border-black/10"}`}>
     <summary className="cursor-pointer list-none px-4 py-4 text-sm font-black uppercase tracking-wide">View full details</summary>
     <div className={`border-t p-4 ${darkMode?"border-white/10":"border-black/10"}`}>

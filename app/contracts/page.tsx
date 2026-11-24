@@ -72,12 +72,9 @@ function startTime(row: ContractRow) {
 }
 
 function cleanDescription(value: string | null | undefined) {
-  return String(value || "")
-    .replace(/^Listing type:\s*[^\n]+\n?/im, "")
-    .replace(/^Vehicle needed:\s*[^\n]+\n?/im, "")
-    .replace(/^Needed by:\s*[^\n]+\n?/im, "")
-    .replace(/^Priority:\s*[^\n]+\n?/im, "")
-    .trim();
+  // Metadata belongs in structured listing details, not repeated in the marketplace card.
+  const metadata=/^(?:Listing type|Vehicle needed|Needed by|Priority|Company|Contact person|Contact number|Phone|Contract type|Contract duration|Duration|Frequency|Pickup Location|Delivery Location|Cargo Type|Vehicle Required|Load Type|Load requirements):/i;
+  return String(value || "").split(/\r?\n/).map(line=>line.trim()).filter(line=>line && !metadata.test(line)).join("\n\n").trim();
 }
 
 function posted(value: string | null | undefined) {
@@ -256,29 +253,34 @@ export default function ContractsPage() {
           <div className="grid gap-5">
             {visible.map((row) => {
               const image = row.photos?.[0] || "/images/contracts-1.jpg";
-              const requested = vehicleNeeded(row);
               return (
-                <article id={`contract-${row.id}`} key={row.id} className={`overflow-hidden rounded-[22px] border shadow-[0_12px_34px_rgba(0,0,0,.06)] ${surface}`}>
-                  <div className="grid md:grid-cols-[220px_minmax(0,1fr)]">
-                    <Link href={`/contracts/${row.id}`} className="relative block aspect-[16/9] overflow-hidden bg-[#111] md:aspect-auto md:min-h-[220px]">
-                      <LoadLinkImage src={image} alt="" className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} />
-                      
-                    </Link>
-                    <div className="p-5 md:p-6">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0"><Link href={`/contracts/${row.id}`} className="block break-words text-[clamp(21px,4.6vw,27px)] font-black leading-[1.2] tracking-[-.035em] hover:underline">{(row.title||"Logistics contract").replace(/^Contract Title:\s*/i,"")}</Link><p className={`mt-2 text-sm font-semibold ${muted}`}>{[row.city, row.vehicle_group].filter(Boolean).join(" · ") || "South Africa"}</p></div>
-                        
+                <article id={`contract-${row.id}`} key={row.id} className={`overflow-hidden rounded-[22px] border shadow-[0_12px_34px_rgba(0,0,0,.045)] ${surface}`}>
+                  <Link href={`/contracts/${row.id}`} className="block aspect-[16/9] w-full overflow-hidden bg-[#111] sm:aspect-[21/9]" aria-label="Open contract">
+                    <LoadLinkImage src={image} alt="" className="h-full w-full object-cover" onError={event=>{event.currentTarget.style.display="none"}}/>
+                  </Link>
+                  <div className="p-4 sm:p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="min-w-0 text-[26px] font-black tracking-[-.04em]">{row.rate?formatListingRate(row.rate):"Rate on request"}</p>
+                      <span className="shrink-0 rounded-full bg-[#e5f4e9] px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#237847]">Contract</span>
+                    </div>
+                    <Link href={`/contracts/${row.id}`} className="mt-3 block break-words text-[22px] font-black leading-[1.25] tracking-[-.035em] hover:underline sm:text-2xl">{(row.title||"Transport contract").replace(/^Contract Title:\s*/i,"")}</Link>
+                    <p className={`mt-2 text-[13px] font-semibold ${muted}`}>{[row.city,row.vehicle_group].filter(Boolean).join(" · ")||"South Africa"}</p>
+                    {startLabel(row)!=="Start date in details"?<p className={`mt-1 text-xs font-medium ${muted}`}>{startLabel(row)}</p>:null}
+                    <div className={`mt-4 flex min-w-0 items-center justify-between gap-3 border-t pt-3 text-xs ${darkMode?"border-white/10 text-white/55":"border-black/10 text-black/55"}`}>
+                      <span className="min-w-0 truncate">{row.posted_by||"LoadLink poster"}</span><span className="shrink-0">{posted(row.created_at)}</span>
+                    </div>
+                    <details className={`group mt-3 overflow-hidden rounded-xl border ${darkMode?"border-white/15":"border-black/10"}`}>
+                      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-bold">
+                        View full details<span className="text-lg font-medium opacity-55 group-open:rotate-45">+</span>
+                      </summary>
+                      <div className={`border-t px-4 pb-4 pt-3 ${darkMode?"border-white/10":"border-black/10"}`}>
+                        <p className={`whitespace-pre-line break-words text-sm leading-6 ${muted}`}>{cleanDescription(row.description)||"See the contract page for the full requirements."}</p>
+                        <Link href={`/contracts/${row.id}`} className="mt-3 inline-flex text-xs font-bold underline underline-offset-4">Open contract page</Link>
                       </div>
-                      <p className="mt-3 text-[clamp(22px,4.5vw,27px)] font-black tracking-[-.035em]">{row.rate?formatListingRate(row.rate):"Rate on request"}</p><div className="mt-3 flex flex-wrap gap-2">
-                        {requested ? <span className={`rounded-full border px-3 py-1 text-[10px] font-black ${darkMode ? "border-white/12 bg-white/[.04]" : "border-black/8 bg-black/[.025]"}`}>{requested}</span> : null}
-                        <span className={`rounded-full border px-3 py-1 text-[10px] font-black ${darkMode ? "border-white/18 text-white/70" : "border-black/12 text-black/60"}`}>{startLabel(row)}</span>
-                      </div>
-                      <p className={`mt-4 line-clamp-3 text-sm font-semibold leading-6 ${muted}`}>{cleanDescription(row.description) || "Open this contract to view the full requirements and contact information."}</p>
-                      <div className={`mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4 text-[11px] font-semibold ${darkMode ? "border-white/10 text-white/42" : "border-black/8 text-black/42"}`}><span>{row.posted_by || "LoadLink poster"}</span><span>{posted(row.created_at)}</span></div>
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-                         <button type="button" onClick={()=>setApplyingTo(row)} className="flex min-h-12 items-center justify-center rounded-xl bg-[#f6b800] px-3 text-center text-[11px] font-black text-black">Apply with LoadLink profile</button>
-                         <Link href={`/contracts/${row.id}`} className={`flex min-h-12 items-center justify-center rounded-xl border px-3 text-center text-[11px] font-black ${darkMode?"border-white/15":"border-black/15"}`}>View contract</Link>
-                       </div>
+                    </details>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button type="button" onClick={()=>setApplyingTo(row)} className="flex min-h-12 items-center justify-center rounded-xl bg-[#f6b800] px-2.5 text-center text-[13px] font-bold text-black">Apply with profile</button>
+                      <Link href={`/messages?listing=${encodeURIComponent(row.id)}`} className={`flex min-h-12 items-center justify-center rounded-xl border px-2.5 text-center text-[13px] font-bold ${darkMode?"border-white/15":"border-black/15"}`}>Message poster</Link>
                     </div>
                   </div>
                 </article>

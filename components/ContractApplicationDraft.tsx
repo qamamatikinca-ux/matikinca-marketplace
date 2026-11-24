@@ -5,78 +5,90 @@ import {supabase} from "@/lib/supabaseClient";
 import {loginHref} from "@/lib/auth";
 
 type Props={listingId:string;title:string;city:string;rate:string;vehicle:string;darkMode:boolean;onClose:()=>void};
+
 export default function ContractApplicationDraft({listingId,title,city,rate,vehicle,darkMode,onClose}:Props){
- const [business,setBusiness]=useState("");
  const [name,setName]=useState("");
- const [vehicleOffered,setVehicleOffered]=useState("");
- const [proposedRate,setProposedRate]=useState("");
- const [note,setNote]=useState("");
- const [draft,setDraft]=useState("");
- const [edited,setEdited]=useState(false);
- const [saving,setSaving]=useState(false);
+ const [company,setCompany]=useState("");
+ const [identityLoaded,setIdentityLoaded]=useState(false);
+ const [offer,setOffer]=useState("");
+ const [message,setMessage]=useState("");
+ const [customDraft,setCustomDraft]=useState<string|null>(null);
+ const [busy,setBusy]=useState(false);
+ const [preview,setPreview]=useState(false);
  useEffect(()=>{
-  let alive=true;
+  let mounted=true;
   void(async()=>{
-   const {data:{user}}=await supabase.auth.getUser();
-   if(!alive||!user)return;
-   const {data}=await supabase.from("profiles").select("full_name,company_name").eq("id",user.id).maybeSingle();
-   if(!alive)return;
-   setName(String(data?.full_name||user.user_metadata?.full_name||"").trim());
-   setBusiness(String(data?.company_name||"").trim());
+   try{
+    const {data:{user}}=await supabase.auth.getUser();
+    if(!mounted||!user)return;
+    const {data}=await supabase.from("profiles").select("full_name,company_name").eq("id",user.id).maybeSingle();
+    if(!mounted)return;
+    setName(String(data?.full_name||user.user_metadata?.full_name||user.user_metadata?.name||"").trim());
+    setCompany(String(data?.company_name||"").trim());
+   }finally{if(mounted)setIdentityLoaded(true)}
   })();
-  return()=>{alive=false};
+  return()=>{mounted=false};
  },[]);
- const generated=[
-  "LOADLINK | TRANSPORT CONTRACT PROPOSAL",
+ const proposal=[
+  "LOADLINK TRANSPORT PROPOSAL",
   `Contract: ${title}`,
-  city?`Operating area: ${city}`:"",
-  vehicle?`Vehicle required: ${vehicle}`:"",
-  rate?`Advertised terms: ${rate}`:"",
+  city?`Location: ${city}`:"",
+  vehicle?`Requested vehicle: ${vehicle}`:"",
+  rate?`Advertised rate: ${rate}`:"",
   "",
-  `Applicant: ${name||"Your name"}`,
-  business?`Company: ${business}`:"",
-  vehicleOffered?`Vehicle / capacity offered: ${vehicleOffered}`:"",
-  proposedRate?`Proposed rate: ${proposedRate}`:"Rate: To be confirmed",
+  `Applicant: ${name||"LoadLink member"}`,
+  company?`Company: ${company}`:"",
+  offer.trim()?`Proposed rate: ${offer.trim()}`:"",
   "",
-  `Hello, I would like to apply for this transport contract on LoadLink. ${note||"Please consider our available transport capacity and let us know the next steps."}`,
-  "Please confirm the route, volume, term, payment schedule and compliance documents required.",
+  `Hello, I would like to apply for this contract through LoadLink.`,
+  message.trim()?message.trim():"Please let me know the next steps and any supporting documents needed.",
   "",
-  "This proposal is subject to your acceptance and agreed written terms.",
- ].filter((line,index)=>line!==""||index===5).join("\n");
- const content=edited?draft:generated;
- function proceed(){
-  if(saving)return;
-  setSaving(true);
+  "Subject to the poster's acceptance and agreed terms.",
+ ].filter(Boolean).join("\n");
+ const prepared=customDraft??proposal;
+ function continueToMessages(){
+  if(busy||!prepared.trim())return;
+  setBusy(true);
   void supabase.auth.getUser().then(({data:{user}})=>{
-   if(!user){window.location.assign(loginHref(`/messages?listing=${encodeURIComponent(listingId)}`));return}
-   window.location.assign(`/messages?listing=${encodeURIComponent(listingId)}&draft=${encodeURIComponent(content.slice(0,3400))}`);
-  }).finally(()=>setSaving(false));
+   const href=`/messages?listing=${encodeURIComponent(listingId)}&draft=${encodeURIComponent(prepared.slice(0,3400))}`;
+   if(!user){window.location.assign(loginHref(href));return;}
+   window.location.assign(href);
+  }).finally(()=>setBusy(false));
  }
+ const inputClass=`mt-2 h-11 w-full rounded-xl border px-3 text-base outline-none focus:border-[#e5b52b] ${darkMode?"border-white/20 bg-[#222] text-white":"border-[#dedede] bg-white text-black"}`;
  return typeof document!=="undefined"?createPortal(
-  <div role="dialog" aria-modal="true" aria-labelledby="loadlink-contract-application-title" className="fixed inset-0 z-[2147483590] flex items-center justify-center overflow-y-auto bg-black/65 p-3 backdrop-blur-sm">
-   <section className={`flex max-h-[min(88dvh,730px)] w-full max-w-xl flex-col overflow-hidden rounded-[23px] border shadow-2xl ${darkMode?"border-white/15 bg-[#111] text-white":"border-black/10 bg-white text-black"}`}>
-    <header className="flex shrink-0 items-start justify-between border-b border-current/10 p-4 sm:p-5">
-     <div><p className="text-[10px] font-black uppercase tracking-wider text-[#b88600]">LoadLink contract application</p>
-      <h2 id="loadlink-contract-application-title" className="mt-1 text-xl font-black">Prepared proposal</h2></div>
-     <button type="button" aria-label="Close" onClick={onClose} className="h-10 w-10 rounded-full border border-current/15 text-xl">×</button>
+  <div role="dialog" aria-modal="true" aria-labelledby="loadlink-apply-heading" className="fixed inset-0 z-[2147483590] flex items-center justify-center bg-black/65 px-3 py-4 backdrop-blur-[3px]" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}>
+   <section className={`flex max-h-[min(88dvh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-[22px] border shadow-[0_24px_72px_rgba(0,0,0,.28)] ${darkMode?"border-white/15 bg-[#111] text-white":"border-black/10 bg-white text-[#141414]"}`}>
+    <header className="flex shrink-0 items-center justify-between gap-3 border-b border-current/10 px-5 py-4">
+     <div className="min-w-0"><h2 id="loadlink-apply-heading" className="text-[21px] font-black tracking-tight">Apply with LoadLink</h2>
+      <p className="mt-1 text-xs opacity-60">Review your prepared proposal</p></div>
+     <button type="button" onClick={onClose} aria-label="Close application" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-current/15 text-xl">×</button>
     </header>
-    <div className="min-h-0 space-y-3 overflow-y-auto p-4 sm:p-5">
-     <p className="text-xs leading-5 opacity-65">A suggested application is prepared using the advertised contract. Review it before submitting; no message is sent automatically.</p>
-     <div className="grid gap-3 sm:grid-cols-2">
-      <label className="text-xs font-bold">Your name<input value={name} onChange={e=>setName(e.target.value)} maxLength={100} className="mt-1 h-11 w-full rounded-lg border border-current/15 bg-transparent px-3 text-sm"/></label>
-      <label className="text-xs font-bold">Company (optional)<input value={business} onChange={e=>setBusiness(e.target.value)} maxLength={120} className="mt-1 h-11 w-full rounded-lg border border-current/15 bg-transparent px-3 text-sm"/></label>
-      <label className="text-xs font-bold">Truck / trailer available<input value={vehicleOffered} onChange={e=>setVehicleOffered(e.target.value)} maxLength={160} placeholder="e.g. 34t side tipper" className="mt-1 h-11 w-full rounded-lg border border-current/15 bg-transparent px-3 text-sm"/></label>
-      <label className="text-xs font-bold">Your rate (optional)<input value={proposedRate} onChange={e=>setProposedRate(e.target.value)} maxLength={80} placeholder="e.g. R28/km excl. VAT" className="mt-1 h-11 w-full rounded-lg border border-current/15 bg-transparent px-3 text-sm"/></label>
+    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+     <div className={`rounded-xl border px-4 py-3 ${darkMode?"border-white/10 bg-white/[.04]":"border-black/10 bg-[#f8f8f7]"}`}>
+      <p className="line-clamp-2 text-[14px] font-bold leading-5">{title}</p>
+      <p className="mt-1 text-xs opacity-60">{city||"South Africa"}{vehicle?` · ${vehicle}`:""}</p>
      </div>
-     <label className="block text-xs font-bold">Why your fleet is suitable<textarea rows={2} value={note} onChange={e=>setNote(e.target.value)} maxLength={500} className="mt-1 w-full rounded-lg border border-current/15 bg-transparent p-3 text-sm" placeholder="Availability, experience, compliance…"/></label>
-     <label className="block text-xs font-bold">Review application document
-      <textarea aria-label="Editable contract application" rows={8} value={content} onChange={e=>{setEdited(true);setDraft(e.target.value)}} maxLength={3500} className="mt-1 w-full resize-y rounded-lg border border-current/15 bg-transparent p-3 font-mono text-xs leading-5"/>
+     <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-wide opacity-50">Your LoadLink profile</p>
+       <p className="mt-1 truncate text-sm font-semibold">{name||"Your account"}{company?` · ${company}`:""}</p></div>
+      <span className={`shrink-0 text-xs ${identityLoaded?"opacity-60":"opacity-40"}`}>{identityLoaded?"Prefilled":"Loading…"}</span>
+     </div>
+     <label className="block text-xs font-bold">Your offer <span className="font-normal opacity-55">(optional)</span>
+      <input className={inputClass} value={offer} onChange={e=>{setOffer(e.target.value.slice(0,100));setCustomDraft(null)}} placeholder="e.g. R28/km or R20 000" />
      </label>
-     <p className="text-[11px] opacity-60">The poster receives your proposal only when you send it in LoadLink Messages. This does not guarantee a contract award.</p>
+     <label className="block text-xs font-bold">Message <span className="font-normal opacity-55">(optional)</span>
+      <textarea value={message} onChange={e=>{setMessage(e.target.value.slice(0,600));setCustomDraft(null)}} rows={2} placeholder="Availability, fleet suitability or conditions…" className={`mt-2 min-h-20 w-full resize-y rounded-xl border p-3 text-[14px] leading-5 outline-none focus:border-[#e5b52b] ${darkMode?"border-white/20 bg-[#222] text-white":"border-[#dedede] bg-white text-black"}`}/>
+     </label>
+     <div className={`overflow-hidden rounded-xl border ${darkMode?"border-white/15":"border-black/10"}`}>
+      <button type="button" onClick={()=>setPreview(v=>!v)} aria-expanded={preview} className="flex min-h-11 w-full items-center justify-between px-3 text-left text-xs font-bold">Preview and edit proposal <span>{preview?"−":"+"}</span></button>
+      {preview?<div className="border-t border-current/10 p-3"><textarea aria-label="Review application proposal" rows={8} value={prepared} onChange={e=>setCustomDraft(e.target.value)} maxLength={3400} className={`w-full resize-y rounded-lg border p-3 font-mono text-[12px] leading-5 ${darkMode?"border-white/15 bg-[#181818]":"border-black/10 bg-[#fafafa]"}`}/></div>:null}
+     </div>
+     <p className="text-[11px] leading-5 opacity-55">Nothing is sent until you approve it in Messages. Private documents are not shared automatically.</p>
     </div>
-    <footer className="grid shrink-0 grid-cols-[1fr_1.6fr] gap-2 border-t border-current/10 p-3 sm:p-4">
-     <button type="button" onClick={onClose} className="min-h-11 rounded-xl border border-current/15 text-xs font-bold">Cancel</button>
-     <button type="button" disabled={!content.trim()||saving} onClick={proceed} className="min-h-11 rounded-xl bg-[#f6b800] px-3 text-xs font-black text-black disabled:opacity-45">{saving?"Opening…":"Continue to Messages"}</button>
+    <footer className="grid shrink-0 grid-cols-[1fr_1.45fr] gap-2 border-t border-current/10 p-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+     <button type="button" onClick={onClose} className="min-h-12 rounded-xl border border-current/15 text-sm font-semibold">Cancel</button>
+     <button type="button" disabled={busy||!prepared.trim()} onClick={continueToMessages} className="min-h-12 rounded-xl bg-[#f6b800] px-3 text-sm font-bold text-black disabled:opacity-40">{busy?"Opening…":"Continue"}</button>
     </footer>
    </section>
   </div>,document.body):null;

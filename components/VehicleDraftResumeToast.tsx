@@ -12,6 +12,12 @@ export default function VehicleDraftResumeToast() {
   const sessionKeyRef = useRef("");
   const [draft, setDraft] = useState<VehicleDraft | null>(null);
   const [userId, setUserId] = useState("");
+  const dismissedKey=(id:string)=>`loadlink:dismissed-vehicle-resume:${id}`;
+  const fingerprint=(value:VehicleDraft)=>JSON.stringify(value);
+  function dismissPersistently(){
+    if(draft&&userId){try{localStorage.setItem(dismissedKey(userId),fingerprint(draft))}catch{}}
+    setDraft(null);
+  }
   useEffect(() => {
     let alive = true, revision = 0;
     const check = (id: string, sessionId: string) => {
@@ -26,6 +32,7 @@ export default function VehicleDraftResumeToast() {
       if (!id || currentPath.startsWith("/list-your-vehicle") || currentPath.startsWith("/list-your-truck")) return;
       const saved = readVehicleDraft(id);
       if (!hasVehicleDraft(saved)) return;
+      try{if(localStorage.getItem(dismissedKey(id))===fingerprint(saved!))return;}catch{}
       const seen = `loadlink-draft-prompt:${id}:${sessionId}`;
       try { if (sessionStorage.getItem(seen)) return; sessionStorage.setItem(seen, "1"); } catch {}
       setDraft(saved);
@@ -42,5 +49,5 @@ export default function VehicleDraftResumeToast() {
     });
     return () => { alive = false; subscription.unsubscribe(); };
   }, []);
-  return <LoadLinkActionToast open={Boolean(draft)} title="Continue your vehicle listing?" message="You left a vehicle listing unfinished. Your saved details are ready when you are." primaryLabel="Continue" secondaryLabel="Start fresh" onPrimary={() => { if (draft) router.push(vehicleDraftHref(draft)); setDraft(null); }} onSecondary={() => { clearVehicleDraft(userId); setDraft(null); }} onClose={() => setDraft(null)} />;
+  return <LoadLinkActionToast open={Boolean(draft)} title="Continue your vehicle listing?" message="You left a vehicle listing unfinished. Your saved details are ready when you are." primaryLabel="Continue" secondaryLabel="Start fresh" onPrimary={() => { if (draft) router.push(vehicleDraftHref(draft)); dismissPersistently(); }} onSecondary={() => { clearVehicleDraft(userId); dismissPersistently(); }} onClose={dismissPersistently} />;
 }
