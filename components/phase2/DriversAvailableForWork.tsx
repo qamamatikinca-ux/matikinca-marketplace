@@ -61,6 +61,7 @@ const PAGE_SIZE = 7;
 export default function DriversAvailableForWork({ darkMode = false, fullPage = false, showHero = true }: { darkMode?: boolean; fullPage?: boolean; showHero?: boolean }) {
   const [contactTarget, setContactTarget] = useState<Driver | null>(null);
   const [allDrivers, setAllDrivers] = useState<Driver[]>([]);
+  const [searchedDrivers,setSearchedDrivers]=useState<Driver[]|null>(null);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
   const [page, setPage] = useState(1);
@@ -118,8 +119,22 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
     return () => { active = false; };
   }, [fullPage]);
 
+  useEffect(()=>{
+    const term=search.trim();
+    if(!fullPage||!term){setSearchedDrivers(null);return}
+    let active=true;
+    const controller=new AbortController();
+    const timeout=window.setTimeout(()=>{
+      const params=new URLSearchParams({limit:"50",offset:"0",search:term});
+      void fetch(`/api/phase2/public-drivers?${params}`,{cache:"no-store",signal:controller.signal})
+       .then(async response=>{if(!response.ok)throw new Error("Search unavailable");return response.json()})
+       .then(payload=>{if(active)setSearchedDrivers((payload.drivers||[]) as Driver[])})
+       .catch(()=>{if(active)setSearchedDrivers(null)});
+    },180);
+    return()=>{active=false;window.clearTimeout(timeout);controller.abort()};
+  },[fullPage,search]);
   const sortedDrivers=useMemo(()=>{
-    const rows=allDrivers.filter(row=>{
+    const rows=(search.trim()&&searchedDrivers!==null?searchedDrivers:allDrivers).filter(row=>{
       const term=search.trim().toLowerCase();
       if(term && ![row.full_name,row.headline,row.bio,row.city,row.province,row.licence_code,...(row.vehicle_types||[])].join(" ").toLowerCase().includes(term))return false;
       if(location.trim()&&!([row.city,row.province].join(" ").toLowerCase().includes(location.trim().toLowerCase())))return false;
@@ -139,16 +154,17 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
       ||Number(b.average_rating||0)-Number(a.average_rating||0)
       ||Number(b.years_experience||0)-Number(a.years_experience||0)
     );
-  },[allDrivers,search,need,location,licence,minExperience,availableOnly,sort]);
+  },[allDrivers,searchedDrivers,search,need,location,licence,minExperience,availableOnly,sort]);
   useEffect(()=>{setPage(1)},[search,need,location,licence,minExperience,availableOnly,sort]);
 
   const nameMatches=useMemo(()=>{
     const query=search.trim().toLowerCase();
     if(!query)return [];
-    const starts=allDrivers.filter(row=>row.full_name.toLowerCase().split(/\s+/).some(word=>word.startsWith(query)));
-    const contains=allDrivers.filter(row=>!starts.includes(row)&&row.full_name.toLowerCase().includes(query));
+    const source=searchedDrivers!==null?searchedDrivers:allDrivers;
+    const starts=source.filter(row=>row.full_name.toLowerCase().split(/\s+/).some(word=>word.startsWith(query)));
+    const contains=source.filter(row=>!starts.includes(row)&&row.full_name.toLowerCase().includes(query));
     return [...starts,...contains].slice(0,5);
-  },[allDrivers,search]);
+  },[allDrivers,searchedDrivers,search]);
   const drivers = fullPage ? sortedDrivers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : sortedDrivers.slice(0, 4);
   const pageCount = Math.max(1, Math.ceil(sortedDrivers.length / PAGE_SIZE));
 
