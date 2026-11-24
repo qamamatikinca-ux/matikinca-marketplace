@@ -466,6 +466,7 @@ function ListingMessagesPage({onOpenDriverThread}:{onOpenDriverThread:(id:string
   const [selectedId, setSelectedId] = useState("");
   const [quotePermissions,setQuotePermissions]=useState<Record<string,boolean>>({});
   const [chatExitPrompt,setChatExitPrompt]=useState<{listingId:string;threadId:string;title:string;listingKind:"job"|"contract"}|null>(null);
+  const [workCompleted,setWorkCompleted]=useState(false);
   const chatCalls = useChatCalls(selectedId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
@@ -617,7 +618,7 @@ function ListingMessagesPage({onOpenDriverThread}:{onOpenDriverThread:(id:string
         let listingData = null;
         const listingResult = await supabase
           .from("job_listings")
-          .select("title,city,vehicle_group,rate,description,listing_kind")
+          .select("title,city,vehicle_group,rate,description,listing_kind,work_starts_at,work_ends_at")
           .eq("id", selectedConversation.listing_id)
           .maybeSingle();
 
@@ -792,7 +793,16 @@ function ListingMessagesPage({onOpenDriverThread}:{onOpenDriverThread:(id:string
   const dailyLimitReached = Boolean(
     selectedConversation && !isPro && messagesUsedToday >= dailyMessageLimit,
   );
-  const conversationBlocked = blockState.blocked_by_me || blockState.blocked_by_other;
+  const conversationBlocked = blockState.blocked_by_me || blockState.blocked_by_other || workCompleted;
+  const dueForClosure=(()=>{
+    if(!starterPost||!selectedConversation||selectedConversation.role!=="owner"||!isTransportConversation)return false;
+    const s=starterPost as PostContext&{work_starts_at?:string|null;work_ends_at?:string|null};
+    const date=s.listing_kind==="contract"?(s.work_ends_at||s.work_starts_at):s.work_starts_at;
+    if(!date)return false;
+    const local=(value:Date)=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Africa/Johannesburg",year:"numeric",month:"2-digit",day:"2-digit"}).format(value);
+    const parsed=new Date(date);
+    return Number.isFinite(parsed.getTime())&&local(parsed)<=local(new Date())&&!workCompleted;
+  })();
   const potentialDealPending = Boolean(selectedConversation?.role === "owner" && selectedConversation.request_status === "pending");
   const potentialDealDeclined = Boolean(selectedConversation?.request_status === "declined");
 
@@ -843,6 +853,14 @@ function ListingMessagesPage({onOpenDriverThread}:{onOpenDriverThread:(id:string
       .map(thread=>({kind:"driver" as const,thread,time:Date.parse(thread.updated_at||"")||0})):[];
     return [...listingItems,...driverItems].sort((a,b)=>b.time-a.time);
   },[visibleConversations,driverThreads,folder,query]);
+  useEffect(()=>{
+    let active=true;
+    setWorkCompleted(false);
+    if(!selectedConversation?.listing_id)return;
+    void supabase.from("job_closures").select("listing_id").eq("listing_id",selectedConversation.listing_id)
+      .eq("outcome","completed").limit(1).then(({data})=>{if(active)setWorkCompleted(Boolean(data?.length))});
+    return()=>{active=false};
+  },[selectedConversation?.listing_id]);
   const archivedCount = useMemo(
     () => conversations.filter((conversation) => Boolean(conversation.archived)).length,
     [conversations],
@@ -1779,16 +1797,7 @@ function ListingMessagesPage({onOpenDriverThread}:{onOpenDriverThread:(id:string
     window.history.replaceState({}, "", `/messages?thread=${conversation.id}`);
   }
 
-  function returnToInbox() {
-    if(selectedConversation && selectedConversation.role==="owner" && isTransportConversation && messages.filter(m=>!m.deleted_at && m.message_kind!=="system").length>=2){
-      const key=`loadlink-status-exit-prompt:${selectedConversation.id}`;
-      let already=false;
-      try{already=sessionStorage.getItem(key)==="shown";if(!already)sessionStorage.setItem(key,"shown")}catch{}
-      if(!already){setChatExitPrompt({listingId:selectedConversation.listing_id,threadId:selectedConversation.id,title:selectedConversation.listing_title,listingKind:starterPost?.listing_kind==="contract"?"contract":"job"});return}
-    }
-    returnToInboxNow();
-  }
-
+  function returnToInbox(){returnToInboxNow()}
   function returnToInboxNow() {
     selectedIdRef.current = "";
     setSelectedId("");
@@ -2030,7 +2039,10 @@ ${message}` : message)}
 
               <div className={`loadlink-listing-context flex min-h-[40px] items-center gap-2 border-b px-3 py-1.5 md:px-5 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black text-[#f6b800]"><BriefcaseIcon /></span>
-                <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black uppercase ${starterPost?.listing_kind==="contract"?"bg-[#ddf5e4] text-[#267849]":"bg-black text-white"}`}>{starterPost?.listing_kind==="contract"?"Contract":"Job"}</span><p className="min-w-0 flex-1 truncate text-[11px] font-semibold">{selectedConversation.listing_title}</p>
+                <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black uppercase ${starterPost?.listing_kind==="contract"?"bg-[#ddf5e4] text-[#267849]":"bg-black text-white"}`}>{starterPost?.listing_kind==="contract"?"Contract":"Job"}</span>
+                <p className="min-w-0 flex-1 truncate text-[11px] font-semibold">{selectedConversation.listing_title}</p>
+                {dueForClosure?<button type="button" onClick={()=>setChatExitPrompt({listingId:selectedConversation.listing_id,threadId:selectedConversation.id,title:selectedConversation.listing_title,listingKind:starterPost?.listing_kind==="contract"?"contract":"job"})} className="shrink-0 rounded-lg border border-[#efb919] px-2 py-1.5 text-[10px] font-bold text-[#936b00]">Confirm completed</button>:null}
+                {workCompleted?<span className="shrink-0 rounded-full bg-[#daf3df] px-2 py-1 text-[10px] font-bold text-[#247c45]">Completed</span>:null>
                 <Link href={`/listing/${selectedConversation.listing_id}`} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[9px] font-semibold uppercase ${darkMode ? "border-white/15 text-white/75" : "border-black/10 text-black/70"}`}>View</Link>
               </div>
 
@@ -2061,7 +2073,7 @@ ${message}` : message)}
 
               {conversationBlocked ? (
                 <div className="flex items-center justify-between gap-3 border-b border-red-300 bg-red-50 px-4 py-3 text-xs font-bold text-red-700">
-                  <span>{blockState.blocked_by_me ? "You blocked this user. Unblock them to continue the conversation." : "This user blocked the conversation. New messages are disabled."}</span>
+                  <span>{workCompleted ? "This work was confirmed completed by the original poster. The conversation is archived in History." : blockState.blocked_by_me ? "You blocked this user. Unblock them to continue the conversation." : "This user blocked the conversation. New messages are disabled."}</span>
                   {blockState.blocked_by_me ? <button type="button" onClick={() => void toggleBlock()} className="shrink-0 border border-red-500 px-3 py-2 text-[10px] font-black uppercase">Unblock</button> : null}
                 </div>
               ) : null}
@@ -2322,7 +2334,7 @@ ${message}` : message)}
           ) : null}
         </aside>
       </div>
-      {chatExitPrompt ? <JobConversationStatusDialog listingId={chatExitPrompt.listingId} threadId={chatExitPrompt.threadId} listingTitle={chatExitPrompt.title} listingKind={chatExitPrompt.listingKind} onExit={()=>{setChatExitPrompt(null);returnToInboxNow()}}/> : null}
+      {chatExitPrompt ? <JobConversationStatusDialog listingId={chatExitPrompt.listingId} threadId={chatExitPrompt.threadId} listingTitle={chatExitPrompt.title} listingKind={chatExitPrompt.listingKind} onCompleted={()=>setWorkCompleted(true)} onExit={()=>setChatExitPrompt(null)}/> : null}
     </main>
   );
 }

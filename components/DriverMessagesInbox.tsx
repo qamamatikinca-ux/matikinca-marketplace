@@ -8,7 +8,7 @@ import {useLoadLinkTheme} from "@/lib/useLoadLinkTheme";
 import {isAuthenticatedUser} from "@/lib/auth";
 import styles from "@/app/messages/messages.module.css";
 
-type Thread={id:string;driver_profile_id:string;driver_user_id:string;enquirer_user_id:string;driver_name:string;enquirer_name:string;blocked:boolean;updated_at?:string};
+type Thread={id:string;driver_profile_id:string;driver_user_id:string;enquirer_user_id:string;driver_name:string;enquirer_name:string;blocked:boolean;reopen_requested_by?:string|null;updated_at?:string};
 type Message={id:string;sender_id:string;body:string;created_at:string};
 export default function DriverMessagesInbox({profileId,threadId}:{profileId:string;threadId:string}){
  const {darkMode,toggleTheme}=useLoadLinkTheme();
@@ -18,6 +18,7 @@ export default function DriverMessagesInbox({profileId,threadId}:{profileId:stri
  const [messages,setMessages]=useState<Message[]>([]);
  const [draft,setDraft]=useState("");
  const [busy,setBusy]=useState(false);
+ const [reopening,setReopening]=useState(false);
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
  const [mobileChat,setMobileChat]=useState(Boolean(profileId||threadId));
@@ -26,7 +27,7 @@ export default function DriverMessagesInbox({profileId,threadId}:{profileId:stri
  const chosen=threads.find(t=>t.id===selected)||null;
  const reload=useCallback(async()=>{
   const {data,error}=await browserSupabase().from("driver_message_threads")
-   .select("id,driver_profile_id,driver_user_id,enquirer_user_id,driver_name,enquirer_name,blocked,updated_at")
+   .select("id,driver_profile_id,driver_user_id,enquirer_user_id,driver_name,enquirer_name,blocked,reopen_requested_by,updated_at")
    .order("updated_at",{ascending:false}).limit(100);
   if(error)throw error;
   setThreads((data||[]) as Thread[]);
@@ -91,6 +92,18 @@ export default function DriverMessagesInbox({profileId,threadId}:{profileId:stri
   return()=>{active=false;window.clearInterval(timer);document.removeEventListener("visibilitychange",load)};
  },[selected,userId]);
  useEffect(()=>{last.current?.scrollIntoView({block:"nearest"})},[messages.length]);
+ useEffect(()=>{if(!userId)return;const timer=window.setInterval(()=>{if(document.visibilityState==="visible")void reload().catch(()=>undefined)},12000);return()=>window.clearInterval(timer)},[userId,reload]);
+ async function requestReopen(){
+  if(!chosen||reopening)return;
+  setReopening(true);setError("");
+  try{
+    const {data,error:err}=await browserSupabase().rpc("loadlink_request_reopen_driver_chat",{p_thread_id:chosen.id});
+    if(err)throw err;
+    await reload();
+    if(data==="pending")setError("Request sent. The other participant must approve reopening.");
+  }catch(e){setError(e instanceof Error?e.message:"Could not request reopening.")}
+  finally{setReopening(false)}
+ }
  async function send(e:FormEvent){
   e.preventDefault();if(!selected||!draft.trim()||busy||chosen?.blocked)return;
   const body=draft.trim();
@@ -149,7 +162,12 @@ export default function DriverMessagesInbox({profileId,threadId}:{profileId:stri
         <div ref={last}/>
        </div>
        {error?<p role="alert" className="border-t border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700">{error}</p>:null}
-       {chosen.blocked?<p className="border-t border-black/10 p-4 text-sm">This conversation is closed.</p>:
+       {chosen.blocked?<div className="border-t border-black/10 bg-white p-4">
+        <p className="text-sm font-semibold text-black/70">This conversation is closed.</p>
+        <p className="mt-1 text-xs text-black/50">Reopening requires both participants to agree.</p>
+        <button type="button" disabled={reopening||chosen.reopen_requested_by===userId} onClick={()=>void requestReopen()}
+          className="mt-3 min-h-11 rounded-xl border border-[#f6b800] bg-[#f6b800] px-5 text-xs font-black text-black disabled:opacity-50">{reopening?"Updating…":chosen.reopen_requested_by===userId?"Request pending":"Reopen conversation"}</button>
+       </div>:
          <form onSubmit={e=>void send(e)} className="loadlink-chat-composer border-t border-black/10 bg-white/75 p-3 pb-[max(.8rem,env(safe-area-inset-bottom))] backdrop-blur-2xl">
           <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-[20px] border border-black/10 bg-white px-3 py-2">
            <textarea aria-label="Write a message" rows={1} maxLength={2000} value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Type a message…" className="min-h-10 max-h-32 min-w-0 flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none"/>

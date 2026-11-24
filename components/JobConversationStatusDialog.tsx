@@ -4,7 +4,7 @@ import {supabase} from "@/lib/supabaseClient";
 import CompletedDriverFeedback from "@/components/CompletedDriverFeedback";
 
 type Outcome="completed"|"cancelled"|"no_agreement";
-export default function JobConversationStatusDialog({listingId,threadId,listingTitle,listingKind="job",onExit}:{listingId:string;threadId:string;listingTitle:string;listingKind?:"job"|"contract";onExit:()=>void}){
+export default function JobConversationStatusDialog({listingId,threadId,listingTitle,listingKind="job",onExit,onCompleted}:{listingId:string;threadId:string;listingTitle:string;listingKind?:"job"|"contract";onExit:()=>void;onCompleted?:()=>void}){
  const [choice,setChoice]=useState<Outcome>("completed");
  const [note,setNote]=useState("");
  const [busy,setBusy]=useState(false);
@@ -23,8 +23,8 @@ export default function JobConversationStatusDialog({listingId,threadId,listingT
    setError(writeError.message||"Could not close this listing.");
    setBusy(false);return;
   }
-  if(choice==="completed")setRateAfterClose(true);
-  else onExit();
+  onCompleted?.();
+  setRateAfterClose(true);
  }
  if(rateAfterClose)return <div role="dialog" aria-modal="true" className="fixed inset-0 z-[2147483600] flex items-center justify-center bg-black/65 px-3 py-4">
    <div className="max-h-[85dvh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-5 text-black">
@@ -36,16 +36,9 @@ export default function JobConversationStatusDialog({listingId,threadId,listingT
  return <div role="dialog" aria-modal="true" aria-labelledby="job-closure-title" className="fixed inset-0 z-[2147483600] flex items-center justify-center bg-black/65 px-3 py-4 backdrop-blur-sm">
   <section className="max-h-[min(90dvh,680px)] w-full max-w-sm overflow-y-auto rounded-[24px] border border-black/10 bg-white p-5 text-black shadow-2xl sm:p-6">
    <p className="text-[10px] font-black uppercase tracking-[.13em] text-[#9a7000]">LoadLink history</p>
-   <h2 id="job-closure-title" className="mt-1 text-2xl font-black tracking-[-.04em]">Is this {listingKind} closed?</h2>
-   <p className="mt-2 text-sm leading-6 text-black/60">Only the original poster can close <strong className="text-black">{listingTitle}</strong>. Closed work moves to History.</p>
-   <fieldset className="mt-5 grid gap-2">
-    <legend className="mb-2 text-xs font-black">Outcome</legend>
-    {([["completed","Yes, work completed"],["cancelled","Closed / cancelled"],["no_agreement","No agreement reached"]] as const).map(([value,label])=>
-     <label key={value} className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 text-sm font-semibold ${choice===value?"border-[#e3aa24] bg-[#f6b800]/10":"border-black/10"}`}>
-      <input type="radio" name="job-outcome" checked={choice===value} onChange={()=>setChoice(value)}/>{label}
-     </label>
-    )}
-   </fieldset>
+   <h2 id="job-closure-title" className="mt-1 text-2xl font-black tracking-[-.04em]">Has this {listingKind} been completed?</h2>
+   <p className="mt-2 text-sm leading-6 text-black/60">Only the original poster can close <strong className="text-black">{listingTitle}</strong>. Only completed work moves to History.</p>
+   <p className="mt-4 rounded-xl border border-[#efb919]/30 bg-[#fff8e1] p-3 text-xs leading-5">Confirm only after the work has been completed. The listing moves to verified History and its conversation becomes read-only.</p>
    <label className="mt-4 block text-xs font-bold">Note (optional)
     <textarea maxLength={1500} value={note} onChange={e=>setNote(e.target.value)}
      placeholder="Add a brief record" className="mt-2 min-h-16 w-full rounded-xl border border-black/15 bg-white p-3 text-sm font-normal outline-none focus:border-[#f6b800]"/>
@@ -53,7 +46,7 @@ export default function JobConversationStatusDialog({listingId,threadId,listingT
    {error?<p role="alert" className="mt-3 text-xs font-bold text-red-600">{error}</p>:null}
    <div className="mt-4 flex gap-2">
     <button type="button" disabled={busy} onClick={onExit} className="min-h-11 flex-1 rounded-xl border border-black/15 text-sm font-bold">Still open</button>
-    <button type="button" disabled={busy} onClick={()=>void closeJob()} className="min-h-11 flex-1 rounded-xl bg-[#f6b800] text-sm font-black text-black disabled:opacity-50">{busy?"Saving…":`Close ${listingKind}`}</button>
+    <button type="button" disabled={busy} onClick={()=>void closeJob()} className="min-h-11 flex-1 rounded-xl bg-[#f6b800] text-sm font-black text-black disabled:opacity-50">{busy?"Saving…":"Confirm completed"}</button>
    </div>
   </section>
  </div>;
