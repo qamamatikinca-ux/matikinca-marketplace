@@ -11,6 +11,7 @@ type Ref={id:string;referee_name:string;referee_company:string|null;verification
 type Assignment={id:string;listing_id:string;operator_user_id:string;driver_user_id:string;driver_display_name:string;vehicle_registration:string;assignment_date:string|null;status:string;created_at:string};
 type EmployerReference={id:string;assignment_id:string;employer_user_id:string;driver_user_id:string;statement:string;created_at:string};
 type Application={id:string;vacancy_id:string;status:string;created_at:string};
+type VerifiedCompletion={assignment_id:string;listing_id:string;job_title:string;listing_kind:string;closed_at:string;rating:number|null};
 function date(value:string|null|undefined){if(!value)return "Not recorded";const d=new Date(value);return Number.isFinite(d.getTime())?d.toLocaleDateString("en-ZA",{day:"numeric",month:"short",year:"numeric"}):"Not recorded"}
 function expiry(value:string|null|undefined){if(!value)return "Not recorded";const d=new Date(value);if(!Number.isFinite(d.getTime()))return "Not recorded";return value.slice(0,10)<new Date().toISOString().slice(0,10)?`Expired · ${date(value)}`:`Valid until ${date(value)}`}
 export default function DriverHistory(){
@@ -18,6 +19,7 @@ export default function DriverHistory(){
  const [profile,setProfile]=useState<Driver|null>(null);const [documents,setDocuments]=useState<DriverDocument[]>([]);
  const [references,setReferences]=useState<Ref[]>([]);const [employerReferences,setEmployerReferences]=useState<EmployerReference[]>([]);
  const [assignments,setAssignments]=useState<Assignment[]>([]);const [applications,setApplications]=useState<Application[]>([]);
+ const [confirmedWork,setConfirmedWork]=useState<VerifiedCompletion[]>([]);
  const [uid,setUid]=useState("");const [loading,setLoading]=useState(true);const [error,setError]=useState("");
  const [referenceNotes,setReferenceNotes]=useState<Record<string,string>>({});const [sending,setSending]=useState("");const [notice,setNotice]=useState("");
  const surface=darkMode?"border-white/15 bg-[#111]":"border-black/10 bg-white";
@@ -27,13 +29,15 @@ export default function DriverHistory(){
     const {data:{user},error:authError}=await supabase.auth.getUser();
     if(!live)return;if(authError)throw authError;if(!user){window.location.assign(loginHref("/history"));return}
     setUid(user.id);
-    const [p,a,apps]=await Promise.all([
+    const [p,a,apps,completed]=await Promise.all([
       supabase.from("driver_profiles").select("id,full_name,headline,city,province,licence_code,years_experience,prdp_required,prdp_expiry,licence_expires_at,licence_expiry,prdp_expires_at,profile_expires_at,availability,vehicle_types,route_experience,status,verification_level,created_at").eq("user_id",user.id).maybeSingle(),
       supabase.from("job_driver_assignments").select("id,listing_id,operator_user_id,driver_user_id,driver_display_name,vehicle_registration,assignment_date,status,created_at").or(`operator_user_id.eq.${user.id},driver_user_id.eq.${user.id}`).order("created_at",{ascending:false}).limit(120),
       supabase.from("driver_vacancy_applications").select("id,vacancy_id,status,created_at").eq("driver_user_id",user.id).order("created_at",{ascending:false}).limit(80),
+      supabase.rpc("loadlink_my_driver_completed_jobs")
     ]);
-    if(!live)return;if(p.error||a.error||apps.error)throw p.error||a.error||apps.error;
+    if(!live)return;if(p.error||a.error||apps.error||completed.error)throw p.error||a.error||apps.error||completed.error;
     const d=p.data as Driver|null;setProfile(d);setAssignments((a.data||[]) as Assignment[]);setApplications((apps.data||[]) as Application[]);
+    setConfirmedWork(((completed.data||[]) as VerifiedCompletion[]).sort((x,y)=>new Date(y.closed_at).getTime()-new Date(x.closed_at).getTime()));
     const assignIds=(a.data||[]).map(x=>x.id);
     const [docs,refs,employers]=await Promise.all([
       d?supabase.from("driver_documents").select("id,document_type,original_filename,validation_status,uploaded_at").eq("profile_id",d.id).order("uploaded_at",{ascending:false}):Promise.resolve({data:[],error:null}),
@@ -87,14 +91,30 @@ export default function DriverHistory(){
       </div>)}</div>}
     </div>
     <div className={`mt-4 rounded-[22px] border p-5 sm:p-6 ${surface}`}>
-     <h3 className="text-lg font-black">Driver Work History</h3>
-     {!ownAssignments.length?<p className="mt-3 text-sm opacity-65">No assigned transport work has been recorded for this profile yet.</p>:
-      <div className="mt-4 space-y-3">{ownAssignments.map(a=><article key={a.id} className="rounded-xl border border-current/10 p-4">
-       <p className="text-sm font-bold">Assignment {a.listing_id.slice(0,8).toUpperCase()}</p>
-       <p className="mt-1 text-xs opacity-65">{date(a.assignment_date||a.created_at)} · {a.status.replaceAll("_"," ")}{a.vehicle_registration?" · "+a.vehicle_registration:""}</p>
-       {refById.get(a.id)?<div className="mt-3 rounded-lg bg-[#f6b800]/10 p-3 text-xs"><strong>Employer reference:</strong><p className="mt-1 whitespace-pre-wrap">{refById.get(a.id)?.statement}</p></div>:null}
-      </article>)}</div>}
-    </div>
+      <h3 className="text-lg font-black">Verified completed work</h3>
+      <p className="mt-1 text-xs opacity-65">Only jobs and contracts marked completed by the original poster count toward your public LoadLink work record.</p>
+      {!confirmedWork.length?<p className="mt-3 text-sm opacity-65">Confirmed completed jobs and contracts will appear here.</p>:
+        <div className="mt-4 space-y-3">{confirmedWork.map(item=>
+          <article key={item.assignment_id} className="rounded-xl border border-current/10 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-bold">{item.job_title}</p>
+              <span className="rounded-full bg-[#e5f6ea] px-2.5 py-1 text-[10px] font-black text-[#258044]">COMPLETED</span>
+            </div>
+            <p className="mt-1 text-xs opacity-65">{item.listing_kind==="contract"?"Contract":"Job"} · {date(item.closed_at)}</p>
+            {item.rating!==null?<p className="mt-2 text-xs font-semibold text-[#956d00]">★ {Number(item.rating).toFixed(1)} · Poster-confirmed rating</p>:null}
+            {refById.get(item.assignment_id)?<p className="mt-2 whitespace-pre-wrap text-xs"><strong>Employer reference:</strong> {refById.get(item.assignment_id)?.statement}</p>:null}
+          </article>
+        )}</div>}
+     </div>
+     {ownAssignments.length?<div className={`mt-4 rounded-[22px] border p-5 sm:p-6 ${surface}`}>
+      <h3 className="text-lg font-black">Other assignments</h3>
+      <p className="mt-1 text-xs opacity-60">Work in progress is kept separate from your completed-job count.</p>
+      <div className="mt-4 space-y-3">{ownAssignments.filter(a=>!confirmedWork.some(item=>item.assignment_id===a.id)).map(a=>
+       <article key={a.id} className="rounded-xl border border-current/10 p-4">
+        <p className="text-sm font-bold">{a.driver_display_name} · Assignment {a.listing_id.slice(0,8).toUpperCase()}</p>
+        <p className="mt-1 text-xs opacity-65">{date(a.assignment_date||a.created_at)} · {a.status.replaceAll("_"," ")}</p>
+       </article>)}</div>
+     </div>:null}
     <div className={`mt-4 rounded-[22px] border p-5 sm:p-6 ${surface}`}>
      <h3 className="text-lg font-black">References</h3>
      {!references.length?<p className="mt-3 text-sm opacity-65">No previous reference contacts recorded in your Driver Profile.</p>:<div className="mt-3 grid gap-2 sm:grid-cols-2">{references.map(r=><div key={r.id} className="rounded-xl border border-current/10 p-3">

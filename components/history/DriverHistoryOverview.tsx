@@ -7,7 +7,7 @@ import DriverHistory from "@/components/history/DriverHistory";
 import DriverAssignmentRecords from "@/components/history/DriverAssignmentRecords";
 
 type Profile={id:string;full_name:string;status:string};
-type Assignment={id:string;driver_display_name:string;status:string;assignment_date:string|null;created_at:string};
+type Assignment={assignment_id:string;listing_id:string;job_title:string;listing_kind:string;closed_at:string;rating:number|null};
 export default function DriverHistoryOverview(){
  const {darkMode}=useLoadLinkTheme();
  const [profile,setProfile]=useState<Profile|null>(null);
@@ -20,10 +20,10 @@ export default function DriverHistoryOverview(){
   if(!user||!active)return;
   const [p,a]=await Promise.all([
    supabase.from("driver_profiles").select("id,full_name,status").eq("user_id",user.id).maybeSingle(),
-   supabase.from("job_driver_assignments").select("id,driver_display_name,status,assignment_date,created_at")
-     .or(`operator_user_id.eq.${user.id},driver_user_id.eq.${user.id}`).eq("status","completed").order("created_at",{ascending:false}).limit(5)
+   supabase.rpc("loadlink_my_driver_completed_jobs")
   ]);
   if(!active)return;
+  if(p.error||a.error)throw p.error||a.error;
   setProfile((p.data||null) as Profile|null);
   setRecords((a.data||[]) as Assignment[]);
   if(p.data?.id){
@@ -42,7 +42,7 @@ export default function DriverHistoryOverview(){
    !profile&&!records.length?<p className="mt-3 text-sm opacity-60">Completed driver assignments and driver documents will appear here when available.</p>:
    <div className="mt-4 space-y-2 text-sm">
     {profile?<p className="font-semibold">{profile.full_name} <span className="font-normal opacity-60">· {docCount} document{docCount===1?"":"s"} recorded</span></p>:null}
-    {records.length?<p className="opacity-65">{records.length} recent completed driver assignment{records.length===1?"":"s"}</p>:null}
+    {records.length?<p className="opacity-65">{records.length} confirmed completed LoadLink job{records.length===1?"":"s"} or contract{records.length===1?"":"s"}</p>:null}
    </div>}
   <div className="mt-4 flex flex-wrap gap-4">
    {profile?<Link href="/driver-profile" className="text-xs font-bold underline underline-offset-4">Driver profile</Link>:null}

@@ -3,7 +3,7 @@ import {useEffect,useState} from "react";
 import {supabase} from "@/lib/supabaseClient";
 import CompletedDriverFeedback from "@/components/CompletedDriverFeedback";
 type Due={id:string;title:string;listing_kind:string;work_starts_at:string};
-function today(){return new Date().toISOString().slice(0,10)}
+function today(){return new Date(Date.now()+2*60*60*1000).toISOString().slice(0,10)}
 export default function JobCompletionReminder(){
  const [item,setItem]=useState<Due|null>(null);
  const [poster,setPoster]=useState("");
@@ -19,7 +19,7 @@ export default function JobCompletionReminder(){
     const {data,error:queryError}=await supabase.from("job_listings")
      .select("id,title,listing_kind,work_starts_at")
      .eq("user_id",user.id).eq("status","active").eq("listing_kind","job")
-     .not("work_starts_at","is",null).lte("work_starts_at",new Date().toISOString())
+     .not("work_starts_at","is",null).lte("work_starts_at",`${today()}T21:59:59.999Z`)
      .order("work_starts_at",{ascending:true}).limit(15);
     if(queryError)throw queryError;
     const candidate=((data||[]) as Due[]).find(j=>{try{return sessionStorage.getItem(`loadlink-due-dismiss:${j.id}:${today()}`)!=="1"}catch{return true}});
