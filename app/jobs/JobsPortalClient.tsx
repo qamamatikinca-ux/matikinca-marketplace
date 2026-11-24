@@ -2,6 +2,7 @@
 
 import LoadLinkSortControl from "@/components/LoadLinkSortControl";
 import DriverVacancyResults from "@/components/DriverVacancyResults";
+import ContractApplicationDraft from "@/components/ContractApplicationDraft";
 
 
 import LoadLinkImage from "@/components/LoadLinkImage";
@@ -819,6 +820,7 @@ function FeaturedJobsRail({ jobs, darkMode, onOpen }: { jobs: JobListing[]; dark
 function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onReport, onOpenGallery, onOpenAnalytics, onDelete, onEdit }: { job: JobListing; darkMode: boolean; isOwner: boolean; isLiked: boolean; onToggleLiked: () => void; onShare: () => void; onReport: () => void; onOpenGallery: () => void; onOpenAnalytics: () => void; onDelete: () => void; onEdit: () => void }) {
   const coverPhoto = job.photos[0] || "/images/jobs/job-card-1.jpg";
   const photoCount = job.photos.length;
+  const [applyOpen,setApplyOpen]=useState(false);
   const isPro = ["pro", "dealer"].includes(job.packageType || "");
 
   return (
@@ -858,9 +860,11 @@ function JobCard({ job, darkMode, isOwner, isLiked, onToggleLiked, onShare, onRe
           </div>
         </details>
 
+        {job.listingType!=="asset"?<button type="button" onClick={()=>setApplyOpen(true)} className="mt-3 flex min-h-12 w-full items-center justify-center bg-[#f6b800] px-4 text-sm font-black text-black">Apply with LoadLink profile</button>:null}
         <div className={`mt-4 grid grid-cols-2 overflow-hidden border ${darkMode?"border-white/10":"border-black/10"}`}><button onClick={onShare} className={`flex min-h-12 items-center justify-center gap-2 border-r text-xs font-black uppercase ${darkMode?"border-white/10":"border-black/10"}`}><ShareIcon/>Share</button><button onClick={onReport} className="flex min-h-12 items-center justify-center gap-2 text-xs font-black uppercase text-red-500"><ReportIcon/>Report</button></div>
         {isOwner?<div className="mt-3 grid grid-cols-2 gap-3"><button onClick={onEdit} className="border border-[#f6b800] px-4 py-3 text-xs font-black uppercase text-[#b88900]">Edit post</button><button onClick={onDelete} className="border border-red-500/70 px-4 py-3 text-xs font-black uppercase text-red-500">Delete post</button></div>:null}
       </div>
+      {applyOpen?<ContractApplicationDraft kind={job.listingType==="contract"?"contract":"job"} listingId={job.id} title={job.title} city={job.city} rate={job.rate} vehicle={job.vehicleNeeded||job.group} darkMode={darkMode} onClose={()=>setApplyOpen(false)}/>:null}
     </article>
   );
 }
