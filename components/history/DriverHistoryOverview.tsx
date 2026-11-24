@@ -36,17 +36,18 @@ export default function DriverHistoryOverview(){
   return()=>{active=false;};
  },[]);
  const surface=darkMode?"border-white/15 bg-[#111]":"border-black/10 bg-white";
- return <section id="driver-records" aria-label="Driver history" className={`mt-5 rounded-[22px] border p-5 sm:p-6 ${surface}`}>
-  <h2 className="text-xl font-black tracking-[-.035em]">Driver records</h2>
+ return <section id="driver-records" aria-label="Driver history" className={`rounded-[20px] border p-5 sm:p-6 ${surface}`}>
+  <h2 className="text-xl font-black tracking-[-.035em]">Driver history</h2>
+  <p className="mt-1 text-xs leading-5 opacity-60">Completed assignments are counted only when the original poster confirms the job or contract.</p>
   {loading?<p className="mt-3 text-sm opacity-60">Loading driver records…</p>:
    !profile&&!records.length?<p className="mt-3 text-sm opacity-60">Completed driver assignments and driver documents will appear here when available.</p>:
    <div className="mt-4 space-y-2 text-sm">
     {profile?<p className="font-semibold">{profile.full_name} <span className="font-normal opacity-60">· {docCount} document{docCount===1?"":"s"} recorded</span></p>:null}
-    {records.length?<p className="opacity-65">{records.length} confirmed completed LoadLink job{records.length===1?"":"s"} or contract{records.length===1?"":"s"}</p>:null}
+    <p className="font-bold">{records.length} verified completed {records.length===1?"assignment":"assignments"}</p>
    </div>}
   <div className="mt-4 flex flex-wrap gap-4">
    {profile?<Link href="/driver-profile" className="text-xs font-bold underline underline-offset-4">Driver profile</Link>:null}
-   <button type="button" onClick={()=>setExpanded(x=>!x)} aria-expanded={expanded} className="text-xs font-bold underline underline-offset-4">{expanded?"Hide driver details":"Driver details & assignments"}</button>
+   <button type="button" onClick={()=>setExpanded(x=>!x)} aria-expanded={expanded} className="text-xs font-bold underline underline-offset-4">{expanded?"Hide driver details":"Open driver records & documents"}</button>
   </div>
   {expanded?<div className="mt-6 border-t border-current/10 pt-6">
    <DriverHistory/>
