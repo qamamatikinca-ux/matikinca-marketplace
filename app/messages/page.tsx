@@ -28,6 +28,7 @@ import SiteMenu from "@/components/SiteMenu";
 import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import LogisticsMessageTools, { type QuoteAutofillDefaults, type QuoteVehicleOption, type StructuredQuote } from "@/components/LogisticsMessageTools";
 import JobConversationStatusDialog from "@/components/JobConversationStatusDialog";
+import DriverMessagesInbox from "@/components/DriverMessagesInbox";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
@@ -410,7 +411,18 @@ function listingRouteSummary(description: string | null | undefined) {
   return from && to ? `${from} → ${to}` : "";
 }
 
-export default function MessagesPage() {
+export default function MessagesPage(){
+  const [driverRoute,setDriverRoute]=useState<{profile:string;thread:string}|null>(null);
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.search);
+    const profile=params.get("driver")||"";
+    const thread=params.get("driverThread")||"";
+    setDriverRoute(profile||thread||params.has("driverInbox")?{profile,thread}:null);
+  },[]);
+  return driverRoute?<DriverMessagesInbox profileId={driverRoute.profile} threadId={driverRoute.thread}/>:<ListingMessagesPage/>;
+}
+
+function ListingMessagesPage() {
   // LOADLINK V2.5.4 SESSION WALLPAPER
   useEffect(() => {
     const count = 10;
@@ -1813,6 +1825,7 @@ ${message}` : message)}
                 className={`${styles.inboxSearch} h-12 w-full min-w-0 rounded-full border border-current/10 bg-current/[.03] px-4 text-sm font-medium outline-none focus:border-[#f6b800]`}
               />
             </label>
+            <Link href="/messages?driverInbox=1" className="mt-3 inline-flex min-h-9 items-center rounded-full border border-current/15 px-4 text-xs font-bold">Driver conversations</Link>
             <div data-loadlink-folder-tabs="v2619-fixed" className="loadlink-folder-tabs mt-3 grid min-w-0 grid-cols-[0.8fr_1.35fr_0.9fr] gap-2" role="tablist" aria-label="Conversation folders">
               <button type="button" role="tab" aria-selected={folder === "inbox"} onClick={() => { setFolder("inbox"); setQuery(""); }} className={`min-w-0 whitespace-nowrap rounded-xl border px-2 py-2.5 text-[10px] font-black transition ${folder === "inbox" ? "border-[#f6b800] bg-[#f6b800] text-black shadow-sm" : darkMode ? "border-white/12 bg-[#0b0b0b] text-white/62" : "border-black/10 bg-white text-black/62"}`}>Inbox</button>
               <button type="button" role="tab" aria-selected={folder === "potential"} onClick={() => { setFolder("potential"); setQuery(""); }} className={`min-w-0 whitespace-nowrap rounded-xl border px-2 py-2.5 text-[10px] font-black transition ${folder === "potential" ? "border-[#f6b800] bg-[#f6b800] text-black shadow-sm" : darkMode ? "border-white/12 bg-[#0b0b0b] text-white/62" : "border-black/10 bg-white text-black/62"}`}>Potential Deals{potentialDealCount ? <span className="ml-1.5 opacity-65">{potentialDealCount}</span> : null}</button>
