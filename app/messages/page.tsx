@@ -417,7 +417,7 @@ export default function MessagesPage(){
     const params=new URLSearchParams(window.location.search);
     const profile=params.get("driver")||"";
     const thread=params.get("driverThread")||"";
-    setDriverRoute(profile||thread||params.has("driverInbox")?{profile,thread}:null);
+    setDriverRoute(profile||thread?{profile,thread}:null);
   },[]);
   function openDriverThread(id:string){setDriverRoute({profile:"",thread:id});window.history.replaceState({},"",`/messages?driverThread=${encodeURIComponent(id)}`)}
   function closeDriverThread(){setDriverRoute(null);window.history.replaceState({},"","/messages")}
