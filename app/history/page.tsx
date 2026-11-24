@@ -21,9 +21,9 @@ export default function HistoryPage(){
     <h1 className="text-4xl font-black tracking-[-.05em] sm:text-5xl">History</h1>
     <p className="mt-2 text-sm opacity-65">Your completed LoadLink jobs, contracts and driver records.</p>
    </header>
-   <nav aria-label="History sections" className={`grid grid-cols-3 gap-1 rounded-[16px] border p-1 ${darkMode?"border-white/15 bg-[#101010]":"border-black/10 bg-white"}`}>
-    {tabs.map(item=><button key={item.id} type="button" onClick={()=>setTab(item.id)} aria-current={tab===item.id?"page":undefined}
-      className={`min-h-12 rounded-xl px-2 text-sm font-bold transition-colors ${tab===item.id?"bg-[#f6b800] text-black":darkMode?"text-white/75 hover:bg-white/10":"text-black/60 hover:bg-black/5"}`}>
+   <nav data-loadlink-folder-tabs="v2619-fixed" aria-label="History sections" className="loadlink-folder-tabs grid min-w-0 grid-cols-3 gap-2" role="tablist">
+    {tabs.map(item=><button key={item.id} type="button" role="tab" aria-selected={tab===item.id} onClick={()=>setTab(item.id)}
+      className={`min-w-0 whitespace-nowrap rounded-xl border px-2 py-3 text-xs font-black transition ${tab===item.id?"border-[#f6b800] bg-[#f6b800] text-black shadow-sm":darkMode?"border-white/12 bg-[#0b0b0b] text-white/75":"border-black/10 bg-white text-black/65"}`}>
       {item.title}
     </button>)}
    </nav>
