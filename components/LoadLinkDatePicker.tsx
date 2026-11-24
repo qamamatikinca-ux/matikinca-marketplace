@@ -1,70 +1,69 @@
 "use client";
-
+import {useMemo,useState} from "react";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
-import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
-
-function toLocalDate(value: string) {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, Math.max(0, month - 1), day || 1);
+function toLocalDate(value:string){
+ const [year,month,day]=value.split("-").map(Number);
+ return new Date(year,Math.max(0,month-1),day||1);
 }
-
-function dateValue(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function dateValue(date:Date){
+ const year=date.getFullYear(),month=String(date.getMonth()+1).padStart(2,"0"),day=String(date.getDate()).padStart(2,"0");
+ return `${year}-${month}-${day}`;
 }
-
-export default function LoadLinkDatePicker({ value, onChange, min, darkMode, ariaLabel }: { value: string; onChange: (value: string) => void; min?: string; darkMode: boolean; ariaLabel: string }) {
-  const initial = value ? toLocalDate(value) : new Date();
-  const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  useEffect(()=>{setMounted(true);},[]);
-
-  const [month, setMonth] = useState(() => new Date(initial.getFullYear(), initial.getMonth(), 1));
-  const minValue = min || "0000-01-01";
-
-  const days = useMemo(() => {
-    const first = new Date(month.getFullYear(), month.getMonth(), 1);
-    const leading = (first.getDay() + 6) % 7;
-    const count = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-    return Array.from({ length: leading + count }, (_, index) => index < leading ? null : new Date(month.getFullYear(), month.getMonth(), index - leading + 1));
-  }, [month]);
-
-  const label = value ? new Intl.DateTimeFormat("en-ZA", { day: "numeric", month: "long", year: "numeric" }).format(toLocalDate(value)) : "Choose a date";
-  const panel = darkMode ? "border-white/12 bg-[#0b0b0b] text-white" : "border-black/10 bg-[#fffdf8] text-black";
-  const soft = darkMode ? "border-white/10 bg-white/[.035]" : "border-black/8 bg-black/[.025]";
-
-  return (
-    <>
-      <button type="button" onClick={() => { setMonth(new Date(initial.getFullYear(), initial.getMonth(), 1)); setOpen(true); }} aria-label={ariaLabel} className={`flex h-12 w-full items-center justify-between rounded-[15px] border px-4 text-left text-sm font-semibold outline-none ${darkMode ? "border-white/12 bg-white/[.045] text-white" : "border-black/10 bg-white/[.62] text-black"}`}>
-        <span>{label}</span><CalendarIcon />
-      </button>
-      {mounted && open ? createPortal(
-        <div className="fixed inset-0 z-[2147483200] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/65 px-3 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-[max(.75rem,env(safe-area-inset-top))] backdrop-blur-sm sm:items-center" role="presentation">
-          <button type="button" aria-label="Close date picker" className="absolute inset-0" onClick={() => setOpen(false)} />
-          <section role="dialog" aria-modal="true" aria-label={ariaLabel} className={`relative z-10 max-h-[min(92dvh,650px)] w-full max-w-md overflow-y-auto overscroll-contain rounded-[24px] border p-4 shadow-2xl sm:p-5 ${panel}`}>
-            <div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-[#b78300]">Date</p><h2 className="mt-1 text-2xl font-black tracking-[-.04em]">Choose a date</h2></div><button type="button" onClick={() => setOpen(false)} className={`flex h-10 w-10 items-center justify-center rounded-full border text-xl ${soft}`} aria-label="Close"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button></div>
-            <div className="mt-3 flex items-center justify-between gap-3"><button type="button" onClick={() => setMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))} className={`h-10 w-10 rounded-full border ${soft}`} aria-label="Previous month"><LoadLinkIcon name="chevronLeft" size={18} className="inline-block shrink-0 align-middle" /></button><strong className="text-base font-black">{new Intl.DateTimeFormat("en-ZA", { month: "long", year: "numeric" }).format(month)}</strong><button type="button" onClick={() => setMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))} className={`h-10 w-10 rounded-full border ${soft}`} aria-label="Next month"><LoadLinkIcon name="chevronRight" size={18} className="inline-block shrink-0 align-middle" /></button></div>
-            <div className="mt-3 grid grid-cols-7 text-center text-[9px] font-black uppercase opacity-45">{["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((item) => <span key={item} className="py-2">{item}</span>)}</div>
-            <div className="grid grid-cols-7 gap-1">{days.map((date, index) => {
-              if (!date) return <span key={`empty-${index}`} className="h-9" />;
-              const next = dateValue(date);
-              const disabled = next < minValue;
-              const selected = next === value;
-              return <button key={next} type="button" disabled={disabled} onClick={() => { onChange(next); setOpen(false); }} className={`h-9 rounded-lg text-sm font-bold transition disabled:opacity-20 ${selected ? "bg-[#f6b800] text-black" : darkMode ? "bg-white/[.035] hover:bg-white/[.08]" : "bg-black/[.025] hover:bg-black/[.06]"}`}>{date.getDate()}</button>;
-            })}</div>
-            <div className="sticky bottom-0 mt-3 flex gap-2 bg-inherit pt-2">
-              <button type="button" onClick={() => {setMonth(new Date()); onChange(dateValue(new Date())); setOpen(false);}} className={`h-11 flex-1 rounded-xl border text-sm font-bold ${soft}`}>Today</button>
-              <button type="button" disabled={!value || value < minValue} onClick={() => setOpen(false)} className="h-11 flex-[1.5] rounded-xl bg-[#f6b800] text-sm font-black text-black disabled:opacity-40">Choose date</button>
-            </div>
-          </section>
-        </div>
-        , document.body) : null}
-    </>
-  );
+export default function LoadLinkDatePicker({value,onChange,min,darkMode,ariaLabel}:{value:string;onChange:(value:string)=>void;min?:string;darkMode:boolean;ariaLabel:string}){
+ const minValue=min||"0000-01-01";
+ const [open,setOpen]=useState(false);
+ const [selected,setSelected]=useState(value||"");
+ const [month,setMonth]=useState(()=>{const start=value?toLocalDate(value):new Date();return new Date(start.getFullYear(),start.getMonth(),1)});
+ const days=useMemo(()=>{
+  const first=new Date(month.getFullYear(),month.getMonth(),1);
+  const leading=(first.getDay()+6)%7;
+  const count=new Date(month.getFullYear(),month.getMonth()+1,0).getDate();
+  return Array.from({length:leading+count},(_,index)=>index<leading?null:new Date(month.getFullYear(),month.getMonth(),index-leading+1));
+ },[month]);
+ const text=value?new Intl.DateTimeFormat("en-ZA",{day:"numeric",month:"long",year:"numeric"}).format(toLocalDate(value)):"Choose a date";
+ const panel=darkMode?"border-white/15 bg-[#111] text-white":"border-black/10 bg-white text-black";
+ const soft=darkMode?"border-white/15 bg-white/[.04]":"border-black/10 bg-[#fafafa]";
+ function toggle(){
+  if(open){setOpen(false);return}
+  const next=value||dateValue(new Date());
+  setSelected(next);
+  const d=toLocalDate(next);
+  setMonth(new Date(d.getFullYear(),d.getMonth(),1));
+  setOpen(true);
+ }
+ function confirm(){
+  if(!selected||selected<minValue)return;
+  onChange(selected);
+  setOpen(false);
+ }
+ return <div className="min-w-0" data-loadlink-inline-date-picker="true">
+  <button type="button" aria-label={ariaLabel} aria-expanded={open} onClick={toggle} className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-[14px] border px-4 text-left text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-[#f6b800] ${panel}`}>
+   <span className="min-w-0 truncate">{text}</span>
+   <LoadLinkIcon name="calendar" size={18} className="shrink-0 text-[#bc8a00]"/>
+  </button>
+  {open?<section aria-label={ariaLabel} className={`mt-3 w-full min-w-0 rounded-[18px] border p-3 sm:p-4 ${panel}`}>
+   <div className="flex items-center justify-between gap-2">
+    <button type="button" aria-label="Previous month" onClick={()=>setMonth(current=>new Date(current.getFullYear(),current.getMonth()-1,1))} className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border ${soft}`}><LoadLinkIcon name="chevronLeft" size={17}/></button>
+    <h3 className="text-center text-sm font-black">{new Intl.DateTimeFormat("en-ZA",{month:"long",year:"numeric"}).format(month)}</h3>
+    <button type="button" aria-label="Next month" onClick={()=>setMonth(current=>new Date(current.getFullYear(),current.getMonth()+1,1))} className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border ${soft}`}><LoadLinkIcon name="chevronRight" size={17}/></button>
+   </div>
+   <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase opacity-50">
+    {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(day=><span className="py-1.5" key={day}>{day}</span>)}
+   </div>
+   <div className="grid grid-cols-7 gap-1">
+    {days.map((day,index)=>{
+      if(!day)return <span key={`empty-${index}`} className="h-10"/>;
+      const next=dateValue(day);
+      return <button key={next} type="button" disabled={next<minValue} aria-pressed={selected===next}
+       onClick={()=>setSelected(next)}
+       className={`h-10 min-w-0 rounded-lg text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-[#f6b800] disabled:cursor-not-allowed disabled:opacity-20 ${selected===next?"bg-[#f6b800] text-black":darkMode?"bg-white/[.04] hover:bg-white/[.10]":"bg-[#f6f6f6] hover:bg-[#eee]"}`}>{day.getDate()}</button>;
+    })}
+   </div>
+   <div className="mt-3 flex gap-2 border-t border-current/10 pt-3">
+    <button type="button" onClick={()=>{const now=dateValue(new Date());setSelected(now);setMonth(new Date(new Date().getFullYear(),new Date().getMonth(),1))}} className={`min-h-11 flex-1 rounded-xl border px-2 text-xs font-bold ${soft}`}>Today</button>
+    <button type="button" disabled={!selected||selected<minValue} onClick={confirm} className="min-h-11 flex-[1.5] rounded-xl bg-[#f6b800] px-3 text-xs font-black text-black disabled:opacity-40">Use this date</button>
+   </div>
+  </section>:null}
+ </div>;
 }
-
-function CalendarIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 6h14v14H5V6Zm3-3v5m8-5v5M5 10h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>; }

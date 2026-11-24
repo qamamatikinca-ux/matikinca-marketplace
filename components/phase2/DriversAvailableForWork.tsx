@@ -3,6 +3,7 @@
 import DriverContactDialog from "@/components/DriverContactDialog";
 import LoadLinkImage from "@/components/LoadLinkImage";
 import LoadLinkSortControl from "@/components/LoadLinkSortControl";
+import SouthAfricaLocationInput from "@/components/SouthAfricaLocationInput";
 
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 
@@ -64,6 +65,8 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
   const [notice, setNotice] = useState("");
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<SortOption>("recommended");
+  const [search,setSearch]=useState("");
+  const [filtersOpen,setFiltersOpen]=useState(false);
   const [need,setNeed]=useState<DriverNeed>("");
   const [location,setLocation]=useState("");
   const [licence,setLicence]=useState("");
@@ -121,6 +124,8 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
 
   const sortedDrivers=useMemo(()=>{
     const rows=allDrivers.filter(row=>{
+      const term=search.trim().toLowerCase();
+      if(term && ![row.full_name,row.headline,row.bio,row.city,row.province,row.licence_code,...(row.vehicle_types||[])].join(" ").toLowerCase().includes(term))return false;
       if(location.trim()&&!([row.city,row.province].join(" ").toLowerCase().includes(location.trim().toLowerCase())))return false;
       if(licence && !String(row.licence_code||"").toUpperCase().includes(licence))return false;
       if(vehicle && !(row.vehicle_types||[]).some(x=>x.toLowerCase().includes(vehicle.toLowerCase())))return false;
@@ -139,8 +144,8 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
       ||Number(b.average_rating||0)-Number(a.average_rating||0)
       ||Number(b.years_experience||0)-Number(a.years_experience||0)
     );
-  },[allDrivers,need,location,licence,vehicle,minExperience,availableOnly,sort]);
-  useEffect(()=>{setPage(1)},[need,location,licence,vehicle,minExperience,availableOnly,sort]);
+  },[allDrivers,search,need,location,licence,vehicle,minExperience,availableOnly,sort]);
+  useEffect(()=>{setPage(1)},[search,need,location,licence,vehicle,minExperience,availableOnly,sort]);
 
   const drivers = fullPage ? sortedDrivers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : sortedDrivers.slice(0, 4);
   const pageCount = Math.max(1, Math.ceil(sortedDrivers.length / PAGE_SIZE));
@@ -167,61 +172,97 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
       {showHero ? <div className={`${styles.hero} ll-driver-hero`}><LoadLinkImage src="/images/driver-profile-hero.jpg" alt="Truck drivers ready for logistics opportunities" className={styles.heroImage} /><div className={styles.heroShade} /><div className={styles.heroContent}><h2 className={styles.title}>Drivers Available for Work</h2><p className={styles.subtitle}>Approved drivers can present their licence details, experience, routes and availability directly to logistics companies and truck owners.</p><div className={styles.actions}><Link data-marketplace-action className={styles.primary} href="/driver-profile">{ownsDriverProfile ? "Manage your profile" : "Create driver profile"}</Link>{fullPage ? <Link className={styles.secondary} href="/account/settings">Profile settings</Link> : null}</div></div></div> : null}
 
       <div className={styles.content}>
-        <div className={styles.resultsHeader}>{!showHero ? <div><h2 className={styles.embeddedHeading}>Approved drivers ready for work</h2></div> : <div><h2 className={styles.resultsTitle}>Available drivers</h2></div>}<LoadLinkSortControl darkMode={darkMode} value={sort} onChange={(value) => { setSort(value as SortOption); setPage(1); }} options={[{value:"recommended",label:"Recommended"},{value:"available",label:"Available first"},{value:"experience",label:"Most experience"},{value:"name",label:"Name A–Z"},{value:"location",label:"Location A–Z"}]} /></div>
-
-        {fullPage?<div className={styles.hiringFilters} aria-label="Find a driver by your requirements">
-          <div className={styles.filterBar}>
-            <label className={styles.filterField}><span>Work needed</span><select value={need} onChange={e=>setNeed(e.target.value as DriverNeed)}>
-              {NEEDS.map(x=><option value={x.value} key={x.value}>{x.label}</option>)}
-            </select></label>
-            <label className={styles.filterField}><span>Location</span><input value={location} onChange={e=>setLocation(e.target.value)} placeholder="City or province" /></label>
-            <label className={styles.filterField}><span>Licence</span><select value={licence} onChange={e=>setLicence(e.target.value)}>
-              <option value="">All licences</option>
-              <option value="EC">EC · Code 14</option><option value="C1">C1 · Code 10</option><option value="C">C · Heavy</option><option value="EB">EB</option><option value="B">B</option>
-            </select></label>
-          </div>
-          <details className={styles.moreFilters}><summary>More filters</summary>
-            <div className={styles.filterBar}>
-              <label className={styles.filterField}><span>Vehicle</span><select value={vehicle} onChange={e=>setVehicle(e.target.value)}><option value="">All vehicles</option>{["Truck","Tipper","Tanker","Bus","Van","Bakkie"].map(x=><option value={x} key={x}>{x}</option>)}</select></label>
-              <label className={styles.filterField}><span>Experience</span><select value={minExperience} onChange={e=>setMinExperience(Number(e.target.value))}>{[0,1,3,5,10].map(x=><option key={x} value={x}>{x===0?"Any experience":`${x}+ years`}</option>)}</select></label>
-              <label className={styles.filterCheck}><input type="checkbox" checked={availableOnly} onChange={e=>setAvailableOnly(e.target.checked)}/> Available now</label>
+        <div className={styles.resultsHeader}>
+          <h2 className={styles.embeddedHeading}>{showHero?"Available drivers":"Approved drivers"}</h2>
+        </div>
+        {fullPage?<div data-loadlink-autotrader-search="true" className={styles.searchShell}>
+          <form onSubmit={e=>{e.preventDefault();document.getElementById("loadlink-driver-results")?.scrollIntoView({behavior:"smooth",block:"start"})}}>
+            <div className={styles.searchRow}>
+              <span className={styles.searchSymbol}><svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.9"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.1 4.1" strokeLinecap="round"/></svg></span>
+              <input type="search" aria-label="Search professional drivers" value={search} onChange={e=>setSearch(e.target.value)}
+                placeholder="Search drivers, routes or vehicles" className={styles.searchInput} />
             </div>
-          </details>
-          <div className={styles.filterResults}><span>{loading?"Finding drivers…":`${sortedDrivers.length} matching driver${sortedDrivers.length===1?"":"s"}`}</span>
-          {(need||location||licence||vehicle||minExperience||availableOnly)?<button type="button" onClick={()=>{setNeed("");setLocation("");setLicence("");setVehicle("");setMinExperience(0);setAvailableOnly(false)}}>Clear filters</button>:null}</div>
-        </div>:null}
-
-        {notice ? <p role="alert" className={styles.empty}>{notice}</p> : null}
-        {loading ? <div className={styles.empty}>Loading approved drivers…</div> : drivers.length === 0 ? <div className={styles.empty}>No drivers match these requirements. Try broader filters.</div> : <div className={styles.grid}>{drivers.map((driver) => {
-          const rating=Number(driver.average_rating||0), count=Number(driver.review_count||0);
-          const location = [...new Set([driver.city, driver.province].filter(Boolean).map(value => value.trim()))].join(", ");
-          return <article className={`${styles.card} ${styles.compactCard}`} key={driver.id} data-loadlink-driver-card="true">
-            <div className={styles.compactHeading}>
-              <div className={styles.avatar} aria-hidden="true">{driver.profile_image_url?<LoadLinkImage src={driver.profile_image_url} alt="" className="h-full w-full rounded-full object-cover" />:initials(driver.full_name)}</div>
-              <div className={styles.compactIdentity}>
-                <div className={styles.compactName}><h3>{driver.full_name}</h3><span className={styles.verified}>Approved</span></div>
-                <p className={styles.compactSubtitle}>{driver.headline||"Professional driver"}</p>
-                <p className={styles.compactFacts}>{location||"Location on request"} · {driver.years_experience||0} yrs · {driver.licence_code||"Licence on request"}</p>
+            <div className={styles.searchControls}>
+              <button type="button" aria-expanded={filtersOpen} onClick={()=>setFiltersOpen(v=>!v)} className={styles.filtersButton}>
+                <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M8 14v6"/></svg>
+                <span>Filters{need||location||licence||vehicle||minExperience||availableOnly?" · Active":""}</span>
+              </button>
+              <button type="submit" className={styles.searchButton}>Search drivers</button>
+            </div>
+          </form>
+          {filtersOpen?<div className={styles.filterPanel}>
+            <div className={styles.filterFields}>
+              <label className={styles.filterField}><span>Work type</span><select value={need} onChange={e=>setNeed(e.target.value as DriverNeed)}>
+               {NEEDS.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}
+              </select></label>
+              <div className={styles.filterField}><label htmlFor="loadlink-driver-location">Location</label>
+                <SouthAfricaLocationInput id="loadlink-driver-location" value={location} onChange={setLocation} darkMode={darkMode}
+                  placeholder="City or province" ariaLabel="Search drivers by city or province" className={styles.locationInput}/>
               </div>
+              <label className={styles.filterField}><span>Licence</span><select value={licence} onChange={e=>setLicence(e.target.value)}>
+               <option value="">Any licence</option><option value="EC">EC / Code 14</option><option value="C1">C1</option><option value="C">C</option><option value="EB">EB</option><option value="B">B</option>
+              </select></label>
             </div>
-            <div className={styles.compactMeta}>
-              <span>{driver.availability||"Availability on request"}</span>
-              <span>{count?`${rating.toFixed(1)}/5 · ${count} review${count===1?"":"s"}`:"No reviews yet"}</span>
-            </div>
-            <div className={styles.compactActions}>
-              <button data-marketplace-action type="button" className={styles.contact} onClick={()=>setContactTarget(driver)}>Contact driver</button>
-            </div>
-            <details className={styles.compactDetails}><summary>View driver details</summary>
-              <div className={styles.compactExpanded}>
-                <p><strong>Vehicle experience:</strong> {driver.vehicle_types?.join(", ")||"On request"}</p>
-                {driver.bio?<p className="mt-2 whitespace-pre-wrap">{driver.bio}</p>:null}
-                {driver.user_id?<button type="button" onClick={()=>setReviewTarget(driver)} className={styles.reviewButton}>Write a review</button>:null}
+            <details className={styles.moreFilters}><summary>More options</summary>
+              <div className={styles.filterFields}>
+                <label className={styles.filterField}><span>Vehicle type</span><select value={vehicle} onChange={e=>setVehicle(e.target.value)}>
+                 <option value="">Any vehicle</option>{["Truck","Tipper","Tanker","Bus","Van","Bakkie"].map(x=><option key={x} value={x}>{x}</option>)}
+                </select></label>
+                <label className={styles.filterField}><span>Experience</span><select value={minExperience} onChange={e=>setMinExperience(Number(e.target.value))}>
+                 {[0,1,3,5,10].map(x=><option key={x} value={x}>{x===0?"Any experience":`${x}+ years`}</option>)}
+                </select></label>
+                <label className={styles.filterCheck}><input type="checkbox" checked={availableOnly} onChange={e=>setAvailableOnly(e.target.checked)}/> Available now</label>
               </div>
             </details>
+            <div className={styles.filterFooter}>
+              <button type="button" onClick={()=>{setNeed("");setLocation("");setLicence("");setVehicle("");setMinExperience(0);setAvailableOnly(false);setSearch("")}}>Clear filters</button>
+              <button type="button" onClick={()=>setFiltersOpen(false)}>Show {sortedDrivers.length} drivers</button>
+            </div>
+          </div>:null}
+        </div>:null}
+
+        <div id="loadlink-driver-results" className={styles.resultsBar}>
+          <span>{loading?"Loading drivers…":`${sortedDrivers.length} driver${sortedDrivers.length===1?"":"s"} found`}</span>
+          <LoadLinkSortControl darkMode={darkMode} value={sort} onChange={value=>setSort(value as SortOption)}
+           options={[{value:"recommended",label:"Recommended"},{value:"available",label:"Available first"},{value:"experience",label:"Most experience"},{value:"name",label:"Name A–Z"},{value:"location",label:"Location A–Z"}]}/>
+        </div>
+        {notice?<p role="alert" className={styles.empty}>{notice}</p>:null}
+        {loading?<div className={styles.empty}>Loading approved drivers…</div>:!drivers.length?<div className={styles.empty}>No approved drivers match your search.</div>
+        :<div className={styles.grid}>{drivers.map(driver=>{
+          const rating=Number(driver.average_rating||0),count=Number(driver.review_count||0);
+          const place=[driver.city,driver.province].filter(Boolean).join(", ");
+          return <article className={styles.directoryCard} data-loadlink-refined-driver-card="true" key={driver.id}>
+            <div className={styles.cardTop}>
+              <div className={styles.portrait}>
+                {driver.profile_image_url?<LoadLinkImage src={driver.profile_image_url} alt={`${driver.full_name} profile photo`} className="h-full w-full object-cover"/>:<span>{initials(driver.full_name)}</span>}
+              </div>
+              <div className={styles.cardIdentity}>
+                <div className={styles.nameLine}>
+                  <h3>{driver.full_name}</h3>
+                  <span className={styles.approved}>Approved</span>
+                </div>
+                <p className={styles.cardRole}>{driver.headline||"Professional driver"}</p>
+                <p className={styles.cardSummary}>{place||"Location on request"} · {driver.licence_code||"Licence on request"} · {Number(driver.years_experience||0)} yrs</p>
+              </div>
+            </div>
+            <div className={styles.cardFoot}>
+              <span className={styles.available}>{driver.availability||"Availability on request"}</span>
+              {count>0?<span className={styles.rating}>★ {rating.toFixed(1)} ({count})</span>:null}
+            </div>
+            <div className={styles.cardActions}>
+              <button data-marketplace-action type="button" onClick={()=>setContactTarget(driver)} className={styles.cardContact}>Contact driver</button>
+              <details className={styles.cardDetails}>
+                <summary>Details</summary>
+                <div className={styles.cardExpanded}>
+                  <p><strong>Vehicle experience:</strong> {driver.vehicle_types?.join(", ")||"On request"}</p>
+                  {driver.bio?<p className="mt-2 whitespace-pre-wrap">{driver.bio}</p>:null}
+                  {driver.user_id?<button type="button" onClick={()=>setReviewTarget(driver)} className={styles.reviewButton}>Write a review</button>:null}
+                </div>
+              </details>
+            </div>
           </article>;
         })}</div>}
-
-        {fullPage && pageCount > 1 ? <LoadLinkPagination current={page} total={pageCount} onChange={setPage} darkMode={darkMode} label="Driver profile pages" /> : null}
+        {fullPage&&pageCount>1?<LoadLinkPagination current={page} total={pageCount} onChange={setPage} darkMode={darkMode} label="Driver profile pages"/>:null}
       </div>
 
       {contactTarget ? <DriverContactDialog id={contactTarget.id} name={contactTarget.full_name} darkMode={darkMode} onClose={() => setContactTarget(null)} /> : null}
