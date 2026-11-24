@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
 import Link from "next/link";
+import {loginHref} from "@/lib/auth";
 import {supabase} from "@/lib/supabaseClient";
 import {useLoadLinkTheme} from "@/lib/useLoadLinkTheme";
 import DriverHistory from "@/components/history/DriverHistory";
@@ -14,10 +15,12 @@ export default function DriverHistoryOverview(){
  const [records,setRecords]=useState<Assignment[]>([]);
  const [docCount,setDocCount]=useState(0);
  const [loading,setLoading]=useState(true);
+ const [error,setError]=useState("");
  const [expanded,setExpanded]=useState(false);
  useEffect(()=>{let active=true;(async()=>{
   const {data:{user}}=await supabase.auth.getUser();
-  if(!user||!active)return;
+  if(!active)return;
+  if(!user){window.location.assign(loginHref("/history"));return;}
   const [p,a]=await Promise.all([
    supabase.from("driver_profiles").select("id,full_name,status").eq("user_id",user.id).maybeSingle(),
    supabase.rpc("loadlink_my_driver_completed_jobs")
@@ -28,10 +31,11 @@ export default function DriverHistoryOverview(){
   setRecords((a.data||[]) as Assignment[]);
   if(p.data?.id){
    const d=await supabase.from("driver_documents").select("id",{count:"exact",head:true}).eq("profile_id",p.data.id);
+   if(d.error)throw d.error;
    if(active)setDocCount(d.count||0);
   }
   setLoading(false);
- })().catch(()=>{if(active)setLoading(false);});
+ })().catch(e=>{if(active){setError(e instanceof Error?e.message:"Could not load driver records.");setLoading(false)}});
   if(window.location.hash==="#driver-assignments")setExpanded(true);
   return()=>{active=false;};
  },[]);
@@ -39,17 +43,17 @@ export default function DriverHistoryOverview(){
  return <section id="driver-records" aria-label="Driver history" className={`rounded-[20px] border p-5 sm:p-6 ${surface}`}>
   <h2 className="text-xl font-black tracking-[-.035em]">Driver history</h2>
   <p className="mt-1 text-xs leading-5 opacity-60">Completed assignments are counted only when the original poster confirms the job or contract.</p>
-  {loading?<p className="mt-3 text-sm opacity-60">Loading driver records…</p>:
+  {loading?<p className="mt-3 text-sm opacity-60">Loading driver records…</p>:error?<p role="alert" className="mt-3 text-sm text-red-600">Driver records could not load. {error}</p>:
    !profile&&!records.length?<p className="mt-3 text-sm opacity-60">Completed driver assignments and driver documents will appear here when available.</p>:
    <div className="mt-4 space-y-2 text-sm">
     {profile?<p className="font-semibold">{profile.full_name} <span className="font-normal opacity-60">· {docCount} document{docCount===1?"":"s"} recorded</span></p>:null}
     <p className="font-bold">{records.length} verified completed {records.length===1?"assignment":"assignments"}</p>
    </div>}
-  <div className="mt-4 flex flex-wrap gap-4">
+  {!error?<div className="mt-4 flex flex-wrap gap-4">
    {profile?<Link href="/driver-profile" className="text-xs font-bold underline underline-offset-4">Driver profile</Link>:null}
    <button type="button" onClick={()=>setExpanded(x=>!x)} aria-expanded={expanded} className="text-xs font-bold underline underline-offset-4">{expanded?"Hide driver details":"Open driver records & documents"}</button>
-  </div>
-  {expanded?<div className="mt-6 border-t border-current/10 pt-6">
+  </div>:null}
+  {!error&&expanded?<div className="mt-6 border-t border-current/10 pt-6">
    <DriverHistory/>
    <DriverAssignmentRecords/>
   </div>:null}

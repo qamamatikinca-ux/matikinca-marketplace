@@ -56,6 +56,7 @@ export default function JobContractHistory({kind}:{kind:Kind}){
      <p className="text-sm font-semibold">{kind==="job"?"No completed jobs yet.":"No completed contracts yet."}</p>
      <p className="mt-1 text-sm leading-6 opacity-60">When the original poster confirms completed {kind==="job"?"work":"contract work"}, the record will appear here.</p>
    </div>:<>
+     {!complete.length?<p className="mt-5 border-t border-current/10 pt-5 text-sm opacity-65">No confirmed completed ${kind==="job"?"jobs":"contracts"} yet. The original poster must confirm completed work before it appears here.</p>:null}
      <div className="mt-5 divide-y divide-current/10 border-t border-current/10">{complete.map(item=><article key={item.listing_id} className="py-4">
        <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><h3 className="break-words text-sm font-bold">{item.title}</h3>
