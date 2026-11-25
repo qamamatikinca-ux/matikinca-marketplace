@@ -6,7 +6,7 @@ export default function PosterTransportPriceGuide({darkMode,onUseRate,contract=f
  const [expanded,setExpanded]=useState(initialExpanded);
  const [values,setValues]=useState({loadedKm:"",emptyKm:"",litresPer100Km:"",dieselRandPerLitre:"",tolls:"",driverExpenses:"",maintenanceRandPerKm:"",otherCosts:"",targetMarginPercent:"15"});
  const field=(key:keyof typeof values,label:string,placeholder:string)=><label className="block text-xs font-semibold">
-   {label}<input className={`mt-1.5 h-11 w-full rounded-xl border px-3 text-sm focus:border-[#f6b800] ${darkMode?"border-white/20 bg-black text-white":"border-black/15 bg-white text-black"}`} type="number" inputMode="decimal" min="0" max={key==="targetMarginPercent"?"99":undefined} step="any" placeholder={placeholder} value={values[key]} onChange={e=>setValues(s=>({...s,[key]:e.target.value}))}/>
+   {label}<input className={`mt-1.5 h-11 w-full min-w-0 max-w-full rounded-lg border px-3 text-base focus:border-[#f6b800] ${darkMode?"border-white/20 bg-black text-white":"border-black/15 bg-white text-black"}`} type="number" inputMode="decimal" min="0" max={key==="targetMarginPercent"?"99":undefined} step="any" placeholder={placeholder} value={values[key]} onChange={e=>setValues(s=>({...s,[key]:e.target.value}))}/>
  </label>;
  const estimate=useMemo(()=>{
    const required=["loadedKm","litresPer100Km","dieselRandPerLitre"] as const;
@@ -15,11 +15,11 @@ export default function PosterTransportPriceGuide({darkMode,onUseRate,contract=f
    return estimateTrip({...obj,offeredRevenue:0} as Parameters<typeof estimateTrip>[0]);
  },[values]);
  const totalOther=estimate?estimate.totalCost-estimate.fuelCost-estimate.maintenanceCost:0;
- return <div className={`mt-4 rounded-2xl border p-4 ${darkMode?"border-white/15 bg-white/[.03]":"border-black/10 bg-[#fafafa]"}`}>
+ return <div data-loadlink-post-price-guide="true" className="mt-4 min-w-0 border-t border-current/10 pt-4">
     <button type="button" aria-expanded={expanded} onClick={()=>setExpanded(s=>!s)} className="flex w-full items-center justify-between gap-3 text-left">
-      <span><strong className="block text-sm">LoadLink transport price guide</strong>
-      <span className="mt-1 block text-xs opacity-65">Calculate an indicative price from the trip costs you provide.</span></span>
-      <span className="text-xl font-semibold" aria-hidden="true">{expanded?"−":"+"}</span>
+      <span><strong className="block text-sm font-semibold">Calculate transport rate</strong>
+      <span className="mt-1 block text-xs opacity-65">Optional cost-based estimate using your figures.</span></span>
+      <span className="text-base opacity-65" aria-hidden="true">{expanded?"−":"+"}</span>
     </button>
     {expanded?<div className="mt-4">
       <p className="mb-3 text-xs opacity-70">Estimate a selling rate using your distance, fuel, operating costs and target margin. Review every calculation before using it.</p>
@@ -34,9 +34,9 @@ export default function PosterTransportPriceGuide({darkMode,onUseRate,contract=f
        {field("otherCosts","Other operating costs (R)","0")}
        {field("targetMarginPercent","Target profit margin (%)","15")}
       </div>
-      {estimate?<div className={`mt-4 rounded-xl border p-4 ${darkMode?"border-white/15":"border-black/10"}`}>
+      {estimate?<div className="mt-4 border-t border-current/10 pt-4">
         <p className="text-xs font-semibold opacity-65">Estimated selling rate (excluding VAT)</p>
-        <p className="mt-1 text-2xl font-black">{formatZar(estimate.suggestedRate)}</p>
+        <p className="mt-1 text-xl font-bold">{formatZar(estimate.suggestedRate)}</p>
         <details className="mt-3 text-xs" open>
          <summary className="cursor-pointer font-black">How we calculated this estimate</summary>
          <div className="mt-2 space-y-1 opacity-80">
@@ -48,7 +48,7 @@ export default function PosterTransportPriceGuide({darkMode,onUseRate,contract=f
            <p>Selling rate = break-even ÷ (1 − {values.targetMarginPercent}% target margin).</p>
          </div>
         </details>
-        <button type="button" onClick={()=>onUseRate(`R${estimate.suggestedRate.toFixed(2)}${contract?" per trip":""}`)} className="mt-4 rounded-xl bg-[#f6b800] px-4 py-3 text-xs font-black text-black">Use this suggested rate</button>
+        <button type="button" onClick={()=>onUseRate(`R${estimate.suggestedRate.toFixed(2)}${contract?" per trip":""}`)} className="mt-3 min-h-10 rounded-lg bg-[#f6b800] px-4 text-xs font-semibold text-black">Use calculated rate</button>
       </div>:<p className="mt-3 text-xs opacity-65">Add a positive loaded distance, fuel consumption and diesel price. Optional costs left blank count as zero and may underestimate the true rate.</p>}
       <p className="mt-3 text-[11px] leading-5 opacity-55">This is a planning calculation, not a market quote or guaranteed price. Confirm road, cargo, vehicle, finance, VAT and contractual costs. {contract?"This example estimates one trip, not the full contract.":""}</p>
     </div>:null}
