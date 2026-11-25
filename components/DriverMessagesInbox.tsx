@@ -2,12 +2,14 @@
 import {useCallback,useEffect,useRef,useState,type FormEvent} from "react";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkImage from "@/components/LoadLinkImage";
+import {useLoadLinkTheme} from "@/lib/useLoadLinkTheme";
 import {browserSupabase} from "@/lib/phase2/supabase";
 import {isAuthenticatedUser} from "@/lib/auth";
 
 type Thread={id:string;driver_profile_id:string;driver_user_id:string;enquirer_user_id:string;driver_name:string;enquirer_name:string;blocked:boolean;reopen_requested_by?:string|null;updated_at?:string};
 type Message={id:string;sender_id:string;body:string;created_at:string};
 export default function DriverMessagesInbox({profileId,threadId,onBack}:{profileId:string;threadId:string;onBack:()=>void}){
+ const {darkMode}=useLoadLinkTheme();
  const [userId,setUserId]=useState("");
  const [threads,setThreads]=useState<Thread[]>([]);
  const [avatars,setAvatars]=useState<Record<string,string>>({});
@@ -19,6 +21,8 @@ export default function DriverMessagesInbox({profileId,threadId,onBack}:{profile
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
  const [notice,setNotice]=useState("");
+ const [searchOpen,setSearchOpen]=useState(false);
+ const [searchTerm,setSearchTerm]=useState("");
  const last=useRef<HTMLDivElement>(null);
  const pending=useRef<{thread:string;text:string;key:string}|null>(null);
  const chosen=threads.find(t=>t.id===selected)||null;
@@ -130,29 +134,50 @@ export default function DriverMessagesInbox({profileId,threadId,onBack}:{profile
   void update();
   return()=>{active=false};
  },[userId]);
+ const visibleMessages=searchTerm.trim()?messages.filter(m=>m.body.toLowerCase().includes(searchTerm.trim().toLowerCase())):messages;
  const person=(t:Thread)=>t.driver_user_id===userId?t.enquirer_name:t.driver_name;
  const profilePhoto=(t:Thread)=>avatars[t.id]||"";
  return (<>
      {chosen?<>
-       <header className="loadlink-chat-header flex min-h-[78px] items-center gap-3 border-b border-black/10 bg-white px-3 py-3 md:px-5">
+       <header className={`loadlink-chat-header flex min-h-[78px] shrink-0 items-center gap-3 border-b px-3 py-3 md:px-5 ${darkMode?"border-white/10 bg-[#111] text-white":"border-black/10 bg-white text-black"}`}>
         <button type="button" onClick={onBack} aria-label="Back to conversations" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/10 md:hidden"><LoadLinkIcon name="chevronLeft" size={18}/></button>
         <span className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-black text-lg font-black text-[#f6b800]">{profilePhoto(chosen)?<LoadLinkImage src={profilePhoto(chosen)} alt="" className="h-full w-full object-cover"/>:person(chosen).charAt(0).toUpperCase()}</span>
-        <div className="min-w-0 flex-1"><h2 className="truncate text-base font-bold">{person(chosen)}</h2><p className="truncate text-xs text-black/50">LoadLink Messages</p></div>
+        <div className="min-w-0 flex-1"><h2 className="truncate text-base font-bold">{person(chosen)}</h2><p className={`truncate text-xs ${darkMode?"text-white/55":"text-black/50"}`}>LoadLink Messages</p></div>
+        <button type="button" aria-label="Search driver conversation" aria-expanded={searchOpen} onClick={()=>{setSearchOpen(v=>!v);setSearchTerm("")}}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${darkMode?"border-white/15":"border-black/10"}`}><LoadLinkIcon name="search" size={18}/></button>
        </header>
-       <div className="loadlink-listing-context flex min-h-10 shrink-0 items-center gap-3 border-b border-black/10 bg-white px-4 py-2"><span className="rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase text-black">Driver</span><span className="min-w-0 flex-1 truncate text-xs font-semibold text-black/60">{chosen.driver_name} · Driver profile</span></div>
+       <div className={`loadlink-listing-context flex min-h-10 shrink-0 items-center gap-3 border-b px-4 py-2 ${darkMode?"border-white/10 bg-[#111] text-white":"border-black/10 bg-white text-black"}`}><span className="rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase text-black">Driver</span><span className={`min-w-0 flex-1 truncate text-xs font-semibold ${darkMode?"text-white/65":"text-black/60"}`}>{chosen.driver_name} · Driver profile</span></div>
+       {searchOpen?<div className={`border-b px-4 py-2 ${darkMode?"border-white/10 bg-[#111]":"border-black/10 bg-white"}`}>
+         <input value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} aria-label="Search messages" placeholder="Search this conversation" type="search"
+           className={`h-10 w-full rounded-xl border px-3 text-sm outline-none focus:border-[#f6b800] ${darkMode?"border-white/15 bg-[#222] text-white":"border-black/10 bg-white text-black"}`}/>
+       </div>:null}
        <div className="loadlink-message-viewport loadlink-chat-wallpaper min-h-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-5 sm:px-5 md:px-8" aria-live="polite">
-        {messages.length===0?<p className="text-center text-xs text-black/45">Ask about availability, routes and driving work.</p>:null}
-        {messages.map(m=><div key={m.id} className={`max-w-[83%] rounded-[19px] px-4 py-3 text-sm leading-6 ${m.sender_id===userId?"ml-auto bg-[#f6b800] text-black":"bg-white text-black shadow-sm"}`}>
-          <p className="whitespace-pre-wrap break-words">{m.body}</p>
-          <time className="mt-1 block text-right text-[10px] text-black/45" dateTime={m.created_at}>{new Date(m.created_at).toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})}</time>
-        </div>)}
+        {!messages.length?<p className={`text-center text-xs ${darkMode?"text-white/60":"text-black/45"}`}>Ask about availability, routes and driving work.</p>:null}
+        {messages.length>0&&!visibleMessages.length?<p className={`text-center text-xs ${darkMode?"text-white/60":"text-black/45"}`}>No matching messages.</p>:null}
+        <div className="mx-auto max-w-3xl space-y-3">
+        {visibleMessages.map((m,i)=>{
+          const mine=m.sender_id===userId;
+          const prev=visibleMessages[i-1];
+          const showDay=!prev||new Date(prev.created_at).toDateString()!==new Date(m.created_at).toDateString();
+          return <div key={m.id}>
+            {showDay?<div className="my-5 flex justify-center"><span className="rounded-full border border-black/5 bg-white/80 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-black/45">{new Intl.DateTimeFormat("en-ZA",{weekday:"short",day:"2-digit",month:"short"}).format(new Date(m.created_at))}</span></div>:null}
+            <div className={`flex items-end gap-2 ${mine?"justify-end":"justify-start"}`}>
+              {!mine?<span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-black text-xs font-bold text-[#f6b800]">{profilePhoto(chosen)?<LoadLinkImage src={profilePhoto(chosen)} alt="" className="h-full w-full object-cover"/>:person(chosen).charAt(0).toUpperCase()}</span>:null}
+              <div className={`relative min-w-0 max-w-[calc(100%_-_2.75rem)] break-words rounded-2xl px-4 py-3 shadow-sm sm:max-w-[72%] ${mine?"rounded-br-sm bg-black text-white":"rounded-bl-sm border border-black/5 bg-white text-black"}`}>
+                <p className="whitespace-pre-wrap break-words text-sm font-medium leading-6">{m.body}</p>
+                <time className={`mt-1.5 block text-right text-[9px] font-semibold ${mine?"text-white/45":"text-black/35"}`} dateTime={m.created_at}>{new Date(m.created_at).toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})}</time>
+              </div>
+            </div>
+          </div>;
+        })}
+        </div>
         <div ref={last}/>
        </div>
        {error?<p role="alert" className="border-t border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700">{error}</p>:null}
        {notice?<p role="status" className="border-t border-[#f6b800]/20 bg-[#fff8dc] px-4 py-2 text-xs font-semibold text-[#765800]">{notice}</p>:null}
-       {chosen.blocked?<div className="border-t border-black/10 bg-white p-4">
-        <p className="text-sm font-semibold text-black/70">This conversation is closed.</p>
-        <p className="mt-1 text-xs text-black/50">Reopening requires both participants to agree.</p>
+       {chosen.blocked?<div className={`border-t p-4 ${darkMode?"border-white/10 bg-[#111] text-white":"border-black/10 bg-white text-black"}`}>
+        <p className={`text-sm font-semibold ${darkMode?"text-white/80":"text-black/70"}`}>This conversation is closed.</p>
+        <p className={`mt-1 text-xs ${darkMode?"text-white/60":"text-black/50"}`}>Reopening requires both participants to agree.</p>
         <button type="button" disabled={reopening||chosen.reopen_requested_by===userId} onClick={()=>void requestReopen()}
           className="mt-3 min-h-11 rounded-xl border border-[#f6b800] bg-[#f6b800] px-5 text-xs font-black text-black disabled:opacity-50">{reopening?"Updating…":chosen.reopen_requested_by===userId?"Request pending":"Reopen conversation"}</button>
        </div>:
