@@ -464,6 +464,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
                 const kindLabel = kind === "mobile_unit" ? "Mobile unit" : kind === "trailer" ? "Trailer" : kind === "truck" ? "Truck" : "Vehicle";
                 const wasSeen = seen.has(String(row.id));
                 const href = `/vehicles/${row.id}`;
+                const valuation=vehiclePriceSignal(rows,row);
                 return (
                   <article
                     key={row.id}
@@ -487,6 +488,10 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
 
                     <div className="p-4 sm:p-5">
                       <p className={`text-2xl font-black tracking-[-.04em] ${darkMode ? "text-white" : "text-black"}`}>{formatListingRate(row.rate)}</p>
+                      {valuation?<div className="mt-2 flex flex-wrap items-center gap-2" title={`Based on ${valuation.sampleSize} comparable LoadLink asking prices; not a verified valuation`}>
+                        <span className={`rounded-md px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${valuation.label==="Underpriced"?"bg-[#f6b800] text-black":valuation.label==="Overpriced"?"bg-[#f4d9bb] text-[#704317]":"bg-[#dbe9d9] text-[#286139]"}`}>{valuation.label==="Underpriced"?"Low price":valuation.label==="Overpriced"?"Above comparison":"Within comparison"}</span>
+                        <span className={`text-[11px] font-semibold ${muted}`}>Compared with ${valuation.sampleSize} similar listings</span>
+                      </div>:null}
                       <div className="mt-3 flex flex-wrap gap-2">
                         <span className="rounded-full bg-[#2f9f5b] px-3 py-1.5 text-[10px] font-black uppercase text-white">{kindLabel}</span>
                         <span className={`rounded-full px-3 py-1.5 text-[10px] font-black uppercase ${softPill}`}>{type}</span>

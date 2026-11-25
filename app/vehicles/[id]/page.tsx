@@ -12,6 +12,7 @@ import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import RequireAuthLink from "@/components/RequireAuthLink";
 import VehicleFullDetails from "@/components/VehicleFullDetails";
 import { advertisedSalePrice, fieldFromDescription } from "@/lib/vehicleMarketGuide";
+import VehicleOwnershipEstimator from "@/components/VehicleOwnershipEstimator";
 import { formatListingRate } from "@/lib/formatCurrency";
 import { jobVehicleRelevance } from "@/lib/vehiclePostingIntelligence";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
@@ -275,6 +276,11 @@ export default function VehicleProductPage() {
                     </div>
                   </div>
                 ) : null}
+                <div className="mt-5">
+                  <VehicleOwnershipEstimator darkMode={darkMode} category={String(listing.vehicle_group||"")}
+                    make={make} model={model} condition={fieldFromDescription(listing.description,"Condition")}
+                    initialFuel={fieldFromDescription(listing.description,"Fuel consumption (L/100 km)")}/>
+                </div>
                 <div className="mt-5 hidden sm:block">
                   <VehicleContactActions listing={listing} whatsapp={whatsapp} mobile={false} darkMode={darkMode} />
                 </div>
