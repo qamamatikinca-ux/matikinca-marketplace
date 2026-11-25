@@ -78,6 +78,17 @@ export default function SearchResultsClient() {
   const [currentPage, setCurrentPage] = useState(1);
   const [smartInfoOpen, setSmartInfoOpen] = useState(false);
   const [interests, setInterests] = useState<string[]>([]);
+  const [interpretation, setInterpretation] = useState<{source:"ai"|"local";query:string;scope:SearchScope;location:string;summary:string}|null>(null);
+  const [interpreting, setInterpreting] = useState(false);
+  useEffect(() => {
+    if(query.trim().length<3){setInterpretation(null);setInterpreting(false);return}
+    const controller=new AbortController();setInterpretation(null);setInterpreting(true);
+    fetch("/api/loadlink-ai/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,location}),signal:controller.signal,cache:"no-store"})
+      .then(async response=>{if(!response.ok)throw new Error("Unavailable");return response.json()})
+      .then(data=>{if(!controller.signal.aborted&&data?.source==="ai")setInterpretation(data)})
+      .catch(()=>undefined).finally(()=>{if(!controller.signal.aborted)setInterpreting(false)});
+    return ()=>controller.abort();
+  },[query,location]);
 
   useEffect(() => {
     if (query.trim()) rememberSearchInterest(query);
@@ -139,21 +150,18 @@ export default function SearchResultsClient() {
     [query, scope],
   );
 
-  const results = useMemo<SearchResult[]>(
-    () =>
-      filterAndRankResults(
-        [
-          ...listings.map(listingToSearchResult),
-          ...drivers.map(driverToSearchResult),
-          ...dealers.map(dealerToSearchResult),
-          ...(includeSitePages ? loadLinkSitePages : []),
-        ],
-        scope,
-        query,
-        location,
-      ),
-    [dealers, drivers, includeSitePages, listings, location, query, scope],
-  );
+  const results = useMemo<SearchResult[]>(() => {
+    const inventory=[...listings.map(listingToSearchResult),...drivers.map(driverToSearchResult),
+      ...dealers.map(dealerToSearchResult),...(includeSitePages?loadLinkSitePages:[])];
+    const original=filterAndRankResults(inventory,scope,query,location);
+    if(interpretation?.source!=="ai")return original;
+    const enhanced=filterAndRankResults(inventory,scope==="all"?interpretation.scope:scope,
+      interpretation.query,location||interpretation.location);
+    // Keep exact matches rather than silently discarding them because AI rephrased a search.
+    if(!enhanced.length)return original;
+    const seen=new Set(enhanced.map(item=>item.id));
+    return [...enhanced,...original.filter(item=>!seen.has(item.id))];
+  },[dealers,drivers,includeSitePages,listings,location,query,scope,interpretation]);
 
   // Recommend only actual approved jobs, never generated opportunities.
   const suggestedJobs = useMemo<SearchResult[]>(() => {
@@ -263,7 +271,7 @@ export default function SearchResultsClient() {
             {smartInfoOpen ? (
               <div role="note" className={`mt-2 rounded-xl border px-4 py-3 ${darkMode ? "border-white/15 bg-[#161719] text-white" : "border-black/10 bg-[#f8f8f8] text-black"}`}>
                 <strong className="text-sm font-semibold">Smart Search</strong>
-                <p className={`mt-1 text-xs leading-5 ${muted}`}>Find specific vehicles, mobile units or work from published listings. Job suggestions use searches stored on this device.</p>
+                <p className={`mt-1 text-xs leading-5 ${muted}`}>LoadLink uses AI to interpret natural-language searches when available and matches them to real published listings. No generated or fictional search results.</p>
               </div>
             ) : null}
 
@@ -304,6 +312,7 @@ export default function SearchResultsClient() {
           <div>
             <h2 className="text-xl font-black tracking-[-.03em] sm:text-2xl">{scopeLabel(scope)} results</h2>
             <p className={`mt-1 text-[12px] font-semibold ${muted}`}>{resultCountLabel}</p>
+            {interpretation?.source==="ai"?<p role="status" className={`mt-2 text-[11px] font-semibold ${darkMode?"text-[#f6b800]":"text-[#8f6600]"}`}>AI search · {interpretation.summary} · Published listings only</p>:interpreting?<p className={`mt-2 text-[11px] ${muted}`}>Interpreting your search…</p>:null}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {query ? <FilterChip label={query} darkMode={darkMode} /> : null}
