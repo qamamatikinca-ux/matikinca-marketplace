@@ -10,7 +10,7 @@ import LoadLinkIcon from "@/components/LoadLinkIcon";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { browserSupabase } from "@/lib/phase2/supabase";
-import { flexibleMatch } from "@/lib/smartSearch";
+import { flexibleMatch, searchTokens } from "@/lib/smartSearch";
 import { matchesSouthAfricanLocation } from "@/lib/southAfricaLocations";
 import styles from "./DriversAvailableForWork.module.css";
 import LoadLinkPagination from "@/components/LoadLinkPagination";
@@ -137,7 +137,9 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
     let active=true;
     const controller=new AbortController();
     const timeout=window.setTimeout(()=>{
-      const params=new URLSearchParams({limit:"50",offset:"0",search:term});
+      const terms = searchTokens(term).filter(word => word !== "driver" && word !== "drivers").join(" ");
+      const params=new URLSearchParams({limit:"50",offset:"0"});
+      if (terms) params.set("search", terms);
       void fetch(`/api/phase2/public-drivers?${params}`,{cache:"default",signal:controller.signal})
        .then(async response=>{if(!response.ok)throw new Error("Search unavailable");return response.json()})
        .then(payload=>{if(active)setSearchedDrivers((payload.drivers||[]) as Driver[])})
