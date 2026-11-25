@@ -49,6 +49,7 @@ type QueueItem = {
   face_consent_at?: string | null;
 };
 
+type VehiclePreReview={id:string;title:string;owner_email?:string|null;status:string;created_at?:string|null;details?:Record<string,unknown>|null;photos?:string[];id_path?:string;registration_path?:string;ownership_path?:string;portrait_path?:string;video_path?:string;face_mode?:string;notes?:string|null;seller_type?:string};
 const statusOptions: ModerationStatus[] = ["pending", "all", "approved", "rejected"];
 const kindOptions: ListingKind[] = ["all", "job", "contract", "vehicle"];
 
@@ -58,6 +59,7 @@ function label(value: string) {
 
 export default function AdminListingsPage() {
   const [rows, setRows] = useState<QueueItem[]>([]);
+  const [preReviews,setPreReviews]=useState<VehiclePreReview[]>([]);
   const [status, setStatus] = useState<ModerationStatus>("pending");
   const [kind, setKind] = useState<ListingKind>("all");
   const [loading, setLoading] = useState(true);
@@ -79,6 +81,8 @@ export default function AdminListingsPage() {
       });
       if (result.error) throw result.error;
       setRows((result.data || []) as QueueItem[]);
+      const pre=await supabase.rpc("loadlink_admin_vehicle_prelisting_queue",{p_limit:40});
+      if(pre.error)setPreReviews([]);else setPreReviews((pre.data||[]) as VehiclePreReview[]);
     } catch (error) {
       setRows([]);
       setMessage(error instanceof Error ? error.message : "The moderation queue could not be loaded.");
@@ -118,6 +122,17 @@ export default function AdminListingsPage() {
     }
   }
 
+  async function reviewPreliminary(id:string,decision:"ready_for_plan"|"needs_changes"){
+    const notes=decision==="needs_changes"?window.prompt("What must the seller correct before approval?")?.trim():"Reviewed for plan readiness; publishing still requires approved access and final moderation.";
+    if(decision==="needs_changes"&&(!notes||notes.length<5))return;
+    setBusyId(id);setMessage("");
+    try{
+      const r=await supabase.rpc("loadlink_review_vehicle_prelisting",{p_id:id,p_decision:decision,p_notes:notes||null});
+      if(r.error)throw r.error;
+      await load();
+    }catch(e){setMessage(e instanceof Error?e.message:"Preliminary review could not be updated.");}
+    finally{setBusyId("")}
+  }
   async function openVerificationDocument(path?: string | null) {
     if (!path) return;
     setMessage("");
@@ -163,6 +178,25 @@ export default function AdminListingsPage() {
         {loading ? <div className="mt-8 rounded-[24px] border border-black/10 bg-white p-10 text-center"><div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-black/15 border-t-[#f6b800]" /><p className="mt-4 text-sm font-bold text-black/50">Loading moderation queue…</p></div> : null}
         {!loading && !message && rows.length === 0 ? <div className="mt-8 rounded-[24px] border border-black/10 bg-white p-9 text-center"><h2 className="text-2xl font-black">Queue clear</h2><p className="mt-2 text-sm font-semibold text-black/50">No listings match these filters.</p></div> : null}
 
+        {preReviews.length>0?<section className="mt-6 rounded-[26px] border border-[#efc14c]/65 bg-[#fffaf0] p-5" aria-label="Preliminary vehicle verification requests">
+          <h2 className="text-xl font-black">Vehicle document pre-review</h2>
+          <p className="mt-1 text-xs leading-5 text-black/65">These vehicles are not publicly listed. Plan approval and payment are separate from document review.</p>
+          <div className="mt-4 space-y-3">{preReviews.map(item=>{
+            const details=item.details||{};
+            const docs=[["ID",item.id_path],["Registration",item.registration_path],["Ownership",item.ownership_path],["Seller selfie",item.portrait_path],["Face recording",item.video_path]].filter(pair=>Boolean(pair[1])) as [string,string][];
+            return <article key={item.id} className="rounded-xl border border-black/10 bg-white p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-base">{item.title}</strong><span className="rounded-full bg-[#f6b800] px-3 py-1 text-[10px] font-black uppercase text-black">{item.status.replaceAll("_"," ")}</span></div>
+              <p className="mt-1 text-xs text-black/60">{item.owner_email||"Signed-in seller"} · {String(details.brand||"")} {String(details.model||"")} · {String(details.year||"")} · {String(details.location||"")}</p>
+              <p className="mt-2 text-xs font-semibold text-black/70">Identity: {item.face_mode==="camera"?"Guided camera evidence": "Manual staff comparison"} · This is not an automatically verified identity</p>
+              <div className="mt-3 flex flex-wrap gap-2">{docs.map(([label,path])=><button key={path} type="button" onClick={()=>void openVerificationDocument(path)} className="min-h-9 rounded-xl border border-black/15 px-3 text-xs font-bold">View {label}</button>)}</div>
+              {item.notes?<p className="mt-2 text-xs text-black/65">{item.notes}</p>:null}
+              {item.status==="pending"?<div className="mt-3 flex flex-wrap gap-2">
+                <button disabled={busyId===item.id} type="button" onClick={()=>void reviewPreliminary(item.id,"ready_for_plan")} className="rounded-xl bg-[#f6b800] px-4 py-2.5 text-xs font-black text-black disabled:opacity-40">Mark documents reviewed</button>
+                <button disabled={busyId===item.id} type="button" onClick={()=>void reviewPreliminary(item.id,"needs_changes")} className="rounded-xl border border-black/15 px-4 py-2.5 text-xs font-bold disabled:opacity-40">Request corrections</button>
+              </div>:null}
+            </article>;
+          })}</div>
+        </section>:null}
         <div className="mt-6 grid gap-5">
           {rows.map((item) => {
             const photos = Array.isArray(item.photos) ? item.photos.filter(Boolean) : [];
