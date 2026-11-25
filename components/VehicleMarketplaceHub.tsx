@@ -219,6 +219,12 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
   const [makeQuery, setMakeQuery] = useState("");
   const [modelQuery, setModelQuery] = useState("");
   const [unitType, setUnitType] = useState("all");
+  const [yearFrom, setYearFrom] = useState("");
+  const [yearTo, setYearTo] = useState("");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const [mileageMax, setMileageMax] = useState("");
+  const [placeQuery, setPlaceQuery] = useState("");
   const [makePickerOpen, setMakePickerOpen] = useState(false);
   const [pickerPanel, setPickerPanel] = useState<"makes" | "models">("makes");
   const [seen, setSeen] = useState<Set<string>>(new Set());
@@ -296,6 +302,20 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
   const visible=useMemo(()=>{
     const filtered=rows.filter(row => {
       if (!equipmentMatches(equipmentKind(row), mode) || !intentMatch(row, intent)) return false;
+      const year = Number(readMeta(row.description, "Year"));
+      const mileageText = readMeta(row.description, "Mileage");
+      const mileage = mileageText ? Number(mileageText.replace(/[^0-9.]/g, "")) : NaN;
+      const price = numericPrice(row, intent);
+      const numericFilter = (value: string) =>
+        value.trim() && Number.isFinite(Number(value)) ? Number(value) : null;
+      const from = numericFilter(yearFrom), to = numericFilter(yearTo);
+      const lower = numericFilter(priceMin), upper = numericFilter(priceMax), km = numericFilter(mileageMax);
+      if (from !== null && (!Number.isFinite(year) || year < from)) return false;
+      if (to !== null && (!Number.isFinite(year) || year > to)) return false;
+      if (lower !== null && (!Number.isFinite(price) || price < lower)) return false;
+      if (upper !== null && (!Number.isFinite(price) || price > upper)) return false;
+      if (km !== null && (!Number.isFinite(mileage) || mileage > km)) return false;
+      if (placeQuery.trim() && !(row.city || "").toLowerCase().includes(placeQuery.trim().toLowerCase())) return false;
       if (mode === "trailers_units") return matchedSubtype(row, unitType);
       if (mode === "trucks" || mode === "vehicles") {
         return (!makeQuery || rowHasMake(row, makeQuery)) && (!modelQuery || rowHasModel(row, modelQuery));
@@ -311,7 +331,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
       }
       return new Date(second.created_at||0).getTime()-new Date(first.created_at||0).getTime();
     });
-  },[mode,rows,sort,intent,makeQuery,modelQuery,unitType]);
+  },[mode,rows,sort,intent,makeQuery,modelQuery,unitType,yearFrom,yearTo,priceMin,priceMax,mileageMax,placeQuery]);
 
   const promoted = useMemo(() =>
     rows.filter(isActiveVehiclePromotion).sort((a,b) => Number(b.display_tier || 1) - Number(a.display_tier || 1) ||
@@ -322,7 +342,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
     return visible.slice(start, start + LISTINGS_PER_PAGE);
   }, [currentPage, visible]);
 
-  useEffect(() => { setCurrentPage(1); }, [mode, sort, intent, makeQuery, modelQuery, unitType]);
+  useEffect(() => { setCurrentPage(1); }, [mode, sort, intent, makeQuery, modelQuery, unitType, yearFrom, yearTo, priceMin, priceMax, mileageMax, placeQuery]);
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages); }, [currentPage, totalPages]);
 
   function changePage(nextPage: number) {
@@ -380,12 +400,12 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
         ) : null}
         <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-4xl font-black tracking-[-.05em] md:text-5xl">{darkMode ? "Vehicles" : "Bakkies"}, trucks and mobile units available</h2>
+            <h2 className="text-4xl font-black tracking-[-.05em] md:text-5xl">{"Vehicles"}, trucks and mobile units available</h2>
             <p className={`mt-3 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Approved commercial stock, presented with the same clear marketplace pattern as LoadLink jobs.</p>
           </div>
           <LoadLinkSortControl darkMode={darkMode} value={sort} onChange={value=>setSort(value as SortMode)}
  options={[{value:"newest",label:"Newest first"},{value:"price_low",label:"Price: low to high"},{value:"price_high",label:"Price: high to low"}]}
- equipment={{value:mode,onChange:value=>onModeChange(value as ViewMode),options:[{value:"all",label:"All equipment"},{value:"trucks",label:"Trucks"},{value:"vehicles",label:darkMode ? "Vehicles" : "Bakkies"},{value:"trailers_units",label:"Trailers, mobile units & equipment"}]}}
+ equipment={{value:mode,onChange:value=>onModeChange(value as ViewMode),options:[{value:"all",label:"All equipment"},{value:"trucks",label:"Trucks"},{value:"vehicles",label:"Vehicles"},{value:"trailers_units",label:"Trailers, mobile units & equipment"}]}}
  filter={{value:intent,onChange:value=>setIntent(value as Intent),resultCount:visible.length,options:[{value:"all",label:"All listings"},{value:"sale",label:"For sale",description:"Available to buy"},{value:"rental",label:"For rent",description:"Available to hire or rent"}]}}
  />
         </div>
@@ -417,15 +437,43 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
             <button type="button"
               onClick={() => document.getElementById("loadlink-vehicle-results")?.scrollIntoView({ behavior: "smooth", block: "start" })}
               className="mt-4 min-h-12 w-full rounded-xl border border-[#f6b800] bg-[#f6b800] px-7 text-sm font-black uppercase tracking-wide text-black transition active:scale-[.99]">
-              Search {mode === "vehicles" && !darkMode ? "Bakkies" : mode}
+              Search {mode}
             </button>
             {makeQuery || modelQuery ? <button type="button" onClick={() => { setMakeQuery(""); setModelQuery(""); }}
               className={"mt-2 min-h-9 w-full text-xs font-semibold " + (darkMode ? "text-white/70" : "text-black/60")}>Clear make and model</button> : null}
           </section>
         ) : null}
 
+        <details className={"mt-4 min-w-0 rounded-xl border px-4 py-3 " + surface} data-loadlink-vehicle-search-filters="true">
+          <summary className="cursor-pointer text-sm font-semibold">More vehicle filters</summary>
+          <div className="mt-4 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {([
+              ["Year from", yearFrom, setYearFrom, "number"],
+              ["Year to", yearTo, setYearTo, "number"],
+              ["Minimum price (R)", priceMin, setPriceMin, "number"],
+              ["Maximum price (R)", priceMax, setPriceMax, "number"],
+              ["Maximum mileage (km)", mileageMax, setMileageMax, "number"],
+              ["City or province", placeQuery, setPlaceQuery, "text"],
+            ] as Array<[string, string, (value: string) => void, string]>).map(([label, value, setter, type]) => (
+              <label key={label} className="block min-w-0 text-xs font-semibold">{label}
+                <input type={type} min={type === "number" ? "0" : undefined} value={value}
+                  onChange={event => setter(event.target.value)}
+                  className={"mt-1.5 h-11 w-full min-w-0 rounded-lg border px-3 text-base outline-none focus:border-[#f6b800] " +
+                    (darkMode ? "border-white/20 bg-[#171717] text-white" : "border-black/15 bg-white text-black")} />
+              </label>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <span className={"text-xs " + muted}>{visible.length} matching approved listings</span>
+            <button type="button" onClick={() => {
+              setYearFrom(""); setYearTo(""); setPriceMin(""); setPriceMax("");
+              setMileageMax(""); setPlaceQuery("");
+            }} className="min-h-10 text-xs font-semibold underline underline-offset-4">Clear additional filters</button>
+          </div>
+        </details>
+
         <div className="mt-6 flex max-w-full gap-2 overflow-x-auto pb-1">
-          {([["all", "All equipment"], ["trucks", "Trucks"], ["vehicles", darkMode ? "Vehicles" : "Bakkies"], ["trailers_units", "Trailers, mobile units & equipment"]] as Array<[ViewMode, string]>).map(([value, label]) => (
+          {([["all", "All equipment"], ["trucks", "Trucks"], ["vehicles", "Vehicles"], ["trailers_units", "Trailers, mobile units & equipment"]] as Array<[ViewMode, string]>).map(([value, label]) => (
             <button key={value} type="button" onClick={() => onModeChange(value)} className={`shrink-0 rounded-full border px-4 py-2.5 text-xs font-black transition ${mode === value ? "border-[#f6b800] bg-[#f6b800] text-black" : surface}`}>{label}</button>
           ))}
         </div>
@@ -442,7 +490,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
           </label>
         ) : null}
         {makePickerOpen && makeModelVisible ? (
-          <VehicleMakeModelPicker darkMode={darkMode} title={mode === "trucks" ? "Trucks" : (darkMode ? "Vehicles" : "Bakkies")}
+          <VehicleMakeModelPicker darkMode={darkMode} title={mode === "trucks" ? "Trucks" : ("Vehicles")}
             brands={brandOptions} currentMake={makeQuery} currentModel={modelQuery} initialPanel={pickerPanel}
             onChoose={(make, model) => { setMakeQuery(make); setModelQuery(model); setMakePickerOpen(false); }}
             onClose={() => setMakePickerOpen(false)} />
@@ -531,7 +579,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
           <div className={`loadlink-glass mt-6 rounded-[24px] border p-8 text-center ${surface}`}>
             <h3 className="text-xl font-black">No approved listings in this category yet</h3>
             <p className={`mx-auto mt-2 max-w-md text-sm font-semibold leading-6 ${muted}`}>Try All equipment and All listings, or change your filters.</p>
-            {(mode !== "all" || intent !== "all" || makeQuery || modelQuery || unitType !== "all") ? <button type="button" onClick={() => {onModeChange("all");setIntent("all");setUnitType("all");}} className="mt-4 min-h-10 rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">Clear filters</button> : null}
+            {(mode !== "all" || intent !== "all" || makeQuery || modelQuery || unitType !== "all" || yearFrom || yearTo || priceMin || priceMax || mileageMax || placeQuery) ? <button type="button" onClick={() => {onModeChange("all");setIntent("all");setUnitType("all");setYearFrom("");setYearTo("");setPriceMin("");setPriceMax("");setMileageMax("");setPlaceQuery("");}} className="mt-4 min-h-10 rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">Clear filters</button> : null}
           </div>
         )}
       </div>
