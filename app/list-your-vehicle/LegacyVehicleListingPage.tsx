@@ -1021,7 +1021,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 <Field label="Payload / capacity kg"><input type="number" min="0" value={payloadKg} onChange={(event) => setPayloadKg(event.target.value)} className={inputClass} /></Field>
                 <Field label="How is this unit available?"><select value={offerMode} onChange={(event) => setOfferMode(event.target.value as OfferMode)} className={inputClass}><option value="sale">For sale only</option><option value="rental">Rental only</option><option value="sale_or_rental">Sale or rental</option><option value="poa">POA — price on application</option></select></Field>
                 {offerMode !== "poa" ? <Field label={offerMode === "rental" ? "Rental rate" : "Sale price"}><input value={rate} onChange={(event) => setRate(event.target.value)} placeholder={offerMode === "rental" ? "Example: 25000" : "Example: 850000"} inputMode="decimal" className={inputClass} required /></Field> : <Field label="Price"><div className={`${inputClass} flex items-center`}>POA — interested users must contact the seller</div></Field>}
-                <div className="md:col-span-2 min-w-0 border-t border-current/10 pt-5">
+                <div className="md:col-span-2 min-w-0 -mt-3">
                   <VehicleIntelligentPricingPanel darkMode={darkMode} category={vehicleCategory || "vehicle"}
                     make={brand} model={modelName} year={year} condition={condition} mileage={odometerKm}
                     salePrice={rate} offerMode={offerMode} onUsePrice={setRate} />
