@@ -43,6 +43,10 @@ type QueueItem = {
   tax_document_path?: string | null;
   business_address_document_path?: string | null;
   representative_authority_document_path?: string | null;
+  face_portrait_path?: string | null;
+  face_video_path?: string | null;
+  face_review_mode?: string | null;
+  face_consent_at?: string | null;
 };
 
 const statusOptions: ModerationStatus[] = ["pending", "all", "approved", "rejected"];
@@ -173,6 +177,8 @@ export default function AdminListingsPage() {
               ["Tax", item.tax_document_path],
               ["Address", item.business_address_document_path],
               ["Authority", item.representative_authority_document_path],
+              ["Owner selfie", item.face_portrait_path],
+              ["Guided face recording", item.face_video_path],
             ].filter((entry) => Boolean(entry[1])) as [string, string][];
 
             return <article key={item.id} className="overflow-hidden rounded-[26px] border border-black/10 bg-white shadow-[0_18px_50px_rgba(0,0,0,.04)]">
@@ -192,6 +198,9 @@ export default function AdminListingsPage() {
                   <p className="mt-4 whitespace-pre-line text-sm font-medium leading-6 text-black/65">{item.description || "No description supplied."}</p>
                   {photos.length ? <p className="mt-3 text-xs font-black text-black/40">{photos.length} photo{photos.length === 1 ? "" : "s"}</p> : null}
 
+                  {item.listing_kind==="vehicle"&&!item.dealership_id?<p className="mt-3 rounded-xl border border-[#f6b800]/45 bg-[#fff9e9] p-3 text-xs font-semibold text-[#54400d]">
+                    Owner identity: {item.face_consent_at?item.face_review_mode==="camera"?"Guided camera evidence received — staff comparison required":"Manual identity review requested — verify uploaded ID and ownership documents":"Identity evidence or consent not yet recorded"}
+                  </p>:null}
                   {documents.length ? <div className="mt-4 flex flex-wrap gap-2">{documents.map(([documentLabel, path]) => <button key={`${documentLabel}-${path}`} type="button" onClick={() => void openVerificationDocument(path)} className="rounded-xl border border-black/12 bg-[#f7f5ef] px-3 py-2 text-[11px] font-black">View {documentLabel}</button>)}</div> : null}
 
                   {item.moderation_status === "pending" ? <div className="mt-5 flex flex-wrap gap-2"><button disabled={busyId === item.id || dealerBlocked} type="button" onClick={() => void review(item, "approved")} className="rounded-xl bg-[#f6b800] px-5 py-3 text-xs font-black text-black disabled:cursor-not-allowed disabled:opacity-40">{busyId === item.id ? "Saving…" : "Approve"}</button><button disabled={busyId === item.id} type="button" onClick={() => void review(item, "rejected")} className="rounded-xl bg-black px-5 py-3 text-xs font-black text-white disabled:opacity-40">Reject with reason</button>{dealerBlocked ? <p className="flex items-center text-xs font-bold text-red-700">Approve the dealership before approving this stock.</p> : null}</div> : null}
