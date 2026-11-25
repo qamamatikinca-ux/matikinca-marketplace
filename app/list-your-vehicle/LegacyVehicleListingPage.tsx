@@ -34,6 +34,7 @@ import { getVehicleListingAccess } from "@/lib/packageAccess";
 import { inspectLoadLinkImage, showLoadLinkImageQuality } from "@/lib/loadlinkImageQuality";
 import { submitListingDirect } from "@/lib/listingSubmission";
 import { assessVehicleListing } from "@/lib/vehiclePostingIntelligence";
+import VehicleIntelligentPricingPanel from "@/components/VehicleIntelligentPricingPanel";
 
 const BusinessPlans = dynamic(() => import("@/components/BusinessPlans"), { ssr: false, loading: () => <div className="mx-auto my-6 h-28 max-w-6xl animate-pulse rounded-2xl bg-current/[.05]" /> });
 const VehicleMarketplaceHub = dynamic(() => import("@/components/VehicleMarketplaceHub"), { ssr: false, loading: () => <div className="mx-auto my-8 h-64 max-w-6xl animate-pulse rounded-2xl bg-current/[.05]" /> });
@@ -196,6 +197,12 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [previousOwners, setPreviousOwners] = useState("");
   const [condition, setCondition] = useState("Good");
   const [serviceHistory, setServiceHistory] = useState("Partial service history");
+  const [engineCondition,setEngineCondition]=useState("Not assessed");
+  const [tyreCondition,setTyreCondition]=useState("Not assessed");
+  const [accidentHistory,setAccidentHistory]=useState("Not disclosed");
+  const [lastServiceDate,setLastServiceDate]=useState("");
+  const [roadworthyStatus,setRoadworthyStatus]=useState("Not confirmed");
+  const [fuelUseL100,setFuelUseL100]=useState("");
   const [gvmKg, setGvmKg] = useState("");
   const [payloadKg, setPayloadKg] = useState("");
   const [rate, setRate] = useState("");
@@ -302,7 +309,10 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       setTitle(d.title || ""); setCity(d.city || "Johannesburg"); setBodyType(d.bodyType || ""); setTransmission(d.transmission || "");
       setFuelType(d.fuelType || ""); setAxleConfiguration(d.axleConfiguration || ""); setRegistrationNumber(d.registrationNumber || "");
       setVin(d.vin || ""); setEngineNumber(d.engineNumber || ""); setOdometerKm(d.odometerKm || ""); setPreviousOwners(d.previousOwners || "");
-      setCondition(d.condition || "Good"); setServiceHistory(d.serviceHistory || "Partial service history"); setGvmKg(d.gvmKg || "");
+      setCondition(d.condition || "Good"); setServiceHistory(d.serviceHistory || "Partial service history");
+      setEngineCondition(d.engineCondition||"Not assessed");setTyreCondition(d.tyreCondition||"Not assessed");
+      setAccidentHistory(d.accidentHistory||"Not disclosed");setLastServiceDate(d.lastServiceDate||"");
+      setRoadworthyStatus(d.roadworthyStatus||"Not confirmed");setFuelUseL100(d.fuelUseL100||""); setGvmKg(d.gvmKg || "");
       setPayloadKg(d.payloadKg || ""); setRate(d.rate || ""); setOfferMode(d.offerMode || "sale"); setRentalRate(d.rentalRate || ""); setRentalPeriod(d.rentalPeriod || "month"); setSpecA(d.specA || ""); setSpecB(d.specB || ""); setSpecC(d.specC || ""); setSpecD(d.specD || ""); setPostedBy(d.postedBy || ""); setContactNumber(d.contactNumber || "");
       setWhatsappNumber(d.whatsappNumber || ""); setDescription(d.description || ""); setConfirmOwnership(Boolean(d.confirmOwnership));
       setConfirmAccuracy(Boolean(d.confirmAccuracy)); setSelectedPlan(entryMode ? initialPackage : d.selectedPlan || initialPackage); setPackageType(entryMode ? initialPackage : d.packageType || "standard");
@@ -318,7 +328,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
 
   useEffect(() => {
     if (!listingFlowOpen || !vehicleCategory || !draftHydrated || !signedIn) return;
-    const draft = { updatedAt: Date.now(), entryMode: entryMode || "vehicle", sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, gvmKg, payloadKg, rate, offerMode, rentalRate, rentalPeriod, specA, specB, specC, specD, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType, submissionId: submissionIdRef.current || "" };
+    const draft = { updatedAt: Date.now(), entryMode: entryMode || "vehicle", sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, engineCondition, tyreCondition, accidentHistory, lastServiceDate, roadworthyStatus, fuelUseL100, gvmKg, payloadKg, rate, offerMode, rentalRate, rentalPeriod, specA, specB, specC, specD, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType, submissionId: submissionIdRef.current || "" };
     const persist = () => {
       try {
         if (!listingSubmittedRef.current && localStorage.getItem(VEHICLE_DRAFT_OWNER_KEY) === draftOwnerRef.current)
@@ -328,7 +338,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     const timer = window.setTimeout(persist, 150);
     window.addEventListener("pagehide", persist);
     return () => { window.clearTimeout(timer); window.removeEventListener("pagehide", persist); persist(); };
-  }, [draftHydrated, signedIn, sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, gvmKg, payloadKg, rate, offerMode, rentalRate, rentalPeriod, specA, specB, specC, specD, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType]);
+  }, [draftHydrated, signedIn, sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, engineCondition, tyreCondition, accidentHistory, lastServiceDate, roadworthyStatus, fuelUseL100, gvmKg, payloadKg, rate, offerMode, rentalRate, rentalPeriod, specA, specB, specC, specD, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType]);
 
   useEffect(() => {
     if (vehicleCategory !== "truck" || !brand || !modelName) { setReferenceImage(null); return; }
@@ -636,6 +646,12 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         `Model: ${modelName.trim()}`,
         `Mileage: ${Number(odometerKm).toLocaleString("en-ZA")} km`,
         previousOwners ? `Previous owners: ${previousOwners}` : "",
+        `Engine and gearbox condition: ${engineCondition}`,
+        `Tyre condition: ${tyreCondition}`,
+        `Accident / damage history: ${accidentHistory}`,
+        lastServiceDate ? `Last service date: ${lastServiceDate}` : "",
+        `Roadworthy evidence: ${roadworthyStatus}`,
+        fuelUseL100 ? `Fuel consumption (L/100 km): ${fuelUseL100}` : "",
         transmission ? `Transmission: ${transmission}` : "",
         fuelType ? `Fuel: ${fuelType}` : "",
         axleConfiguration ? `Axle configuration: ${axleConfiguration}` : "",
@@ -661,6 +677,10 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         sponsored: packageType === "pro" || packageType === "dealer", package_type: packageType,
         listing_kind: "vehicle", display_tier: packageType === "dealer" ? 4 : packageType === "pro" ? 3 : 1,
         stock_status: "available", dealership_id: dealershipId || null, owner_key: ownerKey, user_id: user.id,
+        vehicle_year:year,brand:brand.trim(),model:modelName.trim(),body_type:bodyType||subtype,
+        condition,service_history:serviceHistory,previous_owners:previousOwners?Number(previousOwners):null,
+        odometer_km:Number(odometerKm),fuel_type:fuelType||null,transmission:transmission||null,
+        price_amount:(offerMode==="sale"||offerMode==="sale_or_rental")&&Number(String(rate).replace(/[^0-9.]/g,""))>0?Number(String(rate).replace(/[^0-9.]/g,"")):null,
         status: "active", moderation_status: "pending", client_request_id: submissionId,
       };
 
@@ -979,7 +999,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 </label>
               </div>
               <div className="grid gap-3 px-5 pb-5 md:px-7 md:pb-7"><CheckRow checked={confirmOwnership} onChange={setConfirmOwnership} label="I own this vehicle or have written authority from the owner to list it." /><CheckRow checked={confirmAccuracy} onChange={setConfirmAccuracy} label="I confirm that the details, mileage, ownership history and uploaded documents are accurate." /></div>
-              <div className="border-t border-[#f6b800]/25 bg-black p-5 text-white md:p-7">{message ? <div className="mb-4 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm font-bold leading-6 text-red-300">{message}</div> : null}<button type="submit" disabled={saving || preparingVehiclePhotos} className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[0.12em] text-black disabled:opacity-50">{saving ? "Submitting vehicle…" : dealershipId ? "Add to dealership inventory" : "Submit vehicle for verification"}</button><p className="mt-3 text-center text-xs leading-5 text-white/45">The product will appear in the dealership slider when linked to an approved dealership. Analytics remains available only on Pro listings.</p></div>
+              <div className={`border-t border-[#f6b800]/25 p-5 md:p-7 ${darkMode?"bg-[#111] text-white":"bg-[#fffaf0] text-black"}`}>{message ? <div className={`mb-4 rounded-2xl border p-4 text-sm font-bold leading-6 ${darkMode?"border-red-500/40 bg-red-500/10 text-red-200":"border-red-600/30 bg-red-50 text-red-900"}`}>{message}</div> : null}<button type="submit" disabled={saving || preparingVehiclePhotos} className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[0.12em] text-black disabled:opacity-50">{saving ? "Submitting vehicle…" : dealershipId ? "Add to dealership inventory" : "Submit vehicle for verification"}</button><p className={`mt-3 text-center text-xs leading-5 ${darkMode?"text-white/55":"text-black/55"}`}>The product will appear in the dealership slider when linked to an approved dealership. Analytics remains available only on Pro listings.</p></div>
             </section>
           </> : null}
         </> : null}
