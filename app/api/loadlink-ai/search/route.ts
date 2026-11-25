@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { serverRateLimit } from "@/lib/serverRateLimit";
-import { inferSearchScope, equipmentAliases } from "@/lib/loadlinkSearch";
-import { normaliseSearch } from "@/lib/smartSearch";
+import { inferSearchScope } from "@/lib/loadlinkSearch";
+import { searchTokens } from "@/lib/smartSearch";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ const json = (v: unknown, status=200) => NextResponse.json(v,{status,headers:{"C
 function clean(s: unknown, length=180) {return typeof s==="string"?s.replace(/[<>\\]/g," ").replace(/\s+/g," ").trim().slice(0,length):"";}
 function fallback(query:string,location:string) {
  const scope = inferSearchScope(query);
- return {source:"local" as const,scope:scope==="page"?"all":scope,query,location,summary:"Matching currently published LoadLink listings",terms:equipmentAliases(query).slice(0,5)};
+ return {source:"local" as const,scope:scope==="page"?"all":scope,query,location,summary:"Matching currently published LoadLink listings",terms:searchTokens(query).slice(0,5)};
 }
 export async function POST(request:Request) {
  const limit=serverRateLimit(request,"ai-marketplace-search",18,60_000);

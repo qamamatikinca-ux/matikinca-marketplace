@@ -31,7 +31,7 @@ export default function VehicleOwnershipEstimator({darkMode,category="",make="",
   {key:"depreciationAnnual",label:"Depreciation per year (R)",hint:"Optional"}
  ] as Array<{key:keyof typeof values;label:string;hint:string}>;
  return <section data-loadlink-vehicle-costs="true" className={`overflow-hidden rounded-[20px] border ${darkMode?"border-[#f6b800]/35 bg-[#111] text-white":"border-[#ecc455]/70 bg-[#fffaf0] text-[#171717]"}`}>
-  <details open={posting?undefined:undefined} className="group" defaultOpen={posting}>
+  <details className="group">
    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 sm:px-5">
     <span className="min-w-0"><span className="block text-[10px] font-black uppercase tracking-[.12em] text-[#bd8800]">LoadLink vehicle intelligence</span>
      <strong className="mt-1 block text-base font-black">Cost of ownership</strong>
