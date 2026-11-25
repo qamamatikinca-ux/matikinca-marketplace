@@ -2,10 +2,9 @@
 
 import LoadLinkImage from "@/components/LoadLinkImage";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
 
 const PIN_KEY = "loadlink-pinned-conversations-v1";
 const PIN_META_KEY = "loadlink-pinned-conversation-meta-v1";
@@ -13,10 +12,6 @@ const DISTANCE_ENABLED_KEY = "loadlink-distance-enabled-v1";
 const DISTANCE_DISMISSED_KEY = "loadlink-distance-prompt-dismissed-v1";
 
 type PinMeta = Record<string, { name: string; avatar?: string; savedAt?: string }>;
-type MarketResult = { available?: boolean; sample_count?: number; low_cents?: number; recommended_cents?: number; high_cents?: number; confidence?: string; reason?: string; basis?: string };
-
-type MarketSnapshot = { mode: string; brand: string; model: string; year: number; condition: string; mileage: number | null; bodyType: string };
-
 function readPinIds() {
   try {
     const raw = JSON.parse(localStorage.getItem(PIN_KEY) || "[]");
@@ -51,40 +46,6 @@ function normaliseOffer(value: string) {
   return value;
 }
 
-function findOfferSelect() {
-  return Array.from(document.querySelectorAll<HTMLSelectElement>("select")).find((select) => {
-    const values = Array.from(select.options).map((option) => option.value.toLowerCase());
-    return values.includes("sale") && values.includes("rental");
-  }) || null;
-}
-
-function controlByLabel(pattern: RegExp) {
-  for (const label of Array.from(document.querySelectorAll<HTMLLabelElement>("label"))) {
-    const text = (label.textContent || "").replace(/\s+/g, " ").trim();
-    if (!pattern.test(text)) continue;
-    const control = label.querySelector<HTMLInputElement | HTMLSelectElement>("input,select");
-    if (control) return control;
-  }
-  return null;
-}
-
-function marketSnapshot(): MarketSnapshot | null {
-  const offer = findOfferSelect();
-  if (!offer) return null;
-  const brand = controlByLabel(/^Make \/ manufacturer/i)?.value?.trim() || "";
-  const model = controlByLabel(/^Model$/i)?.value?.trim() || "";
-  const year = Number(controlByLabel(/Registration \/ model year/i)?.value || 0);
-  const condition = controlByLabel(/^Condition$/i)?.value?.trim() || "Good";
-  const mileageRaw = Number(controlByLabel(/Mileage \/ usage/i)?.value || NaN);
-  const bodyType = controlByLabel(/^(Body type|Type)$/i)?.value?.trim() || "";
-  return { mode: offer.value, brand, model, year, condition, mileage: Number.isFinite(mileageRaw) ? mileageRaw : null, bodyType };
-}
-
-function moneyFromCents(cents?: number) {
-  if (!Number.isFinite(Number(cents))) return "—";
-  return new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(Number(cents) / 100);
-}
-
 export default function LoadLinkFinalProductPass20260823() {
   const pathname = usePathname();
   const [pinHost, setPinHost] = useState<HTMLElement | null>(null);
@@ -92,10 +53,6 @@ export default function LoadLinkFinalProductPass20260823() {
   const [pinMeta, setPinMeta] = useState<PinMeta>({});
   const [messageViewport, setMessageViewport] = useState<HTMLElement | null>(null);
   const [showDown, setShowDown] = useState(false);
-  const [marketHost, setMarketHost] = useState<HTMLElement | null>(null);
-  const [market, setMarket] = useState<MarketResult | null>(null);
-  const [marketLoading, setMarketLoading] = useState(false);
-  const [marketInput, setMarketInput] = useState<MarketSnapshot | null>(null);
 
   useEffect(() => {
     if (!pathname.startsWith("/messages")) { setPinHost(null); setMessageViewport(null); return; }
@@ -155,56 +112,6 @@ export default function LoadLinkFinalProductPass20260823() {
   }, [messageViewport]);
 
   useEffect(() => {
-    if (!pathname.startsWith("/list-your-vehicle")) { setMarketHost(null); setMarket(null); return; }
-    let alive = true;
-    let debounce = 0;
-    const mount = () => {
-      const offer = findOfferSelect();
-      if (!offer) return;
-      let host = document.querySelector<HTMLElement>("[data-loadlink-market-guide-host]");
-      if (!host) {
-        host = document.createElement("div");
-        host.dataset.loadlinkMarketGuideHost = "true";
-        (offer.closest("label") || offer.parentElement)?.insertAdjacentElement("afterend", host);
-      }
-      if (alive) setMarketHost(host);
-      const next = marketSnapshot();
-      if (alive) setMarketInput(next);
-    };
-    const changed = () => { window.clearTimeout(debounce); debounce = window.setTimeout(mount, 220); };
-    mount();
-    const observer = new MutationObserver(changed); observer.observe(document.body, { childList: true, subtree: true });
-    document.addEventListener("input", changed, true); document.addEventListener("change", changed, true);
-    return () => { alive = false; observer.disconnect(); window.clearTimeout(debounce); document.removeEventListener("input", changed, true); document.removeEventListener("change", changed, true); };
-  }, [pathname]);
-
-  const marketKey = useMemo(() => marketInput ? JSON.stringify(marketInput) : "", [marketInput]);
-  useEffect(() => {
-    if (!marketInput || !["sale", "sale_or_rental"].includes(marketInput.mode) || !marketInput.brand || !marketInput.model || !marketInput.year) { setMarket(null); return; }
-    let alive = true;
-    const timer = window.setTimeout(() => {
-      void (async () => {
-        setMarketLoading(true);
-        try {
-          const { data, error } = await supabase.rpc("loadlink_vehicle_market_recommendation", {
-            p_brand: marketInput.brand,
-            p_model: marketInput.model,
-            p_year: marketInput.year,
-            p_condition: marketInput.condition,
-            p_odometer_km: marketInput.mileage,
-            p_body_type: marketInput.bodyType || null,
-          });
-          if (!alive) return;
-          setMarket(error ? { available: false, reason: "Market guide is temporarily unavailable." } : (data as MarketResult));
-        } finally {
-          if (alive) setMarketLoading(false);
-        }
-      })();
-    }, 450);
-    return () => { alive = false; window.clearTimeout(timer); };
-  }, [marketKey]);
-
-  useEffect(() => {
     const approved = localStorage.getItem(DISTANCE_ENABLED_KEY) === "true";
     const dismissed = localStorage.getItem(DISTANCE_DISMISSED_KEY) === "true";
     let timer = 0;
@@ -259,8 +166,6 @@ export default function LoadLinkFinalProductPass20260823() {
     {pinHost ? createPortal(<section className="border-b border-current/10 px-4 py-3" data-loadlink-pinned-chat-rail="true"><div className="flex items-center justify-between gap-3"><strong className="text-[10px] font-black uppercase tracking-[.13em] opacity-45">Pinned chats</strong><span className="text-[9px] font-bold opacity-35">{pinIds.length ? `${pinIds.length} pinned` : "Pin from chat info"}</span></div>{pinIds.length ? <div className="no-scrollbar mt-2 flex gap-2 overflow-x-auto pb-1">{pinIds.map((id) => { const meta = pinMeta[id]; return <button key={id} type="button" onClick={() => window.location.assign(`/messages?thread=${encodeURIComponent(id)}&conversation=${encodeURIComponent(id)}`)} className="flex min-w-[154px] max-w-[210px] items-center gap-2 rounded-2xl border border-current/10 bg-current/[.035] p-2.5 text-left"><span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-current/10 text-[10px] font-black">{meta?.avatar ? <LoadLinkImage src={meta.avatar} alt="" className="h-full w-full object-cover" /> : (meta?.name || "P").slice(0,1).toUpperCase()}</span><span className="min-w-0"><span className="block truncate text-xs font-black">{meta?.name || "Pinned chat"}</span><span className="mt-0.5 block text-[9px] font-bold opacity-40">Open conversation</span></span></button>; })}</div> : null}</section>, pinHost) : null}
 
     {showDown && messageViewport && typeof document !== "undefined" ? createPortal(<button type="button" aria-label="Scroll to latest message" onClick={() => { messageViewport.scrollTo({ top: messageViewport.scrollHeight, behavior: "smooth" }); setShowDown(false); }} className="fixed bottom-[calc(env(safe-area-inset-bottom)+94px)] right-5 z-[2147481200] flex h-12 w-12 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-[0_12px_35px_rgba(0,0,0,.22)] backdrop-blur-xl dark:border-white/10 dark:bg-[#181818] dark:text-white"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/></svg></button>, document.body) : null}
-
-    {marketHost && marketInput && ["sale","sale_or_rental"].includes(marketInput.mode) ? createPortal(<div className="mt-3 rounded-[18px] border border-[#f6b800]/35 bg-[#f6b800]/[.07] p-4" data-loadlink-market-guide="true"><div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.13em] text-[#a87a00]">LoadLink market guide</p><h4 className="mt-1 text-sm font-black">Suggested sale range</h4></div>{market?.confidence ? <span className="rounded-full border border-current/10 px-2.5 py-1 text-[9px] font-black uppercase opacity-55">{market.confidence} confidence</span> : null}</div>{marketLoading ? <p className="mt-3 text-xs font-semibold opacity-55">Comparing approved LoadLink vehicles…</p> : market?.available ? <><div className="mt-3 grid grid-cols-3 gap-2"><div><span className="block text-[9px] font-black uppercase opacity-40">Low</span><strong className="mt-1 block text-sm">{moneyFromCents(market.low_cents)}</strong></div><div><span className="block text-[9px] font-black uppercase opacity-40">Recommended</span><strong className="mt-1 block text-sm text-[#a87a00]">{moneyFromCents(market.recommended_cents)}</strong></div><div><span className="block text-[9px] font-black uppercase opacity-40">High</span><strong className="mt-1 block text-sm">{moneyFromCents(market.high_cents)}</strong></div></div><p className="mt-3 text-[10px] font-semibold leading-4 opacity-45">Based on {market.sample_count} approved comparable sale listing{market.sample_count === 1 ? "" : "s"}, adjusted for model year, condition, body type and mileage. This is guidance, not a guaranteed selling price.</p></> : <p className="mt-3 text-xs font-semibold leading-5 opacity-55">{market?.reason || "Choose the make, model and year to see a market recommendation."}</p>}</div>, marketHost) : null}
 
     <style jsx global>{`
       [data-loadlink-offer-badge="true"]{letter-spacing:.1em!important;font-size:9px!important;font-weight:900!important}

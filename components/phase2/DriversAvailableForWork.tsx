@@ -189,7 +189,7 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
               {nameMatches.map(match=><button role="option" aria-selected={false} type="button" key={match.id}
                 onClick={()=>{setSearch(match.full_name);setShowMatches(false);document.activeElement instanceof HTMLElement&&document.activeElement.blur();document.getElementById("loadlink-driver-results")?.scrollIntoView({behavior:"smooth",block:"start"})}}
                 className={styles.liveMatch}>
-                {match.profile_image_url?<LoadLinkImage src={match.profile_image_url} alt="" className={styles.matchAvatar}/>:<span className={styles.matchInitials}>{initials(match.full_name)}</span>}
+                <span className={styles.matchAvatarFrame}><span className={styles.matchInitials}>{initials(match.full_name)}</span>{match.profile_image_url ? <LoadLinkImage src={match.profile_image_url} alt="" sizes="48px" className={styles.matchAvatar} loading="eager" /> : null}</span>
                 <span className="min-w-0"><strong className="block truncate">{match.full_name}</strong><span className="block truncate text-[11px] opacity-60">{match.headline||match.licence_code}</span></span>
               </button>)}
             </div>:null}
@@ -239,8 +239,10 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
           return <article className={styles.directoryCard} data-loadlink-refined-driver-card="true" key={driver.id}>
             <div className={styles.cardTop}>
               <div className={styles.portrait}>
-                {driver.profile_image_url?<LoadLinkImage src={driver.profile_image_url}
-                  alt={`${driver.full_name} profile photograph`} className="h-full w-full object-cover" />:<span>{initials(driver.full_name)}</span>}
+                <span aria-hidden="true" className={styles.portraitInitials}>{initials(driver.full_name)}</span>
+                {driver.profile_image_url ? <LoadLinkImage src={driver.profile_image_url}
+                  alt={`${driver.full_name} profile photograph`} sizes="72px"
+                  className="absolute inset-0 h-full w-full object-cover" loading="eager" /> : null}
               </div>
               <div className={styles.cardIdentity}>
                 <span className={styles.approved}>APPROVED</span>

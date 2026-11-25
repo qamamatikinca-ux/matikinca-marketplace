@@ -5,9 +5,13 @@ import { supabase } from "@/lib/supabaseClient";
 import { formatZar } from "@/lib/vehicleMarketGuide";
 
 type PriceEvidence = {
-  available?: boolean; sample_count?: number;
-  low_cents?: number; recommended_cents?: number; high_cents?: number;
+  available?: boolean;
+  sample_count?: number;
+  low_cents?: number;
+  recommended_cents?: number;
+  high_cents?: number;
 };
+
 type Props = {
   darkMode: boolean; category: string; make: string; model: string; year: number;
   condition: string; mileage: string; salePrice: string; offerMode: string;
@@ -17,7 +21,7 @@ type Props = {
   onUsePrice?: (value: string) => void;
 };
 
-/** Seller-controlled pricing based on available evidence, never a fabricated appraisal. */
+/** A single unobtrusive seller action, not an additional comparison/guide card. */
 export default function VehicleIntelligentPricingPanel({
   darkMode, make, model, year, condition, mileage, offerMode, onUsePrice,
 }: Props) {
@@ -52,7 +56,7 @@ export default function VehicleIntelligentPricingPanel({
       setEvidence((Array.isArray(data) ? data[0] : data) as PriceEvidence | null);
       setChecked(true);
     } catch {
-      setError("The pricing service is unavailable. You can still enter your own price.");
+      setError("Pricing is temporarily unavailable. You may enter your own asking price.");
     } finally {
       setLoading(false);
     }
@@ -67,37 +71,26 @@ export default function VehicleIntelligentPricingPanel({
   const muted = darkMode ? "text-white/60" : "text-black/60";
 
   return (
-    <div data-loadlink-price-determination="true" className="min-w-0">
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold">Price determination</p>
-          <p className={"mt-1 text-xs leading-5 " + muted}>Optional guidance for your asking price.</p>
-        </div>
-        <button type="button" onClick={determinePrice} disabled={!ready || loading}
-          className="min-h-11 shrink-0 rounded-lg border border-[#f6b800] px-4 text-xs font-semibold text-inherit transition-colors hover:bg-[#f6b800]/10 disabled:cursor-not-allowed disabled:opacity-45">
-          {loading ? "Calculating…" : "Determine price"}
-        </button>
-      </div>
-      {!ready ? <p className={"mt-2 text-xs " + muted}>Confirm the make, model and year to request a price estimate.</p> : null}
-      {error ? <p role="status" className="mt-3 text-sm">{error}</p> : null}
+    <div data-loadlink-price-determination="true" className="min-w-0 text-left">
+      <button type="button" onClick={determinePrice} disabled={!ready || loading}
+        className="inline-flex min-h-9 items-center text-xs font-semibold underline underline-offset-4 decoration-[#f6b800] disabled:cursor-not-allowed disabled:opacity-45">
+        {loading ? "Calculating price…" : "Determine price"}
+      </button>
+      {!ready ? <p className={"text-xs leading-5 " + muted}>Select the make, model and year first.</p> : null}
+      {error ? <p role="status" className={"mt-1 text-xs leading-5 " + muted}>{error}</p> : null}
       {checked && supported ? (
-        <div className={"mt-3 rounded-lg border p-3 " + (darkMode ? "border-white/15" : "border-black/10")}>
-          <p className={"text-xs " + muted}>Indicative asking-price range</p>
-          <p className="mt-1 text-lg font-semibold">{formatZar(lower)} – {formatZar(upper)}</p>
-          <p className={"mt-1 text-xs leading-5 " + muted}>
-            Midpoint {formatZar(estimated)}. Based on {evidence?.sample_count} approved LoadLink listings;
-            advertised prices are not confirmed sale prices.
-          </p>
+        <div role="status" className="mt-2 space-y-1 text-xs leading-5">
+          <p><strong>Suggested asking range: {formatZar(lower)} – {formatZar(upper)}</strong></p>
+          <p className={muted}>Based on {evidence?.sample_count} approved LoadLink asking prices, not confirmed sales.</p>
           {onUsePrice ? <button type="button" onClick={() => onUsePrice(String(Math.round(estimated)))}
-            className="mt-3 min-h-10 rounded-lg bg-[#f6b800] px-4 text-xs font-semibold text-black">
-            Use midpoint as asking price
+            className="min-h-9 font-semibold underline underline-offset-4 decoration-[#f6b800]">
+            Use {formatZar(estimated)}
           </button> : null}
         </div>
       ) : null}
       {checked && !supported ? (
-        <p role="status" className={"mt-3 text-xs leading-5 " + muted}>
-          A reliable market estimate is not available for this specific vehicle yet.
-          Enter your own asking price; LoadLink will not invent a valuation.
+        <p role="status" className={"mt-1 text-xs leading-5 " + muted}>
+          Not enough verified market data for a reliable estimate yet. You can set your own asking price.
         </p>
       ) : null}
     </div>
