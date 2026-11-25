@@ -35,6 +35,7 @@ import { inspectLoadLinkImage, showLoadLinkImageQuality } from "@/lib/loadlinkIm
 import { submitListingDirect } from "@/lib/listingSubmission";
 import { assessVehicleListing } from "@/lib/vehiclePostingIntelligence";
 import VehicleIntelligentPricingPanel from "@/components/VehicleIntelligentPricingPanel";
+import VehicleOwnershipEstimator from "@/components/VehicleOwnershipEstimator";
 import VehicleSellerCameraCheck from "@/components/VehicleSellerCameraCheck";
 
 const BusinessPlans = dynamic(() => import("@/components/BusinessPlans"), { ssr: false, loading: () => <div className="mx-auto my-6 h-28 max-w-6xl animate-pulse rounded-2xl bg-current/[.05]" /> });
@@ -799,9 +800,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     }
   }
 
-  const surface = darkMode ? "loadlink-glass border-white/12 bg-black/62 text-white backdrop-blur-xl" : "loadlink-glass border-white/75 bg-white/68 text-black backdrop-blur-xl";
+  const surface = darkMode ? "border-white/12 bg-[#101010] text-white" : "border-black/10 bg-white text-[#151515]";
   const muted = darkMode ? "text-white/55" : "text-black/55";
-  const inputClass = `h-14 w-full rounded-xl border px-4 font-semibold outline-none backdrop-blur-lg focus:border-[#f6b800] ${darkMode ? "border-white/14 bg-white/[.055] text-white placeholder:text-white/30" : "border-black/10 bg-white/72 text-black placeholder:text-black/35"}`;
+  const inputClass = `block h-12 w-full min-w-0 max-w-full rounded-lg border px-3.5 text-base font-medium outline-none focus:border-[#f6b800] ${darkMode ? "border-white/20 bg-[#171717] text-white placeholder:text-white/35" : "border-black/15 bg-white text-[#151515] placeholder:text-black/40"}`;
   const textAreaClass = `${inputClass} min-h-32 py-4`;
   const categoryChosen = Boolean(vehicleCategory);
   const detailsReady = vehicleCategory === "truck" || vehicleCategory === "bakkie_van" ? modelConfirmed : Boolean(vehicleSubtype && brand.trim() && modelName.trim());
@@ -944,7 +945,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       </> : null}
 
       {listingFlowOpen && signedIn && listingIntent && selectedPlan ? <LoadLinkVehicleWizardController20260825 darkMode={darkMode} listingKind={entryMode === "mobile-unit" ? "mobile-unit" : "vehicle"}/> : null}
-      {listingFlowOpen && signedIn && listingIntent && selectedPlan ? <form id="vehicle-listing-form" onSubmit={submitVehicle} className="mx-auto grid max-w-5xl scroll-mt-24 gap-6 px-4 py-7 md:px-6 md:py-12">
+      {listingFlowOpen && signedIn && listingIntent && selectedPlan ? <form id="vehicle-listing-form" onSubmit={submitVehicle} className="mx-auto grid w-full min-w-0 max-w-5xl scroll-mt-24 grid-cols-[minmax(0,1fr)] gap-5 px-4 py-7 md:px-6 md:py-12">
         {categoryChosen ? <>
           <section className={`overflow-hidden rounded-2xl border ${surface}`}>
             <SectionHeading step="01" title={`${categoryLabel(vehicleCategory!)} identity`} description={vehicleCategory === "truck" ? "Select the registration year, manufacturer and exact truck model." : vehicleCategory === "bakkie_van" ? "Choose a bakkie or van make and model, or enter one manually." : "Choose the unit type and enter the make and model exactly as shown on the registration papers."} />
@@ -1020,6 +1021,16 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 <Field label="Payload / capacity kg"><input type="number" min="0" value={payloadKg} onChange={(event) => setPayloadKg(event.target.value)} className={inputClass} /></Field>
                 <Field label="How is this unit available?"><select value={offerMode} onChange={(event) => setOfferMode(event.target.value as OfferMode)} className={inputClass}><option value="sale">For sale only</option><option value="rental">Rental only</option><option value="sale_or_rental">Sale or rental</option><option value="poa">POA — price on application</option></select></Field>
                 {offerMode !== "poa" ? <Field label={offerMode === "rental" ? "Rental rate" : "Sale price"}><input value={rate} onChange={(event) => setRate(event.target.value)} placeholder={offerMode === "rental" ? "Example: 25000" : "Example: 850000"} inputMode="decimal" className={inputClass} required /></Field> : <Field label="Price"><div className={`${inputClass} flex items-center`}>POA — interested users must contact the seller</div></Field>}
+                <div className="md:col-span-2 min-w-0 border-t border-current/10 pt-5">
+                  <VehicleIntelligentPricingPanel darkMode={darkMode} category={vehicleCategory || "vehicle"}
+                    make={brand} model={modelName} year={year} condition={condition} mileage={odometerKm}
+                    salePrice={rate} offerMode={offerMode} onUsePrice={setRate} />
+                </div>
+                <div className="md:col-span-2 min-w-0">
+                  <VehicleOwnershipEstimator darkMode={darkMode} category={vehicleCategory || "vehicle"}
+                    make={brand} model={modelName} condition={condition}
+                    initialFuel={fuelUseL100} onFuelChange={setFuelUseL100} posting />
+                </div>
                 {offerMode === "rental" || offerMode === "sale_or_rental" ? <Field label="Rental period"><select value={rentalPeriod} onChange={(event) => setRentalPeriod(event.target.value as RentalPeriod)} className={inputClass}><option value="day">Per day</option><option value="week">Per week</option><option value="month">Per month</option></select></Field> : null}
                 {offerMode === "sale_or_rental" ? <Field label="Rental rate"><input value={rentalRate} onChange={(event) => setRentalRate(event.target.value)} placeholder="Example: 25000" inputMode="decimal" className={inputClass} required /></Field> : null}
                 <Field label={specSchema[0][0]}><input value={specA} onChange={(event) => setSpecA(event.target.value)} placeholder={specSchema[0][1]} className={inputClass} /></Field>
@@ -1028,11 +1039,6 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 <Field label={specSchema[3][0]}><input value={specD} onChange={(event) => setSpecD(event.target.value)} placeholder={specSchema[3][1]} className={inputClass} /></Field>
                 <Field label="Location"><SouthAfricaLocationInput value={city} onChange={setCity} darkMode={darkMode} placeholder="City, town or province" ariaLabel="Vehicle location" className={inputClass} required /></Field>
                 <Field label="Description" wide><textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the vehicle, maintenance, features, faults and anything a buyer should know." className={textAreaClass} required /></Field>
-                <div className="md:col-span-2"><VehicleIntelligentPricingPanel darkMode={darkMode}
-                   category={vehicleCategory||"vehicle"} make={brand} model={modelName} year={year} condition={condition}
-                   mileage={odometerKm} salePrice={rate} offerMode={offerMode} serviceHistory={serviceHistory}
-                   engineCondition={engineCondition} tyreCondition={tyreCondition} accidentHistory={accidentHistory}
-                   roadworthy={roadworthyStatus} description={description} fuelUse={fuelUseL100} onFuelUseChange={setFuelUseL100}/></div>
               </div>
             </section>
 
@@ -1079,8 +1085,8 @@ function Header({ darkMode, sellerType, dealerPost, onToggleTheme, onToggleSelle
     <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={onToggleTheme} />
   );
 }
-function SectionHeading({ step, title, description }: { step: string; title: string; description: string }) { return <div className="border-b border-current/10 px-5 py-5 md:px-7"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#b88900]">{step}</p><h2 className="mt-2 text-3xl font-black tracking-[-0.04em]">{title}</h2><p className="mt-2 text-sm leading-6 opacity-55">{description}</p></div>; }
-function Field({ label, children, wide = false }: { label: string; children: React.ReactNode; wide?: boolean }) { return <label className={wide ? "block md:col-span-2" : "block"}><span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-[#b88900]">{label}</span>{children}</label>; }
+function SectionHeading({ step, title, description }: { step: string; title: string; description: string }) { return <div className="min-w-0 border-b border-current/10 px-5 py-5 md:px-7"><p className="text-[11px] font-semibold opacity-55">{step}</p><h2 className="mt-1 text-xl font-bold tracking-[-0.025em] sm:text-2xl">{title}</h2><p className="mt-2 text-sm leading-6 opacity-60">{description}</p></div>; }
+function Field({ label, children, wide = false }: { label: string; children: React.ReactNode; wide?: boolean }) { return <label className={wide ? "block min-w-0 md:col-span-2" : "block min-w-0"}><span className="mb-2 block text-xs font-semibold opacity-80">{label}</span>{children}</label>; }
 function CategoryButton({ label, description, active, onClick }: { label: string; description: string; active: boolean; onClick: () => void }) { return <button type="button" onClick={onClick} className={`min-h-28 rounded-2xl border p-4 text-left transition ${active ? "border-[#f6b800] bg-[#f6b800] text-black" : "border-current/15"}`}><span className="text-lg font-black">{label}</span><span className={`mt-2 block text-xs leading-5 ${active ? "text-black/60" : "opacity-55"}`}>{description}</span></button>; }
 function DocumentInput({ label, required = false, file, onChange }: { label: string; required?: boolean; file: File | null; onChange: (file: File | null) => void }) { return <DocumentUpload label={label} required={required} fileName={file?.name} accept={acceptedDocuments} hint="JPG, PNG, WEBP or PDF · up to 10 MB" onFile={onChange} />; }
 function CheckRow({ checked, onChange, label }: { checked: boolean; onChange: (value: boolean) => void; label: string }) { return <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[#f6b800]/30 p-4"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="mt-1 h-5 w-5 accent-[#f6b800]" /><span className="text-sm font-semibold leading-6">{label}</span></label>; }
