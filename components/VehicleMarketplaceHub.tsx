@@ -13,7 +13,8 @@ import { useEffect, useMemo, useState } from "react";
 import LoadLinkPagination from "@/components/LoadLinkPagination";
 import DealershipListingActions20260822 from "@/components/DealershipListingActions20260822";
 import { formatListingRate } from "@/lib/formatCurrency";
-import { normaliseSearch } from "@/lib/smartSearch";
+import { flexibleMatch, normaliseSearch } from "@/lib/smartSearch";
+import { matchesSouthAfricanLocation, locationSearchTerms } from "@/lib/southAfricaLocations";
 import { truckCatalog } from "@/lib/truckCatalog";
 import { lightCommercialCatalog } from "@/lib/southAfricanLightCommercialCatalog";
 import VehicleMakeModelPicker, { type MarketBrand } from "@/components/VehicleMakeModelPicker";
@@ -225,6 +226,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
   const [priceMax, setPriceMax] = useState("");
   const [mileageMax, setMileageMax] = useState("");
   const [placeQuery, setPlaceQuery] = useState("");
+  const [keyword, setKeyword] = useState("");
   const [makePickerOpen, setMakePickerOpen] = useState(false);
   const [pickerPanel, setPickerPanel] = useState<"makes" | "models">("makes");
   const [seen, setSeen] = useState<Set<string>>(new Set());
@@ -243,14 +245,27 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
 
   useEffect(() => {
     let active = true;
-    fetch(`/api/job-listings?t=${Date.now()}`, { cache: "no-store" })
-      .then((response) => response.json())
+    fetch("/api/job-listings", { cache: "default" })
+      .then((response) => {
+        if (!response.ok) throw new Error("Vehicle listings are temporarily unavailable.");
+        return response.json();
+      })
       .then((payload) => {
         if (active) setRows(((payload.rows || []) as VehicleRow[]).filter(isVehicleListing));
       })
       .catch(() => active && setRows([]))
       .finally(() => active && setLoading(false));
     return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    // Apply search terms from LoadLink's homepage and global search.
+    const params = new URLSearchParams(window.location.search);
+    setKeyword(params.get("search") || params.get("q") || "");
+    setPlaceQuery(params.get("city") || params.get("location") || "");
+    setYearFrom(params.get("yearFrom") || "");
+    setYearTo(params.get("yearTo") || "");
+    setPriceMax(params.get("maxPrice") || "");
   }, []);
 
   useEffect(() => {
@@ -302,6 +317,10 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
   const visible=useMemo(()=>{
     const filtered=rows.filter(row => {
       if (!equipmentMatches(equipmentKind(row), mode) || !intentMatch(row, intent)) return false;
+      if (keyword.trim() && !flexibleMatch(
+        [row.title, row.description, row.vehicle_group, row.city, locationSearchTerms(row.city)].filter(Boolean).join(" "),
+        keyword,
+      )) return false;
       const year = Number(readMeta(row.description, "Year"));
       const mileageText = readMeta(row.description, "Mileage");
       const mileage = mileageText ? Number(mileageText.replace(/[^0-9.]/g, "")) : NaN;
@@ -315,7 +334,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
       if (lower !== null && (!Number.isFinite(price) || price < lower)) return false;
       if (upper !== null && (!Number.isFinite(price) || price > upper)) return false;
       if (km !== null && (!Number.isFinite(mileage) || mileage > km)) return false;
-      if (placeQuery.trim() && !(row.city || "").toLowerCase().includes(placeQuery.trim().toLowerCase())) return false;
+      if (placeQuery.trim() && !matchesSouthAfricanLocation(row.city || "", placeQuery)) return false;
       if (mode === "trailers_units") return matchedSubtype(row, unitType);
       if (mode === "trucks" || mode === "vehicles") {
         return (!makeQuery || rowHasMake(row, makeQuery)) && (!modelQuery || rowHasModel(row, modelQuery));
@@ -331,7 +350,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
       }
       return new Date(second.created_at||0).getTime()-new Date(first.created_at||0).getTime();
     });
-  },[mode,rows,sort,intent,makeQuery,modelQuery,unitType,yearFrom,yearTo,priceMin,priceMax,mileageMax,placeQuery]);
+  },[mode,rows,sort,intent,makeQuery,modelQuery,unitType,yearFrom,yearTo,priceMin,priceMax,mileageMax,placeQuery,keyword]);
 
   const promoted = useMemo(() =>
     rows.filter(isActiveVehiclePromotion).sort((a,b) => Number(b.display_tier || 1) - Number(a.display_tier || 1) ||
@@ -342,7 +361,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
     return visible.slice(start, start + LISTINGS_PER_PAGE);
   }, [currentPage, visible]);
 
-  useEffect(() => { setCurrentPage(1); }, [mode, sort, intent, makeQuery, modelQuery, unitType, yearFrom, yearTo, priceMin, priceMax, mileageMax, placeQuery]);
+  useEffect(() => { setCurrentPage(1); }, [mode, sort, intent, makeQuery, modelQuery, unitType, yearFrom, yearTo, priceMin, priceMax, mileageMax, placeQuery, keyword]);
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages); }, [currentPage, totalPages]);
 
   function changePage(nextPage: number) {
@@ -408,6 +427,18 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
  equipment={{value:mode,onChange:value=>onModeChange(value as ViewMode),options:[{value:"all",label:"All equipment"},{value:"trucks",label:"Trucks"},{value:"vehicles",label:"Vehicles"},{value:"trailers_units",label:"Trailers, mobile units & equipment"}]}}
  filter={{value:intent,onChange:value=>setIntent(value as Intent),resultCount:visible.length,options:[{value:"all",label:"All listings"},{value:"sale",label:"For sale",description:"Available to buy"},{value:"rental",label:"For rent",description:"Available to hire or rent"}]}}
  />
+        </div>
+
+        <div className={"mt-5 flex min-w-0 flex-wrap items-center gap-3 rounded-xl border p-3 " + surface}>
+          <label className="min-w-0 flex-1 text-xs font-semibold">
+            Search commercial vehicles
+            <input type="search" value={keyword} onChange={event => setKeyword(event.target.value)}
+              placeholder="Make, model, body type or keyword" autoComplete="off"
+              className={"mt-1.5 h-12 w-full min-w-0 rounded-lg border px-3 text-base outline-none focus:border-[#f6b800] " +
+                (darkMode ? "border-white/20 bg-[#171717] text-white" : "border-black/15 bg-white text-black")} />
+          </label>
+          {keyword ? <button type="button" onClick={() => setKeyword("")}
+            className="mt-5 min-h-10 text-xs font-semibold underline underline-offset-4">Clear</button> : null}
         </div>
 
         {makeModelVisible ? (
@@ -579,7 +610,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
           <div className={`loadlink-glass mt-6 rounded-[24px] border p-8 text-center ${surface}`}>
             <h3 className="text-xl font-black">No approved listings in this category yet</h3>
             <p className={`mx-auto mt-2 max-w-md text-sm font-semibold leading-6 ${muted}`}>Try All equipment and All listings, or change your filters.</p>
-            {(mode !== "all" || intent !== "all" || makeQuery || modelQuery || unitType !== "all" || yearFrom || yearTo || priceMin || priceMax || mileageMax || placeQuery) ? <button type="button" onClick={() => {onModeChange("all");setIntent("all");setUnitType("all");setYearFrom("");setYearTo("");setPriceMin("");setPriceMax("");setMileageMax("");setPlaceQuery("");}} className="mt-4 min-h-10 rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">Clear filters</button> : null}
+            {(mode !== "all" || intent !== "all" || makeQuery || modelQuery || unitType !== "all" || yearFrom || yearTo || priceMin || priceMax || mileageMax || placeQuery || keyword) ? <button type="button" onClick={() => {onModeChange("all");setIntent("all");setUnitType("all");setYearFrom("");setYearTo("");setPriceMin("");setPriceMax("");setMileageMax("");setPlaceQuery("");}} className="mt-4 min-h-10 rounded-full bg-[#f6b800] px-5 text-xs font-black text-black">Clear filters</button> : null}
           </div>
         )}
       </div>
