@@ -228,6 +228,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [sellerFaceMode,setSellerFaceMode]=useState<"camera"|"manual"|null>(null);
   const [sellerFaceEvidence,setSellerFaceEvidence]=useState<{portrait:File;video:File;consentAt:string}|null>(null);
   const [sellerFaceConsentAt,setSellerFaceConsentAt]=useState<string|null>(null);
+  const [preReviewSubmitted,setPreReviewSubmitted]=useState(false);
   const [confirmOwnership, setConfirmOwnership] = useState(false);
   const [confirmAccuracy, setConfirmAccuracy] = useState(false);
   const [companyRegistrationNumber, setCompanyRegistrationNumber] = useState("");
@@ -586,9 +587,43 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     return "";
   }
 
+  async function submitPreliminaryVehicleReview(userId:string) {
+    const token=currentSubmissionId();
+    const folder=token,photoUrls:string[]=[];
+    for(let i=0;i<vehiclePhotos.length;i++)photoUrls.push(await uploadVehiclePhoto(vehiclePhotos[i],userId,folder,i));
+    const idPath=await uploadVerificationDocument(documents.idDocument!,userId,folder,"ID document");
+    const registrationPath=await uploadVerificationDocument(documents.registrationPaper!,userId,folder,"Vehicle registration paper");
+    const ownershipPath=await uploadVerificationDocument(documents.ownershipProof!,userId,folder,"Proof of ownership");
+    const facePortraitPath=sellerType==="private"&&sellerFaceMode==="camera"&&sellerFaceEvidence?
+      await uploadVerificationDocument(sellerFaceEvidence.portrait,userId,folder,"Private seller face portrait"):null;
+    const faceVideoPath=sellerType==="private"&&sellerFaceMode==="camera"&&sellerFaceEvidence?
+      await uploadVerificationDocument(sellerFaceEvidence.video,userId,folder,"Private seller guided video"):null;
+    const payload={
+      sellerType,category:vehicleCategory,brand,model:modelName,year,condition,mileage:odometerKm,
+      title:title.trim(),location:city,registration:registrationNumber.trim(),vin:vin.trim(),
+      description:description.trim(),price:rate,offerMode,photoCount:photoUrls.length,
+      engineCondition,tyreCondition,accidentHistory,lastServiceDate,roadworthyStatus,serviceHistory,
+      selectedPlan,packageType,submittedFor:"preliminary identity and vehicle document review"
+    };
+    const {error}=await supabase.from("vehicle_prelisting_reviews").insert({
+      user_id:userId,request_token:token,title:title.trim(),payload,photo_urls:photoUrls,
+      id_document_path:idPath,registration_document_path:registrationPath,ownership_document_path:ownershipPath,
+      face_portrait_path:facePortraitPath,face_video_path:faceVideoPath,
+      face_mode:sellerType==="private"?sellerFaceMode||"manual":"manual",
+      face_consent_at:sellerType==="private"?sellerFaceConsentAt:null,seller_type:sellerType
+    });
+    if(error){
+      if(error.code!=="23505")throw error;
+      const prior=await supabase.from("vehicle_prelisting_reviews").select("id").eq("user_id",userId).eq("request_token",token).maybeSingle();
+      if(prior.error||!prior.data?.id)throw error;
+    }
+    setPreReviewSubmitted(true);setMessage("");
+    window.dispatchEvent(new Event("loadlink-account-state-changed"));
+  }
+
   async function submitVehicle(event: FormEvent) {
     event.preventDefault();
-    if (submitLockRef.current || saving || preparingVehiclePhotos) return;
+    if (submitLockRef.current || saving || preparingVehiclePhotos || preReviewSubmitted) return;
     setMessage("");
     const validationMessage = validateBeforeSubmit();
     if (validationMessage) { setMessage(validationMessage); return; }
@@ -604,8 +639,11 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       const standardAccess = !intelligence.capabilities.can_post_vehicle ? await getVehicleListingAccess() : null;
       if (!intelligence.capabilities.can_post_vehicle && !(standardAccess?.allowed && standardAccess.plan === "manual")) {
         if (["blocked","suspended"].includes(intelligence.account_status)) throw new Error(intelligence.account_reason || "You cannot post while this account is restricted.");
+        if (intelligence.plan_state === "under_review") {
+          await submitPreliminaryVehicleReview(user.id);
+          return;
+        }
         if (intelligence.plan === "dealer" && !intelligence.dealer_ready) throw new Error("Your Dealer plan is active, but the dealership must be approved before stock can be published.");
-        if (intelligence.plan_state === "under_review") throw new Error("Your plan request is still under review.");
         if (["approved_for_payment","payment_pending"].includes(String(intelligence.plan_state))) throw new Error("Complete your approved plan payment before publishing a vehicle.");
         throw new Error("Standard requires R14 paid daily listing access. Visit Packages to purchase access, or upgrade to Pro or Dealer.");
       }
@@ -1026,7 +1064,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 </label>
               </div>
               <div className="grid gap-3 px-5 pb-5 md:px-7 md:pb-7"><CheckRow checked={confirmOwnership} onChange={setConfirmOwnership} label="I own this vehicle or have written authority from the owner to list it." /><CheckRow checked={confirmAccuracy} onChange={setConfirmAccuracy} label="I confirm that the details, mileage, ownership history and uploaded documents are accurate." /></div>
-              <div className={`border-t border-[#f6b800]/25 p-5 md:p-7 ${darkMode?"bg-[#111] text-white":"bg-[#fffaf0] text-black"}`}>{message ? <div className={`mb-4 rounded-2xl border p-4 text-sm font-bold leading-6 ${darkMode?"border-red-500/40 bg-red-500/10 text-red-200":"border-red-600/30 bg-red-50 text-red-900"}`}>{message}</div> : null}<button type="submit" disabled={saving || preparingVehiclePhotos} className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[0.12em] text-black disabled:opacity-50">{saving ? "Submitting vehicle…" : dealershipId ? "Add to dealership inventory" : "Submit vehicle for verification"}</button><p className={`mt-3 text-center text-xs leading-5 ${darkMode?"text-white/55":"text-black/55"}`}>The product will appear in the dealership slider when linked to an approved dealership. Analytics remains available only on Pro listings.</p></div>
+              <div className={`border-t border-[#f6b800]/25 p-5 md:p-7 ${darkMode?"bg-[#111] text-white":"bg-[#fffaf0] text-black"}`}>{preReviewSubmitted?<div role="status" className={`mb-4 rounded-xl border p-4 text-sm font-bold leading-6 ${darkMode?"border-emerald-500/35 bg-emerald-900/15 text-emerald-200":"border-emerald-500/30 bg-emerald-50 text-emerald-900"}`}>Your vehicle details and documents were sent to the Control Centre for preliminary review. Your plan is still awaiting approval; this vehicle is not published. Your draft stays saved until you can publish.</div>:null}{message ? <div className={`mb-4 rounded-2xl border p-4 text-sm font-bold leading-6 ${darkMode?"border-red-500/40 bg-red-500/10 text-red-200":"border-red-600/30 bg-red-50 text-red-900"}`}>{message}</div> : null}<button type="submit" disabled={saving || preparingVehiclePhotos || preReviewSubmitted} className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[0.12em] text-black disabled:opacity-50">{preReviewSubmitted ? "Sent to Control Centre" : saving ? "Submitting vehicle…" : dealershipId ? "Add to dealership inventory" : "Submit vehicle for verification"}</button><p className={`mt-3 text-center text-xs leading-5 ${darkMode?"text-white/55":"text-black/55"}`}>The product will appear in the dealership slider when linked to an approved dealership. Analytics remains available only on Pro listings.</p></div>
             </section>
           </> : null}
         </> : null}
