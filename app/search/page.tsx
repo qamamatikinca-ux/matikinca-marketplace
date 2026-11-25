@@ -4,7 +4,7 @@ import SearchResultsClient from "./SearchResultsClient";
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen bg-white" />}>
+    <Suspense fallback={<main className="min-h-screen" style={{ backgroundColor: "var(--loadlink-page, #f4efe3)" }} />}>
       <SearchResultsClient />
     </Suspense>
   );
