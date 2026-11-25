@@ -375,3 +375,40 @@ html[data-loadlink-theme="light"] main[data-loadlink-jobs-page="true"] [data-loa
 html[data-loadlink-theme="dark"] main[data-loadlink-jobs-page="true"] [data-loadlink-promoted-rail="true"] button {
   background: #111 !important; color: #fff !important; border-color: rgba(255,255,255,.15) !important;
 }
+
+
+/* Posting form: control grid min-content sizing instead of concealing overflow. */
+[data-loadlink-vehicle-listing-shell] #vehicle-listing-form {
+  box-sizing: border-box;
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  max-width: 64rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+[data-loadlink-vehicle-listing-shell] #vehicle-listing-form > section,
+[data-loadlink-vehicle-listing-shell] #vehicle-listing-form > section > div,
+[data-loadlink-vehicle-listing-shell] #vehicle-listing-form label,
+[data-loadlink-vehicle-listing-shell] #vehicle-listing-form .grid > * {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+[data-loadlink-vehicle-listing-shell] #vehicle-listing-form :is(input:not([type="checkbox"]), select, textarea) {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+[data-loadlink-vehicle-listing-shell] #vehicle-listing-form textarea {
+  display: block;
+  width: 100%;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  [data-loadlink-vehicle-listing-shell] #vehicle-listing-form > section > .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-loadlink-vehicle-listing-shell] #vehicle-listing-form { padding-inline: 16px; }
+  [data-loadlink-vehicle-listing-shell] #vehicle-listing-form > section { border-radius: 14px; }
+  [data-loadlink-vehicle-step-nav] { box-sizing: border-box; width: 100%; max-width: 100%; }
+}
