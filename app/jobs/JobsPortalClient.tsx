@@ -455,20 +455,23 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
       setQuickCategory(category);
       setHasSearched(true);
     }
-    const homeSearch = localStorage.getItem("loadlink-home-search") || querySearch;
+    const homeSearch = querySearch || localStorage.getItem("loadlink-home-search") || "";
+    const requestedCity = params.get("city") || "";
     if (homeSearch) {
       const lower = homeSearch.toLowerCase();
       const cityMatch = SOUTH_AFRICA_LOCATIONS.find((item) => item.kind === "place" && [item.name, ...item.aliases].some((name) => lower.includes(name.toLowerCase())));
       const inferredIntent = detectIntent(homeSearch);
       setKeyword(homeSearch);
-      if (cityMatch) setCity(cityMatch.name);
-      if (inferredIntent === "job" || inferredIntent === "contract" || inferredIntent === "asset") setPortalFilter(inferredIntent);
+      if (requestedCity) setCity(requestedCity);
+      else if (cityMatch) setCity(cityMatch.name);
+      if (!portal && (inferredIntent === "job" || inferredIntent === "contract" || inferredIntent === "asset")) setPortalFilter(inferredIntent);
       if (lower.includes("truck") || lower.includes("superlink") || lower.includes("tipper") || lower.includes("flat deck") || lower.includes("lowbed") || lower.includes("tautliner") || lower.includes("bakkie")) setGroup("Trucks / Trailers");
       if (lower.includes("mining") || lower.includes("farming")) setGroup("Farming / Mining");
       if (lower.includes("catering") || lower.includes("event")) setGroup("Catering / Event");
       setHasSearched(true);
       localStorage.removeItem("loadlink-home-search");
     }
+    if (requestedCity && !homeSearch) { setCity(requestedCity); setHasSearched(true); }
     fetchJobs();
 
     if (!isSupabaseConfigured) return;
@@ -534,7 +537,8 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
         quickCategory === "logistics" ? /logistics|delivery|transport|freight|courier|warehouse|load/i.test(searchable) :
         /mining|farming|farm|agriculture|agricultural/i.test(searchable)
       );
-      const inferredPortalMatch = !intent || intent === "driver" || intent === "dealer" || job.listingType === intent;
+      // An explicit Jobs/Contracts tab always wins over query wording such as "truck".
+      const inferredPortalMatch = Boolean(portalFilter) || !intent || intent === "driver" || intent === "dealer" || job.listingType === intent;
       const explicitPortalMatch = !portalFilter || job.listingType === portalFilter;
       return keywordMatch && selectedCityMatch && regionMatch && groupMatch && categoryMatch && inferredPortalMatch && explicitPortalMatch;
     });
