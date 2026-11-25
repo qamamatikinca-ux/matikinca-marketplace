@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
-import VehicleMarketplaceHub from "@/components/VehicleMarketplaceHub";
+
 import LoadLinkLoading from "@/components/LoadLinkLoading";
 import LoadLinkActionToast from "@/components/LoadLinkActionToast";
 import { scopeVehicleDraft, readVehicleDraft, hasVehicleDraft, clearVehicleDraft } from "@/lib/vehicleDraft";
@@ -12,7 +13,17 @@ import { getVehicleListingAccess } from "@/lib/packageAccess";
 import { getLoadLinkIntelligence } from "@/lib/loadlinkIntelligence";
 import { getFreshAuthenticatedUser } from "@/lib/reliableSupabase";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
-import LegacyVehicleListingPage from "./LegacyVehicleListingPage";
+
+
+// Loading the vehicle marketplace should not download the full posting wizard.
+const LegacyVehicleListingPage = dynamic(() => import("./LegacyVehicleListingPage"), {
+  ssr: false,
+  loading: () => <LoadLinkLoading />,
+});
+const VehicleMarketplaceHub = dynamic(() => import("@/components/VehicleMarketplaceHub"), {
+  ssr: false,
+  loading: () => <div className="mx-auto max-w-5xl px-4 py-8" aria-label="Loading vehicles" />,
+});
 
 type EntryMode = "vehicle" | "mobile-unit" | "";
 type ListingPackage = "standard" | "pro" | "dealer";
