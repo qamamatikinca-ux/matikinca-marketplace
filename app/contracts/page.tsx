@@ -200,18 +200,18 @@ export default function ContractsPage() {
           <div data-loadlink-contracts-search-shell className={`loadlink-glass mt-6 rounded-[24px] border p-4 shadow-[0_20px_60px_rgba(0,0,0,.18)] backdrop-blur-xl md:p-5 ${darkMode ? "border-white/20 bg-black/72 text-white" : "border-white/55 bg-[#b7b4ab]/85 text-black"}`}>
             <div className="grid gap-3 md:grid-cols-2">
               <label className="block min-w-0">
-                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-white" : "text-[#70716f]"}`}>Contract or scope</span>
+                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-white/70" : "text-[#70716f]"}`}>Contract or scope</span>
                 <input type="search" inputMode="search" value={query} onChange={event => setQuery(event.target.value)}
                   onKeyDown={event => { if (event.key === "Enter") searchContracts(); }}
                   placeholder="Mining, transport, recurring delivery..." className={field} />
               </label>
               <label className="relative block min-w-0">
-                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-white" : "text-[#70716f]"}`}>Location</span>
+                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-white/70" : "text-[#70716f]"}`}>Location</span>
                 <SouthAfricaLocationInput id="loadlink-contract-location" value={city} onChange={setCity}
                   darkMode={darkMode} placeholder="City, town or province" ariaLabel="Contract location" className={field} />
               </label>
               <label className="block min-w-0 md:col-span-2">
-                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-white" : "text-[#70716f]"}`}>Category</span>
+                <span className={`mb-2 block text-[10px] font-black uppercase tracking-[.15em] ${darkMode ? "text-white/70" : "text-[#70716f]"}`}>Category</span>
                 <select value={group} onChange={event => setGroup(event.target.value)} className={field}
                   aria-label="Contract category" style={{ colorScheme: "light" }}>
                   <option value={ALL}>All contract types</option>

@@ -1994,7 +1994,7 @@ ${message}` : message)}
 
         <section
           className={`${selectedId||driverRoute ? "flex" : "hidden md:flex"} loadlink-chat-panel min-h-0 flex-col bg-[#f3f0e8]`}
-         data-loadlink-mobile-chat-fit="true">
+         data-loadlink-mobile-chat-fit="true" data-loadlink-unified-thread={driverRoute?"driver":selectedConversation?"listing":"none"}>
           {driverRoute ? <DriverMessagesInbox key={driverRoute.thread||driverRoute.profile} profileId={driverRoute.profile} threadId={driverRoute.thread} onBack={onCloseDriverThread}/> : selectedConversation ? (
             <>
               <header className="loadlink-chat-header flex min-h-[78px] items-center gap-3 border-b border-black/10 bg-white px-3 py-3 md:px-5">

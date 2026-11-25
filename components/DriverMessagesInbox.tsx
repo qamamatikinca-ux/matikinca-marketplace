@@ -1,16 +1,13 @@
 "use client";
-import Link from "next/link";
 import {useCallback,useEffect,useRef,useState,type FormEvent} from "react";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkImage from "@/components/LoadLinkImage";
 import {browserSupabase} from "@/lib/phase2/supabase";
-import {useLoadLinkTheme} from "@/lib/useLoadLinkTheme";
 import {isAuthenticatedUser} from "@/lib/auth";
 
 type Thread={id:string;driver_profile_id:string;driver_user_id:string;enquirer_user_id:string;driver_name:string;enquirer_name:string;blocked:boolean;reopen_requested_by?:string|null;updated_at?:string};
 type Message={id:string;sender_id:string;body:string;created_at:string};
 export default function DriverMessagesInbox({profileId,threadId,onBack}:{profileId:string;threadId:string;onBack:()=>void}){
- const {darkMode}=useLoadLinkTheme();
  const [userId,setUserId]=useState("");
  const [threads,setThreads]=useState<Thread[]>([]);
  const [avatars,setAvatars]=useState<Record<string,string>>({});
@@ -135,12 +132,12 @@ export default function DriverMessagesInbox({profileId,threadId,onBack}:{profile
  },[userId]);
  const person=(t:Thread)=>t.driver_user_id===userId?t.enquirer_name:t.driver_name;
  const profilePhoto=(t:Thread)=>avatars[t.id]||"";
- return (    <section className="loadlink-chat-panel flex min-h-0 min-w-0 flex-1 flex-col bg-[#f3f0e8] text-black" data-loadlink-mobile-chat-fit="true">
+ return (<>
      {chosen?<>
        <header className="loadlink-chat-header flex min-h-[78px] items-center gap-3 border-b border-black/10 bg-white px-3 py-3 md:px-5">
         <button type="button" onClick={onBack} aria-label="Back to conversations" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/10 md:hidden"><LoadLinkIcon name="chevronLeft" size={18}/></button>
         <span className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-black text-lg font-black text-[#f6b800]">{profilePhoto(chosen)?<LoadLinkImage src={profilePhoto(chosen)} alt="" className="h-full w-full object-cover"/>:person(chosen).charAt(0).toUpperCase()}</span>
-        <div className="min-w-0 flex-1"><h2 className="truncate text-base font-bold">{person(chosen)}</h2><p className="truncate text-xs text-black/50">Driver · LoadLink Messages</p></div>
+        <div className="min-w-0 flex-1"><h2 className="truncate text-base font-bold">{person(chosen)}</h2><p className="truncate text-xs text-black/50">LoadLink Messages</p></div>
        </header>
        <div className="loadlink-listing-context flex min-h-10 shrink-0 items-center gap-3 border-b border-black/10 bg-white px-4 py-2"><span className="rounded-full bg-[#f6b800] px-3 py-1.5 text-[10px] font-black uppercase text-black">Driver</span><span className="min-w-0 flex-1 truncate text-xs font-semibold text-black/60">{chosen.driver_name} · Driver profile</span></div>
        <div className="loadlink-message-viewport loadlink-chat-wallpaper min-h-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-5 sm:px-5 md:px-8" aria-live="polite">
@@ -165,6 +162,6 @@ export default function DriverMessagesInbox({profileId,threadId,onBack}:{profile
            <button type="submit" disabled={busy||!draft.trim()} aria-label="Send message" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f6b800] text-black shadow-sm disabled:opacity-40">{busy?"…":<LoadLinkIcon name="send" size={18}/>}</button>
           </div>
          </form>}
-      </>:<div className="flex h-full items-center justify-center p-8 text-center text-sm text-black/50">Select a driver conversation.</div>}
-    </section>);
+      </>:<div className="flex h-full min-h-0 flex-1 items-center justify-center p-8 text-center text-sm opacity-60">{loading?"Loading driver conversation…":error||"Select a driver conversation."}</div>}
+    </>);
 }
