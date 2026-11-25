@@ -5,6 +5,7 @@ import {formatZar} from "@/lib/vehicleMarketGuide";
 type Props={darkMode:boolean;category?:string;make?:string;model?:string;condition?:string;initialFuel?:string;onFuelChange?:(v:string)=>void;posting?:boolean};
 export default function VehicleOwnershipEstimator({darkMode,category="",make="",model="",condition="",initialFuel="",onFuelChange,posting=false}:Props){
  const [fuel,setFuel]=useState(initialFuel);
+ const [expanded,setExpanded]=useState(posting);
  const [values,setValues]=useState({annualKm:"",dieselRandPerLitre:"",maintenanceRandPerKm:"",insuranceMonthly:"",licenceAnnual:"",tyresAnnual:"",financeMonthly:"",depreciationAnnual:""});
  const powered=!/trailer|mobile.unit/i.test(category);
  const actualFuel=onFuelChange?initialFuel:fuel;
@@ -31,13 +32,13 @@ export default function VehicleOwnershipEstimator({darkMode,category="",make="",
   {key:"depreciationAnnual",label:"Depreciation per year (R)",hint:"Optional"}
  ] as Array<{key:keyof typeof values;label:string;hint:string}>;
  return <section data-loadlink-vehicle-costs="true" className="min-w-0 border-t border-current/10 pt-3">
-  <details className="group">
-   <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-2">
-    <span className="min-w-0"><strong className="block text-sm font-semibold">Cost of ownership</strong>
+  <div className="group">
+   <button type="button" aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)} className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 py-2 text-left">
+    <span className="min-w-0"><strong className="block text-sm font-semibold">Cost of ownership calculator</strong>
      <span className="mt-1 block text-xs opacity-65">{make||model?`${make} ${model}`.trim()+" · ":""}Estimate annual running costs before deciding on a price.</span></span>
-    <span className="text-base opacity-65" aria-hidden="true">⌄</span>
-   </summary>
-   <div className="min-w-0 pb-4 pt-3">
+    <span className="text-base opacity-65" aria-hidden="true">{expanded?"−":"+"}</span>
+   </button>
+   {expanded ? <div className="min-w-0 pb-4 pt-3">
     <p className="mb-3 text-xs leading-5 opacity-75">This is a transparent calculation from your own inputs, not an insurance quote, verified vehicle specification or live diesel-price feed.{condition?" Seller-reported condition: "+condition+".":""}</p>
     <div className="grid gap-3 sm:grid-cols-2">
      {powered?<label className="min-w-0 text-xs font-semibold">Vehicle fuel use (L/100 km)<input type="number" min="0" max="150" step="any" placeholder="Use actual vehicle records" value={actualFuel}
@@ -53,7 +54,7 @@ export default function VehicleOwnershipEstimator({darkMode,category="",make="",
      <p className="sm:col-span-3 border-t border-current/10 pt-2 text-[11px] leading-5 opacity-75">Fuel {formatZar(estimate.annualFuel)} · Maintenance {formatZar(estimate.annualMaintenance)} · Other entered costs {formatZar(estimate.annualFixed)}</p>
     </div>:<p role="status" className="mt-4 text-xs leading-5 opacity-65">Enter annual distance{powered?", actual fuel use and diesel price":""} to calculate ownership costs. Missing optional costs count as zero and may understate the total.</p>}
     <p className="mt-3 text-[10px] leading-4 opacity-55">Excludes VAT, unexpected breakdowns and any unentered costs. Confirm maintenance intervals and actual consumption for this vehicle.</p>
-   </div>
-  </details>
+   </div> : null}
+  </div>
  </section>;
 }
