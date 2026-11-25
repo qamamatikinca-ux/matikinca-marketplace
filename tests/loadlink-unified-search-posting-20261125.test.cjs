@@ -58,7 +58,8 @@ test("posting forms keep cost calculators native, understated, and free of dupli
   assert.match(vehicle, /<VehicleOwnershipEstimator/);
   assert.match(vehicle, /<VehicleIntelligentPricingPanel/);
   assert.match(costs, /data-loadlink-vehicle-costs/);
-  assert.match(costs, /<details/);
+  assert.match(costs, /aria-expanded=\{expanded\}/);
+  assert.match(costs, /setExpanded\(value=>!value\)/);
   assert.match(guide, /data-loadlink-post-price-guide/);
   assert.doesNotMatch(guide, /bg-white\/\[\.03\]/);
   assert.match(pricing, /data-loadlink-price-determination/);

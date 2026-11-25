@@ -15,14 +15,14 @@ export default function PosterTransportPriceGuide({darkMode,onUseRate,contract=f
    return estimateTrip({...obj,offeredRevenue:0} as Parameters<typeof estimateTrip>[0]);
  },[values]);
  const totalOther=estimate?estimate.totalCost-estimate.fuelCost-estimate.maintenanceCost:0;
- return <div data-loadlink-post-price-guide="true" className="mt-4 min-w-0 border-t border-current/10 pt-4">
-    <button type="button" aria-expanded={expanded} onClick={()=>setExpanded(s=>!s)} className="flex w-full items-center justify-between gap-3 text-left">
-      <span><strong className="block text-sm font-semibold">Calculate transport rate</strong>
-      <span className="mt-1 block text-xs opacity-65">Optional cost-based estimate using your figures.</span></span>
+ return <div data-loadlink-post-price-guide="true" className="min-w-0 border-t border-current/10 pt-3">
+    <button type="button" aria-expanded={expanded} onClick={()=>setExpanded(s=>!s)} className="flex min-h-11 w-full items-center justify-between gap-3 text-left">
+      <span><strong className="block text-sm font-semibold">Price determination</strong>
+      <span className="mt-1 block text-xs opacity-65">Determine a suggested rate from transport operating costs.</span></span>
       <span className="text-base opacity-65" aria-hidden="true">{expanded?"−":"+"}</span>
     </button>
     {expanded?<div className="mt-4">
-      <p className="mb-3 text-xs opacity-70">Estimate a selling rate using your distance, fuel, operating costs and target margin. Review every calculation before using it.</p>
+      <p className="mb-3 text-xs opacity-70">Enter your route distance, fuel, expenses and target margin. This produces a cost-based estimate, not a fabricated market price.</p>
       <div className="grid gap-3 sm:grid-cols-2">
        {field("loadedKm","Loaded distance (km)","Required")}
        {field("emptyKm","Empty / return distance (km)","0")}
@@ -38,7 +38,7 @@ export default function PosterTransportPriceGuide({darkMode,onUseRate,contract=f
         <p className="text-xs font-semibold opacity-65">Estimated selling rate (excluding VAT)</p>
         <p className="mt-1 text-xl font-bold">{formatZar(estimate.suggestedRate)}</p>
         <details className="mt-3 text-xs" open>
-         <summary className="cursor-pointer font-black">How we calculated this estimate</summary>
+         <summary className="cursor-pointer font-semibold">Calculation breakdown</summary>
          <div className="mt-2 space-y-1 opacity-80">
            <p>Distance: {estimate.totalKm} km, including empty travel</p>
            <p>Fuel: {estimate.fuelLitres} L = {formatZar(estimate.fuelCost)}</p>
