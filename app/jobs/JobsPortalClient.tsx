@@ -390,10 +390,9 @@ export default function JobsPortalPage({ initialQuery }: { initialQuery: Initial
     setLoadingJobs(true);
 
     try {
-      const response = await fetch(`/api/job-listings?t=${Date.now()}`, {
+      const response = await fetch("/api/job-listings", {
         method: "GET",
-        cache: "no-store",
-        headers: { "Cache-Control": "no-cache" },
+        cache: "default",
       });
       const payload = await response.json();
 
