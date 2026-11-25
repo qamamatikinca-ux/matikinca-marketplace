@@ -14,7 +14,7 @@ function photoOf(video:HTMLVideoElement):Promise<Blob>{
 }
 export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Props){
  const [consent,setConsent]=useState(false),[stage,setStage]=useState<"idle"|"opening"|"capturing"|"done"|"manual">("idle");
- const [step,setStep]=useState(0),[error,setError]=useState("");
+ const [step,setStep]=useState(0),[posePrompt,setPosePrompt]=useState<Pose>("centre"),[error,setError]=useState("");
  const video=useRef<HTMLVideoElement>(null),stream=useRef<MediaStream|null>(null),run=useRef(0);
  const stop=useCallback(()=>{stream.current?.getTracks().forEach(t=>t.stop());stream.current=null;if(video.current)video.current.srcObject=null},[]);
  useEffect(()=>()=>{run.current++;stop()},[stop]);
@@ -41,7 +41,7 @@ export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Pr
    let captured:Blob|null=null,hold:Hold|null=null;
    const started=performance.now();setStage("capturing");recording.start(250);
    for(let i=0;i<poses.length;i++){
-    setStep(i);
+    setStep(i);setPosePrompt(poses[i]);
     let accepted=false;
     while(!accepted){
      if(id!==run.current)return;
@@ -85,7 +85,7 @@ export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Pr
   </label>
   {stage==="opening"||stage==="capturing"?<div className="mt-4 space-y-2">
     <video ref={video} autoPlay muted playsInline className="mx-auto max-h-64 w-full rounded-xl bg-black object-contain" aria-label="Selfie camera preview"/>
-    <p role="status" className="text-sm font-bold">{stage==="opening"?"Opening camera…":`Step ${step+1} of 5 · ${prompts[["centre","left","centre","right","centre"][step] as Pose]}`}</p>
+    <p role="status" className="text-sm font-bold">{stage==="opening"?"Opening camera…":`Step ${step+1} of 5 · ${prompts[posePrompt]}`}</p>
     <button type="button" onClick={()=>{run.current++;stop();setStage("idle")}} className="h-10 rounded-xl border border-current/20 px-4 text-xs font-bold">Cancel camera</button>
    </div>:null}
   {stage!=="opening"&&stage!=="capturing"?<div className="mt-4 flex flex-wrap gap-2">

@@ -35,6 +35,7 @@ import { inspectLoadLinkImage, showLoadLinkImageQuality } from "@/lib/loadlinkIm
 import { submitListingDirect } from "@/lib/listingSubmission";
 import { assessVehicleListing } from "@/lib/vehiclePostingIntelligence";
 import VehicleIntelligentPricingPanel from "@/components/VehicleIntelligentPricingPanel";
+import VehicleSellerCameraCheck from "@/components/VehicleSellerCameraCheck";
 
 const BusinessPlans = dynamic(() => import("@/components/BusinessPlans"), { ssr: false, loading: () => <div className="mx-auto my-6 h-28 max-w-6xl animate-pulse rounded-2xl bg-current/[.05]" /> });
 const VehicleMarketplaceHub = dynamic(() => import("@/components/VehicleMarketplaceHub"), { ssr: false, loading: () => <div className="mx-auto my-8 h-64 max-w-6xl animate-pulse rounded-2xl bg-current/[.05]" /> });
@@ -224,6 +225,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [vehiclePhotos, setVehiclePhotos] = useState<File[]>([]);
   const [vehiclePreviews, setVehiclePreviews] = useState<string[]>([]);
   const [documents, setDocuments] = useState<VerificationFiles>(emptyVerificationFiles);
+  const [sellerFaceMode,setSellerFaceMode]=useState<"camera"|"manual"|null>(null);
+  const [sellerFaceEvidence,setSellerFaceEvidence]=useState<{portrait:File;video:File;consentAt:string}|null>(null);
+  const [sellerFaceConsentAt,setSellerFaceConsentAt]=useState<string|null>(null);
   const [confirmOwnership, setConfirmOwnership] = useState(false);
   const [confirmAccuracy, setConfirmAccuracy] = useState(false);
   const [companyRegistrationNumber, setCompanyRegistrationNumber] = useState("");
@@ -569,6 +573,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     if (sellerType === "dealership" && packageType === "dealer" && vehiclePhotos.length < 10) return "Dealer listings require at least 10 clear photos. Your Dealer package supports up to 30.";
     if (vehiclePhotos.length < 2) return "Upload at least two clear photos of the actual vehicle or unit.";
     if (!documents.idDocument || !documents.registrationPaper || !documents.ownershipProof) return "Upload your ID, registration paper and proof of ownership or authority to list.";
+    if(sellerType==="private"&&(!sellerFaceMode||(sellerFaceMode==="camera"&&!sellerFaceEvidence)))
+      return "Complete the guided owner camera check or request private staff identity review.";
+    if(sellerType==="private"&&!sellerFaceConsentAt)return "Agree to the private seller identity verification before submitting.";
     if ((vehicleCategory === "truck" || vehicleCategory === "bakkie_van") && !documents.driverLicence) return "Upload the driver’s licence for this vehicle listing.";
     if (transmissionCheck?.requiresModificationProof && !documents.modificationProof) return "Upload gearbox conversion or engineering paperwork.";
     if (sellerType === "dealership" && !dealerPost) {
@@ -701,6 +708,10 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         if (detailsResult.error) throw detailsResult.error;
       }
 
+      const facePortraitPath=sellerType==="private"&&sellerFaceMode==="camera"&&sellerFaceEvidence?
+        await uploadVerificationDocument(sellerFaceEvidence.portrait,user.id,folder,"Private seller face portrait"):null;
+      const faceVideoPath=sellerType==="private"&&sellerFaceMode==="camera"&&sellerFaceEvidence?
+        await uploadVerificationDocument(sellerFaceEvidence.video,user.id,folder,"Private seller guided video"):null;
       const verificationResult = await supabase.from("vehicle_verifications").upsert({
         listing_id: listingId, user_id: user.id, id_document_path: idPath, licence_document_path: licencePath,
         registration_document_path: registrationPath, ownership_document_path: ownershipPath, roadworthy_document_path: roadworthyPath,
@@ -710,7 +721,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         company_registration_number: sellerType === "dealership" && !dealerPost ? companyRegistrationNumber.trim().toUpperCase() : null,
         tax_number: sellerType === "dealership" && !dealerPost ? taxNumber.trim().toUpperCase() : null,
         company_registration_document_path: companyRegistrationPath, tax_document_path: taxDocumentPath,
-        business_address_document_path: businessAddressPath, representative_authority_document_path: representativeAuthorityPath, status: "pending",
+        business_address_document_path: businessAddressPath, representative_authority_document_path: representativeAuthorityPath,
+        face_portrait_path:facePortraitPath,face_video_path:faceVideoPath,face_review_mode:sellerType==="private"?sellerFaceMode||"manual":"manual",
+        face_consent_at:sellerType==="private"?sellerFaceConsentAt:null,status:"pending",
       }, { onConflict: "listing_id" });
       if (verificationResult.error) throw verificationResult.error;
 
@@ -990,6 +1003,10 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
               <div className="p-5 md:p-7"><label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>{vehiclePhotoProgress || `Minimum 2 photos · up to ${packageType === "dealer" ? 30 : packageType === "pro" ? 10 : 2}`}</span><input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} disabled={preparingVehiclePhotos || saving} className="hidden" /></label>{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <LoadLinkImage key={preview} src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 shrink-0 snap-start rounded-xl object-cover" />)}</div> : null}</div>
               {sellerType === "dealership" && !dealerPost ? <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><Field label="Dealership name"><input value={dealershipName} onChange={(event) => setDealershipName(event.target.value)} className={inputClass} required /></Field><Field label="Company registration number"><input value={companyRegistrationNumber} onChange={(event) => setCompanyRegistrationNumber(event.target.value)} className={inputClass} required /></Field><Field label="SARS tax number"><input value={taxNumber} onChange={(event) => setTaxNumber(event.target.value)} className={inputClass} required /></Field><DocumentInput label="CIPC company registration" required file={documents.companyRegistration} onChange={(file) => setDocument("companyRegistration", file)} /><DocumentInput label="SARS tax document" required file={documents.taxDocument} onChange={(file) => setDocument("taxDocument", file)} /><DocumentInput label="Proof of business address" required file={documents.businessAddress} onChange={(file) => setDocument("businessAddress", file)} /><DocumentInput label="Representative authority" required file={documents.representativeAuthority} onChange={(file) => setDocument("representativeAuthority", file)} /></div> : null}
               <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><DocumentInput label="South African ID or passport" required file={documents.idDocument} onChange={(file) => setDocument("idDocument", file)} />{(vehicleCategory === "truck" || vehicleCategory === "bakkie_van") ? <DocumentInput label="Driver’s licence" required file={documents.driverLicence} onChange={(file) => setDocument("driverLicence", file)} /> : null}<DocumentInput label="Vehicle registration certificate" required file={documents.registrationPaper} onChange={(file) => setDocument("registrationPaper", file)} /><DocumentInput label="Proof of ownership or authority to list" required file={documents.ownershipProof} onChange={(file) => setDocument("ownershipProof", file)} /><DocumentInput label="Roadworthy certificate" file={documents.roadworthy} onChange={(file) => setDocument("roadworthy", file)} /><DocumentInput label="Operating licence" file={documents.operatingLicence} onChange={(file) => setDocument("operatingLicence", file)} />{transmissionCheck?.requiresModificationProof ? <DocumentInput label="Gearbox conversion paperwork" required file={documents.modificationProof} onChange={(file) => setDocument("modificationProof", file)} /> : null}</div>
+              {sellerType==="private"?<div className="border-t border-current/10 p-5 md:p-7">
+                <VehicleSellerCameraCheck darkMode={darkMode} disabled={saving||preparingVehiclePhotos}
+                  onChange={(evidence,mode)=>{setSellerFaceEvidence(evidence);setSellerFaceMode(mode);setSellerFaceConsentAt(mode?evidence?.consentAt||new Date().toISOString():null)}}/>
+              </div>:null}
             </section>
 
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
