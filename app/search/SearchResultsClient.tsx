@@ -69,6 +69,10 @@ export default function SearchResultsClient() {
   const [input, setInput] = useState(query);
   const [place, setPlace] = useState(location);
   const [filtersOpen, setFiltersOpen] = useState(Boolean(location));
+  const [vehicleYearFrom, setVehicleYearFrom] = useState("");
+  const [vehicleYearTo, setVehicleYearTo] = useState("");
+  const [vehicleMaximumPrice, setVehicleMaximumPrice] = useState("");
+  const [vehicleMaximumKm, setVehicleMaximumKm] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(true);
   const [sourceFailures, setSourceFailures] = useState(0);
@@ -163,6 +167,37 @@ export default function SearchResultsClient() {
     return [...enhanced,...original.filter(item=>!seen.has(item.id))];
   },[dealers,drivers,includeSitePages,listings,location,query,scope,interpretation]);
 
+  // The global Vehicles tab filters actual published listings, never AI-generated matches.
+  const filteredResults = useMemo(() => {
+    if (scope !== "asset" ||
+      ![vehicleYearFrom, vehicleYearTo, vehicleMaximumPrice, vehicleMaximumKm].some(value => value.trim())) return results;
+    const byId = new Map(listings.map(row => [row.id, row]));
+    const meta = (description: string | null | undefined, label: string) => {
+      const line = String(description || "").split(/\r?\n/).find(text => text.toLowerCase().startsWith(label.toLowerCase() + ":"));
+      return line ? line.slice(label.length + 1).trim() : "";
+    };
+    const number = (raw: string) => {
+      if (!raw.trim()) return null;
+      const clean = raw.replace(/[^\d.]/g, "");
+      return clean && Number.isFinite(Number(clean)) ? Number(clean) : null;
+    };
+    const from = number(vehicleYearFrom), to = number(vehicleYearTo),
+      maxPrice = number(vehicleMaximumPrice), maxKm = number(vehicleMaximumKm);
+    return results.filter(item => {
+      if (item.scope !== "asset") return false;
+      const row = byId.get(item.id.replace(/^listing-/, ""));
+      if (!row) return false;
+      const year = number(meta(row.description, "Year"));
+      const price = number(meta(row.description, "Sale price") || row.rate || "");
+      const km = number(meta(row.description, "Mileage"));
+      if (from !== null && (year === null || year < from)) return false;
+      if (to !== null && (year === null || year > to)) return false;
+      if (maxPrice !== null && (price === null || price > maxPrice)) return false;
+      if (maxKm !== null && (km === null || km > maxKm)) return false;
+      return true;
+    });
+  }, [scope, results, listings, vehicleYearFrom, vehicleYearTo, vehicleMaximumPrice, vehicleMaximumKm]);
+
   // Recommend only actual approved jobs, never generated opportunities.
   const suggestedJobs = useMemo<SearchResult[]>(() => {
     if (loading || (scope !== "asset" && !(scope === "all" && inferSearchScope(query) === "asset"))) return [];
@@ -177,12 +212,12 @@ export default function SearchResultsClient() {
     return [...matched.values()].slice(0, 3);
   }, [interests, listings, loading, query, scope]);
 
-  const totalPages = Math.max(1, Math.ceil(results.length / RESULTS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(filteredResults.length / RESULTS_PER_PAGE));
   const visiblePage = Math.min(currentPage, totalPages);
   const paginatedResults = useMemo(() => {
     const start = (visiblePage - 1) * RESULTS_PER_PAGE;
-    return results.slice(start, start + RESULTS_PER_PAGE);
-  }, [visiblePage, results]);
+    return filteredResults.slice(start, start + RESULTS_PER_PAGE);
+  }, [visiblePage, filteredResults]);
 
   const visibleScopes = useMemo(
     () => searchScopes.filter((item) => item.value !== "page"),
@@ -206,7 +241,7 @@ export default function SearchResultsClient() {
     });
   }
 
-  const resultCountLabel = loading ? "Searching…" : `${results.length} ${results.length === 1 ? "result" : "results"}${loadingMore ? " so far" : ""}`;
+  const resultCountLabel = loading ? "Searching…" : `${filteredResults.length} ${filteredResults.length === 1 ? "result" : "results"}${loadingMore ? " so far" : ""}`;
   const surface = darkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white";
   const muted = darkMode ? "text-[#c7c7c7]" : "text-[#585858]";
 
@@ -290,6 +325,23 @@ export default function SearchResultsClient() {
               </button>
             </div>
 
+            {scope === "asset" ? (
+              <div className="mt-3 grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Vehicle filters">
+                {([
+                  ["Year from", vehicleYearFrom, setVehicleYearFrom],
+                  ["Year to", vehicleYearTo, setVehicleYearTo],
+                  ["Maximum price (R)", vehicleMaximumPrice, setVehicleMaximumPrice],
+                  ["Maximum mileage (km)", vehicleMaximumKm, setVehicleMaximumKm],
+                ] as Array<[string, string, (value: string) => void]>).map(([label, value, setter]) => (
+                  <label key={label} className="block min-w-0 text-xs font-semibold">{label}
+                    <input type="number" min="0" value={value} onChange={event => setter(event.target.value)}
+                      className={"mt-1.5 h-11 w-full min-w-0 rounded-lg border px-2.5 text-base outline-none focus:border-[#f6b800] " +
+                        (darkMode ? "border-white/15 bg-[#171717] text-white" : "border-black/10 bg-white text-[#171717]")} />
+                  </label>
+                ))}
+              </div>
+            ) : null}
+
             {filtersOpen ? (
               <div className="mt-2">
                 <SouthAfricaLocationInput
@@ -321,11 +373,11 @@ export default function SearchResultsClient() {
         </div>
 
         {sourceFailures > 0 && !loadingMore ? <p role="status" className={`mt-4 rounded-xl border px-4 py-3 text-xs font-medium ${darkMode ? "border-white/20 bg-[#191919] text-white/80" : "border-black/10 bg-white text-black/75"}`}>Some results could not be loaded. Refresh to try again.</p> : null}
-        {loading || (!results.length && loadingMore) ? (
+        {loading || (!filteredResults.length && loadingMore) ? (
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {[0, 1, 2, 3].map((item) => <div key={item} className={`h-28 animate-pulse rounded-[16px] border ${surface}`} />)}
           </div>
-        ) : results.length ? (
+        ) : filteredResults.length ? (
           <>
             <div className="mt-5 grid gap-3 md:grid-cols-2">
               {paginatedResults.map((item) => (
@@ -352,7 +404,7 @@ export default function SearchResultsClient() {
                 </Link>
               ))}
             </div>
-            {results.length > RESULTS_PER_PAGE ? (
+            {filteredResults.length > RESULTS_PER_PAGE ? (
               <LoadLinkPagination current={visiblePage} total={totalPages} onChange={changePage} darkMode={darkMode} label="Search result pages" />
             ) : null}
           </>
