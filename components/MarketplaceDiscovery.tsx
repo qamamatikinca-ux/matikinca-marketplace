@@ -193,12 +193,7 @@ export default function MarketplaceDiscovery({ darkMode }: { darkMode: boolean }
             </div>
 
           <div className="mt-3 max-w-5xl">
-            <button type="button" onClick={() => { searchInputRef.current?.focus(); setSmartInfoOpen(true); setShowSuggestions(false); }}
-              className={`mb-3 flex min-h-11 w-full max-w-md items-center justify-between gap-3 rounded-full border px-4 text-left shadow-sm transition-colors sm:w-auto ${darkMode?"border-[#f6b800]/55 bg-[#f6b800]/[.08] text-white":"border-[#efb42d]/70 bg-[#fffaf0] text-[#171717]"}`}>
-              <span className="flex items-center gap-2"><span className="rounded-md bg-[#f6b800] px-2 py-1 text-[10px] font-black uppercase tracking-wide text-black">BETA</span>
-              <span className="text-sm font-bold">Try LoadLink Intelligent Search</span></span>
-              <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f6b800] text-xs font-black text-black">AI</span>
-            </button>
+            
             <div
               data-loadlink-autotrader-search="true"
               className={`rounded-[18px] border p-2.5 shadow-[0_10px_28px_rgba(0,0,0,.07)] ${

@@ -333,7 +333,7 @@ html[data-loadlink-theme] body main[data-loadlink-contracts-marketplace] [data-l
   letter-spacing:.15em!important;
   line-height:1.6!important;
 }
-html[data-loadlink-theme="dark"] body main[data-loadlink-contracts-marketplace] [data-loadlink-contracts-search-shell] label > span { color:#c7ab68!important; }
+html[data-loadlink-theme="dark"] body main[data-loadlink-contracts-marketplace] [data-loadlink-contracts-search-shell] label > span { color:#9d9d9d!important; }
 html[data-loadlink-theme] body main[data-loadlink-contracts-marketplace] [data-loadlink-contracts-search-shell] :is(input,select) {
   background:#fff!important;
   color:#171717!important;
