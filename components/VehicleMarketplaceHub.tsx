@@ -318,7 +318,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
     const filtered=rows.filter(row => {
       if (!equipmentMatches(equipmentKind(row), mode) || !intentMatch(row, intent)) return false;
       if (keyword.trim() && !flexibleMatch(
-        [row.title, row.description, row.vehicle_group, row.city, locationSearchTerms(row.city)].filter(Boolean).join(" "),
+        [row.title, row.description, row.vehicle_group, row.city, locationSearchTerms(row.city || "")].filter(Boolean).join(" "),
         keyword,
       )) return false;
       const year = Number(readMeta(row.description, "Year"));
