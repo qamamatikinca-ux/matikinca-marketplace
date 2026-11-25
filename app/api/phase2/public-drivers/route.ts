@@ -1,3 +1,6 @@
+// Keep driver catalogue requests near the Supabase eu-west-1 database.
+export const preferredRegion = "lhr1";
+
 import { NextResponse } from "next/server";
 import { publicSupabase, safeError } from "@/lib/phase2/supabase";
 
