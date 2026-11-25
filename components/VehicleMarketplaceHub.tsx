@@ -433,18 +433,6 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
  />
         </div>
 
-        <div className={"mt-5 flex min-w-0 flex-wrap items-center gap-3 rounded-xl border p-3 " + surface}>
-          <label className="min-w-0 flex-1 text-xs font-semibold">
-            Search commercial vehicles
-            <input type="search" value={keyword} onChange={event => setKeyword(event.target.value)}
-              placeholder="Make, model, body type or keyword" autoComplete="off"
-              className={"mt-1.5 h-12 w-full min-w-0 rounded-lg border px-3 text-base outline-none focus:border-[#f6b800] " +
-                (darkMode ? "border-white/20 bg-[#171717] text-white" : "border-black/15 bg-white text-black")} />
-          </label>
-          {keyword ? <button type="button" onClick={() => setKeyword("")}
-            className="mt-5 min-h-10 text-xs font-semibold underline underline-offset-4">Clear</button> : null}
-        </div>
-
         {makeModelVisible ? (
           <section data-loadlink-vehicle-make-search="category-only"
             className={"loadlink-glass mt-6 rounded-[24px] border p-4 shadow-[0_20px_60px_rgba(0,0,0,.12)] backdrop-blur-xl md:p-5 " +
@@ -478,34 +466,6 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
               className={"mt-2 min-h-9 w-full text-xs font-semibold " + (darkMode ? "text-white/70" : "text-black/60")}>Clear make and model</button> : null}
           </section>
         ) : null}
-
-        <details className={"mt-4 min-w-0 rounded-xl border px-4 py-3 " + surface} data-loadlink-vehicle-search-filters="true">
-          <summary className="cursor-pointer text-sm font-semibold">More vehicle filters</summary>
-          <div className="mt-4 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {([
-              ["Year from", yearFrom, setYearFrom, "number"],
-              ["Year to", yearTo, setYearTo, "number"],
-              ["Minimum price (R)", priceMin, setPriceMin, "number"],
-              ["Maximum price (R)", priceMax, setPriceMax, "number"],
-              ["Maximum mileage (km)", mileageMax, setMileageMax, "number"],
-              ["City or province", placeQuery, setPlaceQuery, "text"],
-            ] as Array<[string, string, (value: string) => void, string]>).map(([label, value, setter, type]) => (
-              <label key={label} className="block min-w-0 text-xs font-semibold">{label}
-                <input type={type} min={type === "number" ? "0" : undefined} value={value}
-                  onChange={event => setter(event.target.value)}
-                  className={"mt-1.5 h-11 w-full min-w-0 rounded-lg border px-3 text-base outline-none focus:border-[#f6b800] " +
-                    (darkMode ? "border-white/20 bg-[#171717] text-white" : "border-black/15 bg-white text-black")} />
-              </label>
-            ))}
-          </div>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <span className={"text-xs " + muted}>{visible.length} matching approved listings</span>
-            <button type="button" onClick={() => {
-              setYearFrom(""); setYearTo(""); setPriceMin(""); setPriceMax("");
-              setMileageMax(""); setPlaceQuery("");
-            }} className="min-h-10 text-xs font-semibold underline underline-offset-4">Clear additional filters</button>
-          </div>
-        </details>
 
         <div className="mt-6 flex max-w-full gap-2 overflow-x-auto pb-1">
           {([["all", "All equipment"], ["trucks", "Trucks"], ["vehicles", "Vehicles"], ["trailers_units", "Trailers, mobile units & equipment"]] as Array<[ViewMode, string]>).map(([value, label]) => (
