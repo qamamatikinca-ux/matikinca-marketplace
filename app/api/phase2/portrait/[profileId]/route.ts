@@ -1,3 +1,6 @@
+// Keep driver catalogue requests near the Supabase eu-west-1 database.
+export const preferredRegion = "lhr1";
+
 const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
 export async function GET(_request: Request, context: { params: Promise<{ profileId: string }> }) {
   const { profileId } = await context.params;
