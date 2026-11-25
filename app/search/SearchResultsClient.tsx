@@ -3,6 +3,7 @@
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import SmartSearchIcon from "@/components/SmartSearchIcon";
 import { readSearchInterests, rememberSearchInterest } from "@/lib/searchInterests";
+import { searchTokens } from "@/lib/smartSearch";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
@@ -111,61 +112,102 @@ export default function SearchResultsClient() {
 
   useEffect(() => {
     let active = true;
-    let settled = 0;
-    const done = () => { settled += 1; if (active && settled === 3) { setLoading(false); setLoadingMore(false); } };
+    const wantListings = ["all", "job", "contract", "asset"].includes(scope);
+    const wantDrivers = scope === "all" || scope === "driver";
+    const wantDealers = scope === "all" || scope === "dealer";
+    let remaining = Number(wantListings) + Number(wantDrivers) + Number(wantDealers);
+    const done = () => {
+      remaining -= 1;
+      if (active && remaining <= 0) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    };
     const failed = () => { if (active) setSourceFailures(count => count + 1); };
-    // Do not block the first usable results on the slowest unrelated API.
-    void cachedPublicSearch("listings", async () => {
-      const response = await fetch("/api/job-listings", { cache: "no-store" });
-      if (!response.ok) throw new Error("Listings request failed");
-      return (await response.json()) as { rows?: ListingSearchRow[] };
-    }).then((data) => {
-      if (!active) return;
-      setListings((data.rows || []).filter(isCurrentListing));
-      setLoading(false);
-    }).catch(failed).finally(done);
-    void cachedPublicSearch("drivers", async () => {
-      const response = await fetch("/api/phase2/public-drivers?limit=50&offset=0", { cache: "no-store" });
-      if (!response.ok) throw new Error("Driver search request failed");
-      return (await response.json()) as { drivers?: DriverSearchRow[] };
-    }).then((data) => {
-      if (!active) return;
-      setDrivers(data.drivers || []);
-      setLoading(false);
-    }).catch(failed).finally(done);
-    void cachedPublicSearch("dealers", async () => {
-      if (!isSupabaseConfigured) return [] as DealerSearchRow[];
-      const { data, error } = await supabase.from("dealership_profiles")
-        .select("id,slug,name,short_bio,business_description,physical_location,province,verification_status,is_public")
-        .eq("verification_status", "approved").eq("is_public", true)
-        .order("updated_at", { ascending: false }).limit(50);
-      if (error) throw error;
-      return (data || []) as DealerSearchRow[];
-    }).then((data) => {
-      if (!active) return;
-      setDealers(data);
-      setLoading(false);
-    }).catch(failed).finally(done);
-    return () => { active = false; };
-  }, []);
 
+    // Only fetch data for the chosen tab. All searches query each public category.
+    // Persisted public results use short-lived request deduplication.
+    queueMicrotask(() => {
+      if (!active) return;
+      setLoading(remaining > 0);
+      setLoadingMore(remaining > 0);
+      setSourceFailures(0);
+      if (!wantListings) setListings([]);
+      if (!wantDrivers) setDrivers([]);
+      if (!wantDealers) setDealers([]);
+    });
+
+    if (wantListings) {
+      void cachedPublicSearch("listings", async () => {
+        const response = await fetch("/api/job-listings", { cache: "default" });
+        if (!response.ok) throw new Error("Listings request failed");
+        return (await response.json()) as { rows?: ListingSearchRow[] };
+      }).then(data => {
+        if (!active) return;
+        setListings((data.rows || []).filter(isCurrentListing));
+        setLoading(false);
+      }).catch(failed).finally(done);
+    }
+
+    if (wantDrivers) {
+      const search = searchTokens(query).filter(word => word !== "driver" && word !== "drivers").join(" ");
+      const params = new URLSearchParams({ limit: "50", offset: "0" });
+      if (search) params.set("search", search);
+      const cacheKey = `drivers:${search.toLowerCase()}`;
+      void cachedPublicSearch(cacheKey, async () => {
+        const response = await fetch(`/api/phase2/public-drivers?${params.toString()}`, { cache: "default" });
+        if (!response.ok) throw new Error("Driver search request failed");
+        return (await response.json()) as { drivers?: DriverSearchRow[] };
+      }).then(data => {
+        if (!active) return;
+        setDrivers(data.drivers || []);
+        setLoading(false);
+      }).catch(failed).finally(done);
+    }
+
+    if (wantDealers) {
+      const dealerTerm = scope === "dealer" ? searchTokens(query).filter(word => !["dealer","dealers","dealership","dealerships"].includes(word)).join(" ").replace(/[%(),]/g, "").slice(0,100) : "";
+      const cacheKey = `dealers:${dealerTerm.toLowerCase()}`;
+      void cachedPublicSearch(cacheKey, async () => {
+        if (!isSupabaseConfigured) return [] as DealerSearchRow[];
+        let request = supabase.from("dealership_profiles")
+          .select("id,slug,name,short_bio,business_description,physical_location,province,verification_status,is_public")
+          .eq("verification_status", "approved").eq("is_public", true);
+        if (dealerTerm) request = request.or(
+          `name.ilike.%${dealerTerm}%,short_bio.ilike.%${dealerTerm}%,business_description.ilike.%${dealerTerm}%,physical_location.ilike.%${dealerTerm}%,province.ilike.%${dealerTerm}%`
+        );
+        const { data, error } = await request.order("updated_at", { ascending: false }).limit(50);
+        if (error) throw error;
+        return (data || []) as DealerSearchRow[];
+      }).then(data => {
+        if (!active) return;
+        setDealers(data);
+        setLoading(false);
+      }).catch(failed).finally(done);
+    }
+
+    return () => { active = false; };
+  }, [scope, query]);
+
+  const activeQuery = input;
+  const activeLocation = place;
   const includeSitePages = useMemo(
-    () => scope === "all" && /\b(help|support|settings|packages|messages|notifications|verify|verification|account|profile)\b/i.test(query),
-    [query, scope],
+    () => scope === "all" && /\b(help|support|settings|packages|messages|notifications|verify|verification|account|profile)\b/i.test(activeQuery),
+    [activeQuery, scope],
   );
 
   const results = useMemo<SearchResult[]>(() => {
     const inventory=[...listings.map(listingToSearchResult),...drivers.map(driverToSearchResult),
       ...dealers.map(dealerToSearchResult),...(includeSitePages?loadLinkSitePages:[])];
-    const original=filterAndRankResults(inventory,scope,query,location);
-    if(interpretation?.source!=="ai")return original;
+    const original=filterAndRankResults(inventory,scope,activeQuery,activeLocation);
+    if(interpretation?.source!=="ai" || activeQuery !== query || activeLocation !== location)return original;
     const enhanced=filterAndRankResults(inventory,scope==="all"?interpretation.scope:scope,
-      interpretation.query,location||interpretation.location);
+      interpretation.query,activeLocation||interpretation.location);
     // Keep exact matches rather than silently discarding them because AI rephrased a search.
     if(!enhanced.length)return original;
     const seen=new Set(enhanced.map(item=>item.id));
     return [...enhanced,...original.filter(item=>!seen.has(item.id))];
-  },[dealers,drivers,includeSitePages,listings,location,query,scope,interpretation]);
+  },[dealers,drivers,includeSitePages,listings,activeLocation,activeQuery,location,query,scope,interpretation]);
 
   // The global Vehicles tab filters actual published listings, never AI-generated matches.
   const filteredResults = useMemo(() => {
@@ -200,9 +242,9 @@ export default function SearchResultsClient() {
 
   // Recommend only actual approved jobs, never generated opportunities.
   const suggestedJobs = useMemo<SearchResult[]>(() => {
-    if (loading || (scope !== "asset" && !(scope === "all" && inferSearchScope(query) === "asset"))) return [];
+    if (loading || (scope !== "asset" && !(scope === "all" && inferSearchScope(activeQuery) === "asset"))) return [];
     const opportunities = listings.filter(row => listingScope(row) === "job").map(listingToSearchResult);
-    const hints = [...new Set([query.trim(), ...interests].filter(Boolean))].slice(0, 5);
+    const hints = [...new Set([activeQuery.trim(), ...interests].filter(Boolean))].slice(0, 5);
     const matched = new Map<string, SearchResult>();
     for (const hint of hints) {
       for (const item of filterAndRankResults(opportunities, "job", hint).slice(0, 8)) {
@@ -210,7 +252,7 @@ export default function SearchResultsClient() {
       }
     }
     return [...matched.values()].slice(0, 3);
-  }, [interests, listings, loading, query, scope]);
+  }, [interests, listings, loading, activeQuery, scope]);
 
   const totalPages = Math.max(1, Math.ceil(filteredResults.length / RESULTS_PER_PAGE));
   const visiblePage = Math.min(currentPage, totalPages);
@@ -367,8 +409,8 @@ export default function SearchResultsClient() {
             {interpretation?.source==="ai"?<p role="status" className={`mt-2 text-[11px] font-semibold ${darkMode?"text-[#f6b800]":"text-[#8f6600]"}`}>AI search · {interpretation.summary} · Published listings only</p>:interpreting?<p className={`mt-2 text-[11px] ${muted}`}>Interpreting your search…</p>:null}
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {query ? <FilterChip label={query} darkMode={darkMode} /> : null}
-            {location ? <FilterChip label={location} darkMode={darkMode} /> : null}
+            {activeQuery ? <FilterChip label={activeQuery} darkMode={darkMode} /> : null}
+            {activeLocation ? <FilterChip label={activeLocation} darkMode={darkMode} /> : null}
           </div>
         </div>
 

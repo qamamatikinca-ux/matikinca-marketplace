@@ -10,6 +10,8 @@ import LoadLinkIcon from "@/components/LoadLinkIcon";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { browserSupabase } from "@/lib/phase2/supabase";
+import { flexibleMatch, searchTokens } from "@/lib/smartSearch";
+import { matchesSouthAfricanLocation } from "@/lib/southAfricaLocations";
 import styles from "./DriversAvailableForWork.module.css";
 import LoadLinkPagination from "@/components/LoadLinkPagination";
 
@@ -76,6 +78,16 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
   const [availableOnly,setAvailableOnly]=useState(false);
   const [ownsDriverProfile, setOwnsDriverProfile] = useState(false);
 
+  // Preserve search context from the homepage and global search.
+  useEffect(() => {
+    if (!fullPage) return;
+    const params = new URLSearchParams(window.location.search);
+    const initialSearch = params.get("search") || params.get("q") || "";
+    const initialLocation = params.get("city") || params.get("location") || "";
+    if (initialSearch) setSearch(initialSearch);
+    if (initialLocation) setLocation(initialLocation);
+  }, [fullPage]);
+
   useEffect(() => {
     let active = true;
     void (async () => {
@@ -97,7 +109,7 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
     const pageSize=fullPage?50:4;
     async function fetchDrivers(offset:number){
       const params=new URLSearchParams({limit:String(pageSize),offset:String(offset)});
-      const response=await fetch(`/api/phase2/public-drivers?${params.toString()}`,{cache:"no-store"});
+      const response=await fetch(`/api/phase2/public-drivers?${params.toString()}`,{cache:"default"});
       const data=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(String(data.error||"Driver profiles could not be loaded."));
       return data;
@@ -125,8 +137,10 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
     let active=true;
     const controller=new AbortController();
     const timeout=window.setTimeout(()=>{
-      const params=new URLSearchParams({limit:"50",offset:"0",search:term});
-      void fetch(`/api/phase2/public-drivers?${params}`,{cache:"no-store",signal:controller.signal})
+      const terms = searchTokens(term).filter(word => word !== "driver" && word !== "drivers").join(" ");
+      const params=new URLSearchParams({limit:"50",offset:"0"});
+      if (terms) params.set("search", terms);
+      void fetch(`/api/phase2/public-drivers?${params}`,{cache:"default",signal:controller.signal})
        .then(async response=>{if(!response.ok)throw new Error("Search unavailable");return response.json()})
        .then(payload=>{if(active)setSearchedDrivers((payload.drivers||[]) as Driver[])})
        .catch(()=>{if(active)setSearchedDrivers(null)});
@@ -136,8 +150,8 @@ export default function DriversAvailableForWork({ darkMode = false, fullPage = f
   const sortedDrivers=useMemo(()=>{
     const rows=(search.trim()&&searchedDrivers!==null?searchedDrivers:allDrivers).filter(row=>{
       const term=search.trim().toLowerCase();
-      if(term && ![row.full_name,row.headline,row.bio,row.city,row.province,row.licence_code,...(row.vehicle_types||[])].join(" ").toLowerCase().includes(term))return false;
-      if(location.trim()&&!([row.city,row.province].join(" ").toLowerCase().includes(location.trim().toLowerCase())))return false;
+      if(term && !flexibleMatch([row.full_name,row.headline,row.bio,row.city,row.province,row.licence_code,...(row.vehicle_types||[])].join(" "),term))return false;
+      if(location.trim()&&!matchesSouthAfricanLocation([row.city,row.province].filter(Boolean).join(", "),location))return false;
       if(licence && !String(row.licence_code||"").toUpperCase().includes(licence))return false;
       if(Number(row.years_experience||0)<minExperience)return false;
       if(availableOnly && availabilityScore(row.availability)<2)return false;

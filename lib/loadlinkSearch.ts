@@ -194,11 +194,13 @@ export function filterAndRankResults(items: SearchResult[], scope: SearchScope, 
   const inferred = scope === "all" ? inferSearchScope(query) : scope;
   return items
     .filter((item) => {
-      if (scope !== "all") return item.scope === scope || (scope === "page" && item.scope === "page");
-      if (inferred === "all") return true;
-      if (item.scope === inferred) return true;
-      if (item.scope === "page") return normaliseSearch(item.searchable).includes(normaliseSearch(scopeLabel(inferred)));
-      return false;
+      if (scope !== "all") return item.scope === scope;
+      // All search must search all published categories. Intent affects ranking,
+      // never hides a relevant job or contract simply because it mentions a truck.
+      if (item.scope === "page") {
+        return inferred === "all" || normaliseSearch(item.searchable).includes(normaliseSearch(scopeLabel(inferred)));
+      }
+      return true;
     })
     .map((item) => ({ item, score: scoreSearchResult(item, query, location) }))
     .filter(({ score }) => score >= 0)
