@@ -9,6 +9,10 @@ export async function GET(_request: Request, context: { params: Promise<{ profil
     if (!response.ok) return new Response(null, { status: response.status === 404 ? 404 : 503, headers });
     const type = response.headers.get("content-type") || "";
     if (!["image/jpeg", "image/png"].includes(type)) return new Response(null, { status: 503, headers });
-    return new Response(response.body, { headers: { ...headers, "Content-Type": type, "Content-Disposition": "inline" } });
+    // Only publicly approved portraits reach this point. A short private browser cache
+    // prevents repeated 3-hop downloads when navigating driver cards without caching errors.
+    return new Response(response.body, {
+      headers: { ...headers, "Cache-Control": "private, max-age=60, must-revalidate", "Content-Type": type, "Content-Disposition": "inline" },
+    });
   } catch { return new Response(null, { status: 503, headers }); }
 }
