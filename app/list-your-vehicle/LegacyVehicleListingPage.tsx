@@ -954,6 +954,11 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 <Field label="Mileage / usage"><input type="number" min="0" value={odometerKm} onChange={(event) => setOdometerKm(event.target.value)} placeholder="Kilometres or usage reading" className={inputClass} required /></Field>
                 <Field label="Previous owners"><input type="number" min="0" value={previousOwners} onChange={(event) => setPreviousOwners(event.target.value)} placeholder="0" className={inputClass} /></Field>
                 <Field label="Service history"><select value={serviceHistory} onChange={(event) => setServiceHistory(event.target.value)} className={inputClass}><option>Full service history</option><option>Partial service history</option><option>No service history</option><option>Not applicable</option></select></Field>
+                <Field label="Engine / drivetrain condition"><select value={engineCondition} onChange={e=>setEngineCondition(e.target.value)} className={inputClass}><option>Not assessed</option><option>Excellent</option><option>Good</option><option>Needs inspection</option><option>Needs repair</option><option>Not applicable</option></select></Field>
+                <Field label="Tyre condition"><select value={tyreCondition} onChange={e=>setTyreCondition(e.target.value)} className={inputClass}><option>Not assessed</option><option>New</option><option>Good</option><option>Worn</option><option>Replacement needed</option><option>Not applicable</option></select></Field>
+                <Field label="Accident / structural damage"><select value={accidentHistory} onChange={e=>setAccidentHistory(e.target.value)} className={inputClass}><option>Not disclosed</option><option>No known accident history</option><option>Previous damage repaired</option><option>Structural damage disclosed</option><option>Unknown</option></select></Field>
+                <Field label="Last service date — optional"><input type="date" value={lastServiceDate} onChange={e=>setLastServiceDate(e.target.value)} max={new Date().toISOString().slice(0,10)} className={inputClass}/></Field>
+                <Field label="Roadworthy status"><select value={roadworthyStatus} onChange={e=>setRoadworthyStatus(e.target.value)} className={inputClass}><option>Not confirmed</option><option>Valid certificate provided</option><option>Inspection required</option><option>Expired / not roadworthy</option></select></Field>
                 <Field label="Registration number"><input value={registrationNumber} onChange={(event) => setRegistrationNumber(event.target.value)} className={inputClass} required /></Field>
                 <Field label="VIN / chassis number"><input value={vin} onChange={(event) => setVin(event.target.value)} className={inputClass} required /></Field>
                 <Field label="Engine / serial number"><input value={engineNumber} onChange={(event) => setEngineNumber(event.target.value)} className={inputClass} /></Field>
@@ -972,6 +977,11 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 <Field label={specSchema[3][0]}><input value={specD} onChange={(event) => setSpecD(event.target.value)} placeholder={specSchema[3][1]} className={inputClass} /></Field>
                 <Field label="Location"><SouthAfricaLocationInput value={city} onChange={setCity} darkMode={darkMode} placeholder="City, town or province" ariaLabel="Vehicle location" className={inputClass} required /></Field>
                 <Field label="Description" wide><textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the vehicle, maintenance, features, faults and anything a buyer should know." className={textAreaClass} required /></Field>
+                <div className="md:col-span-2"><VehicleIntelligentPricingPanel darkMode={darkMode}
+                   category={vehicleCategory||"vehicle"} make={brand} model={modelName} year={year} condition={condition}
+                   mileage={odometerKm} salePrice={rate} offerMode={offerMode} serviceHistory={serviceHistory}
+                   engineCondition={engineCondition} tyreCondition={tyreCondition} accidentHistory={accidentHistory}
+                   roadworthy={roadworthyStatus} description={description} fuelUse={fuelUseL100} onFuelUseChange={setFuelUseL100}/></div>
               </div>
             </section>
 
