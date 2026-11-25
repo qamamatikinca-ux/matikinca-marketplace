@@ -3,6 +3,7 @@
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import SmartSearchIcon from "@/components/SmartSearchIcon";
 import { readSearchInterests, rememberSearchInterest } from "@/lib/searchInterests";
+import { searchTokens } from "@/lib/smartSearch";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
@@ -149,7 +150,7 @@ export default function SearchResultsClient() {
     }
 
     if (wantDrivers) {
-      const search = query.trim();
+      const search = searchTokens(query).filter(word => word !== "driver" && word !== "drivers").join(" ");
       const params = new URLSearchParams({ limit: "50", offset: "0" });
       if (search) params.set("search", search);
       const cacheKey = `drivers:${search.toLowerCase()}`;
@@ -165,7 +166,7 @@ export default function SearchResultsClient() {
     }
 
     if (wantDealers) {
-      const dealerTerm = scope === "dealer" ? query.trim().replace(/[%(),]/g, "").slice(0,100) : "";
+      const dealerTerm = scope === "dealer" ? searchTokens(query).filter(word => !["dealer","dealers","dealership","dealerships"].includes(word)).join(" ").replace(/[%(),]/g, "").slice(0,100) : "";
       const cacheKey = `dealers:${dealerTerm.toLowerCase()}`;
       void cachedPublicSearch(cacheKey, async () => {
         if (!isSupabaseConfigured) return [] as DealerSearchRow[];
@@ -173,7 +174,7 @@ export default function SearchResultsClient() {
           .select("id,slug,name,short_bio,business_description,physical_location,province,verification_status,is_public")
           .eq("verification_status", "approved").eq("is_public", true);
         if (dealerTerm) request = request.or(
-          `name.ilike.%${dealerTerm}%,physical_location.ilike.%${dealerTerm}%,province.ilike.%${dealerTerm}%`
+          `name.ilike.%${dealerTerm}%,short_bio.ilike.%${dealerTerm}%,business_description.ilike.%${dealerTerm}%,physical_location.ilike.%${dealerTerm}%,province.ilike.%${dealerTerm}%`
         );
         const { data, error } = await request.order("updated_at", { ascending: false }).limit(50);
         if (error) throw error;
