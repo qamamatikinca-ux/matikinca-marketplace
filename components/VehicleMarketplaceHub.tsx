@@ -214,6 +214,7 @@ function postedLabel(value: string | null | undefined) {
 export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean }) {
   const [rows, setRows] = useState<VehicleRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [mode, setMode] = useState<ViewMode>("all");
   const [sort, setSort] = useState<SortMode>("newest");
   const [intent,setIntent]=useState<Intent>("all");
@@ -251,9 +252,12 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
         return response.json();
       })
       .then((payload) => {
-        if (active) setRows(((payload.rows || []) as VehicleRow[]).filter(isVehicleListing));
+        if (active) {
+          setRows(((payload.rows || []) as VehicleRow[]).filter(isVehicleListing));
+          setLoadError("");
+        }
       })
-      .catch(() => active && setRows([]))
+      .catch(() => { if (active) { setRows([]); setLoadError("Vehicle listings could not be loaded. Please try again."); } })
       .finally(() => active && setLoading(false));
     return () => { active = false; };
   }, []);
@@ -530,6 +534,7 @@ export default function VehicleMarketplaceHub({ darkMode }: { darkMode: boolean 
         <div id="loadlink-vehicle-results" className="scroll-mt-28" />
         {!loading && visible.length ? <div className={`mt-5 text-xs font-bold ${muted}`}>{visible.length} approved listing{visible.length === 1 ? "" : "s"}</div> : null}
 
+        {loadError && !loading ? <p role="alert" className="mt-5 text-sm">{loadError} <button type="button" onClick={() => window.location.reload()} className="ml-2 font-semibold underline underline-offset-4">Retry</button></p> : null}
         {loading ? (
           <div className="mt-6 grid gap-4 sm:grid-cols-2">{[0, 1, 2, 3].map((item) => <div key={item} className={`h-72 animate-pulse rounded-[24px] border ${surface}`} />)}</div>
         ) : visible.length ? (
