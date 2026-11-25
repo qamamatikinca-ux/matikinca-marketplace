@@ -1004,6 +1004,20 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                   ? <select value={fuelType} onChange={(event) => setFuelType(event.target.value)} className={inputClass} required><option value="">Choose actual fuel type</option>{Array.from(new Set([...selectedModel.fuels, ...(fuelType ? [fuelType as typeof selectedModel.fuels[number]] : [])])).map((item) => <option key={item} value={item}>{item}</option>)}</select>
                   : <input value={fuelType} onChange={(event) => setFuelType(event.target.value)} placeholder={vehicleCategory === "trailer" ? "Not applicable" : "Confirm fuel / power type"} className={inputClass} required />}</Field>
                 <Field label="Mileage / usage"><input type="number" min="0" value={odometerKm} onChange={(event) => setOdometerKm(event.target.value)} placeholder="Kilometres or usage reading" className={inputClass} required /></Field>
+                <Field label="How is this unit available?"><select value={offerMode} onChange={(event) => setOfferMode(event.target.value as OfferMode)} className={inputClass}><option value="sale">For sale only</option><option value="rental">Rental only</option><option value="sale_or_rental">Sale or rental</option><option value="poa">POA — price on application</option></select></Field>
+                {offerMode !== "poa" ? <Field label={offerMode === "rental" ? "Rental rate" : "Sale price"}><input value={rate} onChange={(event) => setRate(event.target.value)} placeholder={offerMode === "rental" ? "Example: 25000" : "Example: 850000"} inputMode="decimal" className={inputClass} required /></Field> : <Field label="Price"><div className={`${inputClass} flex items-center`}>POA — interested users must contact the seller</div></Field>}
+                <div className="md:col-span-2 min-w-0 -mt-3">
+                  <VehicleIntelligentPricingPanel darkMode={darkMode} category={vehicleCategory || "vehicle"}
+                    make={brand} model={modelName} year={year} condition={condition} mileage={odometerKm}
+                    salePrice={rate} offerMode={offerMode} onUsePrice={setRate} />
+                </div>
+                <div className="md:col-span-2 min-w-0">
+                  <VehicleOwnershipEstimator darkMode={darkMode} category={vehicleCategory || "vehicle"}
+                    make={brand} model={modelName} condition={condition}
+                    initialFuel={fuelUseL100} onFuelChange={setFuelUseL100} posting />
+                </div>
+                {offerMode === "rental" || offerMode === "sale_or_rental" ? <Field label="Rental period"><select value={rentalPeriod} onChange={(event) => setRentalPeriod(event.target.value as RentalPeriod)} className={inputClass}><option value="day">Per day</option><option value="week">Per week</option><option value="month">Per month</option></select></Field> : null}
+                {offerMode === "sale_or_rental" ? <Field label="Rental rate"><input value={rentalRate} onChange={(event) => setRentalRate(event.target.value)} placeholder="Example: 25000" inputMode="decimal" className={inputClass} required /></Field> : null}
                 <Field label="Previous owners"><input type="number" min="0" value={previousOwners} onChange={(event) => setPreviousOwners(event.target.value)} placeholder="0" className={inputClass} /></Field>
                 <Field label="Service history"><select value={serviceHistory} onChange={(event) => setServiceHistory(event.target.value)} className={inputClass}><option>Full service history</option><option>Partial service history</option><option>No service history</option><option>Not applicable</option></select></Field>
                 <Field label="Engine / drivetrain condition"><select value={engineCondition} onChange={e=>setEngineCondition(e.target.value)} className={inputClass}><option>Not assessed</option><option>Excellent</option><option>Good</option><option>Needs inspection</option><option>Needs repair</option><option>Not applicable</option></select></Field>
@@ -1019,20 +1033,6 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                   : <input value={axleConfiguration} onChange={(event) => setAxleConfiguration(event.target.value)} placeholder="4x2, tandem, tri-axle" className={inputClass} />}</Field>
                 <Field label="GVM kg"><input type="number" min="0" value={gvmKg} onChange={(event) => setGvmKg(event.target.value)} className={inputClass} /></Field>
                 <Field label="Payload / capacity kg"><input type="number" min="0" value={payloadKg} onChange={(event) => setPayloadKg(event.target.value)} className={inputClass} /></Field>
-                <Field label="How is this unit available?"><select value={offerMode} onChange={(event) => setOfferMode(event.target.value as OfferMode)} className={inputClass}><option value="sale">For sale only</option><option value="rental">Rental only</option><option value="sale_or_rental">Sale or rental</option><option value="poa">POA — price on application</option></select></Field>
-                {offerMode !== "poa" ? <Field label={offerMode === "rental" ? "Rental rate" : "Sale price"}><input value={rate} onChange={(event) => setRate(event.target.value)} placeholder={offerMode === "rental" ? "Example: 25000" : "Example: 850000"} inputMode="decimal" className={inputClass} required /></Field> : <Field label="Price"><div className={`${inputClass} flex items-center`}>POA — interested users must contact the seller</div></Field>}
-                <div className="md:col-span-2 min-w-0 -mt-3">
-                  <VehicleIntelligentPricingPanel darkMode={darkMode} category={vehicleCategory || "vehicle"}
-                    make={brand} model={modelName} year={year} condition={condition} mileage={odometerKm}
-                    salePrice={rate} offerMode={offerMode} onUsePrice={setRate} />
-                </div>
-                <div className="md:col-span-2 min-w-0">
-                  <VehicleOwnershipEstimator darkMode={darkMode} category={vehicleCategory || "vehicle"}
-                    make={brand} model={modelName} condition={condition}
-                    initialFuel={fuelUseL100} onFuelChange={setFuelUseL100} posting />
-                </div>
-                {offerMode === "rental" || offerMode === "sale_or_rental" ? <Field label="Rental period"><select value={rentalPeriod} onChange={(event) => setRentalPeriod(event.target.value as RentalPeriod)} className={inputClass}><option value="day">Per day</option><option value="week">Per week</option><option value="month">Per month</option></select></Field> : null}
-                {offerMode === "sale_or_rental" ? <Field label="Rental rate"><input value={rentalRate} onChange={(event) => setRentalRate(event.target.value)} placeholder="Example: 25000" inputMode="decimal" className={inputClass} required /></Field> : null}
                 <Field label={specSchema[0][0]}><input value={specA} onChange={(event) => setSpecA(event.target.value)} placeholder={specSchema[0][1]} className={inputClass} /></Field>
                 <Field label={specSchema[1][0]}><input value={specB} onChange={(event) => setSpecB(event.target.value)} placeholder={specSchema[1][1]} className={inputClass} /></Field>
                 <Field label={specSchema[2][0]}><input value={specC} onChange={(event) => setSpecC(event.target.value)} placeholder={specSchema[2][1]} className={inputClass} /></Field>
