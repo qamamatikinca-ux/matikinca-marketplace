@@ -19,7 +19,7 @@ export default function VehicleOwnershipEstimator({darkMode,category="",make="",
   } as VehicleOwnershipInput;
   if(!values.annualKm||Number(values.annualKm)<=0)return null;
   if(powered&&(!actualFuel||!values.dieselRandPerLitre))return null;
-  if(Object.entries(entry).some(([key,value])=>key!=="energySource" && (typeof value!=="number"||!Number.isFinite(value)||value<0)))return null;
+  if(Object.entries(entry).some(([key,value])=>key!=="energySource" && (typeof value!=="number"||!Number.isFinite(value)||Number(value)<0)))return null;
   return estimateVehicleOwnership(entry);
  },[values,actualFuel,powered,electric]);
  const input=darkMode?"border-white/15 bg-[#202020] text-white":"border-black/10 bg-white text-black";
