@@ -28,6 +28,8 @@ test("a real job application is handed to chat as a private structured preview, 
   assert.match(draft,/&application=1/);
   assert.doesNotMatch(draft,/&draft=/);
   assert.match(chat,/data-loadlink-application-composer/);
+  assert.match(chat,/initialApplicationRequestedRef\.current = params\.get\("application"\) === "1"/);
+  assert.match(chat,/window\.history\.replaceState/);
   assert.match(chat,/send_listing_guest_application/);
   assert.match(chat,/message\.message_kind === "application"/);
   assert.match(chat,/message\.message_kind !== "application" && message\.body/);
