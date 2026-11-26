@@ -8,7 +8,7 @@ import dynamic from "next/dynamic";
 
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkVehicleWizardController20260825 from "@/components/LoadLinkVehicleWizardController20260825";
-import { VEHICLE_DRAFT_OWNER_KEY, readVehicleDraft, clearVehicleDraft, scopeVehicleDraft } from "@/lib/vehicleDraft";
+import { VEHICLE_DRAFT_OWNER_KEY, readVehicleDraft, clearVehicleDraft, scopeVehicleDraft, isVehicleDraftActiveInTab, markVehicleDraftActiveInTab } from "@/lib/vehicleDraft";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -28,6 +28,7 @@ import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { createSafeRandomId, imageExtension, inferUploadContentType, prepareImageFileForForm, readableUploadError, revokePreviewUrl, validateImageFile } from "@/lib/mobilePosting";
+import { saveVehiclePhotos as saveVehiclePhotoDraft, restoreVehiclePhotos as restoreVehiclePhotoDraft, clearVehiclePhotos as clearVehiclePhotoDraft } from "@/lib/vehiclePhotoDraft";
 import { getFreshAuthenticatedUser, postingErrorMessage, withTransientRetry } from "@/lib/reliableSupabase";
 import { getLoadLinkIntelligence } from "@/lib/loadlinkIntelligence";
 import { getVehicleListingAccess } from "@/lib/packageAccess";
@@ -157,6 +158,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const router = useRouter();
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [draftHydrated, setDraftHydrated] = useState(false);
+  const [restoringDraftPhotos,setRestoringDraftPhotos]=useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [listingFlowOpen, setListingFlowOpen] = useState(Boolean(entryMode));
@@ -164,6 +166,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [saving, setSaving] = useState(false);
   const [preparingVehiclePhotos, setPreparingVehiclePhotos] = useState(false);
   const [vehiclePhotoProgress, setVehiclePhotoProgress] = useState("");
+  const [photoRecoveryNotice,setPhotoRecoveryNotice] = useState("");
   const [message, setMessage] = useState("");
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [photoLimitToast, setPhotoLimitToast] = useState(false);
@@ -237,6 +240,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const submitLockRef = useRef(false);
   const draftOwnerRef = useRef("");
   const listingSubmittedRef = useRef(false);
+  const photoSelectionVersionRef = useRef(0);
   const submissionIdRef = useRef("");
   const vehiclePreviewUrlsRef = useRef<string[]>([]);
 
@@ -308,7 +312,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     try {
       submissionIdRef.current = localStorage.getItem("loadlink-vehicle-submission-id") || createSafeRandomId();
       localStorage.setItem("loadlink-vehicle-submission-id", submissionIdRef.current);
-      const d = resumeDraft ? readVehicleDraft() as Record<string, any> | null : null;
+      const resumeCurrentTab = isVehicleDraftActiveInTab(draftOwnerRef.current);
+      const d = resumeDraft || resumeCurrentTab ? readVehicleDraft() as Record<string, any> | null : null;
+      setRestoringDraftPhotos(Boolean(d));
       if (!d) { setDraftHydrated(true); return; }
       setSellerType(d.sellerType || "private"); setVehicleCategory(d.vehicleCategory || null); setVehicleSubtype(d.vehicleSubtype || "");
       setYear(d.year || 2026); setBrand(d.brand || ""); setModelName(d.modelName || ""); setModelConfirmed(Boolean(d.modelConfirmed));
@@ -337,8 +343,10 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     const draft = { updatedAt: Date.now(), entryMode: entryMode || "vehicle", sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, engineCondition, tyreCondition, accidentHistory, lastServiceDate, roadworthyStatus, fuelUseL100, gvmKg, payloadKg, rate, offerMode, rentalRate, rentalPeriod, specA, specB, specC, specD, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType, submissionId: submissionIdRef.current || "" };
     const persist = () => {
       try {
-        if (!listingSubmittedRef.current && localStorage.getItem(VEHICLE_DRAFT_OWNER_KEY) === draftOwnerRef.current)
+        if (!listingSubmittedRef.current && localStorage.getItem(VEHICLE_DRAFT_OWNER_KEY) === draftOwnerRef.current) {
           localStorage.setItem("loadlink-vehicle-draft-v1", JSON.stringify(draft));
+          markVehicleDraftActiveInTab(draftOwnerRef.current);
+        }
       } catch {}
     };
     const timer = window.setTimeout(persist, 150);
@@ -477,53 +485,99 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   async function handleVehiclePhotos(event: ChangeEvent<HTMLInputElement>) {
     const max = packageType === "dealer" ? 30 : packageType === "pro" ? 10 : 2;
     const allSelected = Array.from(event.target.files ?? []) as File[];
-    const candidates = allSelected.slice(0, max);
     event.target.value = "";
+    if (!allSelected.length) return;
+    const remaining = Math.max(0, max - vehiclePhotos.length);
+    if (!remaining) {
+      setMessage(`All ${max} photo slots are already filled. Remove one to add a different photo.`);
+      return;
+    }
+    const candidates = allSelected.slice(0, remaining);
+    const selectionVersion = ++photoSelectionVersionRef.current;
     setMessage("");
-    if (!candidates.length) return;
-
     setPreparingVehiclePhotos(true);
-    const selected: File[] = [];
-    const previews: string[] = [];
-
+    const preparedFiles: File[] = [];
+    const preparedPreviews: string[] = [];
+    const failures: string[] = [];
     try {
-      for (let index = 0; index < candidates.length; index += 1) {
+      for (let index = 0; index < candidates.length; index++) {
         const source = candidates[index];
         const validation = validateImageFile(source, source.name || `Vehicle photo ${index + 1}`);
-        if (validation) throw new Error(validation);
-        // Photo-quality analysis is advisory; unsupported phone codecs must not block a valid upload.
-        try { const quality = await inspectLoadLinkImage(source); showLoadLinkImageQuality(quality.messages); } catch { /* preparation below validates the actual image */ }
-        setVehiclePhotoProgress(`Preparing vehicle photo ${index + 1} of ${candidates.length}…`);
-        const prepared = await prepareImageFileForForm(source, {
-          maxWidth: 1440,
-          maxHeight: 1440,
-          quality: 0.76,
-          namePrefix: `loadlink-vehicle-${index + 1}`,
-        });
-        selected.push(prepared.file);
-        previews.push(prepared.previewUrl);
-        await new Promise((resolve) => window.setTimeout(resolve, 20));
-      }
-
-      vehiclePreviewUrlsRef.current.forEach(revokePreviewUrl);
-      vehiclePreviewUrlsRef.current = previews;
-      setVehiclePhotos(selected);
-      setVehiclePreviews(previews);
-      if (allSelected.length > max) {
-        setMessage(`We kept the first ${max} vehicle photos.`);
-        if (true) {
-          setPhotoLimitToast(false);
-          window.requestAnimationFrame(() => setPhotoLimitToast(true));
+        if (validation) { failures.push(validation); continue; }
+        try {
+          setVehiclePhotoProgress(`Preparing photo ${vehiclePhotos.length + index + 1} of ${max}…`);
+          // Photo quality checks are advisory and must never discard a valid upload.
+          try { const quality = await inspectLoadLinkImage(source); showLoadLinkImageQuality(quality.messages); } catch {}
+          const prepared = await prepareImageFileForForm(source, {
+            maxWidth: 1440, maxHeight: 1440, quality: 0.76,
+            namePrefix: `loadlink-vehicle-${vehiclePhotos.length + index + 1}`,
+          });
+          preparedFiles.push(prepared.file);
+          preparedPreviews.push(prepared.previewUrl);
+        } catch (error) {
+          failures.push(readableUploadError(error, `Photo ${index + 1} could not be prepared.`));
         }
+        await new Promise(resolve => window.setTimeout(resolve, 15));
       }
-    } catch (error) {
-      previews.forEach(revokePreviewUrl);
-      setMessage(readableUploadError(error, "One selected vehicle photo could not be prepared."));
+      if (selectionVersion !== photoSelectionVersionRef.current) {
+        preparedPreviews.forEach(revokePreviewUrl);
+        return;
+      }
+      if (preparedFiles.length) {
+        const combined = [...vehiclePhotos, ...preparedFiles];
+        const combinedPreviews = [...vehiclePreviews, ...preparedPreviews];
+        vehiclePreviewUrlsRef.current = combinedPreviews;
+        setVehiclePhotos(combined);
+        setVehiclePreviews(combinedPreviews);
+        // Private, local recovery: never includes identity documents or face evidence.
+        const saved = await saveVehiclePhotoDraft(draftOwnerRef.current, currentSubmissionId(), combined);
+        setPhotoRecoveryNotice(saved
+          ? "Vehicle photos saved on this device in case your browser reloads."
+          : "Photos are selected, but this browser could not save a recovery copy. Keep this tab open until submission.");
+      }
+      if (allSelected.length > remaining) {
+        failures.push(`Only ${remaining} more photo${remaining === 1 ? "" : "s"} fit your current plan.`);
+        setPhotoLimitToast(true);
+      }
+      if (failures.length) setMessage(failures.join(" · ").slice(0, 450));
     } finally {
       setPreparingVehiclePhotos(false);
       setVehiclePhotoProgress("");
     }
   }
+
+  function removeVehiclePhoto(index: number) {
+    photoSelectionVersionRef.current++;
+    const preview = vehiclePreviews[index];
+    const nextFiles = vehiclePhotos.filter((_, i) => i !== index);
+    const nextPreviews = vehiclePreviews.filter((_, i) => i !== index);
+    setVehiclePhotos(nextFiles);
+    setVehiclePreviews(nextPreviews);
+    vehiclePreviewUrlsRef.current = nextPreviews;
+    if (preview) revokePreviewUrl(preview);
+    void saveVehiclePhotoDraft(draftOwnerRef.current, currentSubmissionId(), nextFiles);
+  }
+
+  useEffect(() => {
+    // Safari can discard the page after opening its camera/photo picker.
+    // Restore only the same account's photos for a resumed listing; ID/face data
+    // is never cached here and still requires explicit selection/consent.
+    if (!draftHydrated || !signedIn || !restoringDraftPhotos) return;
+    const ownerId = draftOwnerRef.current, id = submissionIdRef.current;
+    if (!ownerId || !id) return;
+    let alive = true;
+    const selectionVersion = photoSelectionVersionRef.current;
+    void restoreVehiclePhotoDraft(ownerId, id).then(files => {
+      if (!alive || selectionVersion !== photoSelectionVersionRef.current || !files.length) return;
+      if (vehiclePreviewUrlsRef.current.length) return;
+      const urls = files.map(file => URL.createObjectURL(file));
+      vehiclePreviewUrlsRef.current = urls;
+      setVehiclePhotos(files);
+      setVehiclePreviews(urls);
+      setPhotoRecoveryNotice(`Restored ${files.length} vehicle photo${files.length === 1 ? "" : "s"} from this device. Please reselect identity documents if your browser restarted.`);
+    });
+    return () => { alive = false; };
+  }, [draftHydrated, signedIn, restoringDraftPhotos]);
 
   useEffect(() => () => {
     vehiclePreviewUrlsRef.current.forEach(revokePreviewUrl);
@@ -793,6 +847,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       listingSubmittedRef.current = true;
       await syncAccountState().catch(() => undefined);
       clearVehicleDraft();
+      void clearVehiclePhotoDraft(user.id, folder);
       submissionIdRef.current = createSafeRandomId();
       if (requestBoost) {
         // An opt-in request generates a manual R14 payment reference. The boost
@@ -1071,7 +1126,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
 
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="03" title="Photos and verification" description="Upload clear product photos and the critical documents required for review." />
-              <div className="p-5 md:p-7"><label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>{vehiclePhotoProgress || `Minimum 2 photos · up to ${packageType === "dealer" ? 30 : packageType === "pro" ? 10 : 2}`}</span><input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} disabled={preparingVehiclePhotos || saving} className="hidden" /></label>{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <LoadLinkImage key={preview} src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 shrink-0 snap-start rounded-xl object-cover" />)}</div> : null}</div>
+              <div className="p-5 md:p-7"><label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>{vehiclePhotoProgress || `Minimum 2 photos · up to ${packageType === "dealer" ? 30 : packageType === "pro" ? 10 : 2}`}</span><input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} disabled={preparingVehiclePhotos || saving} className="hidden" /></label>{photoRecoveryNotice ? <p role="status" className="px-5 text-xs leading-5 opacity-65">{photoRecoveryNotice}</p> : null}{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <div key={preview} className="relative w-32 shrink-0 snap-start"><LoadLinkImage src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 rounded-xl object-cover" /><button type="button" onClick={() => removeVehiclePhoto(index)} aria-label={`Remove vehicle photo ${index + 1}`} disabled={saving || preparingVehiclePhotos} className="mt-1 min-h-9 w-full rounded-md border border-current/15 text-xs font-semibold disabled:opacity-50">Remove</button></div>)}</div> : null}</div>
               {sellerType === "dealership" && !dealerPost ? <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><Field label="Dealership name"><input value={dealershipName} onChange={(event) => setDealershipName(event.target.value)} className={inputClass} required /></Field><Field label="Company registration number"><input value={companyRegistrationNumber} onChange={(event) => setCompanyRegistrationNumber(event.target.value)} className={inputClass} required /></Field><Field label="SARS tax number"><input value={taxNumber} onChange={(event) => setTaxNumber(event.target.value)} className={inputClass} required /></Field><DocumentInput label="CIPC company registration" required file={documents.companyRegistration} onChange={(file) => setDocument("companyRegistration", file)} /><DocumentInput label="SARS tax document" required file={documents.taxDocument} onChange={(file) => setDocument("taxDocument", file)} /><DocumentInput label="Proof of business address" required file={documents.businessAddress} onChange={(file) => setDocument("businessAddress", file)} /><DocumentInput label="Representative authority" required file={documents.representativeAuthority} onChange={(file) => setDocument("representativeAuthority", file)} /></div> : null}
               <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><DocumentInput label="South African ID or passport" required file={documents.idDocument} onChange={(file) => setDocument("idDocument", file)} />{(vehicleCategory === "truck" || vehicleCategory === "bakkie_van") ? <DocumentInput label="Driver’s licence" required file={documents.driverLicence} onChange={(file) => setDocument("driverLicence", file)} /> : null}<DocumentInput label="Vehicle registration certificate" required file={documents.registrationPaper} onChange={(file) => setDocument("registrationPaper", file)} /><DocumentInput label="Proof of ownership or authority to list" required file={documents.ownershipProof} onChange={(file) => setDocument("ownershipProof", file)} /><DocumentInput label="Roadworthy certificate" file={documents.roadworthy} onChange={(file) => setDocument("roadworthy", file)} /><DocumentInput label="Operating licence" file={documents.operatingLicence} onChange={(file) => setDocument("operatingLicence", file)} />{transmissionCheck?.requiresModificationProof ? <DocumentInput label="Gearbox conversion paperwork" required file={documents.modificationProof} onChange={(file) => setDocument("modificationProof", file)} /> : null}</div>
               {sellerType==="private"?<div className="border-t border-current/10 p-5 md:p-7">
@@ -1086,7 +1141,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
               <div className="border-t border-current/10 p-5 md:p-7">
                 <h3 className="text-base font-black">Listing checks</h3>
                 <p className={`mt-1 text-xs ${muted}`}>These checks help improve accuracy. They do not verify ownership or guarantee the vehicle's condition.</p>
-                {smartChecks.length ? <ul className="mt-3 space-y-2">{smartChecks.slice(0,6).map((check,index)=><li key={index} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${check.level==="warning"?"border-amber-500/30":"border-current/10"}`}>{check.message}</li>)}</ul> : <p className="mt-2 text-sm font-semibold">All basic listing checks passed.</p>}
+                {smartChecks.length ? <ul className="mt-3 space-y-2">{smartChecks.slice(0,6).map((check,index)=><li key={index} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${check.level==="warning"?"border-amber-500/30":"border-current/10"}`}><span>{check.message}</span>{/year/i.test(check.message) ? <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("loadlink-vehicle-open-step", { detail: { step: 0 } }))} className="ml-2 font-semibold underline underline-offset-4">Edit model year</button> : null}</li>)}</ul> : <p className="mt-2 text-sm font-semibold">All basic listing checks passed.</p>}
               </div>
               <div className="border-t border-current/10 p-5 md:p-7">
                 <h3 className="text-lg font-black">Promote your listing</h3>
@@ -1097,7 +1152,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 </label>
               </div>
               <div className="grid gap-3 px-5 pb-5 md:px-7 md:pb-7"><CheckRow checked={confirmOwnership} onChange={setConfirmOwnership} label="I own this vehicle or have written authority from the owner to list it." /><CheckRow checked={confirmAccuracy} onChange={setConfirmAccuracy} label="I confirm that the details, mileage, ownership history and uploaded documents are accurate." /></div>
-              <div className={`border-t border-[#f6b800]/25 p-5 md:p-7 ${darkMode?"bg-[#111] text-white":"bg-[#fffaf0] text-black"}`}>{preReviewSubmitted?<div role="status" className={`mb-4 rounded-xl border p-4 text-sm font-bold leading-6 ${darkMode?"border-emerald-500/35 bg-emerald-900/15 text-emerald-200":"border-emerald-500/30 bg-emerald-50 text-emerald-900"}`}>Your vehicle details and documents were sent to the Control Centre for preliminary review. Your plan is still awaiting approval; this vehicle is not published. Your draft stays saved until you can publish.</div>:null}{message ? <div className={`mb-4 rounded-2xl border p-4 text-sm font-bold leading-6 ${darkMode?"border-red-500/40 bg-red-500/10 text-red-200":"border-red-600/30 bg-red-50 text-red-900"}`}>{message}</div> : null}<button type="submit" disabled={saving || preparingVehiclePhotos || preReviewSubmitted} className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[0.12em] text-black disabled:opacity-50">{preReviewSubmitted ? "Sent to Control Centre" : saving ? "Submitting vehicle…" : dealershipId ? "Add to dealership inventory" : "Submit vehicle for verification"}</button><p className={`mt-3 text-center text-xs leading-5 ${darkMode?"text-white/55":"text-black/55"}`}>The product will appear in the dealership slider when linked to an approved dealership. Analytics remains available only on Pro listings.</p></div>
+              <div className={`border-t border-[#f6b800]/25 p-5 md:p-7 ${darkMode?"bg-[#111] text-white":"bg-[#f8f9fa] text-black"}`}>{preReviewSubmitted?<div role="status" className={`mb-4 rounded-xl border p-4 text-sm font-bold leading-6 ${darkMode?"border-emerald-500/35 bg-emerald-900/15 text-emerald-200":"border-emerald-500/30 bg-emerald-50 text-emerald-900"}`}>Your vehicle details and documents were sent to the Control Centre for preliminary review. Your plan is still awaiting approval; this vehicle is not published. Your draft stays saved until you can publish.</div>:null}{message ? <div role="alert" className={`mb-4 rounded-xl border p-4 text-sm font-semibold leading-6 ${darkMode?"border-red-500/40 bg-red-500/10 text-red-200":"border-red-600/30 bg-red-50 text-red-900"}`}>{message}</div> : null}<button type="submit" disabled={saving || preparingVehiclePhotos || preReviewSubmitted} className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#f6b800] px-6 text-sm font-black uppercase tracking-[0.12em] text-black disabled:opacity-50">{preReviewSubmitted ? "Sent to Control Centre" : saving ? "Submitting vehicle…" : dealershipId ? "Add to dealership inventory" : "Submit vehicle for verification"}</button><p className={`mt-3 text-center text-xs leading-5 ${darkMode?"text-white/55":"text-black/55"}`}>The product will appear in the dealership slider when linked to an approved dealership. Analytics remains available only on Pro listings.</p></div>
             </section>
           </> : null}
         </> : null}
