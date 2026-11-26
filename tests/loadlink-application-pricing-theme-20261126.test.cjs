@@ -31,6 +31,7 @@ test("a real job application is handed to chat as a private structured preview, 
   assert.match(chat,/initialApplicationRequestedRef\.current = params\.get\("application"\) === "1"/);
   assert.match(chat,/window\.history\.replaceState/);
   assert.match(chat,/send_listing_guest_application/);
+  assert.match(chat,/message_kind: "application", structured_payload: draft/);
   assert.match(chat,/message\.message_kind === "application"/);
   assert.match(chat,/message\.message_kind !== "application" && message\.body/);
   assert.match(card,/data-loadlink-application-card/);
