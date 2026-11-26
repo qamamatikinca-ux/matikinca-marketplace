@@ -35,7 +35,7 @@ export default function VehicleIntelligentPricingPanel({
   const [checked, setChecked] = useState(false);
   const [evidence, setEvidence] = useState<PriceEvidence | null>(null);
   const [error, setError] = useState("");
-  const selling = offerMode === "sale" || offerMode === "sale_or_rental";
+  const selling = offerMode === "sale" || offerMode === "sale_or_rental" || offerMode === "poa";
   const validMileage = mileage.trim() !== "" && Number.isSafeInteger(Number(mileage)) &&
     Number(mileage) >= 0 && Number(mileage) <= 10_000_000;
   const ready = selling && readyForEstimate && make.trim().length >= 2 &&
@@ -72,7 +72,15 @@ export default function VehicleIntelligentPricingPanel({
     return () => { active = false; window.clearTimeout(timer); };
   }, [ready, make, model, year, condition, mileage, bodyType]);
 
-  if (!selling) return null;
+  if (offerMode === "rental") return (
+    <section data-loadlink-price-determination="rental-cost-based" className="min-w-0 border-t border-current/10 pt-4">
+      <h3 className="text-sm font-semibold">Automatic price determination</h3>
+      <p className={"mt-2 text-xs leading-5 " + (darkMode ? "text-white/65" : "text-black/60")}>
+        Comparable sale prices do not determine a reliable rental rate. The cost of ownership calculator immediately below
+        uses your actual operating expenses; use those costs to set a rental rate.
+      </p>
+    </section>
+  );
   const supported = Boolean(checked && evidence?.available &&
     Number(evidence.sample_count) >= 3 && Number.isFinite(Number(evidence.recommended_cents)) &&
     Number(evidence.recommended_cents) > 0);
@@ -99,7 +107,7 @@ export default function VehicleIntelligentPricingPanel({
           <p><strong>Suggested asking range: {formatZar(lower)} – {formatZar(upper)}</strong></p>
           <p className={muted}>Based on {evidence?.sample_count} comparable advertised LoadLink prices, not completed sales or a guaranteed valuation.</p>
           <p className={muted}>The asking price you enter stays under your control.</p>
-          {onUsePrice ? <button type="button" onClick={() => onUsePrice(String(Math.round(estimated)))}
+          {onUsePrice && offerMode !== "poa" ? <button type="button" onClick={() => onUsePrice(String(Math.round(estimated)))}
             className="min-h-10 font-semibold underline underline-offset-4 decoration-[#f6b800]">
             Use suggested {formatZar(estimated)}
           </button> : null}
