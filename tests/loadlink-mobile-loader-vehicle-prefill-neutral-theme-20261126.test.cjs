@@ -5,16 +5,17 @@ const fs = require("node:fs");
 const path = require("node:path");
 const read = p => fs.readFileSync(path.resolve(__dirname, "..", p), "utf8");
 
-test("LoadLink truck is visible from first loading frame in both themes", () => {
-  const loader = read("components/LoadLinkLoading.tsx");
-  const css = read("app/loadlink-refresh-theme-20261015.css");
+test("original LoadLink moving truck and animation are restored without changing its artwork", () => {
+  const loader=read("components/LoadLinkLoading.tsx");
+  const css=read("app/loadlink-refresh-theme-20261015.css");
   assert.match(loader,/data-loadlink-page-loading="true"/);
-  assert.match(loader,/grid place-items-center/);
-  assert.match(loader,/loadlink-loading-truck/);
-  assert.match(loader,/Loading LoadLink/);
-  assert.doesNotMatch(loader,/translate\(120vw|truck-drive|left: -220px/);
-  assert.match(loader,/prefers-reduced-motion: reduce/);
-  assert.match(css,/html\[data-loadlink-theme="light"\] \[data-loadlink-page-loading="true"\] \{ background: #f8f9fa/);
+  assert.match(loader,/loadlink-truck/);
+  assert.match(loader,/truck-box/);
+  assert.match(loader,/truck-cab/);
+  assert.match(loader,/@keyframes truck-drive/);
+  assert.match(loader,/track-mark track-one/);
+  assert.doesNotMatch(loader,/loadlink-loading-scene/);
+  assert.match(css,/html\\[data-loadlink-theme="light"\\] \\[data-loadlink-page-loading="true"\\] \\{ background: #f8f9fa/);
 });
 
 test("first paint and intentional site surfaces have neutral, not beige, backgrounds", () => {
@@ -34,31 +35,46 @@ test("first paint and intentional site surfaces have neutral, not beige, backgro
   assert.match(theme,/\[class\*="bg-\[\#f6b800\]"\]/);
 });
 
-test("selected vehicle retains catalogue prefill without inventing service records", () => {
+test("all original posting fields remain visible, editable, and in their original order", () => {
   const form=read("app/list-your-vehicle/LegacyVehicleListingPage.tsx");
-  assert.match(form,/reference\?\.verified_transmission/);
-  assert.match(form,/reference\?\.verified_fuel/);
-  assert.match(form,/setTitle\(\x60\$\{year\} \$\{brand\} \$\{modelName\}\x60\)/);
-  assert.match(form,/data-loadlink-vehicle-condition-details="true"/);
-  assert.match(form,/useState\("Not specified"\)/);
-  assert.match(form,/const \[condition, setCondition\] = useState\(""\)/);
-  assert.match(form,/required><option value="">Choose actual condition<\/option>/);
-  assert.match(form,/<option>Not specified<\/option>/);
-  assert.match(form,/Model specifications cannot confirm service, tyre or accident history/);
-  assert.match(form,/setEngineCondition\(category === "trailer" \? "Not applicable"/);
-  assert.match(form,/vehicleCategory !== "trailer" \? <Field/);
-  assert.match(form,/Service, condition and inspection details/);
+  assert.doesNotMatch(form,/data-loadlink-vehicle-condition-details/);
+  const labels=[
+    'Listing title','Condition','Transmission','Fuel / power type',
+    'Mileage / usage','Previous owners','Service history',
+    'Engine / drivetrain condition','Tyre condition','Accident / structural damage',
+    'Last service date — optional','Roadworthy status','Registration number',
+    'VIN / chassis number','Engine / serial number','Axle configuration',
+    'GVM kg','Payload / capacity kg',
+  ];
+  for(const label of labels)assert.ok(form.includes(`<Field label="${label}"`),`Missing original field: ${label}`);
+  assert.ok(form.indexOf('<Field label="Previous owners">')<form.indexOf('<Field label="Registration number">'));
+  assert.equal((form.match(/<VehicleIntelligentPricingPanel/g)||[]).length,1);
+  assert.equal((form.match(/<VehicleOwnershipEstimator/g)||[]).length,1);
+  assert.match(form,/const \\[condition, setCondition\\] = useState\\(""\\)/);
+  assert.match(form,/Choose actual condition/);
+  assert.match(form,/<option>Not specified<\\/option>/);
 });
 
-test("posting categories and model fields are compact and native on phones", () => {
+test("truck model prefill remains and selected bakkie/van models get limited editable suggestions",()=>{
+  const form=read("app/list-your-vehicle/LegacyVehicleListingPage.tsx");
+  assert.match(form,/reference\\?\\.verified_transmission/);
+  assert.match(form,/reference\\?\\.verified_fuel/);
+  assert.match(form,/setTransmission\\(reference\\?\\.verified_transmission/);
+  assert.match(form,/selectLightCommercialModel/);
+  assert.match(form,/getLightCommercialModelPrefill/);
+  assert.match(form,/Supported model details are suggested automatically/);
+  assert.doesNotMatch(form,/setServiceHistory\\("Full service history"\\)/);
+});
+
+test("vehicle choice keeps its original photos and fields with only restrained typography",()=>{
   const form=read("app/list-your-vehicle/LegacyVehicleListingPage.tsx");
   const page=read("app/list-your-vehicle/page.tsx");
-  assert.match(form,/ll-vehicle-type-card flex min-h-24 items-center gap-3 rounded-xl/);
-  assert.match(form,/h-20 w-24 shrink-0/);
-  assert.doesNotMatch(form,/ll-vehicle-type-card min-h-28 rounded-\[24px\]/);
+  assert.match(form,/relative mb-4 block h-36/);
+  assert.match(form,/ll-vehicle-type-card min-h-28 rounded-xl border px-6 py-5/);
+  assert.match(form,/images\\/vehicle-types\\/truck.webp/);
+  assert.match(form,/images\\/vehicle-types\\/bakkie-van.webp/);
+  assert.match(form,/images\\/vehicle-types\\/trailer.webp/);
   assert.match(page,/-webkit-appearance: auto !important/);
-  assert.match(page,/border-radius: 10px !important/);
-  assert.doesNotMatch(page,/linear-gradient\(45deg, transparent 50%/);
 });
 
 test("chat application is a compact receipt opening the branded full document", () => {
