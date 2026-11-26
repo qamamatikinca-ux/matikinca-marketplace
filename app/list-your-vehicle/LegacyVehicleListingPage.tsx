@@ -28,6 +28,7 @@ import { formatListingRate } from "@/lib/formatCurrency";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { createSafeRandomId, imageExtension, inferUploadContentType, prepareImageFileForForm, readableUploadError, revokePreviewUrl, validateImageFile } from "@/lib/mobilePosting";
+import { saveVehiclePhotos as saveVehiclePhotoDraft, restoreVehiclePhotos as restoreVehiclePhotoDraft, clearVehiclePhotos as clearVehiclePhotoDraft } from "@/lib/vehiclePhotoDraft";
 import { getFreshAuthenticatedUser, postingErrorMessage, withTransientRetry } from "@/lib/reliableSupabase";
 import { getLoadLinkIntelligence } from "@/lib/loadlinkIntelligence";
 import { getVehicleListingAccess } from "@/lib/packageAccess";
@@ -164,6 +165,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [saving, setSaving] = useState(false);
   const [preparingVehiclePhotos, setPreparingVehiclePhotos] = useState(false);
   const [vehiclePhotoProgress, setVehiclePhotoProgress] = useState("");
+  const [photoRecoveryNotice,setPhotoRecoveryNotice] = useState("");
   const [message, setMessage] = useState("");
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [photoLimitToast, setPhotoLimitToast] = useState(false);
@@ -237,6 +239,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const submitLockRef = useRef(false);
   const draftOwnerRef = useRef("");
   const listingSubmittedRef = useRef(false);
+  const photoSelectionVersionRef = useRef(0);
   const submissionIdRef = useRef("");
   const vehiclePreviewUrlsRef = useRef<string[]>([]);
 
