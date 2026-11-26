@@ -86,7 +86,7 @@ export default function LoadLinkApplicationCard({
                 <h3 className="mt-5 break-words text-lg font-bold leading-7">
                   {application.listing_title || kind + " opportunity"}
                 </h3>
-                <p className="mt-1 text-xs text-black/60">Application submitted through LoadLink</p>
+                <p className="mt-1 text-xs text-black/60">{preview ? "Preview — not sent" : "Submitted through LoadLink"}</p>
                 <dl className="mt-5 grid min-w-0 gap-0 sm:grid-cols-2 sm:gap-x-5">
                   {fields.filter(([, value]) => Boolean(value?.trim())).map(([label, value]) => (
                     <div key={label} className="min-w-0 border-t border-black/10 py-3">
