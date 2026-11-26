@@ -97,6 +97,8 @@ test("ownership calculator covers annual monthly and kilometre costs without cou
   assert.equal(estimateVehicleOwnership({...v,annualKm:600000}),null);
   assert.equal(estimateVehicleOwnership({...v,tyresAnnual:-1}),null);
   assert.equal(estimateVehicleOwnership({...v,financeMonthly:Number.POSITIVE_INFINITY}),null);
+  assert.ok(estimateVehicleOwnership({...v,energySource:"electric",litresPer100Km:180,dieselRandPerLitre:5}));
+  assert.equal(estimateVehicleOwnership({...v,energySource:"fuel",litresPer100Km:180}),null);
   const ui=read("components/VehicleOwnershipEstimator.tsx");
   assert.match(ui,/Finance interest per month/);
   assert.match(ui,/Electricity price \(R\/kWh\)/);
