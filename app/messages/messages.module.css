@@ -13,7 +13,7 @@
 .messageApp :global(.loadlink-logo-wrap) { width: clamp(132px, 32vw, 158px); }
 .messageApp :global(.loadlink-messages-header-logo) { width: 100% !important; }
 .messageApp :global(.loadlink-official-header-logo) { min-width: 0; max-width: min(46vw, 180px); }
-.messageApp :global(.loadlink-chat-wallpaper) { position: relative; isolation: isolate; background-image: var(--loadlink-chat-wallpaper-v254, url("/images/chat-wallpapers/chat-01.svg")) !important; background-color: #fbfaf7 !important; background-repeat: repeat !important; background-position: center top !important; background-size: min(680px, 125vw) auto !important; background-blend-mode: normal !important; }
+.messageApp :global(.loadlink-chat-wallpaper) { position: relative; isolation: isolate; background-image: var(--loadlink-chat-wallpaper-v254, url("/images/chat-wallpapers/chat-01.svg")) !important; background-color: #f8f9fa !important; background-repeat: repeat !important; background-position: center top !important; background-size: min(680px, 125vw) auto !important; background-blend-mode: normal !important; }
 :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-wallpaper) { background-image: var(--loadlink-chat-wallpaper-v254, url("/images/chat-wallpapers/chat-01.svg")), radial-gradient(circle at 45% 20%, rgba(246,184,0,.075), transparent 48%) !important; background-color: #11100d !important; background-blend-mode: normal, screen !important; }
 .messageApp :global(.loadlink-chat-wallpaper)::before, :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-wallpaper)::before { content: none !important; display: none !important; }
 .messageApp :global(.loadlink-chat-header) { border-bottom-color: rgba(17,17,17,.08) !important; background: rgba(255,255,255,.66) !important; -webkit-backdrop-filter: blur(18px) saturate(118%); backdrop-filter: blur(18px) saturate(118%); }
@@ -36,7 +36,7 @@
 :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-composer) { border-top-color: rgba(255,255,255,.08) !important; background: rgba(9,9,9,.66) !important; box-shadow: 0 -10px 34px rgba(0,0,0,.20); }
 
 /* Inbox uses one translucent glass plane with transparent rows and controls. */
-.messageApp :global(.loadlink-inbox-panel) { background: rgba(247,244,236,.74) !important; border-right-color: rgba(17,17,17,.075) !important; -webkit-backdrop-filter: blur(24px) saturate(115%) !important; backdrop-filter: blur(24px) saturate(115%) !important; box-shadow: 10px 0 34px rgba(0,0,0,.035) !important; }
+.messageApp :global(.loadlink-inbox-panel) { background: rgba(248,249,250,.86) !important; border-right-color: rgba(17,17,17,.075) !important; -webkit-backdrop-filter: blur(24px) saturate(115%) !important; backdrop-filter: blur(24px) saturate(115%) !important; box-shadow: 10px 0 34px rgba(0,0,0,.035) !important; }
 :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel) { background: rgba(7,7,7,.68) !important; border-right-color: rgba(255,255,255,.07) !important; box-shadow: 10px 0 38px rgba(0,0,0,.20) !important; }
 .messageApp :global(.loadlink-inbox-panel > div:first-of-type) { background: transparent !important; border-bottom-color: rgba(17,17,17,.07) !important; }
 :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-inbox-panel > div:first-of-type) { background: transparent !important; border-bottom-color: rgba(255,255,255,.07) !important; }
@@ -60,7 +60,7 @@
 .messageApp :global(.loadlink-chat-panel) { min-width: 0; }
 .messageApp :global(.loadlink-chat-header button:focus-visible) { outline: 2px solid #f6b800; outline-offset: 2px; }
 @media (pointer: coarse) {
-  .messageApp :global(.loadlink-chat-header), .messageApp :global(.loadlink-chat-composer), .messageApp :global(.loadlink-chat-privacy) { -webkit-backdrop-filter: none; backdrop-filter: none; background: #fffefa !important; }
+  .messageApp :global(.loadlink-chat-header), .messageApp :global(.loadlink-chat-composer), .messageApp :global(.loadlink-chat-privacy) { -webkit-backdrop-filter: none; backdrop-filter: none; background: #ffffff !important; }
   :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-header), :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-composer), :global(html[data-loadlink-theme="dark"]) .messageApp :global(.loadlink-chat-privacy) { background: #11110e !important; }
 }
 @media (max-width: 360px) {
