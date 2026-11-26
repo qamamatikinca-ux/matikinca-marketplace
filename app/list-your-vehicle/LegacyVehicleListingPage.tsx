@@ -1031,16 +1031,6 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 <Field label="Mileage / usage"><input type="number" min="0" value={odometerKm} onChange={(event) => setOdometerKm(event.target.value)} placeholder="Kilometres or usage reading" className={inputClass} required /></Field>
                 <Field label="How is this unit available?"><select value={offerMode} onChange={(event) => setOfferMode(event.target.value as OfferMode)} className={inputClass}><option value="sale">For sale only</option><option value="rental">Rental only</option><option value="sale_or_rental">Sale or rental</option><option value="poa">POA — price on application</option></select></Field>
                 {offerMode !== "poa" ? <Field label={offerMode === "rental" ? "Rental rate" : "Sale price"}><input value={rate} onChange={(event) => setRate(event.target.value)} placeholder={offerMode === "rental" ? "Example: 25000" : "Example: 850000"} inputMode="decimal" className={inputClass} required /></Field> : <Field label="Price"><div className={`${inputClass} flex items-center`}>POA — interested users must contact the seller</div></Field>}
-                <div className="md:col-span-2 min-w-0 -mt-3">
-                  <VehicleIntelligentPricingPanel darkMode={darkMode} category={vehicleCategory || "vehicle"}
-                    make={brand} model={modelName} year={year} condition={condition} mileage={odometerKm}
-                    salePrice={rate} offerMode={offerMode} onUsePrice={setRate} />
-                </div>
-                <div className="md:col-span-2 min-w-0">
-                  <VehicleOwnershipEstimator darkMode={darkMode} category={vehicleCategory || "vehicle"}
-                    make={brand} model={modelName} condition={condition} fuelType={fuelType}
-                    initialFuel={fuelUseL100} onFuelChange={setFuelUseL100} posting />
-                </div>
                 {offerMode === "rental" || offerMode === "sale_or_rental" ? <Field label="Rental period"><select value={rentalPeriod} onChange={(event) => setRentalPeriod(event.target.value as RentalPeriod)} className={inputClass}><option value="day">Per day</option><option value="week">Per week</option><option value="month">Per month</option></select></Field> : null}
                 {offerMode === "sale_or_rental" ? <Field label="Rental rate"><input value={rentalRate} onChange={(event) => setRentalRate(event.target.value)} placeholder="Example: 25000" inputMode="decimal" className={inputClass} required /></Field> : null}
                 <Field label="Previous owners"><input type="number" min="0" value={previousOwners} onChange={(event) => setPreviousOwners(event.target.value)} placeholder="0" className={inputClass} /></Field>
@@ -1064,6 +1054,18 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 <Field label={specSchema[3][0]}><input value={specD} onChange={(event) => setSpecD(event.target.value)} placeholder={specSchema[3][1]} className={inputClass} /></Field>
                 <Field label="Location"><SouthAfricaLocationInput value={city} onChange={setCity} darkMode={darkMode} placeholder="City, town or province" ariaLabel="Vehicle location" className={inputClass} required /></Field>
                 <Field label="Description" wide><textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the vehicle, maintenance, features, faults and anything a buyer should know." className={textAreaClass} required /></Field>
+                <div className="md:col-span-2 min-w-0" data-loadlink-vehicle-automatic-pricing="true">
+                  <VehicleIntelligentPricingPanel darkMode={darkMode} category={vehicleCategory || "vehicle"}
+                    make={brand} model={modelName} year={year} condition={condition} mileage={odometerKm}
+                    bodyType={bodyType || vehicleSubtype} salePrice={rate} offerMode={offerMode}
+                    readyForEstimate={Boolean(title.trim() && registrationNumber.trim() && vin.trim() && description.trim() && city.trim())}
+                    onUsePrice={setRate} />
+                </div>
+                <div className="md:col-span-2 min-w-0" data-loadlink-vehicle-ownership-after-details="true">
+                  <VehicleOwnershipEstimator darkMode={darkMode} category={vehicleCategory || "vehicle"}
+                    make={brand} model={modelName} condition={condition} fuelType={fuelType}
+                    initialFuel={fuelUseL100} onFuelChange={setFuelUseL100} posting />
+                </div>
               </div>
             </section>
 
