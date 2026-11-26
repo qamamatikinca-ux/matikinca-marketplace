@@ -11,7 +11,10 @@ export function assessVehicleListing(x:VehicleCheckInput):VehicleAdvice[]{
  const warn=(message:string)=>out.push({level:"warning",message});
  const suggest=(message:string)=>out.push({level:"suggestion",message});
  const current=new Date().getFullYear();
- if(x.year>current||x.year<1950)warn("Check the manufacturing year against the registration papers.");
+ if(!Number.isInteger(x.year)||x.year<1950||x.year>current+1)
+  warn(`Selected year ${x.year} is outside the supported manufacturing-year range (1950–${current+1}). Change the year in Vehicle Type, then confirm the registration papers.`);
+ else if(x.year===current+1)
+  suggest(`Next-year model selected (${x.year}). Confirm the manufacturing year on the registration certificate before submission.`);
  if(x.category==="bakkie_van"&&x.year<2009)warn("Bakkie and van listings accept years from 2009 onwards.");
  if(!x.make.trim()||!x.model.trim())warn("Enter the exact make and model.");
  const km=Number(x.mileage);
