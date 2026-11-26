@@ -7,7 +7,9 @@ const read = (name) => fs.readFileSync(path.join(__dirname, "..", name), "utf8")
 test("touch theme switches do not snapshot the full page", () => {
   const theme = read("lib/useLoadLinkTheme.ts");
   assert.ok(theme.includes('"(hover: none) and (pointer: coarse)"'));
-  assert.ok(theme.includes('reducedMotion || mobileTouch'));
+  assert.ok(theme.includes('if (mobileTouch)'));
+  assert.ok(theme.includes('root.dataset.loadlinkThemeFallback = "true"'));
+  assert.ok(theme.indexOf('if (mobileTouch)') < theme.indexOf('startViewTransition?:'));
   assert.ok(theme.includes('themeSubscribers = new Set'));
   assert.ok(theme.includes("return subscribeTheme(sync)"));
   assert.ok(theme.includes("flushSync"));
