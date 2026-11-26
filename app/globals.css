@@ -198,16 +198,16 @@ header img.loadlink-logo-img,
 
 /* LoadLink single-source theme coordination */
 html[data-loadlink-theme="light"] {
-  --background: #f8f8f7;
+  --background: #f8f9fa;
   --foreground: #111111;
-  background: #f8f8f7;
+  background: #f8f9fa;
 }
 html[data-loadlink-theme="dark"] {
   --background: #050505;
   --foreground: #f7f7f7;
   background: #050505;
 }
-html[data-loadlink-theme="light"] body { background:#f8f8f7; color:#111; }
+html[data-loadlink-theme="light"] body { background:#f8f9fa; color:#111; }
 html[data-loadlink-theme="dark"] body { background:#050505; color:#f7f7f7; }
 body { min-height:100vh; }
 
@@ -288,7 +288,7 @@ html[data-loadlink-theme="dark"] .loadlink-messages [class*="border-black/"] { b
 /* LOADLINK UNIVERSAL THEME NORMALISATION V1 */
 html[data-loadlink-theme="light"] {
   color-scheme: light;
-  --loadlink-page: #f8f8f7;
+  --loadlink-page: #f8f9fa;
   --loadlink-surface: #ffffff;
   --loadlink-surface-soft: #f4f5f4;
   --loadlink-text: #111111;
@@ -555,7 +555,7 @@ html, body {
 }
 
 html[data-loadlink-theme="dark"] .loadlink-messages .loadlink-quote-card {
-  background: #f7f2e7 !important;
+  background: #f9fafb !important;
   border-color: rgba(246,184,0,.42) !important;
   color: #111 !important;
 }
