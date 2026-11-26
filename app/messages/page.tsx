@@ -2240,10 +2240,12 @@ ${message}` : message)}
                               />
                             ) : null}
                             <div
-                              className={`relative min-w-0 max-w-[calc(100%_-_2.75rem)] break-words [overflow-wrap:anywhere] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[72%] ${
-                                mine
-                                  ? "rounded-br-sm bg-black text-white"
-                                  : "rounded-bl-sm border border-black/5 bg-white text-black"
+                              className={`relative min-w-0 max-w-[calc(100%_-_2.75rem)] break-words [overflow-wrap:anywhere] sm:max-w-[72%] ${
+                                message.message_kind === "application" && !message.deleted_at
+                                  ? "rounded-lg bg-transparent p-0 shadow-none"
+                                  : mine
+                                    ? "rounded-2xl rounded-br-sm bg-black px-4 py-3 text-white shadow-sm"
+                                    : "rounded-2xl rounded-bl-sm border border-black/5 bg-white px-4 py-3 text-black shadow-sm"
                               }`}
                             >
                               {message.deleted_at ? (
@@ -2262,9 +2264,9 @@ ${message}` : message)}
                               {!message.deleted_at && message.message_kind !== "quote" && message.message_kind !== "application" && message.body && (!message.attachment_id || message.body !== "Shared an attachment") ? (
                                 <p className="whitespace-pre-wrap break-words text-sm font-medium leading-6">{message.body}</p>
                               ) : null}
-                              <div className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] font-semibold ${mine ? "text-white/45" : "text-black/35"}`}>
+                              <div className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] font-semibold ${message.message_kind === "application" && !message.deleted_at ? (darkMode ? "text-white/65" : "text-black/55") : mine ? "text-white/45" : "text-black/35"}`}>
                                 {message.edited_at && !message.deleted_at ? <span>edited ·</span> : null}<span>{formatClock(message.created_at)}</span>{mine ? <span className={seen ? "font-black text-[#f6b800]" : ""} aria-label={seen ? "Seen" : "Sent"}>{seen ? "Seen" : "Sent"}<LoadLinkIcon name={seen ? "checkDouble" : "check"} size={12} /></span> : null}
-                                {!message.deleted_at ? <button type="button" onClick={() => setMessageMenuId((current) => current === message.id ? "" : message.id)} className={`ml-1 flex h-5 w-6 items-center justify-center rounded-md text-[13px] leading-none ${mine ? "text-white/55 hover:bg-white/10" : "text-black/40 hover:bg-black/5"}`} aria-label="Message options" aria-expanded={messageMenuId === message.id}>•••</button> : null}
+                                {!message.deleted_at ? <button type="button" onClick={() => setMessageMenuId((current) => current === message.id ? "" : message.id)} className={`ml-1 flex h-5 w-6 items-center justify-center rounded-md text-[13px] leading-none ${message.message_kind === "application" && !message.deleted_at ? (darkMode ? "text-white/70 hover:bg-white/10" : "text-black/55 hover:bg-black/5") : mine ? "text-white/55 hover:bg-white/10" : "text-black/40 hover:bg-black/5"}`} aria-label="Message options" aria-expanded={messageMenuId === message.id}>•••</button> : null}
                               </div>
                               {!message.deleted_at && messageMenuId === message.id ? (
                                 <div className={`absolute bottom-7 right-2 z-20 min-w-[126px] overflow-hidden rounded-xl border p-1 shadow-xl ${mine ? "border-white/15 bg-[#171717] text-white" : "border-black/10 bg-white text-black"}`}>
