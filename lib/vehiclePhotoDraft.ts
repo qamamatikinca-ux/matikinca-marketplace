@@ -60,10 +60,11 @@ export async function restoreVehiclePhotos(userId: string, submissionId: string)
     database.close();
     if (!entry || !Number.isFinite(entry.savedAt) || Date.now() - entry.savedAt > MAX_AGE_MS) return [];
     if (!Array.isArray(entry.files)) return [];
-    return entry.files.slice(0, 30).filter(file =>
-      file instanceof Blob && file.size > 0 && file.size <= 5 * 1024 * 1024
-    ).map((file, index) => file instanceof File ? file :
-      new File([file], "recovered-vehicle-" + (index + 1) + ".jpg", { type: file.type || "image/jpeg" }));
+    const stored = entry.files as unknown[];
+    return stored.slice(0, 30)
+      .filter((value): value is Blob => value instanceof Blob && value.size > 0 && value.size <= 5 * 1024 * 1024)
+      .map((blob, index) => blob instanceof File ? blob :
+        new File([blob], "recovered-vehicle-" + (index + 1) + ".jpg", { type: blob.type || "image/jpeg" }));
   } catch { return []; }
 }
 
