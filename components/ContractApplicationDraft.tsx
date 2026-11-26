@@ -4,6 +4,7 @@ import {createPortal} from "react-dom";
 import {supabase} from "@/lib/supabaseClient";
 import {loginHref} from "@/lib/auth";
 import LoadLinkDocumentPreview from "@/components/LoadLinkDocumentPreview";
+import { savePendingApplication, type LoadLinkApplication } from "@/lib/loadlinkApplication";
 
 type Props={listingId:string;title:string;city:string;rate:string;vehicle:string;darkMode:boolean;onClose:()=>void;kind?:"job"|"contract"};
 
@@ -18,6 +19,7 @@ export default function ContractApplicationDraft({listingId,title,city,rate,vehi
  const [message,setMessage]=useState("");
  const [customDraft,setCustomDraft]=useState<string|null>(null);
  const [busy,setBusy]=useState(false);
+ const [handoffError,setHandoffError]=useState("");
  const [preview,setPreview]=useState(false);
  useEffect(()=>{
   let mounted=true;
@@ -57,12 +59,22 @@ export default function ContractApplicationDraft({listingId,title,city,rate,vehi
  ].filter(Boolean).join("\n");
  const prepared=customDraft??proposal;
  function continueToMessages(){
-  if(busy||!prepared.trim())return;
+  if(busy || !prepared.trim() || !identityLoaded) return;
   setBusy(true);
+  setHandoffError("");
   void supabase.auth.getUser().then(({data:{user}})=>{
-   const href=`/messages?listing=${encodeURIComponent(listingId)}&draft=${encodeURIComponent(prepared.slice(0,3400))}`;
+   const draft: LoadLinkApplication = {
+    listing_id: listingId, kind, listing_title: title, city, advertised_rate: rate,
+    vehicle, applicant_name: name || "LoadLink member", company, email, phone,
+    area, offer, note: message, details: prepared, client_token: window.crypto.randomUUID(),
+    created_at: Date.now(),
+   };
+   if(!savePendingApplication(draft)) throw new Error("This browser could not save your application preview. Enable session storage and retry.");
+   const href=`/messages?listing=${encodeURIComponent(listingId)}&application=1`;
    if(!user){window.location.assign(loginHref(href));return;}
    window.location.assign(href);
+  }).catch((error)=>{
+    setHandoffError(error instanceof Error ? error.message : "Your application preview could not be opened.");
   }).finally(()=>setBusy(false));
  }
  const inputClass=`mt-2 h-11 w-full rounded-xl border px-3 text-base outline-none focus:border-[#e5b52b] ${darkMode?"border-white/20 bg-[#222] text-white":"border-[#dedede] bg-white text-black"}`;
@@ -100,11 +112,12 @@ export default function ContractApplicationDraft({listingId,title,city,rate,vehi
         </label>
        </div>:null}
      </div>
-     <p className="text-[11px] leading-5 opacity-55">The branded PDF can be downloaded from the preview. You approve the message in LoadLink Messages; private documents are never attached without your permission.</p>
+     <p className="text-[11px] leading-5 opacity-55">Your application opens as a preview card in LoadLink Messages. It is not sent until you choose Send application. Private documents are never attached automatically.</p>
+     {handoffError ? <p role="alert" className="text-xs text-red-500">{handoffError}</p> : null}
     </div>
     <footer className="grid shrink-0 grid-cols-[1fr_1.45fr] gap-2 border-t border-current/10 p-3 pb-[max(12px,env(safe-area-inset-bottom))]">
      <button type="button" onClick={onClose} className="min-h-12 rounded-xl border border-current/15 text-sm font-semibold">Cancel</button>
-     <button type="button" disabled={busy||!prepared.trim()} onClick={continueToMessages} className="min-h-12 rounded-xl bg-[#f6b800] px-3 text-sm font-bold text-black disabled:opacity-40">{busy?"Opening…":"Continue"}</button>
+     <button type="button" disabled={busy||!prepared.trim()||!identityLoaded} onClick={continueToMessages} className="min-h-12 rounded-xl bg-[#f6b800] px-3 text-sm font-bold text-black disabled:opacity-40">{busy?"Opening…":"Continue"}</button>
     </footer>
    </section>
   </div>,document.body):null;

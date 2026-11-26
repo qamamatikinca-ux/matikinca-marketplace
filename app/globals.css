@@ -54,23 +54,8 @@ main.bg-black .logo-name,
 
 
 
-/* LOADLINK ACTUAL FINAL FIX */
-html,
-body,
-main,
-header,
-section,
-article,
-footer,
-button,
-a,
-input,
-textarea,
-select {
-  transition-property: background-color, color, border-color, box-shadow, opacity, transform;
-  transition-duration: 360ms;
-  transition-timing-function: cubic-bezier(.22, .61, .36, 1);
-}
+/* Component animations are opt-in. Global transitions on every element made
+   forms feel sluggish and caused colour lag during dark/light changes. */
 
 .loadlink-logo-wrap {
   position: relative;

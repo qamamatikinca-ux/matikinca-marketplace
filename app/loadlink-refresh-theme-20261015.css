@@ -169,8 +169,8 @@ html[data-loadlink-theme-fallback="true"] body :is(
   [data-loadlink-site-header], .loadlink-glass, .loadlink-sort-control
 ) {
   transition-property: background-color, color, border-color, box-shadow !important;
-  transition-duration: 240ms !important;
-  transition-timing-function: ease-in-out !important;
+  transition-duration: 180ms !important;
+  transition-timing-function: ease-out !important;
 }
 html[data-loadlink-theme-fallback="true"] [data-loadlink-page-loading],
 html[data-loadlink-theme-fallback="true"] [data-loadlink-page-loading] * {
@@ -420,5 +420,26 @@ html[data-loadlink-theme="dark"] main[data-loadlink-jobs-page="true"] [data-load
   html:not([data-loadlink-hydrating="true"]) body main.min-h-screen,
   html:not([data-loadlink-hydrating="true"]) body [data-loadlink-vehicle-listing-shell] #vehicle-listing-form > section {
     transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+  }
+}
+
+/* Preserve readable, unfiltered LoadLink forms during the selected colour mode.
+   Animate only site surfaces during an intentional theme switch; never images
+   or modal transforms. Both themes share the same layout and spacing. */
+html[data-loadlink-theme="light"] body :is(
+  [data-loadlink-application-composer],
+  [data-loadlink-application-card],
+  [data-loadlink-vehicle-costs],
+  [data-loadlink-post-price-guide]
+) { color-scheme: light; }
+html[data-loadlink-theme="dark"] body :is(
+  [data-loadlink-application-composer],
+  [data-loadlink-vehicle-costs],
+  [data-loadlink-post-price-guide]
+) { color-scheme: dark; }
+@media (prefers-reduced-motion: reduce) {
+  html[data-loadlink-theme-fallback="true"] body,
+  html[data-loadlink-theme-fallback="true"] body * {
+    transition-duration: 0ms !important;
   }
 }

@@ -87,9 +87,20 @@ export function setLoadLinkTheme(theme: LoadLinkTheme) {
 
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   const mobileTouch = window.matchMedia?.("(hover: none) and (pointer: coarse)").matches;
-  // Full-page snapshots can stall iOS and Android scrolling.
-  if (reducedMotion || mobileTouch || root.dataset.loadlinkHydrating === "true") {
+  if (reducedMotion || root.dataset.loadlinkHydrating === "true") {
     commit();
+    return;
+  }
+  // Avoid large View Transition screenshots on touch devices: they can stall
+  // iOS Safari and make theme switching feel like a full-page reload.
+  if (mobileTouch) {
+    root.dataset.loadlinkThemeFallback = "true";
+    commit();
+    if (fallbackCleanup !== null) window.clearTimeout(fallbackCleanup);
+    fallbackCleanup = window.setTimeout(() => {
+      delete root.dataset.loadlinkThemeFallback;
+      fallbackCleanup = null;
+    }, 200);
     return;
   }
 
@@ -122,7 +133,7 @@ export function setLoadLinkTheme(theme: LoadLinkTheme) {
   fallbackCleanup = window.setTimeout(() => {
     delete root.dataset.loadlinkThemeFallback;
     fallbackCleanup = null;
-  }, 300);
+  }, 200);
 }
 
 export function useLoadLinkTheme() {

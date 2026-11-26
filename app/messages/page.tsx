@@ -29,6 +29,8 @@ import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import LogisticsMessageTools, { type QuoteAutofillDefaults, type QuoteVehicleOption, type StructuredQuote } from "@/components/LogisticsMessageTools";
 import JobConversationStatusDialog from "@/components/JobConversationStatusDialog";
 import DriverMessagesInbox from "@/components/DriverMessagesInbox";
+import LoadLinkApplicationCard from "@/components/LoadLinkApplicationCard";
+import { readPendingApplication, clearPendingApplication, type LoadLinkApplication } from "@/lib/loadlinkApplication";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
@@ -96,7 +98,7 @@ type ChatMessage = {
   file_size: number | null;
   edited_at?: string | null;
   deleted_at?: string | null;
-  message_kind?: "text" | "quote" | "system" | null;
+  message_kind?: "text" | "quote" | "application" | "system" | null;
   structured_payload?: QuotePayload | Record<string, unknown> | null;
 };
 
@@ -472,6 +474,7 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
   const chatCalls = useChatCalls(selectedId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
+  const [pendingApplication,setPendingApplication]=useState<LoadLinkApplication|null>(null);
   const [query, setQuery] = useState("");
   const [folder, setFolder] = useState<"inbox" | "potential" | "archived">("inbox");
   const [chatSearch, setChatSearch] = useState("");
@@ -710,6 +713,16 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
     return () => { cancelled = true; };
   }, [selectedConversation?.listing_id]);
 
+
+  useEffect(() => {
+    // Listing applications are document previews, not prefilled chat text.
+    if (!selectedConversation) {
+      setPendingApplication(null);
+      return;
+    }
+    const draft = readPendingApplication(selectedConversation.listing_id);
+    setPendingApplication(selectedConversation.role === "buyer" ? draft : null);
+  }, [selectedConversation?.id, selectedConversation?.listing_id, selectedConversation?.role]);
 
   useEffect(() => {
     if (!selectedId || draftSeededForThreadRef.current === selectedId) return;
@@ -1330,6 +1343,61 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
     } finally {
       setSending(false);
     }
+  }
+
+  async function sendApplicationPreview() {
+    const draft = pendingApplication;
+    if (!selectedConversation || !draft || sending || uploading || dailyLimitReached ||
+        potentialDealDeclined || potentialDealPending || conversationBlocked) return;
+    if (selectedConversation.role !== "buyer" || selectedConversation.listing_id !== draft.listing_id) {
+      setError("This application does not belong to the selected conversation.");
+      return;
+    }
+    setSending(true);
+    setError("");
+    try {
+      const user = await getFreshAuthenticatedUser();
+      if (!user) throw new Error("Please sign in to send your application.");
+      const result = await supabase.rpc("send_listing_guest_application", {
+        p_thread_id: selectedConversation.id,
+        p_access_key: selectedConversation.accessKey,
+        p_payload: draft,
+      });
+      if (result.error) throw result.error;
+      // The confirmed database id is enough to display the structured preview
+      // immediately, even if a slower inbox poll is already in flight.
+      const sentId = String(result.data || "");
+      if (sentId) {
+        setMessages(previous => previous.some(message => message.id === sentId)
+          ? previous : [...previous, {
+            id: sentId, sender_role: "buyer", body: "LoadLink " + draft.kind + " application",
+            created_at: new Date().toISOString(), attachment_id: null,
+            file_name: null, file_type: null, file_size: null,
+            message_kind: "application", structured_payload: draft,
+          }]);
+      }
+      clearPendingApplication(draft.listing_id);
+      setPendingApplication(null);
+      const current = new URL(window.location.href);
+      current.searchParams.delete("application");
+      window.history.replaceState(window.history.state, "", current.pathname + current.search + current.hash);
+      void sendPushNotification(selectedConversation, "New LoadLink " + draft.kind + " application");
+      forceScrollRef.current = true;
+      await loadMessages(selectedConversation);
+      await loadConversations(selectedConversation.id);
+    } catch (applicationError) {
+      setError(cleanError(applicationError, "Your application could not be sent. Please retry the same preview."));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function discardApplicationPreview() {
+    if (pendingApplication) clearPendingApplication(pendingApplication.listing_id);
+    setPendingApplication(null);
+    const current = new URL(window.location.href);
+    current.searchParams.delete("application");
+    window.history.replaceState(window.history.state, "", current.pathname + current.search + current.hash);
   }
 
   async function sendPushNotification(conversation: Conversation, preview: string) {
@@ -2180,6 +2248,8 @@ ${message}` : message)}
                             >
                               {message.deleted_at ? (
                                 <p className={`text-sm italic ${mine ? "text-white/55" : "text-black/45"}`}>Message deleted</p>
+                              ) : message.message_kind === "application" && message.structured_payload ? (
+                                <LoadLinkApplicationCard application={message.structured_payload as LoadLinkApplication} />
                               ) : message.message_kind === "quote" && message.structured_payload ? (
                                 <QuoteMessageCard message={message} mine={mine} canRespond={!mine} branding={quoteBranding} onRespond={(status) => void respondToQuote(message, status)} />
                               ) : message.attachment_id ? (
@@ -2189,7 +2259,7 @@ ${message}` : message)}
                                   <DocumentAttachmentCard message={message} mine={mine} onOpen={() => void downloadAttachment(message)} />
                                 )
                               ) : null}
-                              {!message.deleted_at && message.message_kind !== "quote" && message.body && (!message.attachment_id || message.body !== "Shared an attachment") ? (
+                              {!message.deleted_at && message.message_kind !== "quote" && message.message_kind !== "application" && message.body && (!message.attachment_id || message.body !== "Shared an attachment") ? (
                                 <p className="whitespace-pre-wrap break-words text-sm font-medium leading-6">{message.body}</p>
                               ) : null}
                               <div className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] font-semibold ${mine ? "text-white/45" : "text-black/35"}`}>
@@ -2198,7 +2268,7 @@ ${message}` : message)}
                               </div>
                               {!message.deleted_at && messageMenuId === message.id ? (
                                 <div className={`absolute bottom-7 right-2 z-20 min-w-[126px] overflow-hidden rounded-xl border p-1 shadow-xl ${mine ? "border-white/15 bg-[#171717] text-white" : "border-black/10 bg-white text-black"}`}>
-                                  {mine && message.message_kind !== "quote" && Date.now() - new Date(message.created_at).getTime() <= 15 * 60_000 ? <><button type="button" onClick={() => { beginEdit(message); setMessageMenuId(""); }} className={`block w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold ${mine ? "hover:bg-white/10" : "hover:bg-black/[.04]"}`}>Edit</button><button type="button" onClick={() => { setMessageMenuId(""); void deleteMessage(message); }} className="block w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold text-red-500 hover:bg-red-500/10">Delete</button></> : null}
+                                  {mine && message.message_kind !== "quote" && message.message_kind !== "application" && Date.now() - new Date(message.created_at).getTime() <= 15 * 60_000 ? <><button type="button" onClick={() => { beginEdit(message); setMessageMenuId(""); }} className={`block w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold ${mine ? "hover:bg-white/10" : "hover:bg-black/[.04]"}`}>Edit</button><button type="button" onClick={() => { setMessageMenuId(""); void deleteMessage(message); }} className="block w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold text-red-500 hover:bg-red-500/10">Delete</button></> : null}
                                 </div>
                               ) : null}
                             </div>
@@ -2262,6 +2332,32 @@ ${message}` : message)}
                   <JobTimingToast listingId={selectedConversation.listing_id} conversationId={selectedConversation.id} listingTitle={selectedConversation.listing_title} darkMode={darkMode} onFollowUp={(message) => updateTyping(message)} />
                 </div>
               ) : null}
+              {pendingApplication && selectedConversation?.role === "buyer" &&
+                pendingApplication.listing_id === selectedConversation.listing_id ? (
+                <section data-loadlink-application-composer="true"
+                  aria-label="Review application before sending"
+                  className={`max-h-[45dvh] overflow-y-auto border-t px-3 py-3 sm:px-5 ${darkMode ? "border-white/10 bg-[#101010]" : "border-black/10 bg-[#faf9f6]"}`}>
+                  <div className="mx-auto max-w-3xl">
+                    <p className={`mb-2 text-xs font-semibold ${darkMode ? "text-white/70" : "text-black/60"}`}>
+                      Review your application · Not sent
+                    </p>
+                    <LoadLinkApplicationCard application={pendingApplication} preview />
+                    <div className="mt-3 flex gap-2">
+                      <button type="button" onClick={discardApplicationPreview}
+                        className={`min-h-11 rounded-lg border px-4 text-xs font-semibold ${darkMode ? "border-white/20 text-white" : "border-black/15 text-black"}`}>
+                        Cancel
+                      </button>
+                      <button type="button" disabled={sending || uploading || dailyLimitReached ||
+                        potentialDealDeclined || potentialDealPending || conversationBlocked}
+                        onClick={() => void sendApplicationPreview()}
+                        className="min-h-11 flex-1 rounded-lg bg-[#f6b800] px-4 text-xs font-semibold text-black disabled:opacity-40">
+                        {sending ? "Sending…" : "Send application"}
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              ) : null}
+
               <form
                 onSubmit={send}
                 className="loadlink-chat-composer border-t border-black/10 bg-white/55 p-2.5 pb-[max(.65rem,env(safe-area-inset-bottom))] backdrop-blur-2xl sm:p-3"
