@@ -1,4 +1,3 @@
-import { clearVehiclePhotos as clearVehiclePhotoDraft } from "@/lib/vehiclePhotoDraft";
 export const VEHICLE_DRAFT_KEY = "loadlink-vehicle-draft-v1";
 export const VEHICLE_DRAFT_OWNER_KEY = "loadlink-smart-vehicle-draft-owner";
 export const VEHICLE_SUBMISSION_KEY = "loadlink-vehicle-submission-id";
@@ -51,8 +50,6 @@ export function clearVehicleDraft(userId?: string) {
   if (typeof window === "undefined") return;
   try {
     const owner = userId || localStorage.getItem(VEHICLE_DRAFT_OWNER_KEY);
-    const submissionId = localStorage.getItem(VEHICLE_SUBMISSION_KEY);
-    if (owner && submissionId) void clearVehiclePhotoDraft(owner, submissionId);
     for (const key of [VEHICLE_DRAFT_KEY, VEHICLE_SUBMISSION_KEY]) {
       if (!userId || localStorage.getItem(VEHICLE_DRAFT_OWNER_KEY) === userId) localStorage.removeItem(key);
       if (owner) localStorage.removeItem(`${key}:${owner}`);
