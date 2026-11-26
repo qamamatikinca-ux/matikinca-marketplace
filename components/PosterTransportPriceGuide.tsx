@@ -51,13 +51,16 @@ export default function PosterTransportPriceGuide({
   return <section data-loadlink-post-price-guide="true" className="min-w-0 border-t border-current/10 pt-3">
     <button type="button" aria-expanded={expanded} onClick={()=>setExpanded(open=>!open)}
       className="flex min-h-11 w-full items-center justify-between gap-3 text-left">
-      <span><strong className="block text-sm font-semibold">Price determination</strong>
-        <span className="mt-1 block text-xs opacity-65">Optional cost-based transport rate.</span>
+      <span><strong className="block text-sm font-semibold">Automatic price determination</strong>
+        <span role="status" aria-live="polite" className="mt-1 block text-xs opacity-75">
+          {estimate ? `Suggested rate: ${formatZar(estimate.suggestedRate)} per trip`
+            : "Enter actual trip distance and operating costs. The estimate updates automatically."}
+        </span>
       </span>
       <span className="text-base opacity-65" aria-hidden="true">{expanded?"−":"+"}</span>
     </button>
     {expanded?<div className="min-w-0 pb-3 pt-4">
-      <p className="mb-4 text-xs leading-5 opacity-70">Enter actual route distance, fuel costs and operating expenses. LoadLink calculates a suggested rate from these figures.</p>
+      <p className="mb-4 text-xs leading-5 opacity-70">The estimate recalculates automatically from the figures below. No price-check button is required.</p>
       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         {field("loadedKm","Loaded distance (km)","Required")}
         {field("emptyKm","Empty or return distance (km)","0")}
@@ -80,7 +83,7 @@ export default function PosterTransportPriceGuide({
       {estimate?<div role="status" className="mt-4 border-t border-current/10 pt-4">
         <p className="text-xs font-semibold opacity-65">Suggested rate per trip · excluding VAT</p>
         <p className="mt-1 text-xl font-bold">{formatZar(estimate.suggestedRate)}</p>
-        <details className="mt-3 text-xs" open>
+        <details className="mt-3 text-xs">
           <summary className="cursor-pointer font-semibold">Calculation breakdown</summary>
           <div className="mt-2 space-y-1 leading-5 opacity-80">
             <p>Distance: {estimate.totalKm} km · Fuel: {estimate.fuelLitres} L ({formatZar(estimate.fuelCost)})</p>
@@ -106,7 +109,7 @@ export default function PosterTransportPriceGuide({
         </div>
       </div>:<p role="status" className="mt-4 text-xs leading-5 opacity-65">
         {anyInvalid ? "Enter non-negative costs and a target margin between 0% and 95%." :
-          "Enter positive loaded distance, fuel consumption and diesel price to calculate your rate."}
+          "Enter positive loaded distance, fuel consumption and diesel price. Your rate will appear automatically."}
       </p>}
       <p className="mt-3 text-[11px] leading-5 opacity-55">
         Indicative planning calculation, not a market quote. VAT and unentered costs are excluded. Confirm actual route and contractual terms before posting.
