@@ -1345,6 +1345,49 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
     }
   }
 
+  async function sendApplicationPreview() {
+    const draft = pendingApplication;
+    if (!selectedConversation || !draft || sending || uploading || dailyLimitReached ||
+        potentialDealDeclined || potentialDealPending || conversationBlocked) return;
+    if (selectedConversation.role !== "buyer" || selectedConversation.listing_id !== draft.listing_id) {
+      setError("This application does not belong to the selected conversation.");
+      return;
+    }
+    setSending(true);
+    setError("");
+    try {
+      const user = await getFreshAuthenticatedUser();
+      if (!user) throw new Error("Please sign in to send your application.");
+      const result = await supabase.rpc("send_listing_guest_application", {
+        p_thread_id: selectedConversation.id,
+        p_access_key: selectedConversation.accessKey,
+        p_payload: draft,
+      });
+      if (result.error) throw result.error;
+      clearPendingApplication(draft.listing_id);
+      setPendingApplication(null);
+      const current = new URL(window.location.href);
+      current.searchParams.delete("application");
+      window.history.replaceState(window.history.state, "", current.pathname + current.search + current.hash);
+      void sendPushNotification(selectedConversation, "New LoadLink " + draft.kind + " application");
+      forceScrollRef.current = true;
+      await loadMessages(selectedConversation);
+      await loadConversations(selectedConversation.id);
+    } catch (applicationError) {
+      setError(cleanError(applicationError, "Your application could not be sent. Please retry the same preview."));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function discardApplicationPreview() {
+    if (pendingApplication) clearPendingApplication(pendingApplication.listing_id);
+    setPendingApplication(null);
+    const current = new URL(window.location.href);
+    current.searchParams.delete("application");
+    window.history.replaceState(window.history.state, "", current.pathname + current.search + current.hash);
+  }
+
   async function sendPushNotification(conversation: Conversation, preview: string) {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -2277,6 +2320,32 @@ ${message}` : message)}
                   <JobTimingToast listingId={selectedConversation.listing_id} conversationId={selectedConversation.id} listingTitle={selectedConversation.listing_title} darkMode={darkMode} onFollowUp={(message) => updateTyping(message)} />
                 </div>
               ) : null}
+              {pendingApplication && selectedConversation?.role === "buyer" &&
+                pendingApplication.listing_id === selectedConversation.listing_id ? (
+                <section data-loadlink-application-composer="true"
+                  aria-label="Review application before sending"
+                  className={`max-h-[45dvh] overflow-y-auto border-t px-3 py-3 sm:px-5 ${darkMode ? "border-white/10 bg-[#101010]" : "border-black/10 bg-[#faf9f6]"}`}>
+                  <div className="mx-auto max-w-3xl">
+                    <p className={`mb-2 text-xs font-semibold ${darkMode ? "text-white/70" : "text-black/60"}`}>
+                      Review your application · Not sent
+                    </p>
+                    <LoadLinkApplicationCard application={pendingApplication} preview />
+                    <div className="mt-3 flex gap-2">
+                      <button type="button" onClick={discardApplicationPreview}
+                        className={`min-h-11 rounded-lg border px-4 text-xs font-semibold ${darkMode ? "border-white/20 text-white" : "border-black/15 text-black"}`}>
+                        Cancel
+                      </button>
+                      <button type="button" disabled={sending || uploading || dailyLimitReached ||
+                        potentialDealDeclined || potentialDealPending || conversationBlocked}
+                        onClick={() => void sendApplicationPreview()}
+                        className="min-h-11 flex-1 rounded-lg bg-[#f6b800] px-4 text-xs font-semibold text-black disabled:opacity-40">
+                        {sending ? "Sending…" : "Send application"}
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              ) : null}
+
               <form
                 onSubmit={send}
                 className="loadlink-chat-composer border-t border-black/10 bg-white/55 p-2.5 pb-[max(.65rem,env(safe-area-inset-bottom))] backdrop-blur-2xl sm:p-3"
