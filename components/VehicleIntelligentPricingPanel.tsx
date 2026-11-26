@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { formatZar } from "@/lib/vehicleMarketGuide";
+import { canAutoDetermineVehiclePrice } from "@/lib/automaticVehiclePricing";
 
 type PriceEvidence = {
   available?: boolean;
@@ -36,11 +37,9 @@ export default function VehicleIntelligentPricingPanel({
   const [evidence, setEvidence] = useState<PriceEvidence | null>(null);
   const [error, setError] = useState("");
   const selling = offerMode === "sale" || offerMode === "sale_or_rental" || offerMode === "poa";
-  const validMileage = mileage.trim() !== "" && Number.isSafeInteger(Number(mileage)) &&
-    Number(mileage) >= 0 && Number(mileage) <= 10_000_000;
-  const ready = selling && readyForEstimate && make.trim().length >= 2 &&
-    model.trim().length >= 2 && Number.isInteger(year) && year >= 1970 &&
-    year <= new Date().getFullYear() + 1 && condition.trim().length > 0 && validMileage;
+  const ready = canAutoDetermineVehiclePrice({
+    make, model, year, condition, mileage, offerMode, detailsComplete: readyForEstimate,
+  });
 
   useEffect(() => {
     let active = true;
