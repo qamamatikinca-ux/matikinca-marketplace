@@ -29,6 +29,8 @@ import LoadLinkThemeToggle from "@/components/LoadLinkThemeToggle";
 import LogisticsMessageTools, { type QuoteAutofillDefaults, type QuoteVehicleOption, type StructuredQuote } from "@/components/LogisticsMessageTools";
 import JobConversationStatusDialog from "@/components/JobConversationStatusDialog";
 import DriverMessagesInbox from "@/components/DriverMessagesInbox";
+import LoadLinkApplicationCard from "@/components/LoadLinkApplicationCard";
+import { readPendingApplication, clearPendingApplication, type LoadLinkApplication } from "@/lib/loadlinkApplication";
 import { useLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { currentRelativePath, isAuthenticatedUser, loginHref } from "@/lib/auth";
@@ -96,7 +98,7 @@ type ChatMessage = {
   file_size: number | null;
   edited_at?: string | null;
   deleted_at?: string | null;
-  message_kind?: "text" | "quote" | "system" | null;
+  message_kind?: "text" | "quote" | "application" | "system" | null;
   structured_payload?: QuotePayload | Record<string, unknown> | null;
 };
 
@@ -472,6 +474,7 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
   const chatCalls = useChatCalls(selectedId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
+  const [pendingApplication,setPendingApplication]=useState<LoadLinkApplication|null>(null);
   const [query, setQuery] = useState("");
   const [folder, setFolder] = useState<"inbox" | "potential" | "archived">("inbox");
   const [chatSearch, setChatSearch] = useState("");
@@ -710,6 +713,16 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
     return () => { cancelled = true; };
   }, [selectedConversation?.listing_id]);
 
+
+  useEffect(() => {
+    // Listing applications are document previews, not prefilled chat text.
+    if (!selectedConversation || !new URLSearchParams(window.location.search).has("application")) {
+      setPendingApplication(null);
+      return;
+    }
+    const draft = readPendingApplication(selectedConversation.listing_id);
+    setPendingApplication(selectedConversation.role === "buyer" ? draft : null);
+  }, [selectedConversation?.id, selectedConversation?.listing_id, selectedConversation?.role]);
 
   useEffect(() => {
     if (!selectedId || draftSeededForThreadRef.current === selectedId) return;
@@ -2180,6 +2193,8 @@ ${message}` : message)}
                             >
                               {message.deleted_at ? (
                                 <p className={`text-sm italic ${mine ? "text-white/55" : "text-black/45"}`}>Message deleted</p>
+                              ) : message.message_kind === "application" && message.structured_payload ? (
+                                <LoadLinkApplicationCard application={message.structured_payload as LoadLinkApplication} />
                               ) : message.message_kind === "quote" && message.structured_payload ? (
                                 <QuoteMessageCard message={message} mine={mine} canRespond={!mine} branding={quoteBranding} onRespond={(status) => void respondToQuote(message, status)} />
                               ) : message.attachment_id ? (
@@ -2189,7 +2204,7 @@ ${message}` : message)}
                                   <DocumentAttachmentCard message={message} mine={mine} onOpen={() => void downloadAttachment(message)} />
                                 )
                               ) : null}
-                              {!message.deleted_at && message.message_kind !== "quote" && message.body && (!message.attachment_id || message.body !== "Shared an attachment") ? (
+                              {!message.deleted_at && message.message_kind !== "quote" && message.message_kind !== "application" && message.body && (!message.attachment_id || message.body !== "Shared an attachment") ? (
                                 <p className="whitespace-pre-wrap break-words text-sm font-medium leading-6">{message.body}</p>
                               ) : null}
                               <div className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] font-semibold ${mine ? "text-white/45" : "text-black/35"}`}>
@@ -2198,7 +2213,7 @@ ${message}` : message)}
                               </div>
                               {!message.deleted_at && messageMenuId === message.id ? (
                                 <div className={`absolute bottom-7 right-2 z-20 min-w-[126px] overflow-hidden rounded-xl border p-1 shadow-xl ${mine ? "border-white/15 bg-[#171717] text-white" : "border-black/10 bg-white text-black"}`}>
-                                  {mine && message.message_kind !== "quote" && Date.now() - new Date(message.created_at).getTime() <= 15 * 60_000 ? <><button type="button" onClick={() => { beginEdit(message); setMessageMenuId(""); }} className={`block w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold ${mine ? "hover:bg-white/10" : "hover:bg-black/[.04]"}`}>Edit</button><button type="button" onClick={() => { setMessageMenuId(""); void deleteMessage(message); }} className="block w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold text-red-500 hover:bg-red-500/10">Delete</button></> : null}
+                                  {mine && message.message_kind !== "quote" && message.message_kind !== "application" && Date.now() - new Date(message.created_at).getTime() <= 15 * 60_000 ? <><button type="button" onClick={() => { beginEdit(message); setMessageMenuId(""); }} className={`block w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold ${mine ? "hover:bg-white/10" : "hover:bg-black/[.04]"}`}>Edit</button><button type="button" onClick={() => { setMessageMenuId(""); void deleteMessage(message); }} className="block w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold text-red-500 hover:bg-red-500/10">Delete</button></> : null}
                                 </div>
                               ) : null}
                             </div>
