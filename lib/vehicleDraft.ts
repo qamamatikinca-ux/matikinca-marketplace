@@ -1,6 +1,16 @@
 export const VEHICLE_DRAFT_KEY = "loadlink-vehicle-draft-v1";
 export const VEHICLE_DRAFT_OWNER_KEY = "loadlink-smart-vehicle-draft-owner";
 export const VEHICLE_SUBMISSION_KEY = "loadlink-vehicle-submission-id";
+const VEHICLE_ACTIVE_TAB_KEY = "loadlink-vehicle-draft-active-tab:";
+export function isVehicleDraftActiveInTab(userId: string) {
+  try { return Boolean(userId && sessionStorage.getItem(VEHICLE_ACTIVE_TAB_KEY + userId) === "1"); }
+  catch { return false; }
+}
+export function markVehicleDraftActiveInTab(userId: string) {
+  try { if (userId) sessionStorage.setItem(VEHICLE_ACTIVE_TAB_KEY + userId, "1"); }
+  catch {}
+}
+
 export type VehicleDraft = Record<string, string | number | boolean | null>;
 
 export function hasVehicleDraft(draft: VehicleDraft | null) {
@@ -44,6 +54,7 @@ export function clearVehicleDraft(userId?: string) {
       if (!userId || localStorage.getItem(VEHICLE_DRAFT_OWNER_KEY) === userId) localStorage.removeItem(key);
       if (owner) localStorage.removeItem(`${key}:${owner}`);
     }
+    if (owner) try { sessionStorage.removeItem(VEHICLE_ACTIVE_TAB_KEY + owner); } catch {}
     window.dispatchEvent(new Event("loadlink-vehicle-draft-changed"));
   } catch {}
 }
