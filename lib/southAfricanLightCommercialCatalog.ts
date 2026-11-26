@@ -58,3 +58,24 @@ export function getLightCommercialModelYearStatus(make: string, model: string, y
   if (year >= candidate.from && (!candidate.to || year <= candidate.to)) return { valid: true, from: candidate.from, to: candidate.to || null, model: candidate.name };
   return { valid: false, from: candidate.from, to: candidate.to || null, model: candidate.name };
 }
+
+
+/**
+ * Only unambiguous model-family facts are suggested during posting.
+ * No service, tyre, damage, engine variant, ownership or vehicle condition is inferred.
+ * Sellers can always edit these suggested values.
+ */
+export function getLightCommercialModelPrefill(make:string,model:string,year:number):
+  {fuelType?:string;bodyType?:string}|null {
+  const status=getLightCommercialModelYearStatus(make,model,year);
+  if(!status?.valid || status.model.toLowerCase()!==model.trim().toLowerCase())return null;
+  const suggestions:Record<string,{fuelType?:string;bodyType?:string}>={
+    "ford|e-transit":{fuelType:"Electric"},
+    "volkswagen|id. buzz cargo":{fuelType:"Electric",bodyType:"Panel van"},
+    "volkswagen|caddy cargo":{bodyType:"Panel van"},
+    "opel|combo cargo":{bodyType:"Panel van"},
+    "maxus|edeliver 3":{fuelType:"Electric",bodyType:"Panel van"},
+    "maxus|edeliver 9":{fuelType:"Electric",bodyType:"Panel van"},
+  };
+  return suggestions[`${make.trim().toLowerCase()}|${status.model.toLowerCase()}`]||null;
+}
