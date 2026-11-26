@@ -480,53 +480,99 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   async function handleVehiclePhotos(event: ChangeEvent<HTMLInputElement>) {
     const max = packageType === "dealer" ? 30 : packageType === "pro" ? 10 : 2;
     const allSelected = Array.from(event.target.files ?? []) as File[];
-    const candidates = allSelected.slice(0, max);
     event.target.value = "";
+    if (!allSelected.length) return;
+    const remaining = Math.max(0, max - vehiclePhotos.length);
+    if (!remaining) {
+      setMessage(`All ${max} photo slots are already filled. Remove one to add a different photo.`);
+      return;
+    }
+    const candidates = allSelected.slice(0, remaining);
+    const selectionVersion = ++photoSelectionVersionRef.current;
     setMessage("");
-    if (!candidates.length) return;
-
     setPreparingVehiclePhotos(true);
-    const selected: File[] = [];
-    const previews: string[] = [];
-
+    const preparedFiles: File[] = [];
+    const preparedPreviews: string[] = [];
+    const failures: string[] = [];
     try {
-      for (let index = 0; index < candidates.length; index += 1) {
+      for (let index = 0; index < candidates.length; index++) {
         const source = candidates[index];
         const validation = validateImageFile(source, source.name || `Vehicle photo ${index + 1}`);
-        if (validation) throw new Error(validation);
-        // Photo-quality analysis is advisory; unsupported phone codecs must not block a valid upload.
-        try { const quality = await inspectLoadLinkImage(source); showLoadLinkImageQuality(quality.messages); } catch { /* preparation below validates the actual image */ }
-        setVehiclePhotoProgress(`Preparing vehicle photo ${index + 1} of ${candidates.length}…`);
-        const prepared = await prepareImageFileForForm(source, {
-          maxWidth: 1440,
-          maxHeight: 1440,
-          quality: 0.76,
-          namePrefix: `loadlink-vehicle-${index + 1}`,
-        });
-        selected.push(prepared.file);
-        previews.push(prepared.previewUrl);
-        await new Promise((resolve) => window.setTimeout(resolve, 20));
-      }
-
-      vehiclePreviewUrlsRef.current.forEach(revokePreviewUrl);
-      vehiclePreviewUrlsRef.current = previews;
-      setVehiclePhotos(selected);
-      setVehiclePreviews(previews);
-      if (allSelected.length > max) {
-        setMessage(`We kept the first ${max} vehicle photos.`);
-        if (true) {
-          setPhotoLimitToast(false);
-          window.requestAnimationFrame(() => setPhotoLimitToast(true));
+        if (validation) { failures.push(validation); continue; }
+        try {
+          setVehiclePhotoProgress(`Preparing photo ${vehiclePhotos.length + index + 1} of ${max}…`);
+          // Photo quality checks are advisory and must never discard a valid upload.
+          try { const quality = await inspectLoadLinkImage(source); showLoadLinkImageQuality(quality.messages); } catch {}
+          const prepared = await prepareImageFileForForm(source, {
+            maxWidth: 1440, maxHeight: 1440, quality: 0.76,
+            namePrefix: `loadlink-vehicle-${vehiclePhotos.length + index + 1}`,
+          });
+          preparedFiles.push(prepared.file);
+          preparedPreviews.push(prepared.previewUrl);
+        } catch (error) {
+          failures.push(readableUploadError(error, `Photo ${index + 1} could not be prepared.`));
         }
+        await new Promise(resolve => window.setTimeout(resolve, 15));
       }
-    } catch (error) {
-      previews.forEach(revokePreviewUrl);
-      setMessage(readableUploadError(error, "One selected vehicle photo could not be prepared."));
+      if (selectionVersion !== photoSelectionVersionRef.current) {
+        preparedPreviews.forEach(revokePreviewUrl);
+        return;
+      }
+      if (preparedFiles.length) {
+        const combined = [...vehiclePhotos, ...preparedFiles];
+        const combinedPreviews = [...vehiclePreviews, ...preparedPreviews];
+        vehiclePreviewUrlsRef.current = combinedPreviews;
+        setVehiclePhotos(combined);
+        setVehiclePreviews(combinedPreviews);
+        // Private, local recovery: never includes identity documents or face evidence.
+        const saved = await saveVehiclePhotoDraft(draftOwnerRef.current, currentSubmissionId(), combined);
+        setPhotoRecoveryNotice(saved
+          ? "Vehicle photos saved on this device in case your browser reloads."
+          : "Photos are selected, but this browser could not save a recovery copy. Keep this tab open until submission.");
+      }
+      if (allSelected.length > remaining) {
+        failures.push(`Only ${remaining} more photo${remaining === 1 ? "" : "s"} fit your current plan.`);
+        setPhotoLimitToast(true);
+      }
+      if (failures.length) setMessage(failures.join(" · ").slice(0, 450));
     } finally {
       setPreparingVehiclePhotos(false);
       setVehiclePhotoProgress("");
     }
   }
+
+  function removeVehiclePhoto(index: number) {
+    photoSelectionVersionRef.current++;
+    const preview = vehiclePreviews[index];
+    const nextFiles = vehiclePhotos.filter((_, i) => i !== index);
+    const nextPreviews = vehiclePreviews.filter((_, i) => i !== index);
+    setVehiclePhotos(nextFiles);
+    setVehiclePreviews(nextPreviews);
+    vehiclePreviewUrlsRef.current = nextPreviews;
+    if (preview) revokePreviewUrl(preview);
+    void saveVehiclePhotoDraft(draftOwnerRef.current, currentSubmissionId(), nextFiles);
+  }
+
+  useEffect(() => {
+    // Safari can discard the page after opening its camera/photo picker.
+    // Restore only the same account's photos for a resumed listing; ID/face data
+    // is never cached here and still requires explicit selection/consent.
+    if (!draftHydrated || !signedIn || !resumeDraft) return;
+    const ownerId = draftOwnerRef.current, id = submissionIdRef.current;
+    if (!ownerId || !id) return;
+    let alive = true;
+    const selectionVersion = photoSelectionVersionRef.current;
+    void restoreVehiclePhotoDraft(ownerId, id).then(files => {
+      if (!alive || selectionVersion !== photoSelectionVersionRef.current || !files.length) return;
+      if (vehiclePreviewUrlsRef.current.length) return;
+      const urls = files.map(file => URL.createObjectURL(file));
+      vehiclePreviewUrlsRef.current = urls;
+      setVehiclePhotos(files);
+      setVehiclePreviews(urls);
+      setPhotoRecoveryNotice(`Restored ${files.length} vehicle photo${files.length === 1 ? "" : "s"} from this device. Please reselect identity documents if your browser restarted.`);
+    });
+    return () => { alive = false; };
+  }, [draftHydrated, signedIn, resumeDraft]);
 
   useEffect(() => () => {
     vehiclePreviewUrlsRef.current.forEach(revokePreviewUrl);
@@ -1074,7 +1120,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
 
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="03" title="Photos and verification" description="Upload clear product photos and the critical documents required for review." />
-              <div className="p-5 md:p-7"><label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>{vehiclePhotoProgress || `Minimum 2 photos · up to ${packageType === "dealer" ? 30 : packageType === "pro" ? 10 : 2}`}</span><input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} disabled={preparingVehiclePhotos || saving} className="hidden" /></label>{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <LoadLinkImage key={preview} src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 shrink-0 snap-start rounded-xl object-cover" />)}</div> : null}</div>
+              <div className="p-5 md:p-7"><label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#f6b800]/50 bg-[#f6b800]/5 px-5 text-center"><span className="text-sm font-black uppercase">Upload vehicle photos</span><span className={`mt-2 text-xs ${muted}`}>{vehiclePhotoProgress || `Minimum 2 photos · up to ${packageType === "dealer" ? 30 : packageType === "pro" ? 10 : 2}`}</span><input type="file" accept="image/*" multiple onChange={handleVehiclePhotos} disabled={preparingVehiclePhotos || saving} className="hidden" /></label>{photoRecoveryNotice ? <p role="status" className="px-5 text-xs leading-5 opacity-65">{photoRecoveryNotice}</p> : null}{vehiclePreviews.length ? <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">{vehiclePreviews.map((preview, index) => <div key={preview} className="relative w-32 shrink-0 snap-start"><LoadLinkImage src={preview} alt={`Vehicle preview ${index + 1}`} className="aspect-square w-32 rounded-xl object-cover" /><button type="button" onClick={() => removeVehiclePhoto(index)} aria-label={`Remove vehicle photo ${index + 1}`} disabled={saving || preparingVehiclePhotos} className="mt-1 min-h-9 w-full rounded-md border border-current/15 text-xs font-semibold disabled:opacity-50">Remove</button></div>)}</div> : null}</div>
               {sellerType === "dealership" && !dealerPost ? <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><Field label="Dealership name"><input value={dealershipName} onChange={(event) => setDealershipName(event.target.value)} className={inputClass} required /></Field><Field label="Company registration number"><input value={companyRegistrationNumber} onChange={(event) => setCompanyRegistrationNumber(event.target.value)} className={inputClass} required /></Field><Field label="SARS tax number"><input value={taxNumber} onChange={(event) => setTaxNumber(event.target.value)} className={inputClass} required /></Field><DocumentInput label="CIPC company registration" required file={documents.companyRegistration} onChange={(file) => setDocument("companyRegistration", file)} /><DocumentInput label="SARS tax document" required file={documents.taxDocument} onChange={(file) => setDocument("taxDocument", file)} /><DocumentInput label="Proof of business address" required file={documents.businessAddress} onChange={(file) => setDocument("businessAddress", file)} /><DocumentInput label="Representative authority" required file={documents.representativeAuthority} onChange={(file) => setDocument("representativeAuthority", file)} /></div> : null}
               <div className="grid gap-4 border-t border-current/10 p-5 md:grid-cols-2 md:p-7"><DocumentInput label="South African ID or passport" required file={documents.idDocument} onChange={(file) => setDocument("idDocument", file)} />{(vehicleCategory === "truck" || vehicleCategory === "bakkie_van") ? <DocumentInput label="Driver’s licence" required file={documents.driverLicence} onChange={(file) => setDocument("driverLicence", file)} /> : null}<DocumentInput label="Vehicle registration certificate" required file={documents.registrationPaper} onChange={(file) => setDocument("registrationPaper", file)} /><DocumentInput label="Proof of ownership or authority to list" required file={documents.ownershipProof} onChange={(file) => setDocument("ownershipProof", file)} /><DocumentInput label="Roadworthy certificate" file={documents.roadworthy} onChange={(file) => setDocument("roadworthy", file)} /><DocumentInput label="Operating licence" file={documents.operatingLicence} onChange={(file) => setDocument("operatingLicence", file)} />{transmissionCheck?.requiresModificationProof ? <DocumentInput label="Gearbox conversion paperwork" required file={documents.modificationProof} onChange={(file) => setDocument("modificationProof", file)} /> : null}</div>
               {sellerType==="private"?<div className="border-t border-current/10 p-5 md:p-7">
