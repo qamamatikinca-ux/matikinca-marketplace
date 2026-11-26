@@ -548,6 +548,7 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
   const recordingRequestRef = useRef(0);
   const recordingPendingRef = useRef(false);
   const initialMessageDraftRef = useRef("");
+  const initialApplicationRequestedRef = useRef(false);
   const draftSeededForThreadRef = useRef("");
 
   useEffect(() => {
@@ -716,7 +717,7 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
 
   useEffect(() => {
     // Listing applications are document previews, not prefilled chat text.
-    if (!selectedConversation || !new URLSearchParams(window.location.search).has("application")) {
+    if (!selectedConversation || !initialApplicationRequestedRef.current) {
       setPendingApplication(null);
       return;
     }
@@ -1108,6 +1109,7 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
           setMessagePrivacy(nextPrivacy);
         });
         const params = new URLSearchParams(window.location.search);
+        initialApplicationRequestedRef.current = params.get("application") === "1";
         initialMessageDraftRef.current = String(params.get("draft") || "").trim();
         let listingId = params.get("listing");
         const dealershipId = params.get("dealership");
@@ -1365,6 +1367,7 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
       });
       if (result.error) throw result.error;
       clearPendingApplication(draft.listing_id);
+      initialApplicationRequestedRef.current = false;
       setPendingApplication(null);
       const current = new URL(window.location.href);
       current.searchParams.delete("application");
@@ -1382,6 +1385,7 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
 
   function discardApplicationPreview() {
     if (pendingApplication) clearPendingApplication(pendingApplication.listing_id);
+    initialApplicationRequestedRef.current = false;
     setPendingApplication(null);
     const current = new URL(window.location.href);
     current.searchParams.delete("application");
