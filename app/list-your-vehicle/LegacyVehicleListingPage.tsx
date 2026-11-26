@@ -1013,7 +1013,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 </div>
                 <div className="md:col-span-2 min-w-0">
                   <VehicleOwnershipEstimator darkMode={darkMode} category={vehicleCategory || "vehicle"}
-                    make={brand} model={modelName} condition={condition}
+                    make={brand} model={modelName} condition={condition} fuelType={fuelType}
                     initialFuel={fuelUseL100} onFuelChange={setFuelUseL100} posting />
                 </div>
                 {offerMode === "rental" || offerMode === "sale_or_rental" ? <Field label="Rental period"><select value={rentalPeriod} onChange={(event) => setRentalPeriod(event.target.value as RentalPeriod)} className={inputClass}><option value="day">Per day</option><option value="week">Per week</option><option value="month">Per month</option></select></Field> : null}
