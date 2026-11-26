@@ -1366,6 +1366,18 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
         p_payload: draft,
       });
       if (result.error) throw result.error;
+      // The confirmed database id is enough to display the structured preview
+      // immediately, even if a slower inbox poll is already in flight.
+      const sentId = String(result.data || "");
+      if (sentId) {
+        setMessages(previous => previous.some(message => message.id === sentId)
+          ? previous : [...previous, {
+            id: sentId, sender_role: "buyer", body: "LoadLink " + draft.kind + " application",
+            created_at: new Date().toISOString(), attachment_id: null,
+            file_name: null, file_type: null, file_size: null,
+            message_kind: "application", structured_payload: draft,
+          }]);
+      }
       clearPendingApplication(draft.listing_id);
       initialApplicationRequestedRef.current = false;
       setPendingApplication(null);
