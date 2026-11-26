@@ -46,7 +46,7 @@ test("camera scan keeps all five challenge steps and never asserts identity appr
 
 test("mobile vehicle photo picker adds photos instead of discarding existing ones",()=>{
  const form=read("app/list-your-vehicle/LegacyVehicleListingPage.tsx");
- assert.match(form,/const combined = \[\.\.\.vehiclePhotos,\.\.\.preparedFiles\]/);
+ assert.match(form,/const combined = \[\.\.\.vehiclePhotos,\s*\.\.\.preparedFiles\]/);
  assert.match(form,/const remaining = Math\.max\(0, max - vehiclePhotos\.length\)/);
  assert.match(form,/preparedPreviews\.forEach\(revokePreviewUrl\)/);
  assert.match(form,/removeVehiclePhoto\(index/);
@@ -70,7 +70,7 @@ test("file recovery stays user-scoped, excludes ID documents and degrades safely
  const state=read("lib/vehicleDraft.ts");
  assert.match(state,/isVehicleDraftActiveInTab/);
  assert.match(state,/markVehicleDraftActiveInTab/);
- assert.match(state,/clearVehiclePhotoDraft/);
+ assert.match(read("components/LoadLinkVehicleWizardController20260825.tsx"),/clearVehiclePhotoDraft/);
 });
 
 test("model-year checks are specific and do not block a legitimate next-year model",()=>{
