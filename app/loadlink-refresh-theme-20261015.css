@@ -443,3 +443,22 @@ html[data-loadlink-theme="dark"] body :is(
     transition-duration: 0ms !important;
   }
 }
+
+/* A sent LoadLink application is a real white document preview in either mode.
+   It must stay readable inside dark-mode messages, whose older global rules
+   otherwise force every .bg-white element to black. */
+html[data-loadlink-theme] body .loadlink-messages [data-loadlink-application-card="true"] {
+  background: #fff !important;
+  color: #171717 !important;
+  border-color: rgba(0,0,0,.14) !important;
+  color-scheme: light;
+}
+html[data-loadlink-theme] body .loadlink-messages [data-loadlink-application-card="true"] [class*="text-black/"] {
+  color: rgba(23,23,23,.62) !important;
+}
+html[data-loadlink-theme] body .loadlink-messages [data-loadlink-application-card="true"] [class*="border-black/"] {
+  border-color: rgba(0,0,0,.12) !important;
+}
+html[data-loadlink-theme] body .loadlink-messages [data-loadlink-application-card="true"] :is(h3,dd,strong) {
+  color: #171717 !important;
+}
