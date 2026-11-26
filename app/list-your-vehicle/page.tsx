@@ -59,7 +59,7 @@ export default function ListYourVehiclePage() {
   const [initialPackage, setInitialPackage] = useState<ListingPackage>("standard");
   const [draftDecision, setDraftDecision] = useState<"pending" | "resume" | "fresh">("fresh");
   const [dealerPostingGate, setDealerPostingGate] = useState<DealerPostingGate>(null);
-  const page = darkMode ? "bg-black text-white" : "bg-[#f5f1e8] text-black";
+  const page = darkMode ? "bg-black text-white" : "bg-[#f8f9fa] text-black";
 
   useEffect(() => {
     const url = new URL(window.location.href);
