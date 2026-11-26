@@ -1,5 +1,5 @@
 /* LoadLink workspace: scoped components, shared spacing, clear controls. */
-.ll-workspace-page,[data-loadlink-settings],[data-loadlink-support],[data-loadlink-dealer-control-centre="20261021"]{--ll-surface:#fff;--ll-bg:#f7f5ef;--ll-text:#191b18;--ll-muted:#61665f;--ll-border:#e3e5dd;--ll-soft:#f3f4ee;--ll-gold:#f6b800;--ll-gold-ink:#805d00}
+.ll-workspace-page,[data-loadlink-settings],[data-loadlink-support],[data-loadlink-dealer-control-centre="20261021"]{--ll-surface:#fff;--ll-bg:#f8f9fa;--ll-text:#191b18;--ll-muted:#61665f;--ll-border:#e3e5dd;--ll-soft:#f5f6f8;--ll-gold:#f6b800;--ll-gold-ink:#805d00}
 .ll-workspace-page[data-theme="dark"],[data-loadlink-settings][data-theme="dark"],[data-loadlink-support][data-theme="dark"],[data-loadlink-dealer-control-centre="20261021"][data-theme="dark"]{--ll-surface:#111412;--ll-bg:#090b0a;--ll-text:#f4f5f0;--ll-muted:#a9b0a8;--ll-border:#2b302c;--ll-soft:#1a1e1b;--ll-gold-ink:#f6c94c}
 .ll-workspace-page{background:var(--ll-bg);color:var(--ll-text)}
 .ll-eyebrow{font-size:11px!important;letter-spacing:.06em;font-weight:650!important;text-transform:uppercase;color:var(--ll-muted,#737770)!important;margin:0 0 8px!important}
@@ -11,7 +11,7 @@
 .ll-secondary-button{background:var(--ll-surface);color:var(--ll-text)}
 :where(.ll-workspace-page,[data-loadlink-settings],[data-loadlink-support],[data-loadlink-dealer-control-centre="20261021"]) :is(button,a,input,textarea,select,summary):focus-visible{outline:2px solid #d5a000;outline-offset:3px}
 /* Consent is a calm, readable panel with equally accessible choices. */
-html body aside[data-loadlink-cookie-panel]{width:min(760px,calc(100% - 32px))!important;max-width:760px!important;inset:auto 16px max(16px,env(safe-area-inset-bottom))!important;padding:22px!important;border-radius:22px!important;border:1px solid #dedfd6!important;background:#fffefa!important;color:#1b1d17!important;box-shadow:0 10px 50px #0002!important;backdrop-filter:blur(18px)}
+html body aside[data-loadlink-cookie-panel]{width:min(760px,calc(100% - 32px))!important;max-width:760px!important;inset:auto 16px max(16px,env(safe-area-inset-bottom))!important;padding:22px!important;border-radius:22px!important;border:1px solid #dedfd6!important;background:#ffffff!important;color:#1b1d17!important;box-shadow:0 10px 50px #0002!important;backdrop-filter:blur(18px)}
 html body aside[data-loadlink-cookie-panel][data-theme="dark"]{background:#151815!important;color:#f3f5ec!important;border-color:#343b31!important;box-shadow:0 10px 50px #0007!important}
 [data-loadlink-cookie-panel] .ll-cookie-layout{display:grid;gap:18px}
 html body [data-loadlink-cookie-panel] h2{margin:0!important;font-size:18px!important;line-height:1.35!important;letter-spacing:-.02em!important;font-weight:700!important}
@@ -70,7 +70,7 @@ html body .ll-help-search input{width:100%!important;min-width:0!important;borde
 .ll-help-contact p{font-size:14px;line-height:1.7;color:var(--ll-muted);max-width:300px}
 .ll-help-contact>div:last-child{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .ll-help-contact a{margin:0 0 0 8px}
-html body .ll-linkbot-panel{background:#fffefa!important;border-radius:24px!important;box-shadow:0 20px 80px #0004!important}
+html body .ll-linkbot-panel{background:#ffffff!important;border-radius:24px!important;box-shadow:0 20px 80px #0004!important}
 .ll-linkbot-panel header{padding:20px!important}
 .ll-linkbot-panel header p:last-child{font-size:12px!important;line-height:1.6;opacity:.7}
 .ll-linkbot-panel header h2{font-size:23px!important}
@@ -187,9 +187,9 @@ html body [data-loadlink-settings] summary{list-style:none}
 
 /* Account settings: single-source design for the mobile overview and inner pages. */
 html body main[data-loadlink-settings] {
-  --ll-bg: #f7f5ef;
+  --ll-bg: #f8f9fa;
   --ll-surface: #ffffff;
-  --ll-soft: #f4f2ec;
+  --ll-soft: #f5f6f8;
   --ll-border: #e4e2dc;
   --ll-text: #171717;
   --ll-muted: #676965;
