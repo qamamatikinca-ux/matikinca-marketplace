@@ -1,72 +1,149 @@
 "use client";
 
-/**
- * Keep the actual LoadLink truck visible from the very first paint.
- * The previous animation drove it fully offscreen and left a blank cream page.
- */
 export default function LoadLinkLoading() {
   return (
-    <div data-loadlink-page-loading="true" role="status" aria-live="polite"
-      aria-label="Loading LoadLink"
-      className="pointer-events-none fixed inset-0 z-[9999] grid place-items-center overflow-hidden">
-      <div className="loadlink-loading-scene" aria-hidden="true">
-        <div className="loadlink-loading-truck">
-          <div className="loadlink-loading-trailer"><span>LOADLINK</span></div>
-          <div className="loadlink-loading-cab"><span className="loadlink-loading-window" /></div>
-          <span className="loadlink-loading-wheel wheel-back" />
-          <span className="loadlink-loading-wheel wheel-front" />
+    <div data-loadlink-page-loading="true" role="status" aria-label="Loading LoadLink" aria-live="polite" className="pointer-events-none fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden">
+      <div className="relative h-36 w-full">
+        <div className="absolute left-0 top-1/2 h-[2px] w-full -translate-y-1/2 bg-yellow-400/20" />
+
+        <div className="absolute left-0 top-1/2 h-16 w-[140vw] -translate-y-1/2">
+          <div className="loadlink-truck">
+            <div className="truck-body">
+              <div className="truck-cab" />
+              <div className="truck-box">
+                <span>LOADLINK</span>
+              </div>
+              <div className="wheel wheel-one" />
+              <div className="wheel wheel-two" />
+            </div>
+
+            <div className="track-mark track-one" />
+            <div className="track-mark track-two" />
+          </div>
         </div>
-        <div className="loadlink-loading-road" />
       </div>
-      <span className="loadlink-loading-caption">Loading LoadLink</span>
+
       <style jsx>{`
-        .loadlink-loading-scene { position: relative; width: 208px; height: 95px; }
-        .loadlink-loading-truck {
-          position: absolute; bottom: 17px; left: 14px;
-          width: 180px; height: 61px;
-          animation: loadlink-loader-suspension 1.3s ease-in-out infinite;
+        .loadlink-truck {
+          position: absolute;
+          top: 50%;
+          left: -220px;
+          width: 220px;
+          height: 84px;
+          transform: translateY(-50%);
+          animation: truck-drive 1.55s linear infinite;
+          will-change: transform;
+          contain: layout paint;
         }
-        .loadlink-loading-trailer {
-          position: absolute; left: 0; bottom: 10px; width: 121px; height: 48px;
-          border: 2px solid #f6b800; border-radius: 3px;
-          background: #151515; display: flex; align-items: center; justify-content: center;
+
+        /* The original truck artwork faced left while travelling to the right.
+           Flip only the vehicle body so the cab now leads the movement; unflip
+           the wordmark so LOADLINK remains readable. */
+        .truck-body {
+          position: absolute;
+          left: 44px;
+          top: 15px;
+          width: 148px;
+          height: 54px;
+          transform: scaleX(-1);
+          transform-origin: center;
         }
-        .loadlink-loading-trailer span {
-          color: #f6b800; font-size: 12px; font-weight: 900;
-          font-style: italic; letter-spacing: .055em;
+
+        .truck-box {
+          position: absolute;
+          right: 0;
+          top: 0;
+          height: 45px;
+          width: 112px;
+          border: 2px solid #f6b800;
+          background: #111;
+          box-shadow: 0 0 18px rgba(246, 184, 0, 0.28);
         }
-        .loadlink-loading-cab {
-          position: absolute; right: 0; bottom: 10px; width: 57px; height: 43px;
-          background: #f6b800; border: 2px solid #151515; border-radius: 8px 7px 3px 0;
-          clip-path: polygon(0 0, 72% 0, 100% 35%, 100% 100%, 0 100%);
+
+        .truck-box span {
+          position: absolute;
+          left: 10px;
+          top: 14px;
+          color: #f6b800;
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.08em;
+          transform: scaleX(-1);
         }
-        .loadlink-loading-window {
-          position: absolute; right: 6px; top: 7px; width: 19px; height: 15px;
-          background: #151515; border-radius: 2px; transform: skew(8deg);
+
+        .truck-cab {
+          position: absolute;
+          left: 0;
+          top: 12px;
+          width: 42px;
+          height: 33px;
+          background: #f6b800;
+          clip-path: polygon(0 100%, 0 35%, 18% 0, 100% 0, 100% 100%);
         }
-        .loadlink-loading-wheel {
-          position: absolute; bottom: 0; width: 21px; height: 21px;
-          border: 5px solid #151515; border-radius: 50%; background: #f6b800;
-          animation: loadlink-loader-wheel .6s linear infinite;
+
+        .wheel {
+          position: absolute;
+          bottom: 0;
+          height: 20px;
+          width: 20px;
+          border-radius: 999px;
+          border: 4px solid #f6b800;
+          background: #050505;
+          animation: wheel-spin 0.35s linear infinite;
         }
-        .wheel-back { left: 19px; } .wheel-front { right: 13px; }
-        .loadlink-loading-road {
-          position: absolute; bottom: 11px; left: 3px; width: 202px; height: 2px;
-          background: linear-gradient(90deg, transparent, #f6b800 25%, #f6b800 75%, transparent);
-          opacity: .72;
+
+        .wheel-one { left: 26px; }
+        .wheel-two { right: 16px; }
+
+        .track-mark {
+  position: absolute;
+  left: -190px;
+  width: 235px;
+  height: 5px;
+  border-radius: 999px;
+  opacity: 0.88;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(246,184,0,0) 0 7px,
+    rgba(246,184,0,.92) 7px 27px,
+    rgba(246,184,0,.22) 27px 35px
+  );
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 20%, #000 82%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 20%, #000 82%, transparent 100%);
+  filter: drop-shadow(0 0 5px rgba(246,184,0,.4));
+  transform: skewX(-18deg) translateZ(0);
+  will-change: background-position, opacity;
+  animation: skid-flow .62s linear infinite, track-fade 1.55s ease-in-out infinite;
+}
+.track-one { bottom: 15px; }
+.track-two { bottom: 4px; left: -168px; width: 210px; opacity: .72; animation-delay: -.18s, -.18s; }
+
+        @keyframes truck-drive {
+          from { transform: translate(-260px, -50%); }
+          to { transform: translate(120vw, -50%); }
         }
-        .loadlink-loading-caption {
-          position: absolute; top: calc(50% + 61px); left: 0; right: 0;
-          text-align: center; font-size: 12px; font-weight: 600;
-          letter-spacing: .02em; opacity: .65;
+
+        @keyframes wheel-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
-        @keyframes loadlink-loader-suspension {
-          0%,100% { transform: translateY(0); }
-          50% { transform: translateY(-2px); }
+
+        @keyframes skid-flow {
+          from { background-position: 0 0; }
+          to { background-position: -70px 0; }
         }
-        @keyframes loadlink-loader-wheel { to { transform: rotate(360deg); } }
+
+        @keyframes track-fade {
+          0% { opacity: 0; }
+          10% { opacity: 0.9; }
+          80% { opacity: 0.55; }
+          100% { opacity: 0; }
+        }
+
         @media (prefers-reduced-motion: reduce) {
-          .loadlink-loading-truck, .loadlink-loading-wheel { animation: none !important; }
+          .loadlink-truck,
+          .wheel,
+          .track-mark { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
         }
       `}</style>
     </div>
