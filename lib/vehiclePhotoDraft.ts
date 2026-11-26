@@ -31,20 +31,6 @@ function openDatabase(): Promise<IDBDatabase> {
   });
 }
 
-async function transaction<T>(mode: IDBTransactionMode, work: (store: IDBObjectStore, finish: (value: T) => void) => void) {
-  const database = await openDatabase();
-  return new Promise<T>((resolve, reject) => {
-    let completed = false;
-    const tx = database.transaction(STORE, mode);
-    const finish = (value: T) => { if (!completed) { completed = true; resolve(value); } };
-    tx.oncomplete = () => database.close();
-    tx.onerror = () => { database.close(); reject(tx.error || new Error("Photo draft storage failed.")); };
-    tx.onabort = () => { database.close(); reject(tx.error || new Error("Photo draft storage was interrupted.")); };
-    try { work(tx.objectStore(STORE), finish); }
-    catch (error) { database.close(); reject(error); }
-  });
-}
-
 export async function saveVehiclePhotos(userId: string, submissionId: string, files: File[]) {
   if (!userId || !submissionId) return false;
   try {
