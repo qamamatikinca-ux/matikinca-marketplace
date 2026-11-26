@@ -145,6 +145,26 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
     setActiveStep((step) => Math.max(0, step - 1));
   }
 
+  function submitFromReview() {
+    const { form } = getWizardSections();
+    if (!form) return;
+    const existingSubmit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (existingSubmit?.disabled) return;
+    // Native validation remains in force; invalid controls reveal their step.
+    if (typeof form.requestSubmit === "function") form.requestSubmit(existingSubmit || undefined);
+    else existingSubmit?.click();
+  }
+
+  useEffect(() => {
+    const openStep = (event: Event) => {
+      const target = (event as CustomEvent<{ step?: number }>).detail?.step;
+      if (typeof target !== "number" || !Number.isInteger(target)) return;
+      setActiveStep(Math.min(lastStep, Math.max(0, target)));
+    };
+    window.addEventListener("loadlink-vehicle-open-step", openStep);
+    return () => window.removeEventListener("loadlink-vehicle-open-step", openStep);
+  }, [lastStep]);
+
   function confirmCancelListing() {
     try {
       clearVehicleDraft();
@@ -182,7 +202,7 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
           <div className="loadlink-vehicle-step-actions mx-auto max-w-5xl" data-has-back={activeStep > 0}>
             <button type="button" aria-label={`Cancel ${listingLabel} listing`} onClick={() => setCancelOpen(true)} className={`rounded-lg border font-semibold ${darkMode ? "border-white/14 bg-white/[.025] text-white/70" : "border-black/12 bg-white/30 text-black/65"}`}>Cancel</button>
             {activeStep > 0 ? <button type="button" onClick={goBack} className={`rounded-lg border font-semibold ${darkMode ? "border-white/14" : "border-black/12"}`}>Back</button> : null}
-            {activeStep < lastStep ? <button type="button" onClick={goNext} className="rounded-lg bg-[#f6b800] font-semibold text-black transition active:scale-[.99]">Continue</button> : <span className="text-right text-[11px] font-semibold opacity-55">Review, then submit below.</span>}
+            {activeStep < lastStep ? <button type="button" onClick={goNext} className="rounded-lg bg-[#f6b800] font-semibold text-black transition active:scale-[.99]">Continue</button> : <button type="button" onClick={submitFromReview} className="min-h-12 rounded-lg bg-[#f6b800] px-4 text-sm font-semibold text-black">Submit for verification</button>}
           </div>
         </nav>
       ) : null}
