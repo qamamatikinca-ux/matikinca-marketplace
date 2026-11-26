@@ -42,7 +42,7 @@ const BusinessPlans = dynamic(() => import("@/components/BusinessPlans"), { ssr:
 const VehicleMarketplaceHub = dynamic(() => import("@/components/VehicleMarketplaceHub"), { ssr: false, loading: () => <div className="mx-auto my-8 h-64 max-w-6xl animate-pulse rounded-2xl bg-current/[.05]" /> });
 import { findTruckReference, truckReferenceResponse } from "@/lib/truckModelReferences";
 import { getTruckModel, getTruckModels, truckCatalog, truckYears, validateTruckTransmission } from "@/lib/truckCatalog";
-import { getLightCommercialModels, getLightCommercialModelYearStatus, lightCommercialCatalog, lightCommercialYears } from "@/lib/southAfricanLightCommercialCatalog";
+import { getLightCommercialModels, getLightCommercialModelYearStatus, getLightCommercialModelPrefill, lightCommercialCatalog, lightCommercialYears } from "@/lib/southAfricanLightCommercialCatalog";
 import { storedLightCommercialPhotos, type LightCommercialPhoto } from "@/lib/lightCommercialModelPhotos";
 import { modelFamilyPhoto } from "@/lib/modelFamilyPhoto";
 import ModelFamilyPhotoCard from "@/components/ModelFamilyPhotoCard";
@@ -100,7 +100,7 @@ function VehicleCategoryPhoto({ src, alt }: { src: string; alt: string }) {
   }, [src]);
 
   return (
-    <span className="relative block h-20 w-24 shrink-0 overflow-hidden rounded-lg bg-current/[.04] sm:h-24 sm:w-32">
+    <span className="relative mb-4 block h-36 w-full overflow-hidden rounded-[16px] bg-white/[.045] sm:h-40">
       {!loaded ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 animate-pulse bg-current/[.045]" /> : null}
       <LoadLinkImage
         ref={photoRef}
@@ -420,9 +420,8 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     setFuelType(category === "trailer" ? "Not applicable" : "");
     setAxleConfiguration(""); setTitle(""); setMessage("");
     setCondition("");
-    // A trailer has no drivetrain. Do not invent its condition or service records.
-    setEngineCondition(category === "trailer" ? "Not applicable" : "Not assessed");
     setServiceHistory("Not specified");
+    setEngineCondition(category === "trailer" ? "Not applicable" : "Not assessed");
     setTyreCondition("Not assessed");
     setAccidentHistory("Not disclosed");
   }
@@ -450,10 +449,26 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     setMessage("");
   }
 
+  function selectLightCommercialModel(name: string) {
+    const previous = getLightCommercialModelPrefill(brand, modelName, year);
+    const suggested = getLightCommercialModelPrefill(brand, name, year);
+    setModelName(name);
+    setModelConfirmed(false);
+    // Recalculate only fields that are empty or that we previously auto-filled;
+    // preserve a different value deliberately entered by the seller.
+    setFuelType(current => !current || current === previous?.fuelType ? suggested?.fuelType || "" : current);
+    setBodyType(current => !current || current === previous?.bodyType ? suggested?.bodyType || "" : current);
+  }
+
   function confirmBakkieVanModel() {
     if (year < 2009 || year > new Date().getFullYear()) { setMessage("Select a model year from 2009 to the current year."); return; }
     if (lightCommercialYearStatus && !lightCommercialYearStatus.valid) { setMessage(`The ${brand} ${lightCommercialYearStatus.model} is not listed for ${year}. Check the year or exact model variant before continuing.`); return; }
-    if (!brand.trim() || !modelName.trim() || !bodyType.trim()) { setMessage("Enter the make, model and body type as shown on the papers."); return; }
+    const supported = getLightCommercialModelPrefill(brand, modelName, year);
+    if (!brand.trim() || !modelName.trim() || !(bodyType || supported?.bodyType || "").trim()) {
+      setMessage("Enter the make, model and body type as shown on the papers."); return;
+    }
+    if (!bodyType && supported?.bodyType) setBodyType(supported.bodyType);
+    if (!fuelType && supported?.fuelType) setFuelType(supported.fuelType);
     setTitle(`${year} ${brand.trim()} ${modelName.trim()}`);
     setModelConfirmed(true);
     setMessage("");
@@ -878,18 +893,18 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       {listingFlowOpen && !listingIntent && !dealerPost ? (
         <section id="vehicle-listing-choice" className={`scroll-mt-24 border-b px-4 py-8 md:px-6 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
           <div className="ll-vehicle-entry-choice mx-auto max-w-5xl text-left">
-            <h2 className="ll-vehicle-entry-title text-xl font-semibold tracking-[-.02em]">List a vehicle</h2>
+            <h2 className="ll-vehicle-entry-title text-2xl font-semibold tracking-[-.025em]">List a vehicle</h2>
             <p className={`mx-auto mt-2 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Choose your vehicle type to get started.</p>
-            <div className="ll-vehicle-type-choices mt-4 grid max-w-3xl gap-3 sm:grid-cols-2">
+            <div className="ll-vehicle-type-choices mt-6 grid max-w-3xl gap-3 sm:grid-cols-2">
               <button type="button" onClick={() => {
                 setListingIntent("vehicle");
                 chooseCategory("truck");
                 setSelectedPlan(entryMode ? initialPackage : null);
                 setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-              }} className={`ll-vehicle-type-card flex min-h-24 items-center gap-3 rounded-xl border px-3 py-3 text-left ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
-                <VehicleCategoryPhoto src="/images/vehicle-types/truck.webp" alt="Truck at a warehouse loading dock" /><span className="min-w-0 flex-1"><span className="block text-base font-semibold">Truck</span>
-                <span className={`mt-1 block text-xs leading-5 ${muted}`}>Commercial trucks and tractor units.</span></span>
+              }} className={`ll-vehicle-type-card min-h-28 rounded-xl border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <VehicleCategoryPhoto src="/images/vehicle-types/truck.webp" alt="Truck at a warehouse loading dock" /><span className="block text-lg font-semibold">Truck</span>
+                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Commercial trucks and tractor units.</span>
               </button>
               <button type="button" onClick={() => {
                 setListingIntent("vehicle"); chooseCategory("bakkie_van");
@@ -897,10 +912,10 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 setSelectedPlan(entryMode ? initialPackage : null);
                 setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-              }} className={`ll-vehicle-type-card flex min-h-24 items-center gap-3 rounded-xl border px-3 py-3 text-left ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+              }} className={`ll-vehicle-type-card min-h-28 rounded-xl border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
                 <VehicleCategoryPhoto src="/images/vehicle-types/bakkie-van.webp" alt="Red pickup bakkie driving through a shallow river" />
-                <span className="min-w-0 flex-1"><span className="block text-base font-semibold">Bakkie &amp; Van</span>
-                <span className={`mt-1 block text-xs leading-5 ${muted}`}>Bakkies and vans for business and work use.</span></span>
+                <span className="block text-lg font-semibold">Bakkie &amp; Van</span>
+                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Bakkies and vans for business and work use.</span>
               </button>
               <button type="button" onClick={() => {
                 setListingIntent("vehicle");
@@ -908,9 +923,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 setSelectedPlan(entryMode ? initialPackage : null);
                 setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-              }} className={`ll-vehicle-type-card flex min-h-24 items-center gap-3 rounded-xl border px-3 py-3 text-left ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
-                <VehicleCategoryPhoto src="/images/vehicle-types/trailer.webp" alt="Galvanised utility trailer parked on paving" /><span className="min-w-0 flex-1"><span className="block text-base font-semibold">Trailer</span>
-                <span className={`mt-1 block text-xs leading-5 ${muted}`}>Commercial trailer listings.</span></span>
+              }} className={`ll-vehicle-type-card min-h-28 rounded-xl border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <VehicleCategoryPhoto src="/images/vehicle-types/trailer.webp" alt="Galvanised utility trailer parked on paving" /><span className="block text-lg font-semibold">Trailer</span>
+                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Commercial trailer listings.</span>
               </button>
               {!entryMode ?               <button type="button" onClick={() => {
                 setListingIntent("mobile_unit");
@@ -918,9 +933,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 setSelectedPlan(entryMode ? initialPackage : null);
                 setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-              }} className={`ll-vehicle-type-card flex min-h-24 items-center gap-3 rounded-xl border px-3 py-3 text-left ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
-                <span className="min-w-0 flex-1"><span className="block text-base font-semibold">Mobile Unit</span>
-                <span className={`mt-1 block text-xs leading-5 ${muted}`}>Mobile fridge, kitchen, clinic, office and other units.</span></span>
+              }} className={`ll-vehicle-type-card min-h-28 rounded-xl border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <span className="block text-lg font-semibold">Mobile Unit</span>
+                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Mobile fridge, kitchen, clinic, office and other units.</span>
               </button> : null}
             </div>
           </div>
@@ -957,9 +972,13 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
             <SectionHeading step="01" title={`${categoryLabel(vehicleCategory!)} identity`} description={vehicleCategory === "truck" ? "Select the registration year, manufacturer and exact truck model." : vehicleCategory === "bakkie_van" ? "Choose a bakkie or van make and model, or enter one manually." : "Choose the unit type and enter the make and model exactly as shown on the registration papers."} />
             <div className="grid gap-5 p-5 md:grid-cols-3 md:p-7">
               {vehicleCategory !== "truck" && vehicleCategory !== "bakkie_van" ? <Field label={`${vehicleCategory === "trailer" ? "Trailer" : "Mobile unit"} type`}><select value={vehicleSubtype} onChange={(event) => { setVehicleSubtype(event.target.value); setBodyType(event.target.value); }} className={inputClass} required><option value="">Select type</option>{(vehicleCategory === "trailer" ? trailerTypes : mobileUnitTypes).map((item) => <option key={item}>{item}</option>)}</select></Field> : null}
-              <Field label="Registration / model year"><select value={year} onChange={(event) => { setYear(Number(event.target.value)); setModelName(""); setModelConfirmed(false); setTransmission(vehicleCategory === "trailer" ? "Not applicable" : ""); setFuelType(vehicleCategory === "trailer" ? "Not applicable" : ""); setAxleConfiguration(""); }} className={inputClass}>{(vehicleCategory === "bakkie_van" ? lightCommercialYears : truckYears).map((item) => <option key={item} value={item}>{item}</option>)}</select></Field>
-              <Field label="Make / manufacturer">{vehicleCategory === "truck" ? <select value={brand} onChange={(e) => {setBrand(e.target.value);setModelName("");setModelConfirmed(false);setTransmission("");setFuelType("");setAxleConfiguration("");}} className={inputClass} required><option value="">Choose manufacturer</option>{truckCatalog.map((item)=><option key={item.name} value={item.name}>{item.name}</option>)}</select> : vehicleCategory === "bakkie_van" ? <><input list="loadlink-light-commercial-makes" value={brand} onChange={e=>{setBrand(e.target.value);setModelName("");setModelConfirmed(false);setTransmission("");setFuelType("");setAxleConfiguration("");}} placeholder="Choose or enter any make" className={inputClass} required /><datalist id="loadlink-light-commercial-makes">{lightCommercialCatalog.map(item=><option key={item.name} value={item.name}/>)}</datalist></> : <input value={brand} onChange={e=>setBrand(e.target.value)} placeholder="Make or manufacturer" className={inputClass} required />}</Field>
-              <Field label="Model">{vehicleCategory === "truck" ? <select value={modelName} onChange={e=>selectTruckModel(e.target.value)} className={inputClass} disabled={!brand} required><option value="">Choose model family</option>{availableModels.map(item=><option key={item.name}>{item.name}</option>)}</select> : vehicleCategory === "bakkie_van" ? <><input list="loadlink-light-commercial-models" value={modelName} onChange={e=>{setModelName(e.target.value);setModelConfirmed(false);}} placeholder="Select or type your exact model" className={inputClass} required /><datalist id="loadlink-light-commercial-models">{bakkieVanModels.map(name=><option key={name} value={name}/>)}</datalist><p className={`mt-2 text-xs ${muted}`}>Enter the exact make and model from the registration papers.</p></> : <input value={modelName} onChange={e=>setModelName(e.target.value)} placeholder="Model name or number" className={inputClass} required />}</Field>
+              <Field label="Registration / model year"><select value={year} onChange={(event) => { setYear(Number(event.target.value)); setModelName(""); setModelConfirmed(false); setTransmission(vehicleCategory === "trailer" ? "Not applicable" : ""); setFuelType(vehicleCategory === "trailer" ? "Not applicable" : ""); setAxleConfiguration(""); if (vehicleCategory === "bakkie_van") setBodyType(""); }} className={inputClass}>{(vehicleCategory === "bakkie_van" ? lightCommercialYears : truckYears).map((item) => <option key={item} value={item}>{item}</option>)}</select></Field>
+              <Field label="Make / manufacturer">{vehicleCategory === "truck" ? <select value={brand} onChange={(e) => {setBrand(e.target.value);setModelName("");setModelConfirmed(false);setTransmission("");setFuelType("");setAxleConfiguration("");if (vehicleCategory === "bakkie_van") setBodyType("");}} className={inputClass} required><option value="">Choose manufacturer</option>{truckCatalog.map((item)=><option key={item.name} value={item.name}>{item.name}</option>)}</select> : vehicleCategory === "bakkie_van" ? <><input list="loadlink-light-commercial-makes" value={brand} onChange={e=>{setBrand(e.target.value);setModelName("");setModelConfirmed(false);setTransmission("");setFuelType("");setAxleConfiguration("");if (vehicleCategory === "bakkie_van") setBodyType("");}} placeholder="Choose or enter any make" className={inputClass} required /><datalist id="loadlink-light-commercial-makes">{lightCommercialCatalog.map(item=><option key={item.name} value={item.name}/>)}</datalist></> : <input value={brand} onChange={e=>setBrand(e.target.value)} placeholder="Make or manufacturer" className={inputClass} required />}</Field>
+              <Field label="Model">{vehicleCategory === "truck" ? <select value={modelName} onChange={e=>selectTruckModel(e.target.value)} className={inputClass} disabled={!brand} required><option value="">Choose model family</option>{availableModels.map(item=><option key={item.name}>{item.name}</option>)}</select> : vehicleCategory === "bakkie_van" ? <><input list="loadlink-light-commercial-models" value={modelName} onChange={e=>selectLightCommercialModel(e.target.value)} placeholder="Select or type your exact model" className={inputClass} required /><datalist id="loadlink-light-commercial-models">{bakkieVanModels.map(name=><option key={name} value={name}/>)}</datalist><p className={`mt-2 text-xs ${muted}`}>Enter the exact make and model from the registration papers.
+                  {getLightCommercialModelPrefill(brand, modelName, year)
+                    ? " Supported model details are suggested automatically; verify them against the actual vehicle."
+                    : ""}
+                </p></> : <input value={modelName} onChange={e=>setModelName(e.target.value)} placeholder="Model name or number" className={inputClass} required />}</Field>
 
               {vehicleCategory==="bakkie_van" ? <Field label="Cab / van body type"><select value={bodyType} onChange={event=>{setBodyType(event.target.value);setModelConfirmed(false);}} required className={inputClass}><option value="">Choose the actual body type</option>{bakkieVanTypes.map(item=><option key={item}>{item}</option>)}</select></Field> : null}
             </div>
@@ -1002,21 +1021,14 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="02" title="Vehicle details" description="Add the information buyers need before opening the full product view." />
               <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7">
-                {modelConfirmed && (vehicleCategory === "truck" || vehicleCategory === "bakkie_van") ?
-                  <p className={`md:col-span-2 text-xs leading-5 ${muted}`}>
-                    Selected: {year} {brand} {modelName}. {vehicleCategory === "truck" ?
-                      "Verified or single-option specifications are filled in below. Confirm your actual configuration." :
-                      "Make, model and year have been carried into this listing. Confirm the other specifications."}
-                  </p> : null}
                 <Field label="Listing title" wide><input value={title} onChange={(event) => setTitle(event.target.value)} className={inputClass} required /></Field>
                 <Field label={vehicleCategory === "truck" ? "Body type" : "Type"}><select value={bodyType || vehicleSubtype} onChange={(event) => setBodyType(event.target.value)} className={inputClass}>{(vehicleCategory === "truck" ? truckBodyTypes : vehicleCategory === "bakkie_van" ? bakkieVanTypes : vehicleCategory === "trailer" ? trailerTypes : mobileUnitTypes).map((item) => <option key={item}>{item}</option>)}</select></Field>
                 <Field label="Condition"><select value={condition} onChange={(event) => setCondition(event.target.value)} className={inputClass} required><option value="">Choose actual condition</option><option>Excellent</option><option>Very good</option><option>Good</option><option>Fair</option><option>Needs attention</option></select></Field>
-                {(vehicleCategory === "truck" || vehicleCategory === "bakkie_van") ?
-                  <Field label={vehicleCategory === "truck" && selectedModel?.transmissions.length === 1 ? "Transmission · from model" : "Transmission"}><select value={transmission} onChange={(event) => setTransmission(event.target.value)} className={inputClass} required><option value="">Choose gearbox</option>{gearboxOptions.map((item) => <option key={item}>{item}</option>)}</select></Field> : null}
-                {vehicleCategory !== "trailer" ? <Field label={vehicleCategory === "truck" && selectedModel?.fuels.length === 1 ? "Fuel / power type · from model" : "Fuel / power type"}>{vehicleCategory === "truck" && selectedModel
+                <Field label="Transmission"><select value={transmission} onChange={(event) => setTransmission(event.target.value)} className={inputClass} required><option value="">Choose gearbox</option>{gearboxOptions.map((item) => <option key={item}>{item}</option>)}</select></Field>
+                <Field label="Fuel / power type">{vehicleCategory === "truck" && selectedModel
                   ? <select value={fuelType} onChange={(event) => setFuelType(event.target.value)} className={inputClass} required><option value="">Choose actual fuel type</option>{Array.from(new Set([...selectedModel.fuels, ...(fuelType ? [fuelType as typeof selectedModel.fuels[number]] : [])])).map((item) => <option key={item} value={item}>{item}</option>)}</select>
-                  : <input value={fuelType} onChange={(event) => setFuelType(event.target.value)} placeholder={vehicleCategory === "mobile_unit" ? "Power source (if applicable)" : "Confirm fuel / power type"} className={inputClass} required={vehicleCategory !== "mobile_unit"} />}</Field> : null}
-                <Field label={vehicleCategory === "trailer" || vehicleCategory === "mobile_unit" ? "Usage / mileage (if known)" : "Mileage / usage"}><input type="number" min="0" value={odometerKm} onChange={(event) => setOdometerKm(event.target.value)} placeholder={vehicleCategory === "trailer" || vehicleCategory === "mobile_unit" ? "Optional" : "Kilometres"} className={inputClass} required={vehicleCategory === "truck" || vehicleCategory === "bakkie_van"} /></Field>
+                  : <input value={fuelType} onChange={(event) => setFuelType(event.target.value)} placeholder={vehicleCategory === "trailer" ? "Not applicable" : "Confirm fuel / power type"} className={inputClass} required />}</Field>
+                <Field label="Mileage / usage"><input type="number" min="0" value={odometerKm} onChange={(event) => setOdometerKm(event.target.value)} placeholder="Kilometres or usage reading" className={inputClass} required /></Field>
                 <Field label="How is this unit available?"><select value={offerMode} onChange={(event) => setOfferMode(event.target.value as OfferMode)} className={inputClass}><option value="sale">For sale only</option><option value="rental">Rental only</option><option value="sale_or_rental">Sale or rental</option><option value="poa">POA — price on application</option></select></Field>
                 {offerMode !== "poa" ? <Field label={offerMode === "rental" ? "Rental rate" : "Sale price"}><input value={rate} onChange={(event) => setRate(event.target.value)} placeholder={offerMode === "rental" ? "Example: 25000" : "Example: 850000"} inputMode="decimal" className={inputClass} required /></Field> : <Field label="Price"><div className={`${inputClass} flex items-center`}>POA — interested users must contact the seller</div></Field>}
                 <div className="md:col-span-2 min-w-0 -mt-3">
@@ -1031,17 +1043,6 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 </div>
                 {offerMode === "rental" || offerMode === "sale_or_rental" ? <Field label="Rental period"><select value={rentalPeriod} onChange={(event) => setRentalPeriod(event.target.value as RentalPeriod)} className={inputClass}><option value="day">Per day</option><option value="week">Per week</option><option value="month">Per month</option></select></Field> : null}
                 {offerMode === "sale_or_rental" ? <Field label="Rental rate"><input value={rentalRate} onChange={(event) => setRentalRate(event.target.value)} placeholder="Example: 25000" inputMode="decimal" className={inputClass} required /></Field> : null}
-                <details data-loadlink-vehicle-condition-details="true"
-                  className="min-w-0 md:col-span-2 border-t border-current/10 pt-4">
-                  <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">
-                    Service, condition and inspection details
-                    <span className={`ml-2 text-xs font-normal ${muted}`}>Edit actual condition</span>
-                  </summary>
-                  <p className={`mb-4 text-xs leading-5 ${muted}`}>
-                    Model specifications cannot confirm service, tyre or accident history.
-                    Unverified details stay marked until you provide them.
-                  </p>
-                  <div className="grid min-w-0 gap-4 sm:grid-cols-2">
                 <Field label="Previous owners"><input type="number" min="0" value={previousOwners} onChange={(event) => setPreviousOwners(event.target.value)} placeholder="0" className={inputClass} /></Field>
                 <Field label="Service history"><select value={serviceHistory} onChange={(event) => setServiceHistory(event.target.value)} className={inputClass}><option>Not specified</option><option>Full service history</option><option>Partial service history</option><option>No service history</option><option>Not applicable</option></select></Field>
                 <Field label="Engine / drivetrain condition"><select value={engineCondition} onChange={e=>setEngineCondition(e.target.value)} className={inputClass}><option>Not assessed</option><option>Excellent</option><option>Good</option><option>Needs inspection</option><option>Needs repair</option><option>Not applicable</option></select></Field>
@@ -1049,8 +1050,6 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 <Field label="Accident / structural damage"><select value={accidentHistory} onChange={e=>setAccidentHistory(e.target.value)} className={inputClass}><option>Not disclosed</option><option>No known accident history</option><option>Previous damage repaired</option><option>Structural damage disclosed</option><option>Unknown</option></select></Field>
                 <Field label="Last service date — optional"><input type="date" value={lastServiceDate} onChange={e=>setLastServiceDate(e.target.value)} max={new Date().toISOString().slice(0,10)} className={inputClass}/></Field>
                 <Field label="Roadworthy status"><select value={roadworthyStatus} onChange={e=>setRoadworthyStatus(e.target.value)} className={inputClass}><option>Not confirmed</option><option>Valid certificate provided</option><option>Inspection required</option><option>Expired / not roadworthy</option></select></Field>
-                  </div>
-                </details>
                 <Field label="Registration number"><input value={registrationNumber} onChange={(event) => setRegistrationNumber(event.target.value)} className={inputClass} required /></Field>
                 <Field label="VIN / chassis number"><input value={vin} onChange={(event) => setVin(event.target.value)} className={inputClass} required /></Field>
                 <Field label="Engine / serial number"><input value={engineNumber} onChange={(event) => setEngineNumber(event.target.value)} className={inputClass} /></Field>
