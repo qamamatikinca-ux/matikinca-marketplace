@@ -13,6 +13,7 @@ export default function VehicleOwnershipEstimator({darkMode,category="",make="",
  const update=(key:keyof typeof values,value:string)=>setValues(s=>({...s,[key]:value}));
  const estimate=useMemo(()=>{
   const entry:VehicleOwnershipInput={
+   energySource:electric?"electric":"fuel",
    ...Object.fromEntries(Object.entries(values).map(([k,v])=>[k,Number(v||0)])),
    litresPer100Km:powered?Number(actualFuel||0):0,
   } as VehicleOwnershipInput;
@@ -20,7 +21,7 @@ export default function VehicleOwnershipEstimator({darkMode,category="",make="",
   if(powered&&(!actualFuel||!values.dieselRandPerLitre))return null;
   if(Object.values(entry).some(n=>!Number.isFinite(n)||n<0))return null;
   return estimateVehicleOwnership(entry);
- },[values,actualFuel,powered]);
+ },[values,actualFuel,powered,electric]);
  const input=darkMode?"border-white/15 bg-[#202020] text-white":"border-black/10 bg-white text-black";
  const fields=[
   {key:"annualKm",label:"Estimated kilometres per year",hint:"e.g. 80000"},
@@ -42,7 +43,7 @@ export default function VehicleOwnershipEstimator({darkMode,category="",make="",
    {expanded ? <div className="min-w-0 pb-4 pt-3">
     <p className="mb-3 text-xs leading-5 opacity-75">This is a transparent calculation from your own inputs, not an insurance quote, verified vehicle specification or live diesel-price feed.{condition?" Seller-reported condition: "+condition+".":""}</p>
     <div className="grid gap-3 sm:grid-cols-2">
-     {powered?<label className="min-w-0 text-xs font-semibold">{electric?"Energy use (kWh/100 km)":"Fuel use (L/100 km)"}<input type="number" min="0" max="150" step="any" placeholder="Use actual vehicle records" value={actualFuel}
+     {powered?<label className="min-w-0 text-xs font-semibold">{electric?"Energy use (kWh/100 km)":"Fuel use (L/100 km)"}<input type="number" min="0" max={electric?"500":"150"} step="any" placeholder="Use actual vehicle records" value={actualFuel}
       onChange={e=>{if(onFuelChange)onFuelChange(e.target.value);else setFuel(e.target.value)}}
       className={`mt-1.5 h-11 w-full min-w-0 max-w-full rounded-lg border px-3 text-base outline-none focus:border-[#f6b800] ${input}`}/></label>:null}
      {fields.map(f=><label key={f.key} className="min-w-0 text-xs font-semibold">{f.label}<input type="number" min="0" max={f.key==="annualKm"?"500000":undefined} step="any" value={values[f.key]}
