@@ -41,6 +41,8 @@ test("selected vehicle retains catalogue prefill without inventing service recor
   assert.match(form,/setTitle\(\x60\$\{year\} \$\{brand\} \$\{modelName\}\x60\)/);
   assert.match(form,/data-loadlink-vehicle-condition-details="true"/);
   assert.match(form,/useState\("Not specified"\)/);
+  assert.match(form,/const \[condition, setCondition\] = useState\(""\)/);
+  assert.match(form,/required><option value="">Choose actual condition<\/option>/);
   assert.match(form,/<option>Not specified<\/option>/);
   assert.match(form,/Model specifications cannot confirm service, tyre or accident history/);
   assert.match(form,/setEngineCondition\(category === "trailer" \? "Not applicable"/);
