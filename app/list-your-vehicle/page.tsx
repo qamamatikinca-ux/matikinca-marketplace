@@ -230,18 +230,11 @@ export default function ListYourVehiclePage() {
           font-family: inherit !important;
         }
         [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] select {
-          -webkit-appearance: none !important;
-          appearance: none !important;
-          border-radius: 16px !important;
-          padding-right: 3rem !important;
-          background-image:
-            linear-gradient(45deg, transparent 50%, currentColor 50%),
-            linear-gradient(135deg, currentColor 50%, transparent 50%) !important;
-          background-position:
-            calc(100% - 18px) 50%,
-            calc(100% - 13px) 50% !important;
-          background-size: 5px 5px, 5px 5px !important;
-          background-repeat: no-repeat !important;
+          -webkit-appearance: auto !important;
+          appearance: auto !important;
+          border-radius: 10px !important;
+          padding-right: 1rem !important;
+          background-image: none !important;
         }
       `}</style>
     </main>
