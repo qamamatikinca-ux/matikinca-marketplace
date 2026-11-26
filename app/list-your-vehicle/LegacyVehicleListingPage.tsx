@@ -197,7 +197,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [engineNumber, setEngineNumber] = useState("");
   const [odometerKm, setOdometerKm] = useState("");
   const [previousOwners, setPreviousOwners] = useState("");
-  const [condition, setCondition] = useState("Good");
+  const [condition, setCondition] = useState("");
   const [serviceHistory, setServiceHistory] = useState("Not specified");
   const [engineCondition,setEngineCondition]=useState("Not assessed");
   const [tyreCondition,setTyreCondition]=useState("Not assessed");
@@ -315,7 +315,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       setTitle(d.title || ""); setCity(d.city || "Johannesburg"); setBodyType(d.bodyType || ""); setTransmission(d.transmission || "");
       setFuelType(d.fuelType || ""); setAxleConfiguration(d.axleConfiguration || ""); setRegistrationNumber(d.registrationNumber || "");
       setVin(d.vin || ""); setEngineNumber(d.engineNumber || ""); setOdometerKm(d.odometerKm || ""); setPreviousOwners(d.previousOwners || "");
-      setCondition(d.condition || "Good"); setServiceHistory(d.serviceHistory || "Not specified");
+      setCondition(d.condition || ""); setServiceHistory(d.serviceHistory || "Not specified");
       setEngineCondition(d.engineCondition||"Not assessed");setTyreCondition(d.tyreCondition||"Not assessed");
       setAccidentHistory(d.accidentHistory||"Not disclosed");setLastServiceDate(d.lastServiceDate||"");
       setRoadworthyStatus(d.roadworthyStatus||"Not confirmed");setFuelUseL100(d.fuelUseL100||""); setGvmKg(d.gvmKg || "");
@@ -419,6 +419,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     setTransmission(category === "trailer" ? "Not applicable" : "");
     setFuelType(category === "trailer" ? "Not applicable" : "");
     setAxleConfiguration(""); setTitle(""); setMessage("");
+    setCondition("");
     // A trailer has no drivetrain. Do not invent its condition or service records.
     setEngineCondition(category === "trailer" ? "Not applicable" : "Not assessed");
     setServiceHistory("Not specified");
@@ -1009,7 +1010,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                   </p> : null}
                 <Field label="Listing title" wide><input value={title} onChange={(event) => setTitle(event.target.value)} className={inputClass} required /></Field>
                 <Field label={vehicleCategory === "truck" ? "Body type" : "Type"}><select value={bodyType || vehicleSubtype} onChange={(event) => setBodyType(event.target.value)} className={inputClass}>{(vehicleCategory === "truck" ? truckBodyTypes : vehicleCategory === "bakkie_van" ? bakkieVanTypes : vehicleCategory === "trailer" ? trailerTypes : mobileUnitTypes).map((item) => <option key={item}>{item}</option>)}</select></Field>
-                <Field label="Condition"><select value={condition} onChange={(event) => setCondition(event.target.value)} className={inputClass}><option>Excellent</option><option>Very good</option><option>Good</option><option>Fair</option><option>Needs attention</option></select></Field>
+                <Field label="Condition"><select value={condition} onChange={(event) => setCondition(event.target.value)} className={inputClass} required><option value="">Choose actual condition</option><option>Excellent</option><option>Very good</option><option>Good</option><option>Fair</option><option>Needs attention</option></select></Field>
                 {(vehicleCategory === "truck" || vehicleCategory === "bakkie_van") ?
                   <Field label={vehicleCategory === "truck" && selectedModel?.transmissions.length === 1 ? "Transmission · from model" : "Transmission"}><select value={transmission} onChange={(event) => setTransmission(event.target.value)} className={inputClass} required><option value="">Choose gearbox</option>{gearboxOptions.map((item) => <option key={item}>{item}</option>)}</select></Field> : null}
                 {vehicleCategory !== "trailer" ? <Field label={vehicleCategory === "truck" && selectedModel?.fuels.length === 1 ? "Fuel / power type · from model" : "Fuel / power type"}>{vehicleCategory === "truck" && selectedModel
