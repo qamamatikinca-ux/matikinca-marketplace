@@ -31,7 +31,7 @@ export default function VehicleIntelligentPricingPanel({
   const [error, setError] = useState("");
   const selling = offerMode === "sale" || offerMode === "sale_or_rental";
   const ready = make.trim().length >= 2 && model.trim().length >= 2 &&
-    Number.isInteger(year) && year >= 1970;
+    Number.isInteger(year) && year >= 1970 && condition.trim().length > 0;
 
   useEffect(() => {
     setEvidence(null);
@@ -76,7 +76,7 @@ export default function VehicleIntelligentPricingPanel({
         className="inline-flex min-h-9 items-center text-xs font-semibold underline underline-offset-4 decoration-[#f6b800] disabled:cursor-not-allowed disabled:opacity-45">
         {loading ? "Calculating price…" : "Determine price"}
       </button>
-      {!ready ? <p className={"text-xs leading-5 " + muted}>Select the make, model and year first.</p> : null}
+      {!ready ? <p className={"text-xs leading-5 " + muted}>Confirm make, model, year and actual condition first.</p> : null}
       {error ? <p role="status" className={"mt-1 text-xs leading-5 " + muted}>{error}</p> : null}
       {checked && supported ? (
         <div role="status" className="mt-2 space-y-1 text-xs leading-5">

@@ -4,7 +4,7 @@ import { useLayoutEffect } from "react";
 import { applyLoadLinkTheme, readLoadLinkTheme } from "@/lib/useLoadLinkTheme";
 
 function updateBrowserChrome(theme: "light" | "dark") {
-  const colour = theme === "dark" ? "#050505" : "#f4efe3";
+  const colour = theme === "dark" ? "#050505" : "#f8f9fa";
   let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
   if (!meta) {
     meta = document.createElement("meta");

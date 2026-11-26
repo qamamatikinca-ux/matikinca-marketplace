@@ -36,7 +36,9 @@ test("a real job application is handed to chat as a private structured preview, 
   assert.match(chat,/message\.message_kind === "application"/);
   assert.match(chat,/message\.message_kind !== "application" && message\.body/);
   assert.match(card,/data-loadlink-application-card/);
-  assert.match(card,/View full application/);
+  assert.match(card,/View application/);
+  assert.match(card,/data-loadlink-application-viewer/);
+  assert.match(card,/data-loadlink-application-paper/);
   assert.match(sql,/v_role is distinct from 'buyer'/);
   assert.match(sql,/grant execute on function public\.send_listing_guest_application\(uuid,text,jsonb\) to authenticated/i);
   assert.match(sql,/client_token/);

@@ -1,5 +1,5 @@
 /* Existing toast geometry, with deterministic contrast in each theme. */
-:root { --ll-toast-surface: #fffefa; --ll-toast-text: #181813; --ll-toast-detail: #5e5d53; --ll-toast-border: #dcdad2; }
+:root { --ll-toast-surface: #ffffff; --ll-toast-text: #181813; --ll-toast-detail: #5e5d53; --ll-toast-border: #dcdad2; }
 html[data-loadlink-theme="dark"], html.dark { --ll-toast-surface: #171713; --ll-toast-text: #f7f7f2; --ll-toast-detail: #c1c1b5; --ll-toast-border: #45453b; }
 html body [data-loadlink-toast-surface="true"] { background: var(--ll-toast-surface) !important; color: var(--ll-toast-text) !important; border-color: var(--ll-toast-border) !important; }
 html body [data-loadlink-toast-surface="true"] .ll-toast-title { color: var(--ll-toast-text) !important; opacity: 1 !important; }
@@ -13,7 +13,7 @@ html body .loadlink-network-banner { background: var(--ll-toast-surface); color:
 html body [data-loadlink-vehicle-entry-actions] button, html body [data-loadlink-vehicle-entry-actions] a[href="#vehicle-marketplace"] { border-radius: 9999px !important; }
 /* Only call surfaces receive the updated call treatment. */
 html body .ll-call-active-sheet { background: var(--ll-call-background, #11110f) !important; padding: max(18px,env(safe-area-inset-top)) 24px max(24px,env(safe-area-inset-bottom)) !important; }
-html[data-loadlink-theme="light"] .ll-call-active-sheet { --ll-call-background: #faf9f4; }
+html[data-loadlink-theme="light"] .ll-call-active-sheet { --ll-call-background: #f8f9fa; }
 html body .ll-call-active-sheet header { flex: 0 0 44px; }
 html body .ll-call-active-sheet header p { font-size: 10px !important; line-height: 1.4 !important; font-weight: 700 !important; letter-spacing: .12em !important; color: var(--call-muted) !important; }
 html body .ll-call-active-sheet .ll-call-identity { padding: 24px 0 !important; gap: 0 !important; }
