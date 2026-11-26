@@ -100,7 +100,7 @@ function VehicleCategoryPhoto({ src, alt }: { src: string; alt: string }) {
   }, [src]);
 
   return (
-    <span className="relative mb-4 block h-36 w-full overflow-hidden rounded-[16px] bg-white/[.045] sm:h-40">
+    <span className="relative block h-20 w-24 shrink-0 overflow-hidden rounded-lg bg-current/[.04] sm:h-24 sm:w-32">
       {!loaded ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 animate-pulse bg-current/[.045]" /> : null}
       <LoadLinkImage
         ref={photoRef}
@@ -198,7 +198,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [odometerKm, setOdometerKm] = useState("");
   const [previousOwners, setPreviousOwners] = useState("");
   const [condition, setCondition] = useState("Good");
-  const [serviceHistory, setServiceHistory] = useState("Partial service history");
+  const [serviceHistory, setServiceHistory] = useState("Not specified");
   const [engineCondition,setEngineCondition]=useState("Not assessed");
   const [tyreCondition,setTyreCondition]=useState("Not assessed");
   const [accidentHistory,setAccidentHistory]=useState("Not disclosed");
@@ -315,7 +315,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       setTitle(d.title || ""); setCity(d.city || "Johannesburg"); setBodyType(d.bodyType || ""); setTransmission(d.transmission || "");
       setFuelType(d.fuelType || ""); setAxleConfiguration(d.axleConfiguration || ""); setRegistrationNumber(d.registrationNumber || "");
       setVin(d.vin || ""); setEngineNumber(d.engineNumber || ""); setOdometerKm(d.odometerKm || ""); setPreviousOwners(d.previousOwners || "");
-      setCondition(d.condition || "Good"); setServiceHistory(d.serviceHistory || "Partial service history");
+      setCondition(d.condition || "Good"); setServiceHistory(d.serviceHistory || "Not specified");
       setEngineCondition(d.engineCondition||"Not assessed");setTyreCondition(d.tyreCondition||"Not assessed");
       setAccidentHistory(d.accidentHistory||"Not disclosed");setLastServiceDate(d.lastServiceDate||"");
       setRoadworthyStatus(d.roadworthyStatus||"Not confirmed");setFuelUseL100(d.fuelUseL100||""); setGvmKg(d.gvmKg || "");
@@ -419,6 +419,11 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     setTransmission(category === "trailer" ? "Not applicable" : "");
     setFuelType(category === "trailer" ? "Not applicable" : "");
     setAxleConfiguration(""); setTitle(""); setMessage("");
+    // A trailer has no drivetrain. Do not invent its condition or service records.
+    setEngineCondition(category === "trailer" ? "Not applicable" : "Not assessed");
+    setServiceHistory("Not specified");
+    setTyreCondition("Not assessed");
+    setAccidentHistory("Not disclosed");
   }
 
   function selectTruckModel(name: string) {
@@ -872,18 +877,18 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       {listingFlowOpen && !listingIntent && !dealerPost ? (
         <section id="vehicle-listing-choice" className={`scroll-mt-24 border-b px-4 py-8 md:px-6 ${darkMode ? "border-white/10 bg-[#0b0b0b]" : "border-black/10 bg-white"}`}>
           <div className="ll-vehicle-entry-choice mx-auto max-w-5xl text-left">
-            <h2 className="ll-vehicle-entry-title text-3xl font-black tracking-[-.04em]">List a vehicle</h2>
+            <h2 className="ll-vehicle-entry-title text-xl font-semibold tracking-[-.02em]">List a vehicle</h2>
             <p className={`mx-auto mt-2 max-w-2xl text-sm font-semibold leading-6 ${muted}`}>Choose your vehicle type to get started.</p>
-            <div className="ll-vehicle-type-choices mt-6 grid max-w-3xl gap-3 sm:grid-cols-2">
+            <div className="ll-vehicle-type-choices mt-4 grid max-w-3xl gap-3 sm:grid-cols-2">
               <button type="button" onClick={() => {
                 setListingIntent("vehicle");
                 chooseCategory("truck");
                 setSelectedPlan(entryMode ? initialPackage : null);
                 setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-              }} className={`ll-vehicle-type-card min-h-28 rounded-[24px] border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
-                <VehicleCategoryPhoto src="/images/vehicle-types/truck.webp" alt="Truck at a warehouse loading dock" /><span className="block text-xl font-black">Truck</span>
-                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Commercial trucks and tractor units.</span>
+              }} className={`ll-vehicle-type-card flex min-h-24 items-center gap-3 rounded-xl border px-3 py-3 text-left ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <VehicleCategoryPhoto src="/images/vehicle-types/truck.webp" alt="Truck at a warehouse loading dock" /><span className="min-w-0 flex-1"><span className="block text-base font-semibold">Truck</span>
+                <span className={`mt-1 block text-xs leading-5 ${muted}`}>Commercial trucks and tractor units.</span></span>
               </button>
               <button type="button" onClick={() => {
                 setListingIntent("vehicle"); chooseCategory("bakkie_van");
@@ -891,10 +896,10 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 setSelectedPlan(entryMode ? initialPackage : null);
                 setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-              }} className={`ll-vehicle-type-card min-h-28 rounded-[24px] border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+              }} className={`ll-vehicle-type-card flex min-h-24 items-center gap-3 rounded-xl border px-3 py-3 text-left ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
                 <VehicleCategoryPhoto src="/images/vehicle-types/bakkie-van.webp" alt="Red pickup bakkie driving through a shallow river" />
-                <span className="block text-xl font-black">Bakkie &amp; Van</span>
-                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Bakkies and vans for business and work use.</span>
+                <span className="min-w-0 flex-1"><span className="block text-base font-semibold">Bakkie &amp; Van</span>
+                <span className={`mt-1 block text-xs leading-5 ${muted}`}>Bakkies and vans for business and work use.</span></span>
               </button>
               <button type="button" onClick={() => {
                 setListingIntent("vehicle");
@@ -902,9 +907,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 setSelectedPlan(entryMode ? initialPackage : null);
                 setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-              }} className={`ll-vehicle-type-card min-h-28 rounded-[24px] border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
-                <VehicleCategoryPhoto src="/images/vehicle-types/trailer.webp" alt="Galvanised utility trailer parked on paving" /><span className="block text-xl font-black">Trailer</span>
-                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Commercial trailer listings.</span>
+              }} className={`ll-vehicle-type-card flex min-h-24 items-center gap-3 rounded-xl border px-3 py-3 text-left ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <VehicleCategoryPhoto src="/images/vehicle-types/trailer.webp" alt="Galvanised utility trailer parked on paving" /><span className="min-w-0 flex-1"><span className="block text-base font-semibold">Trailer</span>
+                <span className={`mt-1 block text-xs leading-5 ${muted}`}>Commercial trailer listings.</span></span>
               </button>
               {!entryMode ?               <button type="button" onClick={() => {
                 setListingIntent("mobile_unit");
@@ -912,9 +917,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 setSelectedPlan(entryMode ? initialPackage : null);
                 setPackageType(entryMode ? initialPackage : "standard");
                 window.setTimeout(() => document.getElementById("vehicle-listing-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
-              }} className={`ll-vehicle-type-card min-h-28 rounded-[24px] border px-6 py-5 text-left transition ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
-                <span className="block text-xl font-black">Mobile Unit</span>
-                <span className={`mt-2 block text-sm font-semibold leading-6 ${muted}`}>Mobile fridge, kitchen, clinic, office and other units.</span>
+              }} className={`ll-vehicle-type-card flex min-h-24 items-center gap-3 rounded-xl border px-3 py-3 text-left ${darkMode ? "border-white/15 bg-black text-white" : "border-black/10 bg-[#faf8f2] text-black"}`}>
+                <span className="min-w-0 flex-1"><span className="block text-base font-semibold">Mobile Unit</span>
+                <span className={`mt-1 block text-xs leading-5 ${muted}`}>Mobile fridge, kitchen, clinic, office and other units.</span></span>
               </button> : null}
             </div>
           </div>
@@ -996,6 +1001,12 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="02" title="Vehicle details" description="Add the information buyers need before opening the full product view." />
               <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7">
+                {modelConfirmed && (vehicleCategory === "truck" || vehicleCategory === "bakkie_van") ?
+                  <p className={`md:col-span-2 text-xs leading-5 ${muted}`}>
+                    Selected: {year} {brand} {modelName}. {vehicleCategory === "truck" ?
+                      "Verified or single-option specifications are filled in below. Confirm your actual configuration." :
+                      "Make, model and year have been carried into this listing. Confirm the other specifications."}
+                  </p> : null}
                 <Field label="Listing title" wide><input value={title} onChange={(event) => setTitle(event.target.value)} className={inputClass} required /></Field>
                 <Field label={vehicleCategory === "truck" ? "Body type" : "Type"}><select value={bodyType || vehicleSubtype} onChange={(event) => setBodyType(event.target.value)} className={inputClass}>{(vehicleCategory === "truck" ? truckBodyTypes : vehicleCategory === "bakkie_van" ? bakkieVanTypes : vehicleCategory === "trailer" ? trailerTypes : mobileUnitTypes).map((item) => <option key={item}>{item}</option>)}</select></Field>
                 <Field label="Condition"><select value={condition} onChange={(event) => setCondition(event.target.value)} className={inputClass}><option>Excellent</option><option>Very good</option><option>Good</option><option>Fair</option><option>Needs attention</option></select></Field>
@@ -1018,13 +1029,26 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 </div>
                 {offerMode === "rental" || offerMode === "sale_or_rental" ? <Field label="Rental period"><select value={rentalPeriod} onChange={(event) => setRentalPeriod(event.target.value as RentalPeriod)} className={inputClass}><option value="day">Per day</option><option value="week">Per week</option><option value="month">Per month</option></select></Field> : null}
                 {offerMode === "sale_or_rental" ? <Field label="Rental rate"><input value={rentalRate} onChange={(event) => setRentalRate(event.target.value)} placeholder="Example: 25000" inputMode="decimal" className={inputClass} required /></Field> : null}
+                <details data-loadlink-vehicle-condition-details="true"
+                  className="min-w-0 md:col-span-2 border-t border-current/10 pt-4">
+                  <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">
+                    Service, condition and inspection details
+                    <span className={`ml-2 text-xs font-normal ${muted}`}>Edit actual condition</span>
+                  </summary>
+                  <p className={`mb-4 text-xs leading-5 ${muted}`}>
+                    Model specifications cannot confirm service, tyre or accident history.
+                    Unverified details stay marked until you provide them.
+                  </p>
+                  <div className="grid min-w-0 gap-4 sm:grid-cols-2">
                 <Field label="Previous owners"><input type="number" min="0" value={previousOwners} onChange={(event) => setPreviousOwners(event.target.value)} placeholder="0" className={inputClass} /></Field>
-                <Field label="Service history"><select value={serviceHistory} onChange={(event) => setServiceHistory(event.target.value)} className={inputClass}><option>Full service history</option><option>Partial service history</option><option>No service history</option><option>Not applicable</option></select></Field>
+                <Field label="Service history"><select value={serviceHistory} onChange={(event) => setServiceHistory(event.target.value)} className={inputClass}><option>Not specified</option><option>Full service history</option><option>Partial service history</option><option>No service history</option><option>Not applicable</option></select></Field>
                 <Field label="Engine / drivetrain condition"><select value={engineCondition} onChange={e=>setEngineCondition(e.target.value)} className={inputClass}><option>Not assessed</option><option>Excellent</option><option>Good</option><option>Needs inspection</option><option>Needs repair</option><option>Not applicable</option></select></Field>
                 <Field label="Tyre condition"><select value={tyreCondition} onChange={e=>setTyreCondition(e.target.value)} className={inputClass}><option>Not assessed</option><option>New</option><option>Good</option><option>Worn</option><option>Replacement needed</option><option>Not applicable</option></select></Field>
                 <Field label="Accident / structural damage"><select value={accidentHistory} onChange={e=>setAccidentHistory(e.target.value)} className={inputClass}><option>Not disclosed</option><option>No known accident history</option><option>Previous damage repaired</option><option>Structural damage disclosed</option><option>Unknown</option></select></Field>
                 <Field label="Last service date — optional"><input type="date" value={lastServiceDate} onChange={e=>setLastServiceDate(e.target.value)} max={new Date().toISOString().slice(0,10)} className={inputClass}/></Field>
                 <Field label="Roadworthy status"><select value={roadworthyStatus} onChange={e=>setRoadworthyStatus(e.target.value)} className={inputClass}><option>Not confirmed</option><option>Valid certificate provided</option><option>Inspection required</option><option>Expired / not roadworthy</option></select></Field>
+                  </div>
+                </details>
                 <Field label="Registration number"><input value={registrationNumber} onChange={(event) => setRegistrationNumber(event.target.value)} className={inputClass} required /></Field>
                 <Field label="VIN / chassis number"><input value={vin} onChange={(event) => setVin(event.target.value)} className={inputClass} required /></Field>
                 <Field label="Engine / serial number"><input value={engineNumber} onChange={(event) => setEngineNumber(event.target.value)} className={inputClass} /></Field>
