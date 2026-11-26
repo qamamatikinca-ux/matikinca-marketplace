@@ -20,7 +20,7 @@ test('all three posting price tools are near the price field and not duplicated'
  const vehicle=read('app/list-your-vehicle/LegacyVehicleListingPage.tsx');
  const calc=read('components/PosterTransportPriceGuide.tsx');
  for(const src of [job,contract]) assert.equal((src.match(/<PosterTransportPriceGuide/g)||[]).length,1);
- assert.match(calc,/Price determination/);
+ assert.match(calc,/Automatic price determination/);
  assert.match(job,/<PosterTransportPriceGuide darkMode=\{darkMode\} contract=\{isContract\}/);
  assert.ok(job.indexOf('<PosterTransportPriceGuide')<job.indexOf('Accept formal transport offers<span'));
  assert.ok(contract.indexOf('<PosterTransportPriceGuide')<contract.indexOf('Accept formal transport offers<span'));
