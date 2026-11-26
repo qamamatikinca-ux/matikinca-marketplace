@@ -2192,7 +2192,7 @@ ${message}` : message)}
 
               <div
                 ref={messageViewportRef}
-                className={`loadlink-message-viewport loadlink-chat-wallpaper relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-5 sm:px-5 md:px-8 ${darkMode ? "bg-[#090909]" : "bg-[#f6f3eb]"}`}
+                className={`loadlink-message-viewport loadlink-chat-wallpaper relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-5 sm:px-5 md:px-8 ${darkMode ? "bg-[#090909]" : "bg-[#f8f9fa]"}`}
               >
                 {chatCalls.error ? <div className="ll-call-history-retry" role="status">{chatCalls.error} <button type="button" onClick={chatCalls.retry}>Retry</button></div> : null}
                 {!threadChecked && messages.length === 0 && chatTimeline.length === 0 ? (
