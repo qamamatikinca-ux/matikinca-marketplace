@@ -8,7 +8,7 @@ import dynamic from "next/dynamic";
 
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkVehicleWizardController20260825 from "@/components/LoadLinkVehicleWizardController20260825";
-import { VEHICLE_DRAFT_OWNER_KEY, readVehicleDraft, clearVehicleDraft, scopeVehicleDraft } from "@/lib/vehicleDraft";
+import { VEHICLE_DRAFT_OWNER_KEY, readVehicleDraft, clearVehicleDraft, scopeVehicleDraft, isVehicleDraftActiveInTab, markVehicleDraftActiveInTab } from "@/lib/vehicleDraft";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -158,6 +158,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const router = useRouter();
   const { darkMode, toggleTheme } = useLoadLinkTheme();
   const [draftHydrated, setDraftHydrated] = useState(false);
+  const [restoringDraftPhotos,setRestoringDraftPhotos]=useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [listingFlowOpen, setListingFlowOpen] = useState(Boolean(entryMode));
@@ -311,7 +312,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     try {
       submissionIdRef.current = localStorage.getItem("loadlink-vehicle-submission-id") || createSafeRandomId();
       localStorage.setItem("loadlink-vehicle-submission-id", submissionIdRef.current);
-      const d = resumeDraft ? readVehicleDraft() as Record<string, any> | null : null;
+      const resumeCurrentTab = isVehicleDraftActiveInTab(draftOwnerRef.current);
+      const d = resumeDraft || resumeCurrentTab ? readVehicleDraft() as Record<string, any> | null : null;
+      setRestoringDraftPhotos(Boolean(d));
       if (!d) { setDraftHydrated(true); return; }
       setSellerType(d.sellerType || "private"); setVehicleCategory(d.vehicleCategory || null); setVehicleSubtype(d.vehicleSubtype || "");
       setYear(d.year || 2026); setBrand(d.brand || ""); setModelName(d.modelName || ""); setModelConfirmed(Boolean(d.modelConfirmed));
@@ -340,8 +343,10 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     const draft = { updatedAt: Date.now(), entryMode: entryMode || "vehicle", sellerType, vehicleCategory, vehicleSubtype, year, brand, modelName, modelConfirmed, title, city, bodyType, transmission, fuelType, axleConfiguration, registrationNumber, vin, engineNumber, odometerKm, previousOwners, condition, serviceHistory, engineCondition, tyreCondition, accidentHistory, lastServiceDate, roadworthyStatus, fuelUseL100, gvmKg, payloadKg, rate, offerMode, rentalRate, rentalPeriod, specA, specB, specC, specD, postedBy, contactNumber, whatsappNumber, description, confirmOwnership, confirmAccuracy, selectedPlan, packageType, submissionId: submissionIdRef.current || "" };
     const persist = () => {
       try {
-        if (!listingSubmittedRef.current && localStorage.getItem(VEHICLE_DRAFT_OWNER_KEY) === draftOwnerRef.current)
+        if (!listingSubmittedRef.current && localStorage.getItem(VEHICLE_DRAFT_OWNER_KEY) === draftOwnerRef.current) {
           localStorage.setItem("loadlink-vehicle-draft-v1", JSON.stringify(draft));
+          markVehicleDraftActiveInTab(draftOwnerRef.current);
+        }
       } catch {}
     };
     const timer = window.setTimeout(persist, 150);
@@ -557,7 +562,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     // Safari can discard the page after opening its camera/photo picker.
     // Restore only the same account's photos for a resumed listing; ID/face data
     // is never cached here and still requires explicit selection/consent.
-    if (!draftHydrated || !signedIn || !resumeDraft) return;
+    if (!draftHydrated || !signedIn || !restoringDraftPhotos) return;
     const ownerId = draftOwnerRef.current, id = submissionIdRef.current;
     if (!ownerId || !id) return;
     let alive = true;
@@ -572,7 +577,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       setPhotoRecoveryNotice(`Restored ${files.length} vehicle photo${files.length === 1 ? "" : "s"} from this device. Please reselect identity documents if your browser restarted.`);
     });
     return () => { alive = false; };
-  }, [draftHydrated, signedIn, resumeDraft]);
+  }, [draftHydrated, signedIn, restoringDraftPhotos]);
 
   useEffect(() => () => {
     vehiclePreviewUrlsRef.current.forEach(revokePreviewUrl);
@@ -842,6 +847,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       listingSubmittedRef.current = true;
       await syncAccountState().catch(() => undefined);
       clearVehicleDraft();
+      void clearVehiclePhotoDraft(user.id, folder);
       submissionIdRef.current = createSafeRandomId();
       if (requestBoost) {
         // An opt-in request generates a manual R14 payment reference. The boost
