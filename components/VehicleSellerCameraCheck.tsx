@@ -39,6 +39,7 @@ function capturePortrait(player:HTMLVideoElement):Promise<Blob> {
 
 export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Props) {
   const [consent,setConsent]=useState(false);
+  const consentRef=useRef(false);
   const [stage,setStage]=useState<Stage>("idle");
   const [hasCapture,setHasCapture]=useState(false);
   const [step,setStep]=useState(0);
@@ -54,7 +55,7 @@ export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Pr
   useEffect(()=>()=>{run.current++;stop()},[stop]);
 
   const begin=async()=>{
-    if(disabled||!consent||stage==="opening"||stage==="capturing")return;
+    if(disabled||!consentRef.current||stage==="opening"||stage==="capturing")return;
     const id=++run.current;
     setError("");setStep(0);setHint("Opening the front camera…");setStage("opening");
     let recorder:MediaRecorder|null=null;
@@ -136,7 +137,7 @@ export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Pr
         doneRecording,
         new Promise<never>((_,reject)=>window.setTimeout(()=>reject(new Error("Recording did not finish. Retry or request staff review.")),5500)),
       ]);
-      if(id!==run.current)return;
+      if(id!==run.current || !consentRef.current)return;
       const recording=new Blob(chunks,{type:recorderType});
       if(!captured||!recording.size||recording.size>8*1024*1024)
         throw new Error("The scan completed, but the recording could not be saved. Retry or request staff review.");
@@ -171,7 +172,15 @@ export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Pr
       {" "}<Link href="/legal#verification-security" className="underline">Privacy information</Link>
     </p>
     <label className="mt-3 flex items-start gap-3 text-xs font-medium leading-5">
-      <input type="checkbox" checked={consent} onChange={event=>setConsent(event.target.checked)}
+      <input type="checkbox" checked={consent} onChange={event=>{
+        const agreed=event.target.checked;
+        consentRef.current=agreed;
+        setConsent(agreed);
+        if(!agreed){
+          run.current++;stop();setStage("idle");setHasCapture(false);setError("");
+          onChange(null,null);
+        }
+      }}
         disabled={disabled} className="mt-1 h-4 w-4 accent-[#f6b800]"/>
       I consent to private capture, storage and staff review of the face evidence for vehicle listing verification.
     </label>
