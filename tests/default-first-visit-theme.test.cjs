@@ -26,7 +26,7 @@ test("first-time users see light mode even on a dark OS", () => {
   assert.equal(attrs.dataset.loadlinkTheme, "light");
   assert.equal(attrs.classList.dark, false);
   assert.equal(attrs.style.colorScheme, "light");
-  assert.equal(meta.content, "#f4efe3");
+  assert.equal(meta.content, "#f8f9fa");
 });
 
 test("returning users keep their explicitly saved dark mode", () => {
@@ -42,5 +42,5 @@ test("invalid settings fall back to light rather than the OS preference", () => 
 });
 
 test("server-rendered HTML paints in light mode before client JavaScript starts", () => {
-  assert.match(layout, /<html lang="en" data-loadlink-theme="light" style=\{\{ colorScheme: "light", backgroundColor: "#f4efe3" \}\}/);
+  assert.match(layout, /<html lang="en" data-loadlink-theme="light" style=\{\{ colorScheme: "light", backgroundColor: "#f8f9fa" \}\}/);
 });
