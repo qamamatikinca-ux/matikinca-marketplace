@@ -10,7 +10,7 @@ const money=(n:number)=>Math.round((n+Number.EPSILON)*100)/100;
 /** Transparent planning model. Input costs are owner/buyer estimates; it is not a real-time model-specific quote. */
 export function estimateVehicleOwnership(v:VehicleOwnershipInput):VehicleOwnershipEstimate|null{
  if(!Number.isFinite(v.annualKm)||v.annualKm<=0||v.annualKm>500000)return null;
- if(Object.entries(v).some(([key,x])=>key!=="energySource"&&(!Number.isFinite(x)||typeof x!=="number"||x<0)))return null;
+ if(Object.entries(v).some(([key,x])=>key!=="energySource"&&(typeof x!=="number"||!Number.isFinite(x)||x<0)))return null;
  if(v.litresPer100Km>(v.energySource==="electric"?500:150)||v.dieselRandPerLitre>200||v.maintenanceRandPerKm>200)return null;
  const annualFuel=money(v.annualKm*v.litresPer100Km/100*v.dieselRandPerLitre);
  const annualMaintenance=money(v.annualKm*v.maintenanceRandPerKm);
