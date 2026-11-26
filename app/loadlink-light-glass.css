@@ -12,9 +12,9 @@ html[data-loadlink-theme="light"] [class*="bg-[#faf8f2]"] {
   backdrop-filter: none !important;
 }
 
-/* Keep only the homepage "Building a smarter way..." statement warm/cream. */
+/* Homepage statement now uses a nearly neutral surface instead of deep cream. */
 html[data-loadlink-theme="light"] main > section[class*="py-16"][class*="md:px-12"][class*="bg-[#fff6dc]"] {
-  background-color: #fff6dc !important;
+  background-color: #f9fafb !important;
   background-image: none !important;
 }
 
@@ -60,3 +60,22 @@ html[data-loadlink-theme="light"] [data-loadlink-home-search-section] {
     backdrop-filter: none;
   }
 }
+
+/* Neutral light surfaces: remove beige panel treatments throughout LoadLink,
+   keeping brand gold actions, photographs and the user's dark mode untouched. */
+html[data-loadlink-theme="light"] :is(
+  [class*="bg-[#f5f1e8]"],
+  [class*="bg-[#f6f3eb]"],
+  [class*="bg-[#f7f5ef]"],
+  [class*="bg-[#faf9f4]"],
+  [class*="bg-[#fbfaf7]"],
+  [class*="bg-[#f7f2e7]"],
+  [class*="bg-[#f3f0e8]"],
+  [class*="bg-[#f6f4ee]"],
+  [class*="bg-[#f5f3ed]"]
+) { background-color: #f8f9fa !important; }
+html[data-loadlink-theme="light"] [data-loadlink-vehicle-listing-shell] :is(
+  [data-loadlink-vehicle-condition-details],
+  [data-loadlink-vehicle-costs],
+  [data-loadlink-post-price-guide]
+) { color-scheme: light; }
