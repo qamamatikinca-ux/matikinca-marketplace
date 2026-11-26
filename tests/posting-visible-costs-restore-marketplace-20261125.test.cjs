@@ -20,14 +20,15 @@ test('all three posting price tools are near the price field and not duplicated'
  const vehicle=read('app/list-your-vehicle/LegacyVehicleListingPage.tsx');
  const calc=read('components/PosterTransportPriceGuide.tsx');
  for(const src of [job,contract]) assert.equal((src.match(/<PosterTransportPriceGuide/g)||[]).length,1);
- assert.match(calc,/Price determination/);
+ assert.match(calc,/Automatic price determination/);
  assert.match(job,/<PosterTransportPriceGuide darkMode=\{darkMode\} contract=\{isContract\}/);
  assert.ok(job.indexOf('<PosterTransportPriceGuide')<job.indexOf('Accept formal transport offers<span'));
  assert.ok(contract.indexOf('<PosterTransportPriceGuide')<contract.indexOf('Accept formal transport offers<span'));
  assert.equal((vehicle.match(/<VehicleIntelligentPricingPanel/g)||[]).length,1);
  assert.equal((vehicle.match(/<VehicleOwnershipEstimator/g)||[]).length,1);
- assert.ok(vehicle.indexOf('<VehicleIntelligentPricingPanel')<vehicle.indexOf('<Field label="Previous owners">'));
- assert.ok(vehicle.indexOf('<VehicleOwnershipEstimator')<vehicle.indexOf('<Field label="Previous owners">'));
+ assert.ok(vehicle.indexOf('<VehicleIntelligentPricingPanel')>vehicle.indexOf('<Field label="Description" wide>'));
+ assert.ok(vehicle.indexOf('<VehicleOwnershipEstimator')>vehicle.indexOf('<VehicleIntelligentPricingPanel'));
+ assert.ok(vehicle.indexOf('<VehicleIntelligentPricingPanel')<vehicle.indexOf('SectionHeading step="03"'));
 });
 test('ownership calculator displays its actual form when posting and can be collapsed',()=>{
  const src=read('components/VehicleOwnershipEstimator.tsx');

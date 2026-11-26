@@ -33,15 +33,19 @@ export default function VehicleOwnershipEstimator({darkMode,category="",make="",
   {key:"financeMonthly",label:"Finance interest per month (R)",hint:"Interest only; not loan principal"},
   {key:"depreciationAnnual",label:"Depreciation per year (R)",hint:"Optional"}
  ] as Array<{key:keyof typeof values;label:string;hint:string}>;
- return <section data-loadlink-vehicle-costs="true" className="min-w-0 border-t border-current/10 pt-3">
+ return <section data-loadlink-vehicle-costs="true" data-loadlink-cost-automatic="true" className="min-w-0 border-t border-current/10 pt-4">
   <div className="group">
    <button type="button" aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)} className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 py-2 text-left">
-    <span className="min-w-0"><strong className="block text-sm font-semibold">Cost of ownership calculator</strong>
-     <span className="mt-1 block text-xs opacity-65">{make||model?`${make} ${model}`.trim()+" · ":""}Estimate annual running costs before deciding on a price.</span></span>
+    <span className="min-w-0"><strong className="block text-sm font-semibold">Cost of ownership · automatic calculation</strong>
+     <span className="mt-1 block text-xs leading-5 opacity-65">{make||model?`${make} ${model}`.trim()+" · ":""}Shown after vehicle details so you can review running costs before continuing.</span>
+     <span role="status" aria-live="polite" className="mt-2 block text-xs font-semibold">
+       {estimate ? `Estimated annual cost: ${formatZar(estimate.annualTotal)} · ${formatZar(estimate.costPerKm)}/km`
+         : "Add annual distance, actual fuel/energy use and its price below for an automatic ownership estimate."}
+     </span></span>
     <span className="text-base opacity-65" aria-hidden="true">{expanded?"−":"+"}</span>
    </button>
    {expanded ? <div className="min-w-0 pb-4 pt-3">
-    <p className="mb-3 text-xs leading-5 opacity-75">This is a transparent calculation from your own inputs, not an insurance quote, verified vehicle specification or live diesel-price feed.{condition?" Seller-reported condition: "+condition+".":""}</p>
+    <p className="mb-3 text-xs leading-5 opacity-75">Calculated immediately from your operating figures, without a button. This is not an insurance quote, verified vehicle specification or live diesel-price feed.{condition?" Seller-reported condition: "+condition+".":""}</p>
     <div className="grid gap-3 sm:grid-cols-2">
      {powered?<label className="min-w-0 text-xs font-semibold">{electric?"Energy use (kWh/100 km)":"Fuel use (L/100 km)"}<input type="number" min="0" max={electric?"500":"150"} step="any" placeholder="Use actual vehicle records" value={actualFuel}
       onChange={e=>{if(onFuelChange)onFuelChange(e.target.value);else setFuel(e.target.value)}}

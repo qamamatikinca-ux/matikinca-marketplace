@@ -360,7 +360,7 @@ export default function ListJobPage() {
                 <div className="mt-5 grid gap-4">
                   <Field label={`${postNameTitle} title`}><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={`Short ${postName} title`} className={input} /></Field>
                   <Field label="Rate or budget — optional"><input value={rate} onChange={(event) => setRate(event.target.value)} inputMode="decimal" placeholder="e.g. R18 000 or R28/km" className={input} /></Field>
-                  <PosterTransportPriceGuide darkMode={darkMode} contract={isContract} onUseRate={setRate}/>
+                  <PosterTransportPriceGuide darkMode={darkMode} contract={isContract} initialExpanded onUseRate={setRate}/>
                   <label className="flex items-start gap-3 rounded-xl border border-current/15 p-3 text-sm font-semibold"><input type="checkbox" className="mt-1" checked={acceptOffers} onChange={e=>setAcceptOffers(e.target.checked)}/><span>Accept formal transport offers<span className="mt-1 block text-xs font-normal opacity-65">Transporters can send a structured quotation through LoadLink Messages. You can accept or decline.</span></span></label>
                    <Field label="Details"><textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder={isContract ? "Describe the transport scope, suitable vehicles, route, duration and requirements" : "Describe the goods, pickup and delivery route, suitable vehicle and any requirements"} className={`${input} min-h-36 resize-y py-4`} /></Field>
                 </div>
