@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { clearVehicleDraft } from "@/lib/vehicleDraft";
+import { clearVehicleDraft, VEHICLE_DRAFT_OWNER_KEY, VEHICLE_SUBMISSION_KEY } from "@/lib/vehicleDraft";
+import { clearVehiclePhotos as clearVehiclePhotoDraft } from "@/lib/vehiclePhotoDraft";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 
 const STEP_LABELS = ["Type", "Vehicle details", "Photos & documents", "Review"] as const;
@@ -165,8 +166,14 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
     return () => window.removeEventListener("loadlink-vehicle-open-step", openStep);
   }, [lastStep]);
 
-  function confirmCancelListing() {
+  async function confirmCancelListing() {
     try {
+      const owner = localStorage.getItem(VEHICLE_DRAFT_OWNER_KEY) || "";
+      const submissionId = localStorage.getItem(VEHICLE_SUBMISSION_KEY) || "";
+      if (owner && submissionId) await Promise.race([
+        clearVehiclePhotoDraft(owner, submissionId),
+        new Promise<void>(resolve => window.setTimeout(resolve, 1500)),
+      ]);
       clearVehicleDraft();
     } catch {}
     window.location.assign("/list-your-vehicle");
