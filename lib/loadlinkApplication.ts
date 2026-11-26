@@ -34,7 +34,7 @@ export function parseLoadLinkApplication(value: unknown, listingId: string, now 
   const raw = value as Record<string, unknown>;
   const kind = raw.kind;
   if ((kind !== "job" && kind !== "contract") || !UUID.test(listingId) || raw.listing_id !== listingId) return null;
-  if (!Number.isFinite(raw.created_at) || typeof raw.created_at !== "number" ||
+  if (typeof raw.created_at !== "number" || !Number.isFinite(raw.created_at) ||
       raw.created_at > now + 60_000 || now - raw.created_at > MAX_AGE_MS) return null;
   if (!UUID.test(text(raw.client_token, 40))) return null;
   const title = text(raw.listing_title, 220);
