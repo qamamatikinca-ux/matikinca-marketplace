@@ -45,7 +45,7 @@ html[data-loadlink-theme] body [data-loadlink-jobs-page] [data-loadlink-jobs-sea
 html body img[data-loadlink-managed-image="true"][data-loadlink-image-state="pending"],
 html body img[data-loadlink-managed-image="true"][data-loadlink-image-state="unavailable"] { visibility: hidden !important; }
 html[data-loadlink-theme="dark"] [data-loadlink-page-loading="true"] { background: #050505 !important; color: #f6b800 !important; color-scheme: dark !important; }
-html[data-loadlink-theme="light"] [data-loadlink-page-loading="true"] { background: #f4efe3 !important; color: #bb8500 !important; color-scheme: light !important; }
+html[data-loadlink-theme="light"] [data-loadlink-page-loading="true"] { background: #f8f9fa !important; color: #bb8500 !important; color-scheme: light !important; }
 
 /* Show only the active step, including before the wizard hydrates. */
 form#vehicle-listing-form:not([data-loadlink-wizard-ready="true"]) > section:nth-of-type(n+2):nth-of-type(-n+4),
@@ -359,13 +359,13 @@ html[data-loadlink-theme] body main[data-loadlink-contracts-marketplace] [data-l
 
 /* Do not leave stale inline light-mode paint on Jobs or promoted cards. */
 html[data-loadlink-theme="light"] main[data-loadlink-jobs-page="true"] {
-  background-color: #f8f8f7 !important; color: #111 !important;
+  background-color: #f8f9fa !important; color: #111 !important;
 }
 html[data-loadlink-theme="dark"] main[data-loadlink-jobs-page="true"] {
   background-color: #050505 !important; color: #fff !important;
 }
 html[data-loadlink-theme="light"] main[data-loadlink-jobs-page="true"] [data-loadlink-promoted-rail="true"] {
-  background: #f8f8f7 !important; color: #111 !important; border-color: rgba(0,0,0,.09) !important;
+  background: #f8f9fa !important; color: #111 !important; border-color: rgba(0,0,0,.09) !important;
 }
 html[data-loadlink-theme="dark"] main[data-loadlink-jobs-page="true"] [data-loadlink-promoted-rail="true"] {
   background: #050505 !important; color: #fff !important; border-color: rgba(255,255,255,.13) !important;
