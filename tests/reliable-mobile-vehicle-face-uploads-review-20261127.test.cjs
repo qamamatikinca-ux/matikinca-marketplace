@@ -37,6 +37,9 @@ test("camera scan keeps all five challenge steps and never asserts identity appr
  assert.match(scan,/Previous|previous valid capture/);
  assert.match(scan,/setStage\(hasCapture\?"done":"idle"\)/);
  assert.match(scan,/Request staff review/);
+ assert.match(scan,/if\(!agreed\)\{/);
+ assert.match(scan,/consentRef\.current=agreed/);
+ assert.match(scan,/onChange\(null,null\)/);
  assert.match(scan,/not automatically identify you or prove liveness/);
  assert.match(scan,/className="max-h-\[40dvh\] w-full -scale-x-100/);
  const sql=read("supabase/migrations/20261127002500_private_seller_face_video_storage.sql");
