@@ -35,7 +35,14 @@ function revealStep(step: number) {
 
 function firstInvalidControl(section: HTMLElement) {
   const controls = Array.from(section.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input, select, textarea"));
-  return controls.find((control) => !control.disabled && !control.checkValidity()) ?? null;
+  // Catch contradictory mass figures before users spend time uploading images.
+  const gvm=section.querySelector<HTMLInputElement>('input[data-loadlink-gvm="true"]');
+  const payload=section.querySelector<HTMLInputElement>('input[data-loadlink-payload="true"]');
+  if(payload){
+    const mismatch=Boolean(gvm?.value&&payload.value&&Number(payload.value)>Number(gvm.value));
+    payload.setCustomValidity(mismatch?"Payload cannot exceed the vehicle's gross vehicle mass (GVM).":"");
+  }
+  return controls.find(control => !control.disabled && !control.checkValidity()) ?? null;
 }
 
 function confirmationButton(section: HTMLElement) {
