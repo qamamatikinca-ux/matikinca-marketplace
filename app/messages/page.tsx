@@ -955,9 +955,9 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
       window.dispatchEvent(new Event("loadlink-chat-unread-updated"));
     };
     const read = async (key: string, role: Role) => {
-      const result = role === "buyer"
-        ? await supabase.rpc("get_buyer_guest_threads", { p_buyer_key: key }).abortSignal(AbortSignal.timeout(5000))
-        : await supabase.rpc("get_owner_guest_threads", { p_owner_key: key }).abortSignal(AbortSignal.timeout(5000));
+      const result = await reliableChatRead(() => role === "buyer"
+        ? supabase.rpc("get_buyer_guest_threads", { p_buyer_key: key }).abortSignal(AbortSignal.timeout(6500))
+        : supabase.rpc("get_owner_guest_threads", { p_owner_key: key }).abortSignal(AbortSignal.timeout(6500)));
       if (result.error) throw result.error;
       apply((result.data || []) as ConversationRow[], key, role);
       return true;
@@ -1009,7 +1009,7 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
         const result = await reliableChatRead(() => supabase.rpc("get_listing_guest_messages", {
           p_thread_id: conversation.id,
           p_access_key: conversation.accessKey,
-        }).abortSignal(AbortSignal.timeout(4000)));
+        }).abortSignal(AbortSignal.timeout(6500)));
         if (result.error) throw result.error;
         setError((current) => /connection interrupted/i.test(current) ? "" : current);
         const rows = (result.data || []) as ChatMessage[];
@@ -1028,17 +1028,23 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
         }
 
         if (showLoader || changed) {
-          await supabase.rpc("mark_listing_guest_read", {
+          // Read receipts must not hold the message loader or polling lock open.
+          void supabase.rpc("mark_listing_guest_read", {
             p_thread_id: conversation.id,
             p_access_key: conversation.accessKey,
-          });
-          window.dispatchEvent(new Event("loadlink-chat-unread-updated"));
+          }).abortSignal(AbortSignal.timeout(5000)).then(
+            () => window.dispatchEvent(new Event("loadlink-chat-unread-updated")),
+            () => undefined,
+          );
         }
       } catch (loadError) {
-        if (showLoader) setError(cleanError(loadError, "Messages could not load."));
+        if (showLoader && requestSequence === messageLoadSequenceRef.current) setError(cleanError(loadError, "Messages could not load."));
       } finally {
         if (messageReadInFlightRef.current === conversation.id) messageReadInFlightRef.current = "";
-        if (showLoader) setMessagesLoading(false);
+        if (showLoader && requestSequence === messageLoadSequenceRef.current) {
+          setMessagesLoading(false);
+          setThreadChecked(true);
+        }
       }
     },
     [],
@@ -2138,11 +2144,9 @@ ${message}` : message)}
                     <button type="button" onClick={() => setPotentialDealReviewOpen((value) => !value)} className="shrink-0 rounded-lg border border-black/10 bg-white px-2.5 py-1.5 text-[9px] font-black uppercase">{potentialDealReviewOpen ? "Close" : "Review"}</button>
                   </div>
                   {potentialDealReviewOpen ? (
-                    <div className="flex flex-wrap gap-2 border-b border-black/10 bg-white px-3 py-2.5 md:px-5">
-                      <button type="button" onClick={() => void updatePotentialDeal("accepted")} className="rounded-lg bg-black px-3 py-2 text-[9px] font-black uppercase text-white">Accept deal</button>
-                      <button type="button" onClick={() => void updatePotentialDeal("declined")} className="rounded-lg border border-black/15 px-3 py-2 text-[9px] font-black uppercase">Decline</button>
-                      <button type="button" onClick={() => void toggleBlock()} disabled={blockBusy} className="rounded-lg border border-black/15 px-3 py-2 text-[9px] font-black uppercase disabled:opacity-50">{blockState.blocked_by_me ? "Unblock" : "Block"}</button>
-                      <button type="button" onClick={() => void reportConversation()} disabled={reportBusy} className="rounded-lg border border-black/15 px-3 py-2 text-[9px] font-black uppercase disabled:opacity-50">Report</button>
+                    <div className={`grid grid-cols-2 gap-2 border-b px-3 py-2 md:max-w-none md:px-5 ${darkMode ? "border-white/10 bg-[#101010]" : "border-black/10 bg-white"}`}>
+                      <button type="button" onClick={() => void updatePotentialDeal("accepted")} className="min-w-0 min-h-11 rounded-xl bg-black px-3 text-xs font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f6b800]">Accept deal</button>
+                      <button type="button" onClick={() => void updatePotentialDeal("declined")} className={`min-w-0 min-h-11 rounded-xl border px-3 text-xs font-semibold ${darkMode ? "border-white/20 bg-[#202020] text-white" : "border-black/15 bg-white text-black"}`}>Decline</button>
                     </div>
                   ) : null}
                 </>
@@ -2305,7 +2309,7 @@ ${message}` : message)}
               {error ? (
                 <div className="border-t border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
                   <span>{error}</span>
-                  {/connection interrupted|took too long/i.test(error) ? (
+                  {/connection interrupted|took too long|messages could not load|network|timeout/i.test(error) ? (
                     <button type="button" onClick={() => {
                       setError("");
                       setConnectionRetry((value) => value + 1);
