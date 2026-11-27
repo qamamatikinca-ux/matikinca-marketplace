@@ -3,9 +3,7 @@ import {useState} from "react";
 import {supabase} from "@/lib/supabaseClient";
 import CompletedDriverFeedback from "@/components/CompletedDriverFeedback";
 
-type Outcome="completed"|"cancelled"|"no_agreement";
 export default function JobConversationStatusDialog({listingId,threadId,listingTitle,listingKind="job",onExit,onCompleted}:{listingId:string;threadId:string;listingTitle:string;listingKind?:"job"|"contract";onExit:()=>void;onCompleted?:()=>void}){
- const [choice,setChoice]=useState<Outcome>("completed");
  const [note,setNote]=useState("");
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
@@ -16,7 +14,7 @@ export default function JobConversationStatusDialog({listingId,threadId,listingT
   const {data:{user}}=await supabase.auth.getUser();
   if(!user){setError("Sign in to close your listing.");setBusy(false);return;}
   const {error:writeError}=await supabase.from("job_closures").insert({
-   listing_id:listingId,thread_id:threadId,closed_by:user.id,outcome:choice,note:note.trim()
+   listing_id:listingId,thread_id:threadId,closed_by:user.id,outcome:"completed",note:note.trim()
   });
   if(writeError){
    if(writeError.code==="23505"){
