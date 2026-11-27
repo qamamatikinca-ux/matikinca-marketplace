@@ -43,3 +43,28 @@ export function waitForCameraFrame(video: HTMLVideoElement, timeoutMs = 12000): 
     check();
   });
 }
+
+/** React can mount the camera preview after the mobile permission prompt resolves. */
+export function waitForCameraPreview(getPreview: () => HTMLVideoElement | null, timeoutMs = 2500): Promise<HTMLVideoElement> {
+  return new Promise((resolve, reject) => {
+    const started = Date.now();
+    const check = () => {
+      const player = getPreview();
+      if (player) { resolve(player); return; }
+      if (Date.now() - started >= timeoutMs) {
+        reject(new Error("The selfie camera preview did not appear. Retry or request staff review."));
+        return;
+      }
+      window.requestAnimationFrame(check);
+    };
+    check();
+  });
+}
+/** Preserve the actual format recorded by the phone, not a guessed WebM fallback. */
+export function recordedVideoMimeType(chunks: Blob[], recorderMime: string, requestedMime: string): "video/mp4" | "video/webm" | null {
+  for (const value of [chunks.find(chunk => chunk.type)?.type, recorderMime, requestedMime]) {
+    const type = (value || "").split(";")[0].trim().toLowerCase();
+    if (type === "video/mp4" || type === "video/webm") return type;
+  }
+  return null;
+}

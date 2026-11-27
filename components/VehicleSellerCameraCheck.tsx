@@ -3,7 +3,7 @@ import {useCallback,useEffect,useRef,useState} from "react";
 import Link from "next/link";
 import {loadFaceGuidance} from "@/lib/faceComparison";
 import {checkDriverFrame,updateDriverHold,type Hold} from "@/lib/driverCapture";
-import {cameraFailureText,selectRecordingMime,waitForCameraFrame} from "@/lib/vehicleFaceCamera";
+import {cameraFailureText,selectRecordingMime,waitForCameraFrame,waitForCameraPreview,recordedVideoMimeType} from "@/lib/vehicleFaceCamera";
 import type {Pose} from "@/lib/liveIdentity";
 
 type Evidence = {portrait:File;video:File;consentAt:string};
@@ -59,6 +59,7 @@ export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Pr
     const id=++run.current;
     setError("");setStep(0);setHint("Opening the front camera…");setStage("opening");
     let recorder:MediaRecorder|null=null;
+    let captureStream:MediaStream|null=null;
     try{
       if(!window.isSecureContext) throw new Error("Camera access needs a secure HTTPS connection. Use the official LoadLink website.");
       if(!navigator.mediaDevices?.getUserMedia) throw new Error("This browser cannot access a selfie camera. Request staff review instead.");
@@ -72,14 +73,17 @@ export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Pr
       }
       if(id!==run.current){media.getTracks().forEach(track=>track.stop());return;}
       stream.current=media;
-      // Rendering can complete after getUserMedia on iOS webviews.
-      if(!video.current) await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
-      const player=video.current;
-      if(!player) throw new Error("The selfie camera preview did not appear. Retry or request staff review.");
+      captureStream=media;
+      const player=await waitForCameraPreview(()=>video.current);
       player.srcObject=media;
       player.muted=true;
       player.playsInline=true;
-      await player.play();
+      try{await player.play();}
+      catch(playError){
+        // Muted inline autoplay may start on the following frame in iOS webviews.
+        // Still require a real decoded frame before using the video.
+        if((playError as {name?:string})?.name!=="NotAllowedError")throw playError;
+      }
       await waitForCameraFrame(player);
       if(id!==run.current)return;
       setHint("Loading face guidance on your device…");
@@ -91,7 +95,6 @@ export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Pr
       }catch{
         recorder=new MediaRecorder(media);
       }
-      const recorderType=(recorder.mimeType||mime||"video/webm").split(";")[0];
       const chunks:Blob[]=[];
       let recordingFailure=false;
       recorder.ondataavailable=event=>{if(event.data.size>0)chunks.push(event.data);};
@@ -99,7 +102,8 @@ export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Pr
       const doneRecording=new Promise<void>(resolve=>{recorder!.onstop=()=>resolve();});
       // Five deliberately distinct guidance steps, not a claim of automated
       // identity confirmation or spoof-resistant liveness detection.
-      const poses:Pose[]=["centre",Math.random()>.5?"left":"right","centre",Math.random()>.5?"right":"left","centre"];
+      const firstTurn:Pose=Math.random()>.5?"left":"right";
+      const poses:Pose[]=["centre",firstTurn,"centre",firstTurn==="left"?"right":"left","centre"];
       const started=performance.now();
       let captured:Blob|null=null,hold:Hold|null=null;
       recorder.start(400);
@@ -138,6 +142,8 @@ export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Pr
         new Promise<never>((_,reject)=>window.setTimeout(()=>reject(new Error("Recording did not finish. Retry or request staff review.")),5500)),
       ]);
       if(id!==run.current || !consentRef.current)return;
+      const recorderType=recordedVideoMimeType(chunks,recorder.mimeType,mime);
+      if(!recorderType)throw new Error("This device recorded an unsupported video format. Retry or request staff review.");
       const recording=new Blob(chunks,{type:recorderType});
       if(!captured||!recording.size||recording.size>8*1024*1024)
         throw new Error("The scan completed, but the recording could not be saved. Retry or request staff review.");
@@ -156,7 +162,9 @@ export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Pr
       }
     }finally{
       if(recorder?.state==="recording")try{recorder.stop();}catch{}
-      stop();
+      // An old cancelled scan must not close a newer scan\u2019s stream.
+      if(id===run.current)stop();
+      else captureStream?.getTracks().forEach(track=>track.stop());
     }
   };
   const manual=()=>{

@@ -24,6 +24,9 @@ test("camera error guidance is actionable and MP4/WebM choices are device-specif
  assert.equal(camera.selectRecordingMime(type=>type==="video/mp4"),"video/mp4");
  assert.equal(camera.selectRecordingMime(type=>type==="video/webm"),"video/webm");
  assert.equal(camera.selectRecordingMime(()=>false),"");
+ assert.equal(camera.recordedVideoMimeType([{type:"video/mp4;codecs=avc1"}],"video/webm","video/webm"),"video/mp4");
+ assert.equal(camera.recordedVideoMimeType([], "video/webm;codecs=vp8", ""),"video/webm");
+ assert.equal(camera.recordedVideoMimeType([], "", ""),null);
 });
 
 test("camera scan keeps all five challenge steps and never asserts identity approval",()=>{
@@ -33,7 +36,10 @@ test("camera scan keeps all five challenge steps and never asserts identity appr
  assert.match(scan,/recording\.size>8\*1024\*1024/);
  assert.match(scan,/checkDriverFrame\(/);
  assert.match(scan,/updateDriverHold\(/);
- assert.match(scan,/const poses:Pose\[\]=\["centre"/);
+ assert.match(scan,/const firstTurn:Pose=/);
+ assert.match(scan,/const poses:Pose\[\]=\["centre",firstTurn,"centre",firstTurn==="left"\?"right":"left","centre"\]/);
+ assert.match(scan,/if\(id===run.current\)stop\(\)/);
+ assert.match(scan,/recordedVideoMimeType\(/);
  assert.match(scan,/Previous|previous valid capture/);
  assert.match(scan,/setStage\(hasCapture\?"done":"idle"\)/);
  assert.match(scan,/Request staff review/);
@@ -66,6 +72,9 @@ test("file recovery stays user-scoped, excludes ID documents and degrades safely
  const draft=read("lib/vehiclePhotoDraft.ts");
  assert.match(draft,/userId\.trim\(\) \+ ":" \+ submissionId\.trim\(\)/);
  assert.match(draft,/indexedDB\.open\(DATABASE, VERSION\)/);
+ assert.match(draft,/queuedWrites/);
+ assert.match(draft,/queueWrite\(draftId/);
+ assert.match(draft,/await queuedWrites\.get/);
  assert.doesNotMatch(draft,/idDocument|sellerFaceEvidence|vehicle-verification/);
  assert.deepEqual(await photoDraft.restoreVehiclePhotos("owner","submission"),[]);
  assert.equal(await photoDraft.saveVehiclePhotos("owner","submission",[]),false);

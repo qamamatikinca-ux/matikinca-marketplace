@@ -27,6 +27,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify mobile photo recovery and face scan regressions
+        run: node --test tests/reliable-mobile-vehicle-face-uploads-review-20261127.test.cjs
+
       - name: Build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
