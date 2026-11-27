@@ -11,7 +11,7 @@ export default function JobCompletionReminder(){
  const searchParams=useSearchParams();
  // The query can change without the pathname changing. An existing chat
  // must never receive the new-enquiry reminder.
- const newChatEntry=pathname==="/messages" && searchParams.has("listing") && !searchParams.has("thread");
+ const newChatEntry=pathname==="/messages" && searchParams.has("listing") && !searchParams.has("thread") && !searchParams.has("conversation");
  const reminderRoute=pathname==="/" ? "home" : newChatEntry ? "new-enquiry" : "";
  const [readyRoute,setReadyRoute]=useState("");
  useEffect(()=>{
