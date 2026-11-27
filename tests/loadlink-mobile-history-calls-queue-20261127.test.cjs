@@ -79,8 +79,8 @@ test("price determination uses bounded real costs and does not invent a price",(
 });
 test("resume listing popup shows meaningful identity, stage and saved time",()=>{
  const toast=read("components/VehicleDraftResumeToast.tsx");
- assert.match(toast,/Resume your listing/);
+ assert.match(toast,/You have a saved listing/);
  assert.match(toast,/readVehicleWizardStep/);
- assert.match(toast,/Continue listing/);
+ assert.match(toast,/Resume listing/);
  assert.doesNotMatch(toast,/Continue your vehicle listing\?/);
 });
