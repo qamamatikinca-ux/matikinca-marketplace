@@ -192,8 +192,8 @@ export default function PackagesPage() {
     if (params.get("payment") !== "return") return;
     const reference = params.get("reference") || params.get("trxref") || "";
     if (!reference) {
-      setNotice("LoadLink returned from checkout without a payment reference. Nothing has been activated.");
-      return;
+      const timer=window.setTimeout(()=>setNotice("LoadLink returned from checkout without a payment reference. Nothing has been activated."),0);
+      return ()=>window.clearTimeout(timer);
     }
 
     let active = true;
