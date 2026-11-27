@@ -81,7 +81,7 @@ export default function VehicleDraftResumeToast() {
   };
   return (
     <aside role="status" aria-label="Saved vehicle listing" aria-live="polite"
-      className={`fixed bottom-[max(90px,env(safe-area-inset-bottom))] left-3 right-3 z-[950] mx-auto w-[calc(100%-24px)] max-w-[390px] rounded-2xl border p-3.5 shadow-[0_8px_26px_rgba(0,0,0,.10)] ${darkMode ? "border-white/15 bg-[#191919] text-white" : "border-black/10 bg-white text-black"}`}>
+      className={`fixed bottom-[max(90px,env(safe-area-inset-bottom))] left-3 right-3 z-[950] mx-auto max-w-[390px] rounded-2xl border p-3.5 shadow-[0_8px_26px_rgba(0,0,0,.10)] ${darkMode ? "border-white/15 bg-[#191919] text-white" : "border-black/10 bg-white text-black"}`}>
       <div className="flex items-start gap-3">
         <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${darkMode?"bg-white/10":"bg-[#f3f3f3]"}`}>
           <LoadLinkIcon name="truck" size={18}/>
