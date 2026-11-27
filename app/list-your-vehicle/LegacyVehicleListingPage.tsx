@@ -1119,9 +1119,40 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 <Field label="Accident / structural damage"><select value={accidentHistory} onChange={e=>setAccidentHistory(e.target.value)} className={inputClass}><option>Not disclosed</option><option>No known accident history</option><option>Previous damage repaired</option><option>Structural damage disclosed</option><option>Unknown</option></select></Field>
                 <Field label="Last service date — optional"><input type="date" value={lastServiceDate} onChange={e=>setLastServiceDate(e.target.value)} max={new Date().toISOString().slice(0,10)} className={inputClass}/></Field>
                 <Field label="Roadworthy status"><select value={roadworthyStatus} onChange={e=>setRoadworthyStatus(e.target.value)} className={inputClass}><option>Not confirmed</option><option>Valid certificate provided</option><option>Inspection required</option><option>Expired / not roadworthy</option></select></Field>
-                <Field label="Registration number"><input value={registrationNumber} onChange={(event) => setRegistrationNumber(event.target.value)} className={inputClass} required /></Field>
-                <Field label="VIN / chassis number"><input value={vin} onChange={(event) => setVin(event.target.value)} className={inputClass} required /></Field>
-                <Field label="Engine / serial number"><input value={engineNumber} onChange={(event) => setEngineNumber(event.target.value)} className={inputClass} /></Field>
+                
+<Field label="Registration number">
+ <input value={registrationNumber} onChange={event=>{setRegistrationNumber(event.target.value.toUpperCase());event.target.setCustomValidity("");}}
+ onInvalid={event=>event.currentTarget.setCustomValidity(validateVehicleRegistration(registrationNumber)||"")}
+ autoCapitalize="characters" spellCheck={false} maxLength={15} minLength={2}
+ placeholder="As shown on licence disc / NaTIS" className={inputClass} required/>
+ <p className={`mt-1 text-[11px] leading-5 ${muted}`}>Enter the registration exactly as printed. Personalised and older plates can vary.</p>
+ {registrationNumber.trim()&&validateVehicleRegistration(registrationNumber)?
+ <p role="alert" className="mt-1 text-xs text-red-600">{validateVehicleRegistration(registrationNumber)}</p>:null}
+</Field>
+                
+<Field label="VIN / chassis number">
+ <input value={vin}
+ onChange={event=>{setVin(event.target.value.toUpperCase().replace(/\s+/g,""));event.target.setCustomValidity("");}}
+ onInvalid={event=>event.currentTarget.setCustomValidity(validateVehicleVin(vin,year,vehicleCategory)||"")}
+ autoCapitalize="characters" spellCheck={false} autoComplete="off" maxLength={17}
+ minLength={year>=1981?17:5}
+ pattern={year>=1981?"[A-HJ-NPR-Z0-9]{17}":"[A-Z0-9]{5,17}"}
+ placeholder={year>=1981?"17 characters from registration paper":"Original chassis number"}
+ className={inputClass} required/>
+ <p className={`mt-1 text-[11px] leading-5 ${muted}`}>{year>=1981?
+ `Modern VIN: ${normalizeVehicleIdentity(vin).length}/17 characters; no I, O or Q.`:
+ "Historic chassis number: 5–17 alphanumeric characters."} Copy it from the registration papers or chassis plate; format checks cannot verify ownership.</p>
+ {vin&&validateVehicleVin(vin,year,vehicleCategory)?<p role="alert" className="mt-1 text-xs text-red-600">{validateVehicleVin(vin,year,vehicleCategory)}</p>:null}
+</Field>
+                
+<Field label="Engine / serial number">
+ <input value={engineNumber} maxLength={20} pattern="[A-Za-z0-9/\\-]{1,20}"
+ autoCapitalize="characters" spellCheck={false}
+ onChange={event=>{setEngineNumber(event.target.value.toUpperCase());event.target.setCustomValidity("");}}
+ onInvalid={event=>event.currentTarget.setCustomValidity(validateEngineNumber(engineNumber)||"")}
+ placeholder="As shown on registration documents" className={inputClass}/>
+ {engineNumber&&validateEngineNumber(engineNumber)?<p role="alert" className="mt-1 text-xs text-red-600">{validateEngineNumber(engineNumber)}</p>:null}
+</Field>
                 <Field label="Axle configuration">{vehicleCategory === "truck" && selectedModel
                   ? <select value={axleConfiguration} onChange={(event) => setAxleConfiguration(event.target.value)} className={inputClass}><option value="">Choose actual axle configuration</option>{Array.from(new Set([...selectedModel.axleConfigurations, ...(axleConfiguration ? [axleConfiguration] : [])])).map((item) => <option key={item}>{item}</option>)}</select>
                   
