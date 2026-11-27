@@ -101,3 +101,14 @@ test("posting wizard catches payload greater than GVM before photo uploads",()=>
  assert.match(form,/data-loadlink-payload="true"/);
  assert.match(form,/pattern="\[A-Z0-9 -\]\{2,15\}"/);
 });
+
+test("alternate identity-claim route cannot bypass modern VIN validation",()=>{
+ const sql=read("supabase/migrations/20261127222000_identity_claims_vin_format_guard.sql");
+ assert.match(sql,/new\.user_id IS DISTINCT FROM auth\.uid\(\)/);
+ assert.match(sql,/v_year >= 1981/);
+ assert.match(sql,/length\(new\.vin_normalized\) <> 17/);
+ assert.match(sql,/new\.vin_normalized !~ '\^\[A-HJ-NPR-Z0-9\]\{17\}\$'/);
+ assert.match(sql,/length\(new\.plate_normalized\)<2/);
+ assert.match(sql,/VEHICLE_ALREADY_LISTED/);
+ assert.equal(sql.split("SELECT coalesce(bool_or").length-1,1,"must not duplicate the original SQL function body");
+});
