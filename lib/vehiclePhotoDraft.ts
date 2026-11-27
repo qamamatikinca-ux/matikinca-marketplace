@@ -10,6 +10,17 @@ const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 type PhotoRecord = { id: string; files: File[]; savedAt: number };
 
+// Mobile IndexedDB open/write completion can reorder concurrent saves and removals.
+const queuedWrites = new Map<string, Promise<void>>();
+function queueWrite<T>(key: string, action: () => Promise<T>): Promise<T> {
+  const prior = queuedWrites.get(key) || Promise.resolve();
+  const work = prior.then(action, action);
+  const settled = work.then(() => undefined, () => undefined);
+  queuedWrites.set(key, settled);
+  void settled.then(() => { if (queuedWrites.get(key) === settled) queuedWrites.delete(key); });
+  return work;
+}
+
 function draftId(userId: string, submissionId: string) {
   return userId.trim() + ":" + submissionId.trim();
 }
@@ -33,11 +44,13 @@ function openDatabase(): Promise<IDBDatabase> {
 
 export async function saveVehiclePhotos(userId: string, submissionId: string, files: File[]) {
   if (!userId || !submissionId) return false;
+  const snapshot = files.slice();
+  return queueWrite(draftId(userId, submissionId), async () => {
   try {
     const database = await openDatabase();
     await new Promise<void>((resolve, reject) => {
       const tx = database.transaction(STORE, "readwrite");
-      tx.objectStore(STORE).put({ id: draftId(userId, submissionId), files, savedAt: Date.now() } satisfies PhotoRecord);
+      tx.objectStore(STORE).put({ id: draftId(userId, submissionId), files: snapshot, savedAt: Date.now() } satisfies PhotoRecord);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error || new Error("Photo draft write failed."));
       tx.onabort = () => reject(tx.error || new Error("Photo draft write interrupted."));
@@ -45,11 +58,13 @@ export async function saveVehiclePhotos(userId: string, submissionId: string, fi
     database.close();
     return true;
   } catch { return false; } // Quota/private browsing: keep existing in-memory files.
+  });
 }
 
 export async function restoreVehiclePhotos(userId: string, submissionId: string): Promise<File[]> {
   if (!userId || !submissionId) return [];
   try {
+    await queuedWrites.get(draftId(userId, submissionId));
     const database = await openDatabase();
     const entry = await new Promise<PhotoRecord | undefined>((resolve, reject) => {
       const tx = database.transaction(STORE, "readonly");
@@ -70,6 +85,7 @@ export async function restoreVehiclePhotos(userId: string, submissionId: string)
 
 export async function clearVehiclePhotos(userId: string, submissionId: string) {
   if (!userId || !submissionId) return;
+  return queueWrite(draftId(userId, submissionId), async () => {
   try {
     const database = await openDatabase();
     await new Promise<void>((resolve, reject) => {
@@ -80,4 +96,5 @@ export async function clearVehiclePhotos(userId: string, submissionId: string) {
     });
     database.close();
   } catch { /* Best-effort removal; never change posting result. */ }
+  });
 }
