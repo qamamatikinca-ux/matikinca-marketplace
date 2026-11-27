@@ -1093,7 +1093,20 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 <Field label="Transmission"><select value={transmission} onChange={(event) => setTransmission(event.target.value)} className={inputClass} required><option value="">Choose gearbox</option>{gearboxOptions.map((item) => <option key={item}>{item}</option>)}</select></Field>
                 <Field label="Fuel / power type">{vehicleCategory === "truck" && selectedModel
                   ? <select value={fuelType} onChange={(event) => setFuelType(event.target.value)} className={inputClass} required><option value="">Choose actual fuel type</option>{Array.from(new Set([...selectedModel.fuels, ...(fuelType ? [fuelType as typeof selectedModel.fuels[number]] : [])])).map((item) => <option key={item} value={item}>{item}</option>)}</select>
-                  : <input value={fuelType} onChange={(event) => setFuelType(event.target.value)} placeholder={vehicleCategory === "trailer" ? "Not applicable" : "Confirm fuel / power type"} className={inputClass} required />}</Field>
+                  
+: <div className="space-y-2">
+ <select value={fuelType&&!commonFuelTypes.includes(fuelType)?"Other":fuelType}
+ onChange={event=>setFuelType(event.target.value==="Other"?"Other (specify)":event.target.value)}
+ className={inputClass} required>
+ <option value="">Choose fuel / power type</option>
+ {commonFuelTypes.map(item=><option key={item} value={item}>{item}</option>)}
+ <option value="Other">Other — specify</option>
+ </select>
+ {fuelType&&!commonFuelTypes.includes(fuelType)?
+ <input value={fuelType==="Other (specify)"?"":fuelType}
+ onChange={event=>setFuelType(event.target.value||"Other (specify)")}
+ placeholder="Enter exact fuel / power type" maxLength={60} aria-label="Other fuel or power type" className={inputClass} required/>:null}
+ </div>}</Field>
                 <Field label="Mileage / usage"><input type="number" min="0" max="99999999" step="1" value={odometerKm} onChange={(event) => setOdometerKm(event.target.value)} placeholder="Kilometres or usage reading" className={inputClass} required /></Field>
                 <Field label="How is this unit available?"><select value={offerMode} onChange={(event) => setOfferMode(event.target.value as OfferMode)} className={inputClass}><option value="sale">For sale only</option><option value="rental">Rental only</option><option value="sale_or_rental">Sale or rental</option><option value="poa">POA — price on application</option></select></Field>
                 {offerMode !== "poa" ? <Field label={offerMode === "rental" ? "Rental rate" : "Sale price"}><input value={rate} onChange={(event) => setRate(event.target.value)} placeholder={offerMode === "rental" ? "Example: 25000" : "Example: 850000"} inputMode="decimal" className={inputClass} required /></Field> : <Field label="Price"><div className={`${inputClass} flex items-center`}>POA — interested users must contact the seller</div></Field>}
@@ -1111,7 +1124,18 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 <Field label="Engine / serial number"><input value={engineNumber} onChange={(event) => setEngineNumber(event.target.value)} className={inputClass} /></Field>
                 <Field label="Axle configuration">{vehicleCategory === "truck" && selectedModel
                   ? <select value={axleConfiguration} onChange={(event) => setAxleConfiguration(event.target.value)} className={inputClass}><option value="">Choose actual axle configuration</option>{Array.from(new Set([...selectedModel.axleConfigurations, ...(axleConfiguration ? [axleConfiguration] : [])])).map((item) => <option key={item}>{item}</option>)}</select>
-                  : <input value={axleConfiguration} onChange={(event) => setAxleConfiguration(event.target.value)} placeholder="4x2, tandem, tri-axle" className={inputClass} />}</Field>
+                  
+: <div className="space-y-2">
+ <select value={axleConfiguration&&!commonAxles.includes(axleConfiguration)?"Other":axleConfiguration}
+ onChange={event=>setAxleConfiguration(event.target.value==="Other"?"Other (specify)":event.target.value)}
+ className={inputClass}><option value="">Choose axle arrangement (if applicable)</option>
+ {commonAxles.map(item=><option key={item} value={item}>{item}</option>)}
+ <option value="Other">Other — specify</option></select>
+ {axleConfiguration&&!commonAxles.includes(axleConfiguration)?
+ <input value={axleConfiguration==="Other (specify)"?"":axleConfiguration}
+ onChange={event=>setAxleConfiguration(event.target.value||"Other (specify)")}
+ placeholder="Enter the actual axle arrangement" maxLength={50} aria-label="Other axle arrangement" className={inputClass} required/>:null}
+ </div>}</Field>
                 <Field label="GVM kg"><input type="number" min="1" max="150000" step="1" value={gvmKg} onChange={(event) => setGvmKg(event.target.value)} className={inputClass} /></Field>
                 <Field label="Payload / capacity kg"><input type="number" min="1" max="150000" step="1" value={payloadKg} onChange={(event) => setPayloadKg(event.target.value)} className={inputClass} /></Field>
                 <Field label={specSchema[0][0]}><input value={specA} onChange={(event) => setSpecA(event.target.value)} placeholder={specSchema[0][1]} className={inputClass} /></Field>
