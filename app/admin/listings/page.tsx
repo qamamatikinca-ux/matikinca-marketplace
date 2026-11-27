@@ -93,7 +93,7 @@ export default function AdminListingsPage() {
     }
   }, [kind, status]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { const timer=window.setTimeout(() => void load(),0); return ()=>window.clearTimeout(timer); }, [load]);
 
   async function review(item: QueueItem, decision: "approved" | "rejected") {
     let reason: string | null = null;
