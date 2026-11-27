@@ -22,22 +22,29 @@ export default function VehicleDraftResumeToast() {
   }
   useEffect(() => {
     let alive = true, revision = 0;
+    let promptTimer: ReturnType<typeof setTimeout> | null = null;
     const check = (id: string, sessionId: string) => {
       if (!alive) return;
-      const key = id ? `${id}:${sessionId}` : "";
-      // Focus and token events can repeat SIGNED_IN for the same active session.
-      // Navigation alone must never offer a draft the user just left.
-      if (key && sessionKeyRef.current === key) return;
-      sessionKeyRef.current = key;
-      scopeVehicleDraft(id); setUserId(id); setDraft(null);
-      const currentPath = pathnameRef.current;
-      if (!id || currentPath.startsWith("/list-your-vehicle") || currentPath.startsWith("/list-your-truck")) return;
+      // A resume suggestion belongs only on Home, never over Messages,
+      // Control Centre, forms, face verification, or an active conversation.
+      if (!id || pathnameRef.current !== "/") return;
+      const key = `${id}:${sessionId}`;
+      if (sessionKeyRef.current === key) return;
+      const seen = `loadlink-draft-prompt:${id}:${sessionId}`;
+      try { if (sessionStorage.getItem(seen)) return; } catch {}
+      scopeVehicleDraft(id);
       const saved = readVehicleDraft(id);
       if (!hasVehicleDraft(saved)) return;
-      try{if(localStorage.getItem(dismissedKey(id))===fingerprint(saved!))return;}catch{}
-      const seen = `loadlink-draft-prompt:${id}:${sessionId}`;
-      try { if (sessionStorage.getItem(seen)) return; sessionStorage.setItem(seen, "1"); } catch {}
-      setDraft(saved);
+      try { if (localStorage.getItem(dismissedKey(id)) === fingerprint(saved!)) return; } catch {}
+      sessionKeyRef.current = key;
+      // Let Home become usable first. Never interrupt navigation or page load.
+      if (promptTimer) window.clearTimeout(promptTimer);
+      promptTimer = window.setTimeout(() => {
+        if (!alive || pathnameRef.current !== "/") return;
+        try { sessionStorage.setItem(seen, "1"); } catch {}
+        setUserId(id);
+        setDraft(saved);
+      }, 5500);
     };
     const getSessionId = (token?: string) => {
       try { return token ? String(JSON.parse(atob(token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))).session_id || "session") : "session"; } catch { return "session"; }
@@ -49,9 +56,14 @@ export default function VehicleDraftResumeToast() {
       if (event === "SIGNED_OUT") { window.setTimeout(() => check("", ""), 0); return; }
       if (event === "SIGNED_IN" || event === "INITIAL_SESSION") window.setTimeout(() => check(session?.user.id || "", getSessionId(session?.access_token)), 0);
     });
-    return () => { alive = false; subscription.unsubscribe(); };
-  }, []);
-  if (!draft) return null;
+    return () => {
+      alive = false;
+      if (promptTimer) window.clearTimeout(promptTimer);
+      sessionKeyRef.current = "";
+      subscription.unsubscribe();
+    };
+  }, [pathname]);
+  if (pathname !== "/" || !draft) return null;
   const categoryNames: Record<string,string> = { truck:"Truck", bakkie_van:"Bakkie or van", trailer:"Trailer", mobile_unit:"Mobile unit" };
   const category = categoryNames[String(draft.vehicleCategory||"")] || "Vehicle";
   const identity = [draft.year && Number(draft.year)>1970 ? draft.year : null, draft.brand, draft.modelName]
@@ -68,26 +80,29 @@ export default function VehicleDraftResumeToast() {
     router.push(`/list-your-vehicle?entry=${entry}#listing-form`);
   };
   return (
-    <section role="status" aria-label="Unfinished vehicle listing"
-      className={`fixed left-3 right-3 top-[max(12px,env(safe-area-inset-top))] z-[2147483490] mx-auto max-w-[420px] rounded-2xl border p-4 shadow-[0_12px_32px_rgba(0,0,0,.14)] ${darkMode ? "border-white/15 bg-[#171717] text-white" : "border-black/10 bg-white text-black"}`}>
-      <div className="flex min-w-0 items-start gap-3">
-        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${darkMode?"bg-white/10":"bg-[#f5f5f3]"}`}><LoadLinkIcon name="truck" size={20}/></span>
+    <aside role="status" aria-label="Saved vehicle listing" aria-live="polite"
+      className={`fixed bottom-[max(90px,env(safe-area-inset-bottom))] left-3 right-3 z-[950] mx-auto w-[calc(100%-24px)] max-w-[390px] rounded-2xl border p-3.5 shadow-[0_8px_26px_rgba(0,0,0,.10)] ${darkMode ? "border-white/15 bg-[#191919] text-white" : "border-black/10 bg-white text-black"}`}>
+      <div className="flex items-start gap-3">
+        <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${darkMode?"bg-white/10":"bg-[#f3f3f3]"}`}>
+          <LoadLinkIcon name="truck" size={18}/>
+        </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-[16px] font-bold tracking-tight">Resume your listing</h2>
-          <p className="mt-0.5 truncate text-sm font-medium">{identity || String(draft.title||category)}</p>
-          <p className="mt-1 text-xs opacity-60">{category} · {stepName} · {updated}</p>
+          <h2 className="text-[15px] font-semibold tracking-tight">You have a saved listing</h2>
+          <p className="mt-0.5 truncate text-[13px] font-medium">{identity || String(draft.title || category)}</p>
+          <p className="mt-1 text-xs leading-4 opacity-60">{category} · {stepName}</p>
+          <p className="mt-0.5 text-[11px] opacity-50">{updated}</p>
         </div>
-        <button type="button" onClick={dismissPersistently} aria-label="Dismiss saved listing prompt"
-          className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border ${darkMode?"border-white/15":"border-black/10"}`}>
-          <LoadLinkIcon name="close" size={17}/>
+        <button type="button" onClick={dismissPersistently} aria-label="Dismiss listing reminder"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg opacity-65 hover:opacity-100">
+          <LoadLinkIcon name="close" size={18}/>
         </button>
       </div>
-      <p className="mt-3 text-xs leading-5 opacity-65">Your form details are saved on this device. Pick up where you stopped, or start a new listing.</p>
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <button type="button" onClick={startFresh} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${darkMode?"border-white/20":"border-black/15"}`}>Start fresh</button>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button type="button" onClick={startFresh}
+          className={`min-h-10 rounded-lg border px-3 text-[13px] font-semibold ${darkMode?"border-white/20":"border-black/15"}`}>Start fresh</button>
         <button type="button" onClick={()=>{router.push(vehicleDraftHref(draft));dismissPersistently();}}
-          className="min-h-11 rounded-xl bg-[#f6b800] px-3 text-sm font-bold text-black">Continue listing</button>
+          className="min-h-10 rounded-lg bg-[#f6b800] px-3 text-[13px] font-semibold text-black">Resume listing</button>
       </div>
-    </section>
+    </aside>
   );
 }
