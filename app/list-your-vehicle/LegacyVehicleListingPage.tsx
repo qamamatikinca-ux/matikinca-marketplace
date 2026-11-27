@@ -1151,7 +1151,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
 <Field label="Registration number">
  <input value={registrationNumber} onChange={event=>{setRegistrationNumber(event.target.value.toUpperCase());event.target.setCustomValidity("");}}
  onInvalid={event=>event.currentTarget.setCustomValidity(validateVehicleRegistration(registrationNumber)||"")}
- autoCapitalize="characters" spellCheck={false} maxLength={15} minLength={2}
+ autoCapitalize="characters" spellCheck={false} maxLength={15} minLength={2} pattern="[A-Z0-9 -]{2,15}"
  placeholder="As shown on licence disc / NaTIS" className={inputClass} required/>
  <p className={`mt-1 text-[11px] leading-5 ${muted}`}>Enter the registration exactly as printed. Personalised and older plates can vary.</p>
  {registrationNumber.trim()&&validateVehicleRegistration(registrationNumber)?
@@ -1195,8 +1195,8 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
  onChange={event=>setAxleConfiguration(event.target.value||"Other (specify)")}
  placeholder="Enter the actual axle arrangement" maxLength={50} aria-label="Other axle arrangement" className={inputClass} required/>:null}
  </div>}</Field>
-                <Field label="GVM kg"><input type="number" min="1" max="150000" step="1" value={gvmKg} onChange={(event) => setGvmKg(event.target.value)} className={inputClass} /></Field>
-                <Field label="Payload / capacity kg"><input type="number" min="1" max="150000" step="1" value={payloadKg} onChange={(event) => setPayloadKg(event.target.value)} className={inputClass} /></Field>
+                <Field label="GVM kg"><input data-loadlink-gvm="true" type="number" min="1" max="150000" step="1" value={gvmKg} onChange={(event) => setGvmKg(event.target.value)} className={inputClass} /></Field>
+                <Field label="Payload / capacity kg"><input data-loadlink-payload="true" type="number" min="1" max="150000" step="1" value={payloadKg} onChange={(event) => setPayloadKg(event.target.value)} className={inputClass} /></Field>
                 <Field label={specSchema[0][0]}><input value={specA} onChange={(event) => setSpecA(event.target.value)} placeholder={specSchema[0][1]} className={inputClass} /></Field>
                 <Field label={specSchema[1][0]}><input value={specB} onChange={(event) => setSpecB(event.target.value)} placeholder={specSchema[1][1]} className={inputClass} /></Field>
                 <Field label={specSchema[2][0]}><input value={specC} onChange={(event) => setSpecC(event.target.value)} placeholder={specSchema[2][1]} className={inputClass} /></Field>
