@@ -1,5 +1,6 @@
 "use client";
 
+import { VEHICLE_PLAN_RULES } from "@/lib/vehiclePlanBenefits";
 import { useEffect, useMemo, useState } from "react";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 import Link from "next/link";
@@ -48,7 +49,7 @@ const planDetails = {
     billing: "/ month",
     eyebrow: "Regular",
     description: "For individual owners and operators who advertise vehicles regularly.",
-    features: ["10 vehicle listings per month", "Up to 10 photos on each listing", "No Standard daily vehicle activation charge", "Unlimited messaging for business conversations", "View listing visits and engagement analytics", "Improved marketplace visibility", "Manage vehicles and enquiries from one account", "Priority customer support"],
+    features: VEHICLE_PLAN_RULES.pro.features,
   },
   dealer: {
     name: "Dealer",
