@@ -56,11 +56,11 @@ test("only approved jobs and ended contracts are eligible for a reminder",()=>{
 });
 test("saved draft prompt is compact, detailed, delayed and never shown over messages",()=>{
  const p=read("components/VehicleDraftResumeToast.tsx");
- assert.match(p,/pathnameRef\.current !== "\/"/);
- assert.match(p,/if \(pathname !== "\/" \|\| !draft\) return null;/);
- assert.match(p,/5500/);
+ assert.match(p,/if\(pathname!=="\/"\)/);
+ assert.match(p,/if\(pathname!=="\/"\|\|!visible\)return null;/);
+ assert.match(p,/1800/);
  assert.match(p,/readVehicleWizardStep/);
  assert.match(p,/saved listing/);
- assert.match(p,/bottom-\[max\(90px,env\(safe-area-inset-bottom\)\)\]/);
+ assert.match(p,/bottom-\[max\(96px,env\(safe-area-inset-bottom\)\)\]/);
  assert.doesNotMatch(p,/Continue your vehicle listing\?/);
 });
