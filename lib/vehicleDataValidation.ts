@@ -8,6 +8,8 @@ const VIN_ALPHABET=/^[A-HJ-NPR-Z0-9]{17}$/;
 const LEGACY_CHASSIS=/^[A-Z0-9]{5,17}$/;
 export const normalizeVehicleIdentity=(value:string)=>value.trim().toUpperCase().replace(/\s+/g,"");
 export function validateVehicleVin(value:string,year:number,category:VehicleIdentityCategory):string|null{
+ // VIN format applies consistently; category is used for routing and staff review elsewhere.
+ void category;
  const vin=normalizeVehicleIdentity(value);
  if(!vin)return "Enter the VIN/chassis number exactly as printed on the vehicle registration document.";
  if(!Number.isInteger(year)||year<1900||year>new Date().getFullYear()+1)
