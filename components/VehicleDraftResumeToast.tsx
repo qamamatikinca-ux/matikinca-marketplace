@@ -34,7 +34,14 @@ export default function VehicleDraftResumeToast() {
       if (!alive) return;
       // A resume suggestion belongs only on Home, never over Messages,
       // Control Centre, forms, face verification, or an active conversation.
-      if (!id || pathnameRef.current !== "/") return;
+      if (!id) {
+        // A signed-out user must never see a previous account's draft prompt.
+        setDraft(null);
+        setUserId("");
+        sessionKeyRef.current = "";
+        return;
+      }
+      if (pathnameRef.current !== "/") return;
       const key = `${id}:${sessionId}`;
       if (sessionKeyRef.current === key) return;
       const seen = `loadlink-draft-prompt:${id}:${sessionId}`;
