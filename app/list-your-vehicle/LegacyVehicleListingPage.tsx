@@ -32,7 +32,8 @@ import { createSafeRandomId, imageExtension, inferUploadContentType, prepareImag
 import { saveVehiclePhotos as saveVehiclePhotoDraft, restoreVehiclePhotos as restoreVehiclePhotoDraft, clearVehiclePhotos as clearVehiclePhotoDraft } from "@/lib/vehiclePhotoDraft";
 import { getFreshAuthenticatedUser, postingErrorMessage, withTransientRetry } from "@/lib/reliableSupabase";
 import { getLoadLinkIntelligence } from "@/lib/loadlinkIntelligence";
-import { getVehicleListingAccess } from "@/lib/packageAccess";
+import { getVehicleListingAccess, type PackageAccess } from "@/lib/packageAccess";
+import { VEHICLE_PLAN_RULES } from "@/lib/vehiclePlanBenefits";
 import { inspectLoadLinkImage, showLoadLinkImageQuality } from "@/lib/loadlinkImageQuality";
 import { submitListingDirect } from "@/lib/listingSubmission";
 import { assessVehicleListing } from "@/lib/vehiclePostingIntelligence";
@@ -228,6 +229,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [description, setDescription] = useState("");
   const [packageType, setPackageType] = useState<"standard" | "pro" | "dealer">(initialPackage);
+  const [verifiedAccess,setVerifiedAccess] = useState<PackageAccess | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<BusinessPlanId | "standard" | null>(entryMode ? initialPackage : null);
   const [vehiclePhotos, setVehiclePhotos] = useState<File[]>([]);
   const [vehiclePreviews, setVehiclePreviews] = useState<string[]>([]);
@@ -309,6 +311,17 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     }
     void requireAccount().catch(() => setAuthReady(true));
   }, [router]);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    let active = true;
+    void getVehicleListingAccess().then(access => {
+      if(active)setVerifiedAccess(access);
+    }).catch(() => {
+      if(active)setVerifiedAccess(null);
+    });
+    return () => { active = false; };
+  }, [signedIn]);
 
   useEffect(() => {
     if (!authReady || !signedIn) return;
@@ -723,6 +736,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       const user = await getFreshAuthenticatedUser();
       if (!user) throw new Error("Your sign-in session could not be confirmed.");
       const intelligence = await getLoadLinkIntelligence();
+      const effectivePackage: "standard"|"pro"|"dealer" = intelligence.capabilities.can_post_vehicle
+        && intelligence.plan === "dealer" && intelligence.dealer_ready ? "dealer"
+        : intelligence.capabilities.can_post_vehicle && intelligence.plan === "pro" ? "pro" : "standard";
       const standardAccess = !intelligence.capabilities.can_post_vehicle ? await getVehicleListingAccess() : null;
       if (!intelligence.capabilities.can_post_vehicle && !(standardAccess?.allowed && standardAccess.plan === "manual")) {
         if (["blocked","suspended"].includes(intelligence.account_status)) throw new Error(intelligence.account_reason || "You cannot post while this account is restricted.");
@@ -806,8 +822,10 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         vehicle_group: vehicleCategory === "mobile_unit" ? "Mobile Units" : vehicleCategory === "bakkie_van" ? "Vehicles" : "Trucks / Trailers",
         rate: displayRate, posted_by: postedBy.trim(), contact_number: contactNumber.trim(), whatsapp_number: whatsappNumber.trim(),
         description: storedDescription, photos: photoUrls,
-        sponsored: packageType === "pro" || packageType === "dealer", package_type: packageType,
-        listing_kind: "vehicle", display_tier: packageType === "dealer" ? 4 : packageType === "pro" ? 3 : 1,
+        // Published tier must come from the verified server entitlement, never
+        // from the package tab the seller clicked before payment/approval.
+        sponsored: effectivePackage === "pro" || effectivePackage === "dealer", package_type: effectivePackage,
+        listing_kind: "vehicle", display_tier: effectivePackage === "dealer" ? 4 : effectivePackage === "pro" ? 3 : 1,
         stock_status: "available", dealership_id: dealershipId || null, owner_key: ownerKey, user_id: user.id,
         vehicle_year:year,brand:brand.trim(),model:modelName.trim(),body_type:bodyType||subtype,
         condition,service_history:serviceHistory,previous_owners:previousOwners?Number(previousOwners):null,
@@ -1086,6 +1104,16 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
           {detailsReady ? <>
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="02" title="Vehicle details" description="Add the information buyers need before opening the full product view." />
+               <div data-loadlink-plan-entitlements="verified" className={`mx-5 mt-4 rounded-xl border px-4 py-3 text-xs leading-5 md:mx-7 ${darkMode?"border-white/15 bg-white/[.03]":"border-black/10 bg-white"}`}>
+                 <div className="flex flex-wrap items-center justify-between gap-2">
+                   <p className="font-semibold">{VEHICLE_PLAN_RULES[packageType].label} vehicle posting benefits</p>
+                   <a href="/packages" className="font-semibold underline underline-offset-2">Compare packages</a>
+                 </div>
+                 <p className={`mt-1 ${muted}`}>Up to {VEHICLE_PLAN_RULES[packageType].photoLimit} photos · {VEHICLE_PLAN_RULES[packageType].monthlyListings??"Unlimited"} new vehicle listings / month · {VEHICLE_PLAN_RULES[packageType].dailyMessages??"Unlimited"} messages / day</p>
+                 <p className={`mt-1 ${muted}`}>{verifiedAccess?.allowed && (verifiedAccess.plan === packageType || (packageType==="standard"&&verifiedAccess.plan==="manual"))
+                   ?`Active access confirmed: ${verifiedAccess.photoLimit} photos per listing.`
+                   :packageType==="standard"?"Standard vehicle publishing requires a paid daily listing credit.":"Selected benefits require an active approved plan before a listing can go live."}</p>
+               </div>
               <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7">
                 <Field label="Listing title" wide><input value={title} onChange={(event) => setTitle(event.target.value)} className={inputClass} required /></Field>
                 <Field label={vehicleCategory === "truck" ? "Body type" : "Type"}><select value={bodyType || vehicleSubtype} onChange={(event) => setBodyType(event.target.value)} className={inputClass}>{(vehicleCategory === "truck" ? truckBodyTypes : vehicleCategory === "bakkie_van" ? bakkieVanTypes : vehicleCategory === "trailer" ? trailerTypes : mobileUnitTypes).map((item) => <option key={item}>{item}</option>)}</select></Field>
