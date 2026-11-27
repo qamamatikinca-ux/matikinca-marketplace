@@ -21,6 +21,7 @@ export default function JobCompletionReminder(){
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
  useEffect(()=>{
+  if(!eligible)return;
   let active=true;
   const check=async()=>{
    try{
@@ -32,15 +33,13 @@ export default function JobCompletionReminder(){
      .not("work_starts_at","is",null).lte("work_starts_at",`${today()}T21:59:59.999Z`)
      .order("work_starts_at",{ascending:true}).limit(15);
     if(queryError)throw queryError;
-    const candidate=((data||[]) as Due[]).find(j=>{try{return localStorage.getItem(`loadlink-due-dismiss:${user.id}:${j.id}:${today()}`)!=="1"}catch{return true}});
-    if(active){setPoster(user.id);setItem(candidate||null);}
+    const candidate=((data||[]) as Due[]).find(j=>{try{return localStorage.getItem(`loadlink-due-dismiss:${user.id}:${j.id}:${today()}`)!=="1"&&localStorage.getItem(`loadlink-due-complete:${user.id}:${j.id}`)!=="1"}catch{return true}});
+    if(active){setPoster(user.id);setStage("ask");setItem(candidate||null);}
    }catch{/* A reminder must never interrupt ordinary browsing. */}
   };
   void check();
-  const visibility=()=>{if(!document.hidden)void check()};
-  document.addEventListener("visibilitychange",visibility);
-  return()=>{active=false;document.removeEventListener("visibilitychange",visibility)};
- },[]);
+  return()=>{active=false};
+ },[eligible]);
  function dismiss(){
   if(item)try{localStorage.setItem(`loadlink-due-dismiss:${poster}:${item.id}:${today()}`,"1")}catch{}
   setItem(null);setError("");
@@ -53,18 +52,18 @@ export default function JobCompletionReminder(){
     listing_id:item.id,thread_id:null,closed_by:poster,outcome:"completed",note:"Confirmed complete after scheduled work date."
    });
    if(closeError)throw closeError;
+   try{localStorage.setItem(`loadlink-due-complete:${poster}:${item.id}`,"1")}catch{}
    setStage("rate");
    window.dispatchEvent(new Event("loadlink:content-updated"));
   }catch(e){setError(e instanceof Error?e.message:"Could not confirm completion.")}
   finally{setBusy(false)}
  }
- if(!item)return null;
+ if(pathname!=="/"||!eligible||!item)return null;
  return <aside role="region" aria-label="Job completion reminder"
-  className="fixed bottom-[max(92px,env(safe-area-inset-bottom))] right-3 z-[1000] w-[min(345px,calc(100vw-24px))] overflow-y-auto rounded-[22px] border border-black/10 bg-white p-4 text-black shadow-[0_18px_65px_rgba(0,0,0,.20)]"
+  className="fixed bottom-[max(92px,env(safe-area-inset-bottom))] right-3 z-[1000] w-[min(345px,calc(100vw-24px))] overflow-y-auto rounded-2xl border border-black/10 bg-white p-4 text-black shadow-lg"
   style={{maxHeight:"min(68dvh,520px)"}}>
    <div className="flex items-start justify-between gap-3">
-    <div><p className="text-[10px] font-black uppercase tracking-[.12em] text-[#9c7200]">LoadLink job reminder</p>
-     <h2 className="mt-1 text-base font-black">{stage==="ask"?"Was this job completed?":"Job marked completed"}</h2></div>
+    <div><h2 className="text-base font-semibold">{stage==="ask"?"Was this job completed?":"Job marked completed"}</h2></div>
     <button type="button" onClick={dismiss} aria-label="Dismiss job reminder" className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-lg">×</button>
    </div>
    <p className="mt-2 line-clamp-2 text-xs font-semibold text-black/65">{item.title}</p>
