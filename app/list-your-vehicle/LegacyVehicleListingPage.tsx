@@ -9,6 +9,7 @@ import dynamic from "next/dynamic";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkVehicleWizardController20260825 from "@/components/LoadLinkVehicleWizardController20260825";
 import { VEHICLE_DRAFT_OWNER_KEY, readVehicleDraft, clearVehicleDraft, scopeVehicleDraft, isVehicleDraftActiveInTab, markVehicleDraftActiveInTab } from "@/lib/vehicleDraft";
+import { normalizeVehicleIdentity, validateVehicleVin, validateVehicleRegistration, validateEngineNumber, validateVehicleMeasurements } from "@/lib/vehicleDataValidation";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -31,7 +32,8 @@ import { createSafeRandomId, imageExtension, inferUploadContentType, prepareImag
 import { saveVehiclePhotos as saveVehiclePhotoDraft, restoreVehiclePhotos as restoreVehiclePhotoDraft, clearVehiclePhotos as clearVehiclePhotoDraft } from "@/lib/vehiclePhotoDraft";
 import { getFreshAuthenticatedUser, postingErrorMessage, withTransientRetry } from "@/lib/reliableSupabase";
 import { getLoadLinkIntelligence } from "@/lib/loadlinkIntelligence";
-import { getVehicleListingAccess } from "@/lib/packageAccess";
+import { getVehicleListingAccess, type PackageAccess } from "@/lib/packageAccess";
+import { VEHICLE_PLAN_RULES } from "@/lib/vehiclePlanBenefits";
 import { inspectLoadLinkImage, showLoadLinkImageQuality } from "@/lib/loadlinkImageQuality";
 import { submitListingDirect } from "@/lib/listingSubmission";
 import { assessVehicleListing } from "@/lib/vehiclePostingIntelligence";
@@ -209,6 +211,8 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [roadworthyStatus,setRoadworthyStatus]=useState("Not confirmed");
   const [fuelUseL100,setFuelUseL100]=useState("");
   const [gvmKg, setGvmKg] = useState("");
+  const commonFuelTypes=["Diesel","Petrol","Electric","Hybrid","CNG","LNG","Hydrogen","Not applicable"];
+  const commonAxles=["4x2","4x4","6x2","6x4","6x6","8x2","8x4","8x6","8x8","Single axle","Tandem axle","Tri-axle","Quad axle","Not applicable"];
   const [payloadKg, setPayloadKg] = useState("");
   const [rate, setRate] = useState("");
   const [offerMode, setOfferMode] = useState<OfferMode>("sale");
@@ -225,6 +229,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [description, setDescription] = useState("");
   const [packageType, setPackageType] = useState<"standard" | "pro" | "dealer">(initialPackage);
+  const [verifiedAccess,setVerifiedAccess] = useState<PackageAccess | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<BusinessPlanId | "standard" | null>(entryMode ? initialPackage : null);
   const [vehiclePhotos, setVehiclePhotos] = useState<File[]>([]);
   const [vehiclePreviews, setVehiclePreviews] = useState<string[]>([]);
@@ -306,6 +311,17 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     }
     void requireAccount().catch(() => setAuthReady(true));
   }, [router]);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    let active = true;
+    void getVehicleListingAccess().then(access => {
+      if(active)setVerifiedAccess(access);
+    }).catch(() => {
+      if(active)setVerifiedAccess(null);
+    });
+    return () => { active = false; };
+  }, [signedIn]);
 
   useEffect(() => {
     if (!authReady || !signedIn) return;
@@ -640,7 +656,15 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     if (!title.trim() || !postedBy.trim() || !description.trim()) return "Complete all required vehicle and listing fields.";
     if (offerMode !== "poa" && !rate.trim()) return offerMode === "rental" ? "Enter the advertised rental rate." : "Enter the advertised sale price.";
     if (offerMode === "sale_or_rental" && !rentalRate.trim()) return "Enter the advertised rental rate as well as the sale price.";
-    if (!registrationNumber.trim() || vin.trim().length < 6) return "Enter the registration number and VIN/chassis number.";
+    const registrationError=validateVehicleRegistration(registrationNumber);
+    if(registrationError)return registrationError;
+    const vinError=validateVehicleVin(vin,year,vehicleCategory);
+    if(vinError)return vinError;
+    const engineError=validateEngineNumber(engineNumber);
+    if(engineError)return engineError;
+    if(fuelType==="Other (specify)"||axleConfiguration==="Other (specify)")return "Specify the actual fuel type or axle configuration before continuing.";
+    const measurementsError=validateVehicleMeasurements({odometerKm,previousOwners,gvmKg,payloadKg,rate,rentalRate,offerMode});
+    if(measurementsError)return measurementsError;
     if (!odometerKm || Number(odometerKm) < 0) return "Enter a valid mileage or usage reading.";
     if (!isValidSouthAfricanPhone(contactNumber)) return "Enter a valid South African contact number.";
     if (whatsappNumber && !isValidSouthAfricanPhone(whatsappNumber)) return "Enter a valid WhatsApp number or leave it blank.";
@@ -712,6 +736,9 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
       const user = await getFreshAuthenticatedUser();
       if (!user) throw new Error("Your sign-in session could not be confirmed.");
       const intelligence = await getLoadLinkIntelligence();
+      const effectivePackage: "standard"|"pro"|"dealer" = intelligence.capabilities.can_post_vehicle
+        && intelligence.plan === "dealer" && intelligence.dealer_ready ? "dealer"
+        : intelligence.capabilities.can_post_vehicle && intelligence.plan === "pro" ? "pro" : "standard";
       const standardAccess = !intelligence.capabilities.can_post_vehicle ? await getVehicleListingAccess() : null;
       if (!intelligence.capabilities.can_post_vehicle && !(standardAccess?.allowed && standardAccess.plan === "manual")) {
         if (["blocked","suspended"].includes(intelligence.account_status)) throw new Error(intelligence.account_reason || "You cannot post while this account is restricted.");
@@ -724,7 +751,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         throw new Error("Standard requires R14 paid daily listing access. Visit Packages to purchase access, or upgrade to Pro or Dealer.");
       }
       const preflight = await supabase.rpc("loadlink_vehicle_preflight",{
-        p_vin:vin.trim(),p_registration:registrationNumber.trim()
+        p_vin:normalizeVehicleIdentity(vin),p_registration:registrationNumber.trim().toUpperCase()
       });
       if(preflight.error) throw preflight.error;
       const pre = preflight.data as {owned_duplicate?:boolean;monthly_used?:number;monthly_limit?:number|null;photo_limit?:number} | null;
@@ -795,8 +822,10 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         vehicle_group: vehicleCategory === "mobile_unit" ? "Mobile Units" : vehicleCategory === "bakkie_van" ? "Vehicles" : "Trucks / Trailers",
         rate: displayRate, posted_by: postedBy.trim(), contact_number: contactNumber.trim(), whatsapp_number: whatsappNumber.trim(),
         description: storedDescription, photos: photoUrls,
-        sponsored: packageType === "pro" || packageType === "dealer", package_type: packageType,
-        listing_kind: "vehicle", display_tier: packageType === "dealer" ? 4 : packageType === "pro" ? 3 : 1,
+        // Published tier must come from the verified server entitlement, never
+        // from the package tab the seller clicked before payment/approval.
+        sponsored: effectivePackage === "pro" || effectivePackage === "dealer", package_type: effectivePackage,
+        listing_kind: "vehicle", display_tier: effectivePackage === "dealer" ? 4 : effectivePackage === "pro" ? 3 : 1,
         stock_status: "available", dealership_id: dealershipId || null, owner_key: ownerKey, user_id: user.id,
         vehicle_year:year,brand:brand.trim(),model:modelName.trim(),body_type:bodyType||subtype,
         condition,service_history:serviceHistory,previous_owners:previousOwners?Number(previousOwners):null,
@@ -814,7 +843,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         const detailsResult = await supabase.from("truck_listing_details").upsert({
           listing_id: listingId, user_id: user.id, vehicle_year: year, brand, model: modelName, body_type: bodyType,
           transmission, fuel_type: fuelType, axle_configuration: axleConfiguration,
-          registration_number: registrationNumber.trim().toUpperCase(), vin: vin.trim().toUpperCase(), engine_number: engineNumber.trim().toUpperCase(),
+          registration_number: registrationNumber.trim().toUpperCase(), vin: normalizeVehicleIdentity(vin), engine_number: engineNumber.trim().toUpperCase(),
           odometer_km: Number(odometerKm), gvm_kg: gvmKg ? Number(gvmKg) : null, payload_kg: payloadKg ? Number(payloadKg) : null,
           reference_image_url: referenceImage?.imageUrl || null, reference_image_source: referenceImage?.sourceUrl || null,
           factory_transmissions: selectedModel?.transmissions || [], specification_status: transmissionCheck?.requiresModificationProof ? "modified_pending_review" : "catalogue_match",
@@ -1062,7 +1091,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
               {imageLoading ? <p className={`mt-3 text-sm ${muted}`}>Finding a model-year reference…</p> : null}
               {!curatedModelPhoto && referenceImage?.imageUrl ? <div className="mt-4 max-w-xl"><VehicleModelReferencePhoto photo={{url:referenceImage.imageUrl,title:referenceImage.title,credit:"",license:"",matchKind:"generation"}} year={year}/></div> : null}
               {!curatedModelPhoto && !referenceImage?.imageUrl && truckYearPhotos.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2">{truckYearPhotos.map(photo=><VehicleModelReferencePhoto key={photo.url} photo={photo} year={year}/>)}</div> : null}
-              {!curatedModelPhoto && !referenceImage?.imageUrl && !imageLoading && truckPhotoUnavailable ? <p role="status" className={`mt-3 text-xs ${muted}`}>No year-verified photo is available for this truck model. Please check the manufacturer's specifications and upload photos of your actual truck.</p> : null}
+              {!curatedModelPhoto && !referenceImage?.imageUrl && !imageLoading && truckPhotoUnavailable ? <p role="status" className={`mt-3 text-xs ${muted}`}>No year-verified photo is available for this truck model. Please check the manufacturer&apos;s specifications and upload photos of your actual truck.</p> : null}
               {referenceImage?.specSourceUrl ? <p className={`mt-3 text-xs ${muted}`}>Model specifications can vary by year and trim. Confirm gearbox and fuel type against your vehicle.</p> : null}
             </div> : vehicleCategory === "bakkie_van" ? <div className="border-t border-current/10 p-5 md:p-7"><button type="button" onClick={confirmBakkieVanModel} className="inline-flex min-h-12 max-w-full items-center justify-center whitespace-nowrap rounded-full bg-[#f6b800] px-6 text-sm font-black uppercase text-black transition-transform duration-150 active:scale-[.98]">Confirm vehicle</button><p className={`mt-2 text-xs ${muted}`}>Verify the exact make, model and year against the registration papers.</p>
               {lightCommercialYearStatus && !lightCommercialYearStatus.valid ? <p role="alert" className="mt-3 rounded-xl border border-amber-500/40 p-3 text-sm font-semibold text-amber-500">This {brand} {lightCommercialYearStatus.model} is not listed as produced in {year}. Check the model variant or registration year before confirming.</p> : null}
@@ -1075,6 +1104,16 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
           {detailsReady ? <>
             <section className={`overflow-hidden rounded-2xl border ${surface}`}>
               <SectionHeading step="02" title="Vehicle details" description="Add the information buyers need before opening the full product view." />
+               <div data-loadlink-plan-entitlements="verified" className={`mx-5 mt-4 rounded-xl border px-4 py-3 text-xs leading-5 md:mx-7 ${darkMode?"border-white/15 bg-white/[.03]":"border-black/10 bg-white"}`}>
+                 <div className="flex flex-wrap items-center justify-between gap-2">
+                   <p className="font-semibold">{VEHICLE_PLAN_RULES[packageType].label} vehicle posting benefits</p>
+                   <a href="/packages" className="font-semibold underline underline-offset-2">Compare packages</a>
+                 </div>
+                 <p className={`mt-1 ${muted}`}>Up to {VEHICLE_PLAN_RULES[packageType].photoLimit} photos · {VEHICLE_PLAN_RULES[packageType].monthlyListings??"Unlimited"} new vehicle listings / month · {VEHICLE_PLAN_RULES[packageType].dailyMessages??"Unlimited"} messages / day</p>
+                 <p className={`mt-1 ${muted}`}>{verifiedAccess?.allowed && (verifiedAccess.plan === packageType || (packageType==="standard"&&verifiedAccess.plan==="manual"))
+                   ?`Active access confirmed: ${verifiedAccess.photoLimit} photos per listing.`
+                   :packageType==="standard"?"Standard vehicle publishing requires a paid daily listing credit.":"Selected benefits require an active approved plan before a listing can go live."}</p>
+               </div>
               <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7">
                 <Field label="Listing title" wide><input value={title} onChange={(event) => setTitle(event.target.value)} className={inputClass} required /></Field>
                 <Field label={vehicleCategory === "truck" ? "Body type" : "Type"}><select value={bodyType || vehicleSubtype} onChange={(event) => setBodyType(event.target.value)} className={inputClass}>{(vehicleCategory === "truck" ? truckBodyTypes : vehicleCategory === "bakkie_van" ? bakkieVanTypes : vehicleCategory === "trailer" ? trailerTypes : mobileUnitTypes).map((item) => <option key={item}>{item}</option>)}</select></Field>
@@ -1082,27 +1121,82 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 <Field label="Transmission"><select value={transmission} onChange={(event) => setTransmission(event.target.value)} className={inputClass} required><option value="">Choose gearbox</option>{gearboxOptions.map((item) => <option key={item}>{item}</option>)}</select></Field>
                 <Field label="Fuel / power type">{vehicleCategory === "truck" && selectedModel
                   ? <select value={fuelType} onChange={(event) => setFuelType(event.target.value)} className={inputClass} required><option value="">Choose actual fuel type</option>{Array.from(new Set([...selectedModel.fuels, ...(fuelType ? [fuelType as typeof selectedModel.fuels[number]] : [])])).map((item) => <option key={item} value={item}>{item}</option>)}</select>
-                  : <input value={fuelType} onChange={(event) => setFuelType(event.target.value)} placeholder={vehicleCategory === "trailer" ? "Not applicable" : "Confirm fuel / power type"} className={inputClass} required />}</Field>
-                <Field label="Mileage / usage"><input type="number" min="0" value={odometerKm} onChange={(event) => setOdometerKm(event.target.value)} placeholder="Kilometres or usage reading" className={inputClass} required /></Field>
+                  
+: <div className="space-y-2">
+ <select value={fuelType&&!commonFuelTypes.includes(fuelType)?"Other":fuelType}
+ onChange={event=>setFuelType(event.target.value==="Other"?"Other (specify)":event.target.value)}
+ className={inputClass} required>
+ <option value="">Choose fuel / power type</option>
+ {commonFuelTypes.map(item=><option key={item} value={item}>{item}</option>)}
+ <option value="Other">Other — specify</option>
+ </select>
+ {fuelType&&!commonFuelTypes.includes(fuelType)?
+ <input value={fuelType==="Other (specify)"?"":fuelType}
+ onChange={event=>setFuelType(event.target.value||"Other (specify)")}
+ placeholder="Enter exact fuel / power type" maxLength={60} aria-label="Other fuel or power type" className={inputClass} required/>:null}
+ </div>}</Field>
+                <Field label="Mileage / usage"><input type="number" min="0" max="99999999" step="1" value={odometerKm} onChange={(event) => setOdometerKm(event.target.value)} placeholder="Kilometres or usage reading" className={inputClass} required /></Field>
                 <Field label="How is this unit available?"><select value={offerMode} onChange={(event) => setOfferMode(event.target.value as OfferMode)} className={inputClass}><option value="sale">For sale only</option><option value="rental">Rental only</option><option value="sale_or_rental">Sale or rental</option><option value="poa">POA — price on application</option></select></Field>
                 {offerMode !== "poa" ? <Field label={offerMode === "rental" ? "Rental rate" : "Sale price"}><input value={rate} onChange={(event) => setRate(event.target.value)} placeholder={offerMode === "rental" ? "Example: 25000" : "Example: 850000"} inputMode="decimal" className={inputClass} required /></Field> : <Field label="Price"><div className={`${inputClass} flex items-center`}>POA — interested users must contact the seller</div></Field>}
                 {offerMode === "rental" || offerMode === "sale_or_rental" ? <Field label="Rental period"><select value={rentalPeriod} onChange={(event) => setRentalPeriod(event.target.value as RentalPeriod)} className={inputClass}><option value="day">Per day</option><option value="week">Per week</option><option value="month">Per month</option></select></Field> : null}
                 {offerMode === "sale_or_rental" ? <Field label="Rental rate"><input value={rentalRate} onChange={(event) => setRentalRate(event.target.value)} placeholder="Example: 25000" inputMode="decimal" className={inputClass} required /></Field> : null}
-                <Field label="Previous owners"><input type="number" min="0" value={previousOwners} onChange={(event) => setPreviousOwners(event.target.value)} placeholder="0" className={inputClass} /></Field>
+                <Field label="Previous owners"><input type="number" min="0" max="100" step="1" value={previousOwners} onChange={(event) => setPreviousOwners(event.target.value)} placeholder="0" className={inputClass} /></Field>
                 <Field label="Service history"><select value={serviceHistory} onChange={(event) => setServiceHistory(event.target.value)} className={inputClass}><option>Not specified</option><option>Full service history</option><option>Partial service history</option><option>No service history</option><option>Not applicable</option></select></Field>
                 <Field label="Engine / drivetrain condition"><select value={engineCondition} onChange={e=>setEngineCondition(e.target.value)} className={inputClass}><option>Not assessed</option><option>Excellent</option><option>Good</option><option>Needs inspection</option><option>Needs repair</option><option>Not applicable</option></select></Field>
                 <Field label="Tyre condition"><select value={tyreCondition} onChange={e=>setTyreCondition(e.target.value)} className={inputClass}><option>Not assessed</option><option>New</option><option>Good</option><option>Worn</option><option>Replacement needed</option><option>Not applicable</option></select></Field>
                 <Field label="Accident / structural damage"><select value={accidentHistory} onChange={e=>setAccidentHistory(e.target.value)} className={inputClass}><option>Not disclosed</option><option>No known accident history</option><option>Previous damage repaired</option><option>Structural damage disclosed</option><option>Unknown</option></select></Field>
                 <Field label="Last service date — optional"><input type="date" value={lastServiceDate} onChange={e=>setLastServiceDate(e.target.value)} max={new Date().toISOString().slice(0,10)} className={inputClass}/></Field>
                 <Field label="Roadworthy status"><select value={roadworthyStatus} onChange={e=>setRoadworthyStatus(e.target.value)} className={inputClass}><option>Not confirmed</option><option>Valid certificate provided</option><option>Inspection required</option><option>Expired / not roadworthy</option></select></Field>
-                <Field label="Registration number"><input value={registrationNumber} onChange={(event) => setRegistrationNumber(event.target.value)} className={inputClass} required /></Field>
-                <Field label="VIN / chassis number"><input value={vin} onChange={(event) => setVin(event.target.value)} className={inputClass} required /></Field>
-                <Field label="Engine / serial number"><input value={engineNumber} onChange={(event) => setEngineNumber(event.target.value)} className={inputClass} /></Field>
+                
+<Field label="Registration number">
+ <input value={registrationNumber} onChange={event=>{setRegistrationNumber(event.target.value.toUpperCase());event.target.setCustomValidity("");}}
+ onInvalid={event=>event.currentTarget.setCustomValidity(validateVehicleRegistration(registrationNumber)||"")}
+ autoCapitalize="characters" spellCheck={false} maxLength={15} minLength={2} pattern="[A-Z0-9 -]{2,15}"
+ placeholder="As shown on licence disc / NaTIS" className={inputClass} required/>
+ <p className={`mt-1 text-[11px] leading-5 ${muted}`}>Enter the registration exactly as printed. Personalised and older plates can vary.</p>
+ {registrationNumber.trim()&&validateVehicleRegistration(registrationNumber)?
+ <p role="alert" className="mt-1 text-xs text-red-600">{validateVehicleRegistration(registrationNumber)}</p>:null}
+</Field>
+                
+<Field label="VIN / chassis number">
+ <input value={vin}
+ onChange={event=>{setVin(event.target.value.toUpperCase().replace(/\s+/g,""));event.target.setCustomValidity("");}}
+ onInvalid={event=>event.currentTarget.setCustomValidity(validateVehicleVin(vin,year,vehicleCategory)||"")}
+ autoCapitalize="characters" spellCheck={false} autoComplete="off" maxLength={17}
+ minLength={year>=1981?17:5}
+ pattern={year>=1981?"[A-HJ-NPR-Z0-9]{17}":"[A-Z0-9]{5,17}"}
+ placeholder={year>=1981?"17 characters from registration paper":"Original chassis number"}
+ className={inputClass} required/>
+ <p className={`mt-1 text-[11px] leading-5 ${muted}`}>{year>=1981?
+ `Modern VIN: ${normalizeVehicleIdentity(vin).length}/17 characters; no I, O or Q.`:
+ "Historic chassis number: 5–17 alphanumeric characters."} Copy it from the registration papers or chassis plate; format checks cannot verify ownership.</p>
+ {vin&&validateVehicleVin(vin,year,vehicleCategory)?<p role="alert" className="mt-1 text-xs text-red-600">{validateVehicleVin(vin,year,vehicleCategory)}</p>:null}
+</Field>
+                
+<Field label="Engine / serial number">
+ <input value={engineNumber} maxLength={20} pattern="[A-Za-z0-9/\\-]{1,20}"
+ autoCapitalize="characters" spellCheck={false}
+ onChange={event=>{setEngineNumber(event.target.value.toUpperCase());event.target.setCustomValidity("");}}
+ onInvalid={event=>event.currentTarget.setCustomValidity(validateEngineNumber(engineNumber)||"")}
+ placeholder="As shown on registration documents" className={inputClass}/>
+ {engineNumber&&validateEngineNumber(engineNumber)?<p role="alert" className="mt-1 text-xs text-red-600">{validateEngineNumber(engineNumber)}</p>:null}
+</Field>
                 <Field label="Axle configuration">{vehicleCategory === "truck" && selectedModel
                   ? <select value={axleConfiguration} onChange={(event) => setAxleConfiguration(event.target.value)} className={inputClass}><option value="">Choose actual axle configuration</option>{Array.from(new Set([...selectedModel.axleConfigurations, ...(axleConfiguration ? [axleConfiguration] : [])])).map((item) => <option key={item}>{item}</option>)}</select>
-                  : <input value={axleConfiguration} onChange={(event) => setAxleConfiguration(event.target.value)} placeholder="4x2, tandem, tri-axle" className={inputClass} />}</Field>
-                <Field label="GVM kg"><input type="number" min="0" value={gvmKg} onChange={(event) => setGvmKg(event.target.value)} className={inputClass} /></Field>
-                <Field label="Payload / capacity kg"><input type="number" min="0" value={payloadKg} onChange={(event) => setPayloadKg(event.target.value)} className={inputClass} /></Field>
+                  
+: <div className="space-y-2">
+ <select value={axleConfiguration&&!commonAxles.includes(axleConfiguration)?"Other":axleConfiguration}
+ onChange={event=>setAxleConfiguration(event.target.value==="Other"?"Other (specify)":event.target.value)}
+ className={inputClass}><option value="">Choose axle arrangement (if applicable)</option>
+ {commonAxles.map(item=><option key={item} value={item}>{item}</option>)}
+ <option value="Other">Other — specify</option></select>
+ {axleConfiguration&&!commonAxles.includes(axleConfiguration)?
+ <input value={axleConfiguration==="Other (specify)"?"":axleConfiguration}
+ onChange={event=>setAxleConfiguration(event.target.value||"Other (specify)")}
+ placeholder="Enter the actual axle arrangement" maxLength={50} aria-label="Other axle arrangement" className={inputClass} required/>:null}
+ </div>}</Field>
+                <Field label="GVM kg"><input data-loadlink-gvm="true" type="number" min="1" max="150000" step="1" value={gvmKg} onChange={(event) => setGvmKg(event.target.value)} className={inputClass} /></Field>
+                <Field label="Payload / capacity kg"><input data-loadlink-payload="true" type="number" min="1" max="150000" step="1" value={payloadKg} onChange={(event) => setPayloadKg(event.target.value)} className={inputClass} /></Field>
                 <Field label={specSchema[0][0]}><input value={specA} onChange={(event) => setSpecA(event.target.value)} placeholder={specSchema[0][1]} className={inputClass} /></Field>
                 <Field label={specSchema[1][0]}><input value={specB} onChange={(event) => setSpecB(event.target.value)} placeholder={specSchema[1][1]} className={inputClass} /></Field>
                 <Field label={specSchema[2][0]}><input value={specC} onChange={(event) => setSpecC(event.target.value)} placeholder={specSchema[2][1]} className={inputClass} /></Field>
@@ -1140,7 +1234,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
               <div className="grid gap-5 p-5 md:grid-cols-2 md:p-7"><Field label={sellerType === "dealership" ? "Dealership / contact name" : "Owner / company name"}><input value={postedBy} onChange={(event) => setPostedBy(event.target.value)} className={inputClass} required /></Field><Field label="Contact number"><input value={contactNumber} onChange={(event) => setContactNumber(event.target.value)} placeholder="0821234567" className={inputClass} required /></Field><Field label="WhatsApp number — optional"><input value={whatsappNumber} onChange={(event) => setWhatsappNumber(event.target.value)} placeholder="0821234567" className={inputClass} /></Field><Field label="Selected plan"><div className={`${inputClass} flex items-center`}>{packageType === "standard" ? "Standard — R14 per active listing day" : selectedPlan === "pro" ? "Pro — daily vehicle charge included" : "Dealer — daily vehicle charge included"}</div></Field></div>
               <div className="border-t border-current/10 p-5 md:p-7">
                 <h3 className="text-base font-black">Listing checks</h3>
-                <p className={`mt-1 text-xs ${muted}`}>These checks help improve accuracy. They do not verify ownership or guarantee the vehicle's condition.</p>
+                <p className={`mt-1 text-xs ${muted}`}>These checks help improve accuracy. They do not verify ownership or guarantee the vehicle&apos;s condition.</p>
                 {smartChecks.length ? <ul className="mt-3 space-y-2">{smartChecks.slice(0,6).map((check,index)=><li key={index} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${check.level==="warning"?"border-amber-500/30":"border-current/10"}`}><span>{check.message}</span>{/year/i.test(check.message) ? <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("loadlink-vehicle-open-step", { detail: { step: 0 } }))} className="ml-2 font-semibold underline underline-offset-4">Edit model year</button> : null}</li>)}</ul> : <p className="mt-2 text-sm font-semibold">All basic listing checks passed.</p>}
               </div>
               <div className="border-t border-current/10 p-5 md:p-7">

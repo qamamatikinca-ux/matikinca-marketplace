@@ -1,5 +1,6 @@
 "use client";
 
+import { VEHICLE_PLAN_RULES } from "@/lib/vehiclePlanBenefits";
 import { useEffect, useMemo, useState } from "react";
 import {
   getLoadLinkIntelligence,
@@ -23,7 +24,7 @@ const plans = [
     price: `R${MANUAL_DAILY_PRICE_CENTS / 100}`,
     billing: "per vehicle / active day",
     description: "For occasional vehicle advertising without a monthly subscription.",
-    features: ["Up to 5 vehicle listings per month", "Up to 2 photos per listing", "Standard marketplace placement", "50 messages per day"],
+    features: VEHICLE_PLAN_RULES.standard.features,
   },
   {
     id: "pro" as const,
@@ -31,7 +32,7 @@ const plans = [
     price: "R399",
     billing: "/month",
     description: "For owners and operators who advertise vehicles regularly.",
-    features: ["Up to 10 vehicle listings per month", "Up to 10 photos per listing", "Listing analytics", "Unlimited messages", "Higher search visibility", "Priority support"],
+    features: VEHICLE_PLAN_RULES.pro.features,
   },
   {
     id: "dealer" as const,
@@ -39,7 +40,7 @@ const plans = [
     price: "R2 999",
     billing: "/month",
     description: "For dealerships that need a public showroom, sales workspace and team tools.",
-    features: ["Unlimited vehicle listings", "Up to 30 photos per listing", "Public dealership showroom", "Dealer Status", "Lead and customer workspace", "Quotes and follow-ups", "Team roles", "Dealer analytics", "Inventory and sales tools"],
+    features: VEHICLE_PLAN_RULES.dealer.features,
   },
 ];
 
