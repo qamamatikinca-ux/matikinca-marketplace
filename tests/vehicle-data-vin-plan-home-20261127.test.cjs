@@ -83,3 +83,11 @@ test("database enforces VIN and truck measurements, not just client form",()=>{
  assert.match(sql,/NEW\.vin/iu); // server assigns canonical uppercase VIN
  assert.match(sql,/new\.payload_kg>new\.gvm_kg/);
 });
+
+test("active subscription—not self-selected ticket priority—unlocks PRO/Dealer priority support",()=>{
+ const sql=read("supabase/migrations/20261127221500_plan_verified_priority_support_sla.sql");
+ assert.match(sql,/auth\.uid\(\)=new\.requester_user_id/);
+ assert.match(sql,/loadlink_active_plan\(new\.requester_user_id\)/);
+ assert.match(sql,/then 'high' else 'normal'/);
+ assert.match(sql,/when 'high' then interval '8 hours'/);
+});
