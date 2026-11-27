@@ -36,10 +36,10 @@ export default function JobCompletionReminder(){
     // their recorded end date. This mirrors the actual job_closures RLS rule.
     const [jobs,contracts]=await Promise.all([
      supabase.from("job_listings").select("id,title,listing_kind,work_starts_at,work_ends_at")
-      .eq("user_id",user.id).eq("status","active").eq("listing_kind","job")
+      .eq("user_id",user.id).eq("status","active").eq("moderation_status","approved").eq("listing_kind","job")
       .not("work_starts_at","is",null).order("work_starts_at",{ascending:true}).limit(75),
      supabase.from("job_listings").select("id,title,listing_kind,work_starts_at,work_ends_at")
-      .eq("user_id",user.id).eq("status","active").eq("listing_kind","contract")
+      .eq("user_id",user.id).eq("status","active").eq("moderation_status","approved").eq("listing_kind","contract")
       .not("work_ends_at","is",null).order("work_ends_at",{ascending:true}).limit(75)
     ]);
     if(jobs.error)throw jobs.error;
