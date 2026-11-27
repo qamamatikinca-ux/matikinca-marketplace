@@ -182,6 +182,8 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
       ]);
       clearVehicleDraft();
     } catch {}
+    // A full reset is intentional: Next.js client navigation can retain old file-input state.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = "/list-your-vehicle";
   }
 
