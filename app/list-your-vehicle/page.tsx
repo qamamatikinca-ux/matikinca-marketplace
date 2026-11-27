@@ -7,8 +7,7 @@ import { useEffect, useState } from "react";
 import LoadLinkSiteHeader from "@/components/LoadLinkSiteHeader";
 
 import LoadLinkLoading from "@/components/LoadLinkLoading";
-import LoadLinkActionToast from "@/components/LoadLinkActionToast";
-import { scopeVehicleDraft, readVehicleDraft, hasVehicleDraft, clearVehicleDraft } from "@/lib/vehicleDraft";
+import { scopeVehicleDraft, readVehicleDraft, readVehicleWizardStep, hasVehicleDraft, clearVehicleDraft } from "@/lib/vehicleDraft";
 import { getVehicleListingAccess } from "@/lib/packageAccess";
 import { getLoadLinkIntelligence } from "@/lib/loadlinkIntelligence";
 import { getFreshAuthenticatedUser } from "@/lib/reliableSupabase";
@@ -47,6 +46,8 @@ function seed(packageType: ListingPackage) {
 }
 
 function openEntry(mode: Exclude<EntryMode, "">) {
+  // A full page entry is intentional: preserve URL hash and reset prior posting state.
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
   window.location.assign(`/list-your-vehicle?entry=${encodeURIComponent(mode)}#listing-form`);
 }
 
@@ -65,6 +66,8 @@ export default function ListYourVehiclePage() {
     const url = new URL(window.location.href);
     const requested = url.searchParams.get("entry");
     const mode: EntryMode = requested === "vehicle" || requested === "mobile-unit" ? requested : "";
+    // Read the browser entry URL once on mount; this is not derived React state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEntryMode(mode);
     setEntryReady(false);
     setDealerPostingGate(null);
@@ -166,10 +169,6 @@ export default function ListYourVehiclePage() {
     );
   }
 
-  if (entryReady && draftDecision === "pending" && !dealerPostingGate) {
-    return <main className={`min-h-screen ${page}`}><LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme}/><LoadLinkActionToast open title="Continue your vehicle listing?" message="Your saved vehicle details are ready. Continue where you stopped or start a new listing." primaryLabel="Continue" secondaryLabel="Start fresh" onPrimary={() => setDraftDecision("resume")} onSecondary={() => { clearVehicleDraft(); setDraftDecision("fresh"); }} onClose={() => window.location.assign("/list-your-vehicle")} /></main>;
-  }
-
   if (!entryReady) {
     return <main className={`min-h-screen ${page}`}><LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} /><LoadLinkLoading /></main>;
   }
@@ -208,7 +207,32 @@ export default function ListYourVehiclePage() {
     <main className={page} data-loadlink-vehicle-listing-shell="working-guided-flow-v11">
       <LoadLinkSiteHeader darkMode={darkMode} onToggleTheme={toggleTheme} />
       
-      <div id="listing-form" className="scroll-mt-36"><LegacyVehicleListingPage entryMode={entryMode} initialPackage={initialPackage} resumeDraft={draftDecision === "resume"} embedded /></div>
+      {draftDecision === "pending" ? (() => {
+        const saved = readVehicleDraft();
+        const vehicle = [saved?.year, saved?.brand, saved?.modelName]
+          .filter(value => value !== null && value !== undefined && String(value).trim()).join(" ");
+        const savedStep = readVehicleWizardStep();
+        const stages = ["Vehicle type", "Vehicle details", "Photos & documents", "Review"];
+        const lastSaved = typeof saved?.updatedAt === "number" && Number.isFinite(saved.updatedAt)
+          ? new Date(saved.updatedAt).toLocaleString("en-ZA", {day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})
+          : "";
+        return <section data-loadlink-saved-draft-inline="true" aria-label="Saved vehicle listing" className="mx-auto w-full max-w-4xl px-4 pt-4 sm:px-6">
+          <div className={`rounded-xl border px-4 py-4 sm:flex sm:items-center sm:justify-between sm:gap-5 ${darkMode ? "border-white/15 bg-[#151515]" : "border-black/10 bg-white"}`}>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">Your saved listing is ready</p>
+              <p className="mt-1 truncate text-[13px] font-medium opacity-80">{vehicle || String(saved?.title || "Vehicle listing")}</p>
+              <p className="mt-1 text-xs opacity-55">Step {savedStep+1} of 4 · {stages[savedStep] || stages[0]}{lastSaved ? ` · Saved ${lastSaved}` : ""}</p>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-0 sm:min-w-[240px]">
+              <button type="button" onClick={() => { clearVehicleDraft(); setDraftDecision("fresh"); }}
+                className={`min-h-10 rounded-lg border px-3 text-[13px] font-semibold ${darkMode ? "border-white/20" : "border-black/15"}`}>Start fresh</button>
+              <button type="button" onClick={() => setDraftDecision("resume")}
+                className="min-h-10 rounded-lg bg-[#f6b800] px-3 text-[13px] font-semibold text-black">Keep editing</button>
+            </div>
+          </div>
+        </section>;
+      })() : null}
+      <div id="listing-form" className="scroll-mt-36"><LegacyVehicleListingPage key={draftDecision === "fresh" ? "fresh-draft" : "saved-draft"} entryMode={entryMode} initialPackage={initialPackage} resumeDraft={draftDecision !== "fresh"} embedded /></div>
       <style jsx global>{`
         [data-loadlink-vehicle-listing-shell="working-guided-flow-v11"] #vehicle-listing-form {
           padding-bottom: max(118px, calc(env(safe-area-inset-bottom) + 94px)) !important;
