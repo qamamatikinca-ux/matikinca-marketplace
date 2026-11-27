@@ -9,6 +9,7 @@ import dynamic from "next/dynamic";
 import LoadLinkIcon from "@/components/LoadLinkIcon";
 import LoadLinkVehicleWizardController20260825 from "@/components/LoadLinkVehicleWizardController20260825";
 import { VEHICLE_DRAFT_OWNER_KEY, readVehicleDraft, clearVehicleDraft, scopeVehicleDraft, isVehicleDraftActiveInTab, markVehicleDraftActiveInTab } from "@/lib/vehicleDraft";
+import { normalizeVehicleIdentity, validateVehicleVin, validateVehicleRegistration, validateEngineNumber, validateVehicleMeasurements } from "@/lib/vehicleDataValidation";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -209,6 +210,8 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
   const [roadworthyStatus,setRoadworthyStatus]=useState("Not confirmed");
   const [fuelUseL100,setFuelUseL100]=useState("");
   const [gvmKg, setGvmKg] = useState("");
+  const commonFuelTypes=["Diesel","Petrol","Electric","Hybrid","CNG","LNG","Hydrogen","Not applicable"];
+  const commonAxles=["4x2","4x4","6x2","6x4","6x6","8x2","8x4","8x6","8x8","Single axle","Tandem axle","Tri-axle","Quad axle","Not applicable"];
   const [payloadKg, setPayloadKg] = useState("");
   const [rate, setRate] = useState("");
   const [offerMode, setOfferMode] = useState<OfferMode>("sale");
@@ -640,7 +643,15 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
     if (!title.trim() || !postedBy.trim() || !description.trim()) return "Complete all required vehicle and listing fields.";
     if (offerMode !== "poa" && !rate.trim()) return offerMode === "rental" ? "Enter the advertised rental rate." : "Enter the advertised sale price.";
     if (offerMode === "sale_or_rental" && !rentalRate.trim()) return "Enter the advertised rental rate as well as the sale price.";
-    if (!registrationNumber.trim() || vin.trim().length < 6) return "Enter the registration number and VIN/chassis number.";
+    const registrationError=validateVehicleRegistration(registrationNumber);
+    if(registrationError)return registrationError;
+    const vinError=validateVehicleVin(vin,year,vehicleCategory);
+    if(vinError)return vinError;
+    const engineError=validateEngineNumber(engineNumber);
+    if(engineError)return engineError;
+    if(fuelType==="Other (specify)"||axleConfiguration==="Other (specify)")return "Specify the actual fuel type or axle configuration before continuing.";
+    const measurementsError=validateVehicleMeasurements({odometerKm,previousOwners,gvmKg,payloadKg,rate,rentalRate,offerMode});
+    if(measurementsError)return measurementsError;
     if (!odometerKm || Number(odometerKm) < 0) return "Enter a valid mileage or usage reading.";
     if (!isValidSouthAfricanPhone(contactNumber)) return "Enter a valid South African contact number.";
     if (whatsappNumber && !isValidSouthAfricanPhone(whatsappNumber)) return "Enter a valid WhatsApp number or leave it blank.";
@@ -724,7 +735,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         throw new Error("Standard requires R14 paid daily listing access. Visit Packages to purchase access, or upgrade to Pro or Dealer.");
       }
       const preflight = await supabase.rpc("loadlink_vehicle_preflight",{
-        p_vin:vin.trim(),p_registration:registrationNumber.trim()
+        p_vin:normalizeVehicleIdentity(vin),p_registration:registrationNumber.trim().toUpperCase()
       });
       if(preflight.error) throw preflight.error;
       const pre = preflight.data as {owned_duplicate?:boolean;monthly_used?:number;monthly_limit?:number|null;photo_limit?:number} | null;
@@ -814,7 +825,7 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
         const detailsResult = await supabase.from("truck_listing_details").upsert({
           listing_id: listingId, user_id: user.id, vehicle_year: year, brand, model: modelName, body_type: bodyType,
           transmission, fuel_type: fuelType, axle_configuration: axleConfiguration,
-          registration_number: registrationNumber.trim().toUpperCase(), vin: vin.trim().toUpperCase(), engine_number: engineNumber.trim().toUpperCase(),
+          registration_number: registrationNumber.trim().toUpperCase(), vin: normalizeVehicleIdentity(vin), engine_number: engineNumber.trim().toUpperCase(),
           odometer_km: Number(odometerKm), gvm_kg: gvmKg ? Number(gvmKg) : null, payload_kg: payloadKg ? Number(payloadKg) : null,
           reference_image_url: referenceImage?.imageUrl || null, reference_image_source: referenceImage?.sourceUrl || null,
           factory_transmissions: selectedModel?.transmissions || [], specification_status: transmissionCheck?.requiresModificationProof ? "modified_pending_review" : "catalogue_match",
@@ -1083,12 +1094,12 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 <Field label="Fuel / power type">{vehicleCategory === "truck" && selectedModel
                   ? <select value={fuelType} onChange={(event) => setFuelType(event.target.value)} className={inputClass} required><option value="">Choose actual fuel type</option>{Array.from(new Set([...selectedModel.fuels, ...(fuelType ? [fuelType as typeof selectedModel.fuels[number]] : [])])).map((item) => <option key={item} value={item}>{item}</option>)}</select>
                   : <input value={fuelType} onChange={(event) => setFuelType(event.target.value)} placeholder={vehicleCategory === "trailer" ? "Not applicable" : "Confirm fuel / power type"} className={inputClass} required />}</Field>
-                <Field label="Mileage / usage"><input type="number" min="0" value={odometerKm} onChange={(event) => setOdometerKm(event.target.value)} placeholder="Kilometres or usage reading" className={inputClass} required /></Field>
+                <Field label="Mileage / usage"><input type="number" min="0" max="99999999" step="1" value={odometerKm} onChange={(event) => setOdometerKm(event.target.value)} placeholder="Kilometres or usage reading" className={inputClass} required /></Field>
                 <Field label="How is this unit available?"><select value={offerMode} onChange={(event) => setOfferMode(event.target.value as OfferMode)} className={inputClass}><option value="sale">For sale only</option><option value="rental">Rental only</option><option value="sale_or_rental">Sale or rental</option><option value="poa">POA — price on application</option></select></Field>
                 {offerMode !== "poa" ? <Field label={offerMode === "rental" ? "Rental rate" : "Sale price"}><input value={rate} onChange={(event) => setRate(event.target.value)} placeholder={offerMode === "rental" ? "Example: 25000" : "Example: 850000"} inputMode="decimal" className={inputClass} required /></Field> : <Field label="Price"><div className={`${inputClass} flex items-center`}>POA — interested users must contact the seller</div></Field>}
                 {offerMode === "rental" || offerMode === "sale_or_rental" ? <Field label="Rental period"><select value={rentalPeriod} onChange={(event) => setRentalPeriod(event.target.value as RentalPeriod)} className={inputClass}><option value="day">Per day</option><option value="week">Per week</option><option value="month">Per month</option></select></Field> : null}
                 {offerMode === "sale_or_rental" ? <Field label="Rental rate"><input value={rentalRate} onChange={(event) => setRentalRate(event.target.value)} placeholder="Example: 25000" inputMode="decimal" className={inputClass} required /></Field> : null}
-                <Field label="Previous owners"><input type="number" min="0" value={previousOwners} onChange={(event) => setPreviousOwners(event.target.value)} placeholder="0" className={inputClass} /></Field>
+                <Field label="Previous owners"><input type="number" min="0" max="100" step="1" value={previousOwners} onChange={(event) => setPreviousOwners(event.target.value)} placeholder="0" className={inputClass} /></Field>
                 <Field label="Service history"><select value={serviceHistory} onChange={(event) => setServiceHistory(event.target.value)} className={inputClass}><option>Not specified</option><option>Full service history</option><option>Partial service history</option><option>No service history</option><option>Not applicable</option></select></Field>
                 <Field label="Engine / drivetrain condition"><select value={engineCondition} onChange={e=>setEngineCondition(e.target.value)} className={inputClass}><option>Not assessed</option><option>Excellent</option><option>Good</option><option>Needs inspection</option><option>Needs repair</option><option>Not applicable</option></select></Field>
                 <Field label="Tyre condition"><select value={tyreCondition} onChange={e=>setTyreCondition(e.target.value)} className={inputClass}><option>Not assessed</option><option>New</option><option>Good</option><option>Worn</option><option>Replacement needed</option><option>Not applicable</option></select></Field>
@@ -1101,8 +1112,8 @@ export default function ListYourVehiclePage({ entryMode, initialPackage = "stand
                 <Field label="Axle configuration">{vehicleCategory === "truck" && selectedModel
                   ? <select value={axleConfiguration} onChange={(event) => setAxleConfiguration(event.target.value)} className={inputClass}><option value="">Choose actual axle configuration</option>{Array.from(new Set([...selectedModel.axleConfigurations, ...(axleConfiguration ? [axleConfiguration] : [])])).map((item) => <option key={item}>{item}</option>)}</select>
                   : <input value={axleConfiguration} onChange={(event) => setAxleConfiguration(event.target.value)} placeholder="4x2, tandem, tri-axle" className={inputClass} />}</Field>
-                <Field label="GVM kg"><input type="number" min="0" value={gvmKg} onChange={(event) => setGvmKg(event.target.value)} className={inputClass} /></Field>
-                <Field label="Payload / capacity kg"><input type="number" min="0" value={payloadKg} onChange={(event) => setPayloadKg(event.target.value)} className={inputClass} /></Field>
+                <Field label="GVM kg"><input type="number" min="1" max="150000" step="1" value={gvmKg} onChange={(event) => setGvmKg(event.target.value)} className={inputClass} /></Field>
+                <Field label="Payload / capacity kg"><input type="number" min="1" max="150000" step="1" value={payloadKg} onChange={(event) => setPayloadKg(event.target.value)} className={inputClass} /></Field>
                 <Field label={specSchema[0][0]}><input value={specA} onChange={(event) => setSpecA(event.target.value)} placeholder={specSchema[0][1]} className={inputClass} /></Field>
                 <Field label={specSchema[1][0]}><input value={specB} onChange={(event) => setSpecB(event.target.value)} placeholder={specSchema[1][1]} className={inputClass} /></Field>
                 <Field label={specSchema[2][0]}><input value={specC} onChange={(event) => setSpecC(event.target.value)} placeholder={specSchema[2][1]} className={inputClass} /></Field>
