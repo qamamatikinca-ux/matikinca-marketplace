@@ -54,6 +54,8 @@ const statusOptions: ModerationStatus[] = ["pending", "all", "approved", "reject
 const kindOptions: ListingKind[] = ["all", "job", "contract", "vehicle"];
 
 function label(value: string) {
+  // Existing assets remain in the same moderated vehicle/mobile-unit queue.
+  if (value === "asset") return "Vehicle / mobile unit";
   return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
@@ -82,7 +84,7 @@ export default function AdminListingsPage() {
       if (result.error) throw result.error;
       setRows((result.data || []) as QueueItem[]);
       const pre=await supabase.rpc("loadlink_admin_vehicle_prelisting_queue",{p_limit:40});
-      if(pre.error)setPreReviews([]);else setPreReviews((pre.data||[]) as VehiclePreReview[]);
+      if(pre.error){setPreReviews([]);setMessage("Preliminary vehicle reviews could not load. Refresh to retry.");}else setPreReviews((pre.data||[]) as VehiclePreReview[]);
     } catch (error) {
       setRows([]);
       setMessage(error instanceof Error ? error.message : "The moderation queue could not be loaded.");
