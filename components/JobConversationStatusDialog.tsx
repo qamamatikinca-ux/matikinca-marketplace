@@ -19,8 +19,16 @@ export default function JobConversationStatusDialog({listingId,threadId,listingT
    listing_id:listingId,thread_id:threadId,closed_by:user.id,outcome:choice,note:note.trim()
   });
   if(writeError){
-   if(writeError.code==="23505"){onExit();return;}
-   setError(writeError.message||"Could not close this listing.");
+   if(writeError.code==="23505"){
+    const existing=await supabase.from("job_closures").select("outcome")
+      .eq("listing_id",listingId).eq("closed_by",user.id).maybeSingle();
+    if(!existing.error&&existing.data?.outcome==="completed"){
+      onCompleted?.();setRateAfterClose(true);setBusy(false);return;
+    }
+   }
+   setError(/lifecycle|constraint|violates check/i.test(writeError.message||"")
+     ? "History could not save the listing status. Please retry; your listing has not been changed."
+     : writeError.message||"Could not confirm completion. Please retry.");
    setBusy(false);return;
   }
   onCompleted?.();
@@ -33,20 +41,20 @@ export default function JobConversationStatusDialog({listingId,threadId,listingT
     <button type="button" onClick={onExit} className="mt-4 text-xs font-bold underline">Finish</button>
    </div>
  </div>;
- return <div role="dialog" aria-modal="true" aria-labelledby="job-closure-title" className="fixed inset-0 z-[2147483600] flex items-center justify-center bg-black/65 px-3 py-4 backdrop-blur-sm">
-  <section className="max-h-[min(90dvh,680px)] w-full max-w-sm overflow-y-auto rounded-[24px] border border-black/10 bg-white p-5 text-black shadow-2xl sm:p-6">
-   <p className="text-[10px] font-black uppercase tracking-[.13em] text-[#9a7000]">LoadLink history</p>
-   <h2 id="job-closure-title" className="mt-1 text-2xl font-black tracking-[-.04em]">Has this {listingKind} been completed?</h2>
-   <p className="mt-2 text-sm leading-6 text-black/60">Only the original poster can close <strong className="text-black">{listingTitle}</strong>. Only completed work moves to History.</p>
-   <p className="mt-4 rounded-xl border border-[#efb919]/30 bg-[#fff8e1] p-3 text-xs leading-5">Confirm only after the work has been completed. The listing moves to verified History and its conversation becomes read-only.</p>
-   <label className="mt-4 block text-xs font-bold">Note (optional)
+ return <div role="dialog" aria-modal="true" aria-labelledby="job-closure-title" className="fixed inset-0 z-[2147483600] flex items-center justify-center overflow-y-auto bg-black/60 px-4 py-5">
+  <section className="my-auto max-h-[min(86dvh,620px)] w-full max-w-[430px] overflow-y-auto rounded-[22px] border border-black/10 bg-white p-5 text-black shadow-xl sm:p-6">
+   <div className="flex items-center gap-2 text-xs font-semibold text-black/50"><span className="h-2 w-2 rounded-full bg-[#f6b800]"/>LoadLink History</div>
+   <h2 id="job-closure-title" className="mt-3 text-[23px] font-bold leading-tight tracking-tight">Mark {listingKind} as completed?</h2>
+   <p className="mt-3 break-words text-sm font-semibold leading-6 text-black/85">{listingTitle}</p>
+   <p className="mt-2 text-[13px] leading-5 text-black/60">Only the original poster can confirm finished work. Confirming moves this listing to History and makes the conversation read-only.</p>
+   <label className="mt-5 block border-t border-black/10 pt-4 text-xs font-semibold">Completion note <span className="font-normal text-black/50">(optional)</span>
     <textarea maxLength={1500} value={note} onChange={e=>setNote(e.target.value)}
-     placeholder="Add a brief record" className="mt-2 min-h-16 w-full rounded-xl border border-black/15 bg-white p-3 text-sm font-normal outline-none focus:border-[#f6b800]"/>
+     placeholder="Add a brief record of the completed work" className="mt-2 min-h-[84px] w-full resize-y rounded-xl border border-black/15 bg-white p-3 text-sm font-normal outline-none focus:border-[#c38d00]"/>
    </label>
-   {error?<p role="alert" className="mt-3 text-xs font-bold text-red-600">{error}</p>:null}
-   <div className="mt-4 flex gap-2">
-    <button type="button" disabled={busy} onClick={onExit} className="min-h-11 flex-1 rounded-xl border border-black/15 text-sm font-bold">Still open</button>
-    <button type="button" disabled={busy} onClick={()=>void closeJob()} className="min-h-11 flex-1 rounded-xl bg-[#f6b800] text-sm font-black text-black disabled:opacity-50">{busy?"Saving…":"Confirm completed"}</button>
+   {error?<p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-xs font-medium leading-5 text-red-700">{error}</p>:null}
+   <div className="mt-4 grid grid-cols-2 gap-2">
+    <button type="button" disabled={busy} onClick={onExit} className="min-h-12 rounded-xl border border-black/15 bg-white px-3 text-sm font-semibold disabled:opacity-50">Still open</button>
+    <button type="button" disabled={busy} onClick={()=>void closeJob()} className="min-h-12 rounded-xl bg-[#f6b800] px-3 text-sm font-bold text-black disabled:opacity-50">{busy?"Saving…":"Confirm completed"}</button>
    </div>
   </section>
  </div>;
