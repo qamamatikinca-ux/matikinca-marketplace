@@ -22,13 +22,38 @@ function bridgeMessageThreadForCalls() {
 export default function LoadLinkCallBootstrap() {
   const pathname = usePathname();
   const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    let layerReady = false;
+    let pending: CustomEvent | null = null;
+    // The first call tap can happen before a lazy call module has installed
+    // its event listener. Queue the request until the call layer is mounted.
+    const onCall=(event: Event)=>{
+      if (layerReady) return;
+      pending = event as CustomEvent;
+      setEnabled(true);
+    };
+    const onReady=()=>{
+      layerReady=true;
+      if (!pending) return;
+      const detail=pending.detail;
+      pending=null;
+      window.dispatchEvent(new CustomEvent("loadlink-start-chat-call",{detail}));
+    };
+    window.addEventListener("loadlink-start-chat-call",onCall);
+    window.addEventListener("loadlink-call-layer-ready",onReady);
+    return ()=>{
+      window.removeEventListener("loadlink-start-chat-call",onCall);
+      window.removeEventListener("loadlink-call-layer-ready",onReady);
+    };
+  }, []);
 
   useEffect(() => {
     if (pathname !== "/messages") return;
+    const eager = window.setTimeout(() => setEnabled(true), 0);
     bridgeMessageThreadForCalls();
     const beforeCallChoice = () => bridgeMessageThreadForCalls();
     document.addEventListener("click", beforeCallChoice, true);
-    return () => document.removeEventListener("click", beforeCallChoice, true);
+    return () => { window.clearTimeout(eager); document.removeEventListener("click", beforeCallChoice, true); };
   }, [pathname]);
 
   useEffect(() => {

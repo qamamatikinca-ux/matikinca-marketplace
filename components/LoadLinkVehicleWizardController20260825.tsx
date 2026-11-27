@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { clearVehicleDraft, VEHICLE_DRAFT_OWNER_KEY, VEHICLE_SUBMISSION_KEY } from "@/lib/vehicleDraft";
+import { clearVehicleDraft, readVehicleWizardStep, saveVehicleWizardStep, VEHICLE_DRAFT_OWNER_KEY, VEHICLE_SUBMISSION_KEY } from "@/lib/vehicleDraft";
 import { clearVehiclePhotos as clearVehiclePhotoDraft } from "@/lib/vehiclePhotoDraft";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 
@@ -45,11 +45,16 @@ function confirmationButton(section: HTMLElement) {
 export default function LoadLinkVehicleWizardController20260825({ darkMode, listingKind = "vehicle" }: { darkMode: boolean; listingKind?: ListingKind }) {
   const pathname = usePathname();
   const onListingRoute = pathname === "/list-your-vehicle" || pathname === "/list-your-truck";
-  const [activeStep, setActiveStep] = useState(0);
+  const [activeStep, setActiveStep] = useState(() => typeof window === "undefined" ? 0 : readVehicleWizardStep());
   const [formReady, setFormReady] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const lastStep = STEP_LABELS.length - 1;
   const listingLabel = listingKind === "mobile-unit" ? "mobile unit" : "vehicle";
+  // Safari/Android may discard the page when the OS photo picker or camera opens.
+  // Initial state restores the saved step without flashing Step 1.
+  useEffect(() => {
+    if (onListingRoute && formReady) saveVehicleWizardStep(activeStep);
+  }, [activeStep, formReady, onListingRoute]);
 
   const applyStep = useCallback(() => {
     const { sections } = getWizardSections();
@@ -69,9 +74,10 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
       window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => applyStep());
     };
-    applyStep();
+    sync();
     const observer = new MutationObserver(sync);
-    observer.observe(document.getElementById("listing-form") || document.body, { childList: true, subtree: true });
+    // Observe only structural changes, not photo previews, file inputs or face-scan frames.
+    observer.observe(document.getElementById("listing-form") || document.body, { childList: true, subtree: false });
 
     return () => {
       window.cancelAnimationFrame(frame);
@@ -176,7 +182,9 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
       ]);
       clearVehicleDraft();
     } catch {}
-    window.location.assign("/list-your-vehicle");
+    // A full reset is intentional: Next.js client navigation can retain old file-input state.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.href = "/list-your-vehicle";
   }
 
   if (!onListingRoute) return null;
