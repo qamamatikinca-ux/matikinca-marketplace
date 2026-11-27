@@ -91,3 +91,13 @@ test("active subscription—not self-selected ticket priority—unlocks PRO/Deal
  assert.match(sql,/then 'high' else 'normal'/);
  assert.match(sql,/when 'high' then interval '8 hours'/);
 });
+
+test("posting wizard catches payload greater than GVM before photo uploads",()=>{
+ const wizard=read("components/LoadLinkVehicleWizardController20260825.tsx");
+ const form=read("app/list-your-vehicle/LegacyVehicleListingPage.tsx");
+ assert.match(wizard,/Payload cannot exceed the vehicle's gross vehicle mass/);
+ assert.match(wizard,/payload\.setCustomValidity\(/);
+ assert.match(form,/data-loadlink-gvm="true"/);
+ assert.match(form,/data-loadlink-payload="true"/);
+ assert.match(form,/pattern="\[A-Z0-9 -\]\{2,15\}"/);
+});
