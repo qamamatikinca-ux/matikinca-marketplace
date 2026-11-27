@@ -633,7 +633,8 @@ body:has(.loadlink-logistics-sheet) .loadlink-chat-wallpaper { visibility: hidde
   max-width: none !important;
   max-height: none !important;
   overflow-x: hidden !important;
-  overflow-y: auto !important;
+  overflow-y: hidden !important;
+  touch-action: pan-y !important;
   overscroll-behavior: contain !important;
   -webkit-overflow-scrolling: touch !important;
   z-index: 2147483647 !important;
@@ -641,6 +642,15 @@ body:has(.loadlink-logistics-sheet) .loadlink-chat-wallpaper { visibility: hidde
   transform: none !important;
   opacity: 1 !important;
 }
+.loadlink-logistics-sheet [data-loadlink-tools-scroll="true"] {
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior-y: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+}
+
 html[data-loadlink-logistics-open="true"] .loadlink-chat-composer,
 body[data-loadlink-logistics-open="true"] .loadlink-chat-composer,
 body:has(.loadlink-logistics-sheet) .loadlink-chat-composer {
