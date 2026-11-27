@@ -94,7 +94,7 @@ export default function VehicleDraftResumeToast(){
      className="grid h-9 w-9 shrink-0 place-items-center rounded-lg opacity-65"><LoadLinkIcon name="close" size={18}/></button>
    </div>
    <div className="mt-3 grid grid-cols-2 gap-2">
-    <button type="button" onClick={()=>{clearVehicleDraft(visible.owner);setVisible(null);router.push("/list-your-vehicle?entry=vehicle#listing-form")}}
+    <button type="button" onClick={()=>{clearVehicleDraft(visible.owner);setVisible(null);router.push(`/list-your-vehicle?entry=${draft.vehicleCategory==="mobile_unit"?"mobile-unit":"vehicle"}#listing-form`)}}
      className={`min-h-10 rounded-lg border px-3 text-xs font-semibold ${darkMode?"border-white/20":"border-black/15"}`}>Start fresh</button>
     <button type="button" onClick={()=>{router.push(vehicleDraftHref(draft));dismiss()}}
      className="min-h-10 rounded-lg bg-[#f6b800] px-3 text-xs font-semibold text-black">Keep editing</button>
