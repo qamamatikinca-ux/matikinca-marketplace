@@ -1,10 +1,20 @@
 "use client";
 import {useEffect,useState} from "react";
+import {usePathname} from "next/navigation";
 import {supabase} from "@/lib/supabaseClient";
 import CompletedDriverFeedback from "@/components/CompletedDriverFeedback";
 type Due={id:string;title:string;listing_kind:string;work_starts_at:string};
-function today(){return new Date(Date.now()+2*60*60*1000).toISOString().slice(0,10)}
+function today(){return new Intl.DateTimeFormat("sv-SE",{timeZone:"Africa/Johannesburg",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())}
 export default function JobCompletionReminder(){
+ const pathname=usePathname();
+ const [eligible,setEligible]=useState(false);
+ useEffect(()=>{
+  setEligible(false);
+  // Reminders belong on Home, never over forms, cameras or existing chats.
+  if(pathname!=="/")return;
+  const timer=window.setTimeout(()=>setEligible(true),9000);
+  return()=>window.clearTimeout(timer);
+ },[pathname]);
  const [item,setItem]=useState<Due|null>(null);
  const [poster,setPoster]=useState("");
  const [stage,setStage]=useState<"ask"|"rate">("ask");
@@ -22,7 +32,7 @@ export default function JobCompletionReminder(){
      .not("work_starts_at","is",null).lte("work_starts_at",`${today()}T21:59:59.999Z`)
      .order("work_starts_at",{ascending:true}).limit(15);
     if(queryError)throw queryError;
-    const candidate=((data||[]) as Due[]).find(j=>{try{return sessionStorage.getItem(`loadlink-due-dismiss:${j.id}:${today()}`)!=="1"}catch{return true}});
+    const candidate=((data||[]) as Due[]).find(j=>{try{return localStorage.getItem(`loadlink-due-dismiss:${user.id}:${j.id}:${today()}`)!=="1"}catch{return true}});
     if(active){setPoster(user.id);setItem(candidate||null);}
    }catch{/* A reminder must never interrupt ordinary browsing. */}
   };
@@ -32,7 +42,7 @@ export default function JobCompletionReminder(){
   return()=>{active=false;document.removeEventListener("visibilitychange",visibility)};
  },[]);
  function dismiss(){
-  if(item)try{sessionStorage.setItem(`loadlink-due-dismiss:${item.id}:${today()}`,"1")}catch{}
+  if(item)try{localStorage.setItem(`loadlink-due-dismiss:${poster}:${item.id}:${today()}`,"1")}catch{}
   setItem(null);setError("");
  }
  async function complete(){
