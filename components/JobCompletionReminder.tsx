@@ -8,11 +8,15 @@ function today(){return new Intl.DateTimeFormat("sv-SE",{timeZone:"Africa/Johann
 export default function JobCompletionReminder(){
  const pathname=usePathname();
  const [eligible,setEligible]=useState(false);
+ const [newChatEntry,setNewChatEntry]=useState(false);
  useEffect(()=>{
   setEligible(false);
-  // Reminders belong on Home, never over forms, cameras or existing chats.
-  if(pathname!=="/")return;
-  const timer=window.setTimeout(()=>setEligible(true),9000);
+  // Show only on Home, or when a listing enquiry starts a new chat.
+  // Existing conversations (?thread=...) and posting/verification routes never qualify.
+  const startingChat=pathname==="/messages"&&new URLSearchParams(window.location.search).has("listing");
+  setNewChatEntry(startingChat);
+  if(pathname!=="/"&&!startingChat)return;
+  const timer=window.setTimeout(()=>setEligible(true),pathname==="/"?9000:1200);
   return()=>window.clearTimeout(timer);
  },[pathname]);
  const [item,setItem]=useState<Due|null>(null);
@@ -58,7 +62,7 @@ export default function JobCompletionReminder(){
   }catch(e){setError(e instanceof Error?e.message:"Could not confirm completion.")}
   finally{setBusy(false)}
  }
- if(pathname!=="/"||!eligible||!item)return null;
+ if((pathname!=="/"&&!newChatEntry)||!eligible||!item)return null;
  return <aside role="region" aria-label="Job completion reminder"
   className="fixed bottom-[max(92px,env(safe-area-inset-bottom))] right-3 z-[1000] w-[min(345px,calc(100vw-24px))] overflow-y-auto rounded-2xl border border-black/10 bg-white p-4 text-black shadow-lg"
   style={{maxHeight:"min(68dvh,520px)"}}>
