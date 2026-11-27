@@ -537,6 +537,7 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const conversationLoadSequenceRef = useRef(0);
+  const inboxReadInFlightRef = useRef(false);
   const conversationsRef = useRef<Conversation[]>([]);
   const activeInboxUserRef = useRef("");
   const messageLoadSequenceRef = useRef(0);
@@ -922,9 +923,14 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
   };
 
   const loadConversations = useCallback(async (preferredId?: string, withLegacyKeys = false) => {
-    const sequence = ++conversationLoadSequenceRef.current;
+    // Bounded retries can exceed the poll interval on a slow phone.
+    // Never invalidate an unfinished successful inbox read with another poll.
+    if (inboxReadInFlightRef.current) return;
     const userId = activeInboxUserRef.current;
     if (!userId) return;
+    inboxReadInFlightRef.current = true;
+    const sequence = ++conversationLoadSequenceRef.current;
+    try {
     const buyerKey = getBuyerKey();
     const ownerKey = getOwnerKeys()[0] || buyerKey;
     const localArchive = readLocalArchivedIds();
@@ -994,6 +1000,9 @@ function ListingMessagesPage({driverRoute,onOpenDriverThread,onCloseDriverThread
       } else if (mainSuccess) setInboxChecked(true);
     }
     writeLocalArchivedIds(localArchive);
+    } finally {
+      inboxReadInFlightRef.current = false;
+    }
   }, []);
 
   const loadMessages = useCallback(
