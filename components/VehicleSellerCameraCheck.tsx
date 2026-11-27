@@ -66,7 +66,7 @@ export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Pr
       if(typeof MediaRecorder==="undefined") throw new Error("This browser does not support video evidence recording. Request staff review.");
       let media:MediaStream;
       try{
-        media=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:"user"},width:{ideal:720},height:{ideal:960}}});
+        media=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:"user"},width:{ideal:480},height:{ideal:640}}});
       }catch(e){
         if((e as {name?:string})?.name!=="OverconstrainedError")throw e;
         media=await navigator.mediaDevices.getUserMedia({audio:false,video:true});
@@ -91,7 +91,7 @@ export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Pr
       if(id!==run.current)return;
       const mime=selectRecordingMime(type=>MediaRecorder.isTypeSupported?.(type)===true);
       try{
-        recorder=new MediaRecorder(media,{...(mime?{mimeType:mime}:{}),videoBitsPerSecond:420000});
+        recorder=new MediaRecorder(media,{...(mime?{mimeType:mime}:{}),videoBitsPerSecond:350000});
       }catch{
         recorder=new MediaRecorder(media);
       }
@@ -117,7 +117,7 @@ export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Pr
           if(media.getVideoTracks().some(track=>track.readyState==="ended")) throw new Error("Camera connection was interrupted. Retry the scan.");
           if(performance.now()-started>90000) throw new Error("The scan timed out. Try brighter, even lighting or request staff review.");
           const faces=await face.detectAllFaces(player,new face.TinyFaceDetectorOptions({
-            inputSize:224,scoreThreshold:.45,
+            inputSize:192,scoreThreshold:.45,
           })).withFaceLandmarks(true).run();
           const entry=faces.length===1?faces[0]:null;
           const quality=checkDriverFrame({
@@ -133,7 +133,7 @@ export default function VehicleSellerCameraCheck({darkMode,disabled,onChange}:Pr
           if(next.reached){
             if(!captured)captured=await capturePortrait(player);
             accepted=true;
-          }else await new Promise(resolve=>window.setTimeout(resolve,110));
+          }else await new Promise(resolve=>window.setTimeout(resolve,260));
         }
       }
       if(recorder.state!=="inactive")recorder.stop();

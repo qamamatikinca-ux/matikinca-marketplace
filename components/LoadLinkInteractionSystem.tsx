@@ -542,7 +542,7 @@ export default function LoadLinkInteractionSystem() {
           <section className={`relative flex w-full max-w-[500px] min-h-0 flex-col overflow-hidden rounded-[24px] border shadow-[0_25px_75px_rgba(0,0,0,.22)] ${darkMode?"border-white/15 bg-[#151515] text-white":"border-white/85 bg-[#faf9f6] text-black"}`}
             style={{maxHeight:Math.min(520,Math.max(270,calendarViewportHeight-32))}}>
             <div className="flex shrink-0 items-start justify-between gap-4 px-4 pb-2 pt-4 sm:px-5">
-              <div><p className={`text-[10px] font-black uppercase tracking-[.10em] ${darkMode?"text-[#f6b800]":"text-[#8f6900]"}`}>{dateTarget.label}</p><h2 id="loadlink-calendar-title" className="mt-1 text-[23px] font-black tracking-[-.03em]">Choose a date</h2></div>
+              <div><h2 id="loadlink-calendar-title" className="text-[23px] font-bold tracking-[-.03em]">Choose a date</h2></div>
               <button type="button" onClick={()=>setDateTarget(null)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-current/15" aria-label="Close calendar"><LoadLinkIcon name="close" size={16}/></button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2 sm:px-5">

@@ -401,8 +401,8 @@ export default function LogisticsMessageTools({
       {open && typeof document !== "undefined" ? createPortal(
         <>
           <button type="button" className="fixed inset-0 bg-black/70" style={{ zIndex: 2147483646 }} aria-label="Close logistics tools" onClick={closePanel} />
-          <section className={`loadlink-logistics-sheet fixed inset-0 isolate overflow-y-auto overscroll-contain border-0 shadow-none ${panel}`} style={{ zIndex: 2147483647, transform: "translateZ(0)" }} aria-label="Logistics actions panel">
-          <div className="mx-auto min-h-full max-w-3xl p-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
+          <section className={`loadlink-logistics-sheet fixed inset-0 isolate flex min-h-0 flex-col overflow-hidden border-0 shadow-none ${panel}`} style={{ zIndex: 2147483647, height:"100dvh", maxHeight:"100dvh" }} aria-label="Logistics actions panel">
+          <div data-loadlink-tools-scroll="true" className="mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-y-auto overscroll-contain touch-pan-y p-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] [-webkit-overflow-scrolling:touch]" style={{touchAction:"pan-y",WebkitOverflowScrolling:"touch"}}>
             <div className="flex items-start justify-between gap-4">
               <div><p className="loadlink-ui-label">In conversation</p><h2 className="mt-1 text-xl font-black tracking-[-.025em]">Logistics tools</h2><p className={`mt-1 text-xs font-medium ${muted}`}>Use a tool without leaving this chat.</p></div>
               <button type="button" onClick={closePanel} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-xl ${control}`} aria-label="Close logistics actions"><LoadLinkIcon name="close" size={18} className="inline-block shrink-0 align-middle" /></button>
