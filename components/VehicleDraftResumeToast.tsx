@@ -22,7 +22,7 @@ export default function VehicleDraftResumeToast() {
   }
   useEffect(() => {
     let alive = true, revision = 0;
-    let promptTimer: ReturnType<typeof setTimeout> | null = null;
+    let promptTimer: number | null = null;
     const check = (id: string, sessionId: string) => {
       if (!alive) return;
       // A resume suggestion belongs only on Home, never over Messages,
