@@ -45,19 +45,13 @@ function confirmationButton(section: HTMLElement) {
 export default function LoadLinkVehicleWizardController20260825({ darkMode, listingKind = "vehicle" }: { darkMode: boolean; listingKind?: ListingKind }) {
   const pathname = usePathname();
   const onListingRoute = pathname === "/list-your-vehicle" || pathname === "/list-your-truck";
-  const [activeStep, setActiveStep] = useState(0);
+  const [activeStep, setActiveStep] = useState(() => typeof window === "undefined" ? 0 : readVehicleWizardStep());
   const [formReady, setFormReady] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const lastStep = STEP_LABELS.length - 1;
   const listingLabel = listingKind === "mobile-unit" ? "mobile unit" : "vehicle";
   // Safari/Android may discard the page when the OS photo picker or camera opens.
-  // Restore the same step instead of forcing the owner back to Type.
-  useLayoutEffect(() => {
-    if (!onListingRoute) return;
-    const saved = readVehicleWizardStep();
-    if (saved > 0) setActiveStep(saved);
-  }, [onListingRoute]);
-
+  // Initial state restores the saved step without flashing Step 1.
   useEffect(() => {
     if (onListingRoute && formReady) saveVehicleWizardStep(activeStep);
   }, [activeStep, formReady, onListingRoute]);
@@ -80,7 +74,7 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
       window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => applyStep());
     };
-    applyStep();
+    sync();
     const observer = new MutationObserver(sync);
     // Observe only structural changes, not photo previews, file inputs or face-scan frames.
     observer.observe(document.getElementById("listing-form") || document.body, { childList: true, subtree: false });
@@ -188,7 +182,7 @@ export default function LoadLinkVehicleWizardController20260825({ darkMode, list
       ]);
       clearVehicleDraft();
     } catch {}
-    window.location.assign("/list-your-vehicle");
+    window.location.href = "/list-your-vehicle";
   }
 
   if (!onListingRoute) return null;
