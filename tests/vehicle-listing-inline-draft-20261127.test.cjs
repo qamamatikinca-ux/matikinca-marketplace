@@ -35,5 +35,5 @@ test("Start fresh clears the stored draft and remounts the wizard",()=>{
 test("the home-only reminder stays separate from the listing form",()=>{
  const reminder=read("components/VehicleDraftResumeToast.tsx");
  assert.match(reminder,/if\(pathname!=="\/"\|\|!visible\)return null/);
- assert.match(reminder,/bottom-\[max\(90px,env\(safe-area-inset-bottom\)\)\]/);
+ assert.match(reminder,/bottom-\[max\(96px,env\(safe-area-inset-bottom\)\)\]/);
 });
