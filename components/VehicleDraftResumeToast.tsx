@@ -12,6 +12,13 @@ export default function VehicleDraftResumeToast() {
   const pathnameRef = useRef(pathname);
   useEffect(() => { pathnameRef.current = pathname; }, [pathname]);
   const sessionKeyRef = useRef("");
+  // Navigation must remove the temporary card, not leave it waiting
+  // to reappear over the next visit.
+  useEffect(() => {
+    if (pathname === "/") return;
+    const timer = window.setTimeout(() => setDraft(null), 0);
+    return () => window.clearTimeout(timer);
+  }, [pathname]);
   const [draft, setDraft] = useState<VehicleDraft | null>(null);
   const [userId, setUserId] = useState("");
   const dismissedKey=(id:string)=>`loadlink:dismissed-vehicle-resume:${id}`;
