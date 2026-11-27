@@ -49,11 +49,11 @@ export default function LoadLinkCallBootstrap() {
 
   useEffect(() => {
     if (pathname !== "/messages") return;
-    setEnabled(true);
+    const eager = window.setTimeout(() => setEnabled(true), 0);
     bridgeMessageThreadForCalls();
     const beforeCallChoice = () => bridgeMessageThreadForCalls();
     document.addEventListener("click", beforeCallChoice, true);
-    return () => document.removeEventListener("click", beforeCallChoice, true);
+    return () => { window.clearTimeout(eager); document.removeEventListener("click", beforeCallChoice, true); };
   }, [pathname]);
 
   useEffect(() => {
