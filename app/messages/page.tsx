@@ -2139,9 +2139,9 @@ ${message}` : message)}
 
               {potentialDealPending ? (
                 <>
-                  <div className="flex min-h-[44px] items-center justify-between gap-3 border-b border-[#f6b800]/25 bg-[#fff9e8] px-3 py-2 text-[10px] font-semibold text-black md:px-5">
-                    <span className="min-w-0 truncate"><strong>Potential deal</strong><span className="text-black/50"> · new listing enquiry</span></span>
-                    <button type="button" onClick={() => setPotentialDealReviewOpen((value) => !value)} className="shrink-0 rounded-lg border border-black/10 bg-white px-2.5 py-1.5 text-[9px] font-black uppercase">{potentialDealReviewOpen ? "Close" : "Review"}</button>
+                  <div className={`flex min-h-[44px] items-center justify-between gap-3 border-b px-3 py-2 text-xs font-medium md:px-5 ${darkMode ? "border-white/10 bg-[#121212] text-white" : "border-black/10 bg-[#f6f6f6] text-black"}`}>
+                    <span className="min-w-0 truncate"><strong>Potential deal</strong><span className={darkMode ? "text-white/50" : "text-black/50"}> · new listing enquiry</span></span>
+                    <button type="button" onClick={() => setPotentialDealReviewOpen((value) => !value)} className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold ${darkMode ? "border-white/20 bg-[#242424] text-white" : "border-black/10 bg-white text-black"}`}>{potentialDealReviewOpen ? "Close" : "Review"}</button>
                   </div>
                   {potentialDealReviewOpen ? (
                     <div className={`grid grid-cols-2 gap-2 border-b px-3 py-2 md:max-w-none md:px-5 ${darkMode ? "border-white/10 bg-[#101010]" : "border-black/10 bg-white"}`}>
