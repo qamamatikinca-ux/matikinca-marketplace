@@ -46,6 +46,8 @@ function seed(packageType: ListingPackage) {
 }
 
 function openEntry(mode: Exclude<EntryMode, "">) {
+  // A full page entry is intentional: preserve URL hash and reset prior posting state.
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
   window.location.assign(`/list-your-vehicle?entry=${encodeURIComponent(mode)}#listing-form`);
 }
 
@@ -64,6 +66,8 @@ export default function ListYourVehiclePage() {
     const url = new URL(window.location.href);
     const requested = url.searchParams.get("entry");
     const mode: EntryMode = requested === "vehicle" || requested === "mobile-unit" ? requested : "";
+    // Read the browser entry URL once on mount; this is not derived React state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEntryMode(mode);
     setEntryReady(false);
     setDealerPostingGate(null);
